@@ -25,71 +25,57 @@ export function HrShell({children}){
     A.canAccessModule(emp.role,m.module) && settings.modules[m.module]!==false
   );
 
-  const sidebar=<div style={{width:260,background:C.ink,color:"#fff",display:"flex",flexDirection:"column",
-    borderRight:"1px solid rgba(255,255,255,.08)",height:"100vh",position:mob?"fixed":"sticky",top:0,left:0,
-    zIndex:mob?900:10,transform:navOpen?"translateX(0)":`translateX(-100%)`,transition:"transform .28s ease"}}>
-    <div style={{padding:"20px 22px",borderBottom:"1px solid rgba(255,255,255,.08)"}}>
-      <button onClick={()=>A.go("home")} style={{display:"flex",alignItems:"center",gap:10,background:"none",
-        border:"none",color:"#fff",cursor:"pointer",fontFamily:"inherit",padding:0}}>
-        <div style={{width:32,height:32,borderRadius:9,background:"rgba(106,172,255,.2)",border:"1px solid rgba(106,172,255,.35)",
-          display:"flex",alignItems:"center",justifyContent:"center"}}><I n="hex" s={16} c="#6AACFF"/></div>
-        <div><div style={{fontSize:14,fontWeight:720,letterSpacing:"-.02em"}}>NorthHire</div>
-          <div style={{fontSize:11,color:"#6AACFF",fontWeight:600,marginTop:1}}>HR Suite</div></div>
+  const sidebar=<div className={`w-64 bg-ink text-white flex flex-col border-r border-white/8 h-screen ${mob?"fixed":"sticky"} top-0 left-0 ${mob?"z-900":"z-10"} transition-transform duration-300 ${navOpen?"translate-x-0":"-translate-x-full"}`}>
+    <div className="py-5 px-6 border-b border-white/8">
+      <button onClick={()=>A.go("home")} className="flex items-center gap-2.5 bg-transparent border-0 text-white cursor-pointer p-0">
+        <div className="w-8 h-8 rounded-lg bg-accent/20 border border-accent/35 flex items-center justify-center"><I n="hex" s={16} c="#6AACFF"/></div>
+        <div><div className="text-sm font-extrabold tracking-tight">NorthHire</div>
+          <div className="text-xs text-accent font-semibold mt-px">HR Suite</div></div>
       </button>
     </div>
-    <div style={{padding:"16px 14px",borderBottom:"1px solid rgba(255,255,255,.08)"}}>
-      <div style={{display:"flex",gap:10,alignItems:"center",padding:"8px 8px"}}>
-        <div style={{width:36,height:36,borderRadius:9,background:company?.a||C.brand,color:"#fff",display:"flex",
-          alignItems:"center",justifyContent:"center",fontWeight:730,fontSize:14,flexShrink:0}}>
+    <div className="py-4 px-3.5 border-b border-white/8">
+      <div className="flex gap-2.5 items-center p-2">
+        <div className="w-9 h-9 rounded-lg text-white font-bold text-sm shrink-0 flex items-center justify-center" style={{background:company?.a||C.brand}}>
           {company?.name?.charAt(0)||"P"}</div>
-        <div style={{flex:1,minWidth:0}}>
-          <div style={{fontSize:13.5,fontWeight:660,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{company?.name}</div>
-          <div style={{fontSize:11,color:"rgba(255,255,255,.55)",marginTop:1}}>Enterprise plan</div>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-bold text-white overflow-hidden text-ellipsis whitespace-nowrap">{company?.name}</div>
+          <div className="text-xs text-white/55 mt-px">Enterprise plan</div>
         </div></div>
     </div>
-    <nav style={{flex:1,overflowY:"auto",padding:"10px 8px"}}>
+    <nav className="flex-1 overflow-y-auto py-2.5 px-2">
       {visibleModules.map(m=>{const active=A.pg===m.k;
-        return <button key={m.k} onClick={()=>{A.go(m.k); if(mob)setNavOpen(false);}} style={{width:"100%",display:"flex",gap:12,alignItems:"center",
-          padding:"10px 14px",background:active?"rgba(106,172,255,.15)":"none",border:"none",cursor:"pointer",fontFamily:"inherit",
-          textAlign:"left",borderRadius:9,margin:"1px 0",color:active?"#6AACFF":"rgba(255,255,255,.75)",
-          fontSize:13.5,fontWeight:active?640:500,transition:"all .15s"}}
-          onMouseEnter={e=>{if(!active)e.currentTarget.style.background="rgba(255,255,255,.05)";}}
-          onMouseLeave={e=>{if(!active)e.currentTarget.style.background="transparent";}}>
+        return <button key={m.k} onClick={()=>{A.go(m.k); if(mob)setNavOpen(false);}}
+          className={`w-full flex gap-3 items-center py-2.5 px-3.5 border-0 cursor-pointer text-left rounded-xl my-px text-sm transition duration-150
+           ${active?"bg-accent/15 text-accent font-semibold":"text-white/75 font-medium hover:bg-white/5"}`}>
           <I n={m.icon} s={17}/>{m.label}</button>;})}
     </nav>
-    <div style={{padding:14,borderTop:"1px solid rgba(255,255,255,.08)"}}>
-      <button onClick={()=>{A.hrLogout(); A.go("hrLogin");}} style={{width:"100%",display:"flex",gap:11,alignItems:"center",
-        padding:"10px 14px",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",textAlign:"left",
-        borderRadius:9,color:"rgba(255,255,255,.75)",fontSize:13.5,fontWeight:520}}
-        onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,.05)"}
-        onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+    <div className="p-3.5 border-t border-white/8">
+      <button onClick={()=>{A.hrLogout(); A.go("hrLogin");}} className="w-full flex gap-3 items-center py-2.5 px-3.5 bg-transparent border-0 cursor-pointer text-left rounded-xl text-white/75 text-sm font-medium hover:bg-white/5">
         <I n="logout" s={17}/>Sign out</button>
     </div>
   </div>;
 
-  const topbar=<div style={{background:"#fff",borderBottom:`1px solid ${C.line}`,padding:mob?"12px 16px":"14px 28px",
-    display:"flex",gap:12,alignItems:"center",position:"sticky",top:0,zIndex:20}}>
-    {mob&&<button onClick={()=>setNavOpen(!navOpen)} style={{background:"none",border:"none",cursor:"pointer",padding:6,color:C.text,display:"flex"}}>
+  const topbar=<div className={`bg-white border-b border-line flex gap-3 items-center sticky top-0 z-20 ${mob?"py-3 px-4":"py-3.5 px-7"}`}>
+    {mob&&<button onClick={()=>setNavOpen(!navOpen)} className="bg-transparent border-0 cursor-pointer p-1.5 text-text flex">
       <I n="menu" s={22}/></button>}
-    <div style={{flex:1,minWidth:0}}>
-      <div style={{fontSize:mob?15:16.5,fontWeight:670,color:C.text,letterSpacing:"-.02em"}}>
+    <div className="flex-1 min-w-0">
+      <div className="text-base font-bold text-text tracking-tight">
         {HR_MODULES.find(m=>m.k===A.pg)?.label||A.pageTitle||ROUTES[A.pg]?.title||"HR Suite"}</div>
-      {!mob&&<div style={{fontSize:12,color:C.text3,marginTop:2}}>{company?.name} • {emp?.title}</div>}
+      {!mob&&<div className="text-xs text-text-3 mt-0.5">{company?.name} • {emp?.title}</div>}
     </div>
-    <button onClick={()=>A.go("hrProfile")} style={{display:"flex",gap:10,alignItems:"center",background:C.bg,border:`1px solid ${C.line}`,
-      borderRadius:99,padding:"5px 12px 5px 5px",cursor:"pointer",fontFamily:"inherit"}}>
+    <button onClick={()=>A.go("hrProfile")} className="flex gap-2.5 items-center bg-bg border border-line rounded-full py-1.5 pr-3 pl-1.5 cursor-pointer">
       <SmartPortrait seed={emp.seed} size={32}/>
-      {!mob&&<span style={{fontSize:13,fontWeight:640,color:C.text}}>{emp.name.split(" ")[0]}</span>}
+      {!mob&&<span className="text-sm font-semibold text-text">{emp.name.split(" ")[0]}</span>}
       <Tag tone={emp.role==="owner"?"warn":emp.role==="admin"?"brand":emp.role==="hr"?"ok":emp.role==="finance"?"violet":"neutral"} sm>{emp.role}</Tag>
     </button>
   </div>;
 
-  return <div style={{display:"flex",background:C.bg,minHeight:"100vh"}}>
-    {mob&&navOpen&&<div onClick={()=>setNavOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.4)",zIndex:800}}/>}
+  return <div className="flex bg-bg min-h-screen">
+    {mob&&navOpen&&<div onClick={()=>setNavOpen(false)} className="fixed inset-0 bg-black/40 z-800"/>}
     {sidebar}
-    <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column"}}>
+    <div className="flex-1 min-w-0 flex flex-col">
       {topbar}
-      <main style={{flex:1,padding:mob?"18px 16px 40px":"28px 32px 60px"}}>{children}</main>
+      <main className={mob?"pt-5 px-4 pb-10":"pt-8 px-8 pb-15"}>{children}</main>
     </div>
   </div>;
 }

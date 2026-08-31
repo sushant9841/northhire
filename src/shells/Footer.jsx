@@ -21,37 +21,31 @@ export function Footer(){
     {h:"Explore",links:CATS.slice(0,6).map(c=>[c.label,()=>{A.setSearch({q:"",where:"",cats:[c.id]});A.go("search");}])},
     {h:"Company",links:[["About us",()=>A.go("about")],["How it works",()=>A.go("howItWorks")],["Contact us",()=>A.go("contact")],["Career resources",()=>A.go("blogs")],["Privacy policy",()=>A.go("privacy")],["Terms of service",()=>A.go("terms")]]},
   ];
-  return <footer style={{background:C.ink,color:"#fff",marginTop:"auto",flexShrink:0}}>
-    <div style={{maxWidth:1240,margin:"0 auto",padding:mob?"34px 16px 24px":"52px 28px 32px"}}>
-      <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1.3fr repeat(5,1fr)",gap:mob?28:28}}>
+  return <footer className="bg-ink text-white mt-auto shrink-0">
+    <div className={`max-w-site mx-auto ${mob?"pt-9 px-4 pb-6":"pt-13 px-7 pb-8"}`}>
+      <div className={`grid gap-7 ${mob?"grid-cols-1":"grid-cols-[1.3fr_repeat(5,1fr)]"}`}>
         <div>
           <Wordmark light size={20}/>
-          <p style={{fontSize:14,color:"rgba(255,255,255,.55)",lineHeight:1.7,margin:"16px 0 20px",maxWidth:300}}>
+          <p className="text-sm text-white/55 leading-relaxed mt-4 mb-5 max-w-xs">
             Canada's job platform for every kind of work. Trades, care, transport, kitchens, warehouses and offices, with real pay published on every listing.</p>
-          <div style={{display:"flex",gap:9}}>
+          <div className="flex gap-2.5">
             {["linkedin","facebook","twitter"].map(s=>
-              <a key={s} href="#" onClick={e=>e.preventDefault()} aria-label={s} style={{width:38,height:38,borderRadius:10,
-                background:"rgba(255,255,255,.09)",border:"1px solid rgba(255,255,255,.14)",color:"rgba(255,255,255,.75)",
-                display:"flex",alignItems:"center",justifyContent:"center",textDecoration:"none"}}><I n={s} s={17}/></a>)}</div>
+              <a key={s} href="#" onClick={e=>e.preventDefault()} aria-label={s} className="w-10 h-10 rounded-xl bg-white/9 border border-white/14 text-white/75 flex items-center justify-center no-underline"><I n={s} s={17}/></a>)}</div>
         </div>
         {cols.map(col=><div key={col.h}>
-          <div style={{fontSize:12.5,fontWeight:700,letterSpacing:".06em",textTransform:"uppercase",
-            color:"rgba(255,255,255,.45)",marginBottom:14}}>{col.h}</div>
-          <div style={{display:"flex",flexDirection:"column",gap:11}}>
-            {col.links.map(([l,fn])=><button key={l} onClick={fn} style={{background:"none",border:"none",padding:0,
-              textAlign:"left",cursor:"pointer",fontFamily:"inherit",fontSize:14,color:"rgba(255,255,255,.68)",transition:"color .16s"}}
-              onMouseEnter={e=>e.currentTarget.style.color="#fff"} onMouseLeave={e=>e.currentTarget.style.color="rgba(255,255,255,.68)"}>{l}</button>)}
+          <div className="text-xs font-bold tracking-wider uppercase text-white/45 mb-3.5">{col.h}</div>
+          <div className="flex flex-col gap-3">
+            {col.links.map(([l,fn])=><button key={l} onClick={fn} className="bg-transparent border-0 p-0 text-left cursor-pointer text-sm text-white/68 transition-colors duration-150 hover:text-white">{l}</button>)}
           </div></div>)}
       </div>
-      <div style={{borderTop:"1px solid rgba(255,255,255,.11)",marginTop:mob?28:42,paddingTop:22,display:"flex",
-        justifyContent:"space-between",gap:14,flexWrap:"wrap",alignItems:"center"}}>
-        <div style={{display:"flex",flexDirection:"column",gap:4}}>
-          <span style={{fontSize:13,color:"rgba(255,255,255,.4)"}}>© 2026 NorthHire Technologies Inc. Built in Canada.</span>
-          <span style={{fontSize:11.5,color:"rgba(255,255,255,.32)",fontFamily:"ui-monospace,SFMono-Regular,monospace"}}>NorthHire Staffing · Ontario THA licence {SEED_AGENCY_LICENSE}</span>
+      <div className={`border-t border-white/11 pt-6 flex justify-between gap-3.5 flex-wrap items-center ${mob?"mt-7":"mt-11"}`}>
+        <div className="flex flex-col gap-1">
+          <span className="text-sm text-white/40">© 2026 NorthHire Technologies Inc. Built in Canada.</span>
+          <span className="text-xs text-white/32 font-mono">NorthHire Staffing · Ontario THA licence {SEED_AGENCY_LICENSE}</span>
         </div>
-        <div style={{display:"flex",gap:20,flexWrap:"wrap"}}>
-          <button onClick={()=>A.go("accessibility")} style={{background:"none",border:"none",padding:0,cursor:"pointer",fontFamily:"inherit",fontSize:13,color:"rgba(255,255,255,.4)",transition:"color .16s"}} onMouseEnter={e=>e.currentTarget.style.color="#fff"} onMouseLeave={e=>e.currentTarget.style.color="rgba(255,255,255,.4)"}>Accessibility (AODA)</button>
-          <button onClick={()=>A.go("pipeda")} style={{background:"none",border:"none",padding:0,cursor:"pointer",fontFamily:"inherit",fontSize:13,color:"rgba(255,255,255,.4)",transition:"color .16s"}} onMouseEnter={e=>e.currentTarget.style.color="#fff"} onMouseLeave={e=>e.currentTarget.style.color="rgba(255,255,255,.4)"}>PIPEDA compliant</button>
-          <span style={{fontSize:13,color:"rgba(255,255,255,.4)"}}>English (CA)</span></div></div>
+        <div className="flex gap-5 flex-wrap">
+          <button onClick={()=>A.go("accessibility")} className="bg-transparent border-0 p-0 cursor-pointer text-sm text-white/40 transition-colors duration-150 hover:text-white">Accessibility (AODA)</button>
+          <button onClick={()=>A.go("pipeda")} className="bg-transparent border-0 p-0 cursor-pointer text-sm text-white/40 transition-colors duration-150 hover:text-white">PIPEDA compliant</button>
+          <span className="text-sm text-white/40">English (CA)</span></div></div>
     </div></footer>;
 }

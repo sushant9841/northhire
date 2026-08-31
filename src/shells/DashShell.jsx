@@ -75,45 +75,45 @@ export function UpgradePromptModal({payload,onClose}){
   /* Which plans include this */
   const plans=Object.entries(A.PLANS).filter(([_,p])=>{const v=p[feature]; return v===true||typeof v==="number"&&v>0||v==="full"||v===Infinity;});
   const cheapest=plans.reduce((min,[n,p])=>!min||p.price<min[1].price?[n,p]:min,null);
-  return <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(15,23,42,.68)",zIndex:9998,display:"flex",alignItems:"center",justifyContent:"center",padding:mob?16:24,backdropFilter:"blur(4px)"}}>
-    <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:mob?16:20,maxWidth:600,width:"100%",maxHeight:"90vh",overflow:"auto",boxShadow:"0 24px 60px rgba(0,0,0,.35)"}}>
+  return <div onClick={onClose} className={`fixed inset-0 bg-[rgba(15,23,42,0.68)] z-9998 flex items-center justify-center backdrop-blur-sm ${mob?"p-4":"p-6"}`}>
+    <div onClick={e=>e.stopPropagation()} className={`bg-white max-w-xl w-full max-h-[90vh] overflow-auto shadow-[0_24px_60px_rgba(0,0,0,0.35)] ${mob?"rounded-2xl":"rounded-3xl"}`}>
       {/* Header */}
-      <div style={{padding:mob?"22px 22px 18px":"28px 32px 22px",borderBottom:`1px solid ${C.line}`,background:`linear-gradient(180deg, ${C.tint} 0%, #fff 100%)`}}>
-        <div style={{display:"flex",gap:14,alignItems:"flex-start"}}>
-          <div style={{width:48,height:48,borderRadius:12,background:"#fff",color:C.brand,border:`1px solid ${C.line2}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+      <div className={`border-b border-line bg-[linear-gradient(180deg,var(--color-tint)_0%,#fff_100%)] ${mob?"pt-6 px-6 pb-5":"pt-7 px-8 pb-6"}`}>
+        <div className="flex gap-3.5 items-start">
+          <div className="w-12 h-12 rounded-xl bg-white text-brand border border-line-2 flex items-center justify-center shrink-0">
             <I n={icon||"lock"} s={22}/>
           </div>
-          <div style={{flex:1,minWidth:0}}>
-            <div style={{display:"inline-block",padding:"3px 10px",background:"#FEF3E2",color:"#D97706",border:"1px solid #FCD9A8",borderRadius:99,fontSize:10.5,fontWeight:700,letterSpacing:".05em",textTransform:"uppercase",marginBottom:8}}>Requires {requiredPlan}</div>
-            <h2 style={{fontSize:mob?20:24,fontWeight:730,color:C.text,letterSpacing:"-.025em",margin:"0 0 6px",lineHeight:1.2}}>{b.title}</h2>
-            <div style={{fontSize:13,color:C.text3}}>You're on the <strong style={{color:C.text2}}>{currentPlan}</strong> plan</div>
+          <div className="flex-1 min-w-0">
+            <div className="inline-block py-1 px-2.5 bg-[#FEF3E2] text-[#D97706] border border-[#FCD9A8] rounded-full text-xs font-bold tracking-wide uppercase mb-2">Requires {requiredPlan}</div>
+            <h2 className={`font-extrabold tracking-tight text-text mb-1.5 leading-tight ${mob?"text-xl":"text-2xl"}`}>{b.title}</h2>
+            <div className="text-sm text-text-3">You're on the <strong className="text-text-2">{currentPlan}</strong> plan</div>
           </div>
-          <button onClick={onClose} aria-label="Close" style={{background:"none",border:"none",cursor:"pointer",padding:6,color:C.text3,display:"flex",flexShrink:0}}><I n="x" s={20}/></button>
+          <button onClick={onClose} aria-label="Close" className="bg-transparent border-0 cursor-pointer p-1.5 text-text-3 flex shrink-0"><I n="x" s={20}/></button>
         </div>
       </div>
 
       {/* Body */}
-      <div style={{padding:mob?22:32}}>
-        <p style={{fontSize:14.5,color:C.text2,lineHeight:1.65,margin:"0 0 20px"}}>{b.why}</p>
+      <div className={mob?"p-6":"p-8"}>
+        <p className="text-sm text-text-2 leading-relaxed mb-5">{b.why}</p>
 
-        {b.bullets.length>0&&<div style={{marginBottom:24}}>
-          <div style={{fontSize:11,fontWeight:700,color:C.text3,letterSpacing:".07em",textTransform:"uppercase",marginBottom:12}}>What you unlock</div>
-          <div style={{display:"flex",flexDirection:"column",gap:10}}>
-            {b.bullets.map((bl,i)=><div key={i} style={{display:"flex",gap:10,alignItems:"flex-start",fontSize:13.5,color:C.text2,lineHeight:1.5}}>
-              <div style={{width:20,height:20,borderRadius:99,background:C.tint,color:C.brand,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}><I n="check" s={12}/></div>
+        {b.bullets.length>0&&<div className="mb-6">
+          <div className="text-xs font-bold text-text-3 tracking-wider uppercase mb-3">What you unlock</div>
+          <div className="flex flex-col gap-2.5">
+            {b.bullets.map((bl,i)=><div key={i} className="flex gap-2.5 items-start text-sm text-text-2 leading-normal">
+              <div className="w-5 h-5 rounded-full bg-tint text-brand flex items-center justify-center shrink-0 mt-px"><I n="check" s={12}/></div>
               <span>{bl}</span>
             </div>)}
           </div>
         </div>}
 
         {/* Plans that unlock it */}
-        <div style={{padding:16,background:C.bg,borderRadius:12,marginBottom:20}}>
-          <div style={{fontSize:11,fontWeight:700,color:C.text3,letterSpacing:".07em",textTransform:"uppercase",marginBottom:12}}>Available on</div>
-          <div style={{display:"flex",flexDirection:"column",gap:8}}>
-            {plans.map(([n,p])=><div key={n} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 12px",background:"#fff",borderRadius:8,border:n===cheapest?.[0]?`1.5px solid ${C.brand}`:`1px solid ${C.line}`}}>
+        <div className="p-4 bg-bg rounded-xl mb-5">
+          <div className="text-xs font-bold text-text-3 tracking-wider uppercase mb-3">Available on</div>
+          <div className="flex flex-col gap-2">
+            {plans.map(([n,p])=><div key={n} className={`flex justify-between items-center py-2.5 px-3 bg-white rounded-lg ${n===cheapest?.[0]?"border-2 border-brand":"border border-line"}`}>
               <div>
-                <div style={{fontSize:14,fontWeight:660,color:C.text}}>{n}{n===cheapest?.[0]&&<span style={{marginLeft:8,fontSize:10,fontWeight:700,color:C.brand,letterSpacing:".05em",textTransform:"uppercase"}}>Cheapest</span>}</div>
-                <div style={{fontSize:12,color:C.text3,marginTop:2}}>${p.price}/month</div>
+                <div className="text-sm font-bold text-text">{n}{n===cheapest?.[0]&&<span className="ml-2 text-xs font-bold text-brand tracking-wide uppercase">Cheapest</span>}</div>
+                <div className="text-xs text-text-3 mt-0.5">${p.price}/month</div>
               </div>
               <I n="check" s={16} c={C.ok}/>
             </div>)}
@@ -122,7 +122,7 @@ export function UpgradePromptModal({payload,onClose}){
       </div>
 
       {/* Footer actions */}
-      <div style={{padding:mob?"16px 22px 22px":"18px 32px 28px",borderTop:`1px solid ${C.line}`,background:C.bg,display:"flex",gap:10,justifyContent:"flex-end",flexWrap:"wrap"}}>
+      <div className={`border-t border-line bg-bg flex gap-2.5 justify-end flex-wrap ${mob?"pt-4 px-6 pb-6":"pt-5 px-8 pb-7"}`}>
         <Btn kind="ghost" onClick={onClose}>Maybe later</Btn>
         <Btn kind="primary" icon="wallet" onClick={()=>{onClose(); A.go("pricing");}}>See all plans</Btn>
         {cheapest&&<Btn kind="primary" icon="chevR" onClick={()=>{onClose(); A.choosePlan(cheapest[0]);}} style={{background:C.brand,borderColor:C.brand}}>Upgrade to {cheapest[0]}</Btn>}
@@ -135,7 +135,6 @@ export function DashShell({modules,children,brandKind}){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [navOpen,setNavOpen]=useState(!mob);
   const [upgradeModal,setUpgradeModal]=useState(null); /* {feature, requiredPlan, label} */
-  const [hoveredLock,setHoveredLock]=useState(null); /* module key currently hovered */
   const [accountMenu,setAccountMenu]=useState(false);
   useEffect(()=>{setNavOpen(!mob);},[mob]);
 
@@ -154,164 +153,139 @@ export function DashShell({modules,children,brandKind}){
     return {users:A.people.length,employers:A.employers.length,jobs:A.jobs.filter(j=>j.status==="live").length};
   })():null;
 
-  const sidebar=<div style={{width:264,background:C.ink,color:"#fff",display:"flex",flexDirection:"column",
-    borderRight:"1px solid rgba(255,255,255,.08)",height:"100vh",position:mob?"fixed":"sticky",top:0,left:0,
-    zIndex:mob?900:10,transform:navOpen?"translateX(0)":"translateX(-100%)",transition:"transform .28s ease",flexShrink:0}}>
+  const sidebar=<div className={`w-64 bg-ink text-white flex flex-col border-r border-white/8 h-screen ${mob?"fixed":"sticky"} top-0 left-0 ${mob?"z-900":"z-10"} transition-transform duration-300 ${navOpen?"translate-x-0":"-translate-x-full"} shrink-0`}>
 
     {/* Brand */}
-    <div style={{padding:"18px 22px",borderBottom:"1px solid rgba(255,255,255,.08)"}}>
-      <button onClick={()=>A.go("home")} style={{display:"flex",alignItems:"center",gap:10,background:"none",border:"none",color:"#fff",cursor:"pointer",fontFamily:"inherit",padding:0}}>
-        <div style={{width:32,height:32,borderRadius:9,background:"rgba(106,172,255,.2)",border:"1px solid rgba(106,172,255,.35)",display:"flex",alignItems:"center",justifyContent:"center"}}><I n="hex" s={16} c="#6AACFF"/></div>
-        <div><div style={{fontSize:14.5,fontWeight:720,letterSpacing:"-.02em"}}>NorthHire</div>
-          <div style={{fontSize:11,color:"#6AACFF",fontWeight:600,marginTop:1}}>{brandKind}</div></div>
+    <div className="py-5 px-6 border-b border-white/8">
+      <button onClick={()=>A.go("home")} className="flex items-center gap-2.5 bg-transparent border-0 text-white cursor-pointer p-0">
+        <div className="w-8 h-8 rounded-lg bg-accent/20 border border-accent/35 flex items-center justify-center"><I n="hex" s={16} c="#6AACFF"/></div>
+        <div><div className="text-sm font-extrabold tracking-tight">NorthHire</div>
+          <div className="text-xs text-accent font-semibold mt-px">{brandKind}</div></div>
       </button>
     </div>
 
     {/* Profile + stats block */}
-    <div style={{padding:"16px 18px",borderBottom:"1px solid rgba(255,255,255,.08)"}}>
-      <div style={{display:"flex",gap:11,alignItems:"center",marginBottom:14}}>
+    <div className="py-4 px-5 border-b border-white/8">
+      <div className="flex gap-3 items-center mb-3.5">
         {user?.role==="employer"
           ? <SmartLogo e={company||{mark:"hex",a:C.brand,b:"#fff",name:"",site:""}} size={40} radius={11}/>
           : <SmartPortrait seed={user?.seed??0} size={40} radius={11}/>}
-        <div style={{flex:1,minWidth:0}}>
-          <div style={{fontSize:13.5,fontWeight:660,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-bold text-white overflow-hidden text-ellipsis whitespace-nowrap">
             {user?.role==="employer"?company?.name:user?.name}</div>
-          <div style={{fontSize:11.5,color:"rgba(255,255,255,.55)",marginTop:1}}>
+          <div className="text-xs text-white/55 mt-px">
             {user?.role==="employer"?(company?.verified?"Verified employer":"Awaiting verification"):"Administrator"}</div>
         </div>
       </div>
-      {empStats&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-        <div style={{background:"rgba(255,255,255,.05)",borderRadius:8,padding:"9px 11px"}}>
-          <div style={{fontSize:16,fontWeight:720,color:"#fff",letterSpacing:"-.02em",lineHeight:1}}>{empStats.jobs}</div>
-          <div style={{fontSize:11,color:"rgba(255,255,255,.6)",marginTop:4}}>Live jobs</div></div>
-        <div style={{background:"rgba(255,255,255,.05)",borderRadius:8,padding:"9px 11px"}}>
-          <div style={{fontSize:16,fontWeight:720,color:"#fff",letterSpacing:"-.02em",lineHeight:1}}>{empStats.apps}</div>
-          <div style={{fontSize:11,color:"rgba(255,255,255,.6)",marginTop:4}}>Applicants</div></div>
+      {empStats&&<div className="grid grid-cols-2 gap-2">
+        <div className="bg-white/5 rounded-lg py-2.5 px-3">
+          <div className="text-base font-extrabold text-white tracking-tight leading-none">{empStats.jobs}</div>
+          <div className="text-xs text-white/60 mt-1">Live jobs</div></div>
+        <div className="bg-white/5 rounded-lg py-2.5 px-3">
+          <div className="text-base font-extrabold text-white tracking-tight leading-none">{empStats.apps}</div>
+          <div className="text-xs text-white/60 mt-1">Applicants</div></div>
       </div>}
-      {admStats&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
+      {admStats&&<div className="grid grid-cols-3 gap-1.5">
         {[["Users",admStats.users],["Cos",admStats.employers],["Jobs",admStats.jobs]].map(([l,v])=>
-          <div key={l} style={{background:"rgba(255,255,255,.05)",borderRadius:8,padding:"9px 8px",textAlign:"center"}}>
-            <div style={{fontSize:14,fontWeight:720,color:"#fff",letterSpacing:"-.02em",lineHeight:1}}>{v}</div>
-            <div style={{fontSize:10.5,color:"rgba(255,255,255,.6)",marginTop:3}}>{l}</div></div>)}
+          <div key={l} className="bg-white/5 rounded-lg py-2.5 px-2 text-center">
+            <div className="text-sm font-extrabold text-white tracking-tight leading-none">{v}</div>
+            <div className="text-xs text-white/60 mt-1">{l}</div></div>)}
       </div>}
-      {empStats&&<button onClick={()=>A.go("empBilling")} style={{marginTop:10,width:"100%",display:"flex",justifyContent:"space-between",alignItems:"center",background:"rgba(106,172,255,.12)",border:"1px solid rgba(106,172,255,.25)",borderRadius:8,padding:"8px 11px",cursor:"pointer",fontFamily:"inherit",color:"#6AACFF"}}>
-        <span style={{fontSize:12,fontWeight:600}}>Current plan</span>
-        <span style={{fontSize:12.5,fontWeight:700}}>{empStats.plan}</span></button>}
+      {empStats&&<button onClick={()=>A.go("empBilling")} className="mt-2.5 w-full flex justify-between items-center bg-accent/12 border border-accent/25 rounded-lg py-2 px-3 cursor-pointer text-accent">
+        <span className="text-xs font-semibold">Current plan</span>
+        <span className="text-xs font-bold">{empStats.plan}</span></button>}
     </div>
 
-    <nav style={{flex:1,overflowY:"auto",padding:"10px 8px"}}>
+    <nav className="flex-1 overflow-y-auto py-2.5 px-2">
       {sections.map(sec=>{const items=modules.filter(m=>m.section===sec);
-        return <div key={sec} style={{marginBottom:10}}>
-          <div style={{fontSize:10,fontWeight:700,color:"rgba(255,255,255,.35)",letterSpacing:".08em",textTransform:"uppercase",padding:"8px 12px 6px"}}>{SECTION_LABELS[sec]}</div>
+        return <div key={sec} className="mb-2.5">
+          <div className="text-xs font-bold text-white/35 tracking-widest uppercase pt-2 px-3 pb-1.5">{SECTION_LABELS[sec]}</div>
           {items.map(m=>{const active=A.pg===m.k;
             const locked=m.feature&&A.company&&!A.can(m.feature);
             const requiredPlan=locked?A.planRequires(m.feature):null;
             /* Build the "which plans have this" phrase */
             const planPhrase=requiredPlan==="Enterprise"?"the Enterprise plan":"the Growth and Enterprise plans";
-            const isHovered=hoveredLock===m.k;
-            return <div key={m.k} style={{position:"relative"}}>
+            return <div key={m.k} className="relative group">
               <button onClick={()=>{
                 if(locked){setUpgradeModal({feature:m.feature,requiredPlan,label:m.label,icon:m.icon}); return;}
                 if(m.section==="hrsuite"){if(typeof window!=="undefined")window.open("#hr","_blank"); return;}
                 A.go(m.k); if(mob)setNavOpen(false);
               }}
-              style={{width:"100%",display:"flex",gap:12,alignItems:"center",padding:"9px 13px",
-                background:active?"rgba(106,172,255,.15)":"none",border:"none",cursor:"pointer",fontFamily:"inherit",
-                textAlign:"left",borderRadius:9,margin:"1px 0",
-                color:locked?"rgba(255,255,255,.4)":active?"#6AACFF":"rgba(255,255,255,.75)",
-                fontSize:13.5,fontWeight:active?640:500,transition:"all .15s"}}
-              onMouseEnter={e=>{if(locked){setHoveredLock(m.k);} else if(!active){e.currentTarget.style.background="rgba(255,255,255,.05)";}}}
-              onMouseLeave={e=>{if(locked){setHoveredLock(null);} else if(!active){e.currentTarget.style.background="transparent";}}}>
+              className={`w-full flex gap-3 items-center py-2.5 px-3.5 border-0 cursor-pointer text-left rounded-xl my-px text-sm transition duration-150
+               ${active?"bg-accent/15 text-accent font-semibold":locked?"text-white/40 font-medium":"text-white/75 font-medium hover:bg-white/5"}`}>
               <I n={m.icon} s={16.5}/>
-              <span style={{flex:1}}>{m.label}</span>
+              <span className="flex-1">{m.label}</span>
               {locked&&<I n="lock" s={13} c="rgba(245,165,36,.85)"/>}
               </button>
-              {/* Floating tooltip on hover */}
-              {locked&&isHovered&&<div style={{position:"absolute",left:"calc(100% + 12px)",top:"50%",transform:"translateY(-50%)",
-                background:C.ink,color:"#fff",padding:"10px 14px",borderRadius:10,fontSize:12.5,lineHeight:1.5,
-                width:230,zIndex:9999,boxShadow:"0 8px 24px rgba(0,0,0,.25)",pointerEvents:"none",
-                border:"1px solid rgba(245,165,36,.3)"}}>
-                <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:6}}>
+              {/* Floating tooltip on hover — pure CSS group-hover, no JS hover state needed */}
+              {locked&&<div className="hidden group-hover:block absolute top-1/2 -translate-y-1/2 bg-ink text-white py-2.5 px-3.5 rounded-xl text-xs leading-normal w-56 z-9999 shadow-[0_8px_24px_rgba(0,0,0,0.25)] pointer-events-none border border-amber/30" style={{left:"calc(100% + 12px)"}}>
+                <div className="flex gap-1.5 items-center mb-1.5">
                   <I n="lock" s={13} c="#F5A524"/>
-                  <span style={{fontSize:11,fontWeight:700,color:"#F5A524",letterSpacing:".05em",textTransform:"uppercase"}}>Locked</span>
+                  <span className="text-xs font-bold text-amber tracking-wide uppercase">Locked</span>
                 </div>
-                <div style={{color:"rgba(255,255,255,.9)"}}>This feature is only available on {planPhrase}.</div>
-                <div style={{marginTop:6,fontSize:11,color:"rgba(255,255,255,.55)"}}>Click to see upgrade options.</div>
+                <div className="text-white/90">This feature is only available on {planPhrase}.</div>
+                <div className="mt-1.5 text-xs text-white/55">Click to see upgrade options.</div>
                 {/* Arrow pointing left toward the sidebar item */}
-                <div style={{position:"absolute",right:"100%",top:"50%",transform:"translateY(-50%)",width:0,height:0,
-                  borderTop:"6px solid transparent",borderBottom:"6px solid transparent",borderRight:`6px solid ${C.ink}`}}/>
+                <div className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-t-8 border-t-transparent border-b-8 border-b-transparent border-r-8 border-r-ink"/>
               </div>}
             </div>;})}
         </div>;})}
     </nav>
     {upgradeModal&&<UpgradePromptModal payload={upgradeModal} onClose={()=>setUpgradeModal(null)}/>}
 
-    <div style={{padding:12,borderTop:"1px solid rgba(255,255,255,.08)"}}>
-      <button onClick={()=>{A.logout(); A.go("home");}} style={{width:"100%",display:"flex",gap:11,alignItems:"center",padding:"9px 13px",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",textAlign:"left",borderRadius:9,color:"rgba(255,255,255,.75)",fontSize:13.5,fontWeight:520,transition:"all .15s"}}
-        onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,.05)"}
-        onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+    <div className="p-3 border-t border-white/8">
+      <button onClick={()=>{A.logout(); A.go("home");}} className="w-full flex gap-3 items-center py-2.5 px-3.5 bg-transparent border-0 cursor-pointer text-left rounded-xl text-white/75 text-sm font-medium transition duration-150 hover:bg-white/5">
         <I n="logout" s={16.5}/>Sign out</button>
     </div>
   </div>;
 
-  const topbar=<div style={{background:"#fff",borderBottom:`1px solid ${C.line}`,padding:mob?"10px 14px":"12px 24px",display:"flex",gap:12,alignItems:"center",position:"sticky",top:0,zIndex:20}}>
-    {mob&&<button onClick={()=>setNavOpen(!navOpen)} aria-label="Menu" style={{background:"none",border:"none",cursor:"pointer",padding:6,color:C.text,display:"flex"}}><I n="menu" s={22}/></button>}
-    {!mob&&A.history?.length>0&&<button onClick={A.back} aria-label="Back" style={{background:"transparent",border:`1px solid ${C.line}`,height:34,padding:"0 11px 0 8px",borderRadius:8,cursor:"pointer",display:"flex",alignItems:"center",gap:4,color:C.text2,fontFamily:"inherit",fontSize:13,fontWeight:520,transition:"all .16s"}}
-      onMouseEnter={e=>{e.currentTarget.style.background=C.bg;e.currentTarget.style.color=C.text;}}
-      onMouseLeave={e=>{e.currentTarget.style.background="transparent";e.currentTarget.style.color=C.text2;}}>
+  const topbar=<div className={`bg-white border-b border-line flex gap-3 items-center sticky top-0 z-20 ${mob?"py-2.5 px-3.5":"py-3 px-6"}`}>
+    {mob&&<button onClick={()=>setNavOpen(!navOpen)} aria-label="Menu" className="bg-transparent border-0 cursor-pointer p-1.5 text-text flex"><I n="menu" s={22}/></button>}
+    {!mob&&A.history?.length>0&&<button onClick={A.back} aria-label="Back" className="bg-transparent border border-line h-9 pr-3 pl-2 rounded-lg cursor-pointer flex items-center gap-1 text-text-2 text-sm font-medium transition duration-150 hover:bg-bg hover:text-text">
       <I n="chevL" s={16} w={2}/>Back</button>}
-    <div style={{flex:1,minWidth:0,textAlign:mob?"center":"left"}}>
-      <div style={{fontSize:mob?15:16,fontWeight:670,color:C.text,letterSpacing:"-.02em"}}>{currentModule?.label||A.pageTitle||ROUTES[A.pg]?.title||"Dashboard"}</div>
+    <div className={`flex-1 min-w-0 ${mob?"text-center":"text-left"}`}>
+      <div className="text-base font-bold text-text tracking-tight">{currentModule?.label||A.pageTitle||ROUTES[A.pg]?.title||"Dashboard"}</div>
     </div>
-    <button onClick={()=>{const target=A.user?.role==="admin"?"admLog":A.user?.role==="employer"?"messages":"alerts"; A.go(target);}} aria-label="Notifications" style={{position:"relative",background:C.bg,border:"none",width:36,height:36,borderRadius:9,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:C.text}}>
+    <button onClick={()=>{const target=A.user?.role==="admin"?"admLog":A.user?.role==="employer"?"messages":"alerts"; A.go(target);}} aria-label="Notifications" className="relative bg-bg border-0 w-9 h-9 rounded-lg cursor-pointer flex items-center justify-center text-text">
       <I n="bell" s={17}/>
-      {A.notifications.filter(n=>!n.read).length>0&&<span style={{position:"absolute",top:5,right:5,minWidth:14,height:14,padding:"0 3px",borderRadius:99,background:C.brand,color:"#fff",fontSize:9,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",border:"2px solid #fff"}}>{A.notifications.filter(n=>!n.read).length}</span>}</button>
-    <div style={{position:"relative",marginLeft:8}}>
+      {A.notifications.filter(n=>!n.read).length>0&&<span className="absolute top-1.5 right-1.5 min-w-3.5 h-3.5 px-1 rounded-full bg-brand text-white text-xs font-bold flex items-center justify-center border-2 border-white">{A.notifications.filter(n=>!n.read).length}</span>}</button>
+    <div className="relative ml-2">
       <button onClick={()=>setAccountMenu(v=>!v)} aria-label="Account"
-        style={{background:"none",border:"none",padding:0,cursor:"pointer",display:"flex",borderRadius:10,transition:"transform .18s"}}
-        onMouseEnter={e=>e.currentTarget.style.transform="scale(1.04)"}
-        onMouseLeave={e=>e.currentTarget.style.transform="scale(1)"}>
+        className="bg-transparent border-0 p-0 cursor-pointer flex rounded-xl transition duration-200 hover:scale-105">
         {user?.role==="employer"
           ? <SmartLogo e={company||{mark:"hex",a:C.brand,b:"#fff",name:"",site:""}} size={36} radius={10}/>
           : <SmartPortrait seed={user?.seed??0} size={36} radius={10}/>}
       </button>
       {accountMenu&&<>
-        <div onClick={()=>setAccountMenu(false)} style={{position:"fixed",inset:0,zIndex:490}}/>
-        <div style={{position:"absolute",top:44,right:0,width:252,background:"#fff",border:`1px solid ${C.line}`,
-          borderRadius:14,boxShadow:SH.md,zIndex:500,overflow:"hidden",animation:"pop .16s ease"}}>
-          <div style={{padding:"14px 16px",borderBottom:`1px solid ${C.lineSoft}`,display:"flex",gap:11,alignItems:"center"}}>
+        <div onClick={()=>setAccountMenu(false)} className="fixed inset-0 z-490"/>
+        <div className="absolute top-11 right-0 w-64 bg-white border border-line rounded-2xl shadow-md z-500 overflow-hidden" style={{animation:"pop .16s ease"}}>
+          <div className="py-3.5 px-4 border-b border-line-soft flex gap-3 items-center">
             {user?.role==="employer"
               ? <SmartLogo e={company||{mark:"hex",a:C.brand,b:"#fff",name:"",site:""}} size={40} radius={11}/>
               : <SmartPortrait seed={user?.seed??0} size={40} radius={11}/>}
-            <div style={{minWidth:0}}>
-              <div style={{fontSize:14,fontWeight:650,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+            <div className="min-w-0">
+              <div className="text-sm font-bold text-text overflow-hidden text-ellipsis whitespace-nowrap">
                 {user?.role==="employer"?company?.name:user?.name}</div>
-              <div style={{fontSize:12,color:C.text3}}>{user?.role==="employer"?"Employer":"Administrator"}</div></div></div>
-          <div style={{padding:6}}>
+              <div className="text-xs text-text-3">{user?.role==="employer"?"Employer":"Administrator"}</div></div></div>
+          <div className="p-1.5">
             {(user?.role==="employer"
               ?[["empHome","Dashboard","home"],["empPost","Post a job","plus"],["empPipeline","Candidates","users"],["empCompany","Company profile","building"],["empBilling","Billing","wallet"],["settings","Settings","gear"]]
               :[["admHome","Overview","home"],["admSettings","Platform settings","gear"],["admLog","Activity log","file"],["admStats","Statistics","trend"]]
             ).map(([p,l,ic])=>
-              <button key={p} onClick={()=>{A.go(p);setAccountMenu(false);}} style={{width:"100%",display:"flex",alignItems:"center",gap:11,
-                padding:"10px 11px",border:"none",background:"transparent",cursor:"pointer",fontFamily:"inherit",fontSize:14,
-                color:C.text,borderRadius:9,textAlign:"left"}}
-                onMouseEnter={e=>e.currentTarget.style.background=C.bg} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+              <button key={p} onClick={()=>{A.go(p);setAccountMenu(false);}} className="w-full flex items-center gap-3 py-2.5 px-3 border-0 bg-transparent cursor-pointer text-sm text-text rounded-xl text-left hover:bg-bg">
                 <I n={ic} s={17} c={C.text2}/>{l}</button>)}
-            <div style={{height:1,background:C.lineSoft,margin:"6px 4px"}}/>
-            <button onClick={()=>{A.logout();setAccountMenu(false);A.go("home");}} style={{width:"100%",display:"flex",alignItems:"center",gap:11,
-              padding:"10px 11px",border:"none",background:"transparent",cursor:"pointer",fontFamily:"inherit",fontSize:14,
-              color:C.red,borderRadius:9,textAlign:"left"}}
-              onMouseEnter={e=>e.currentTarget.style.background=C.redBg} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+            <div className="h-px bg-line-soft my-1.5 mx-1"/>
+            <button onClick={()=>{A.logout();setAccountMenu(false);A.go("home");}} className="w-full flex items-center gap-3 py-2.5 px-3 border-0 bg-transparent cursor-pointer text-sm text-red rounded-xl text-left hover:bg-red-bg">
               <I n="logout" s={17}/>Sign out</button></div></div></>}
     </div>
   </div>;
 
-  return <div style={{display:"flex",background:C.bg,minHeight:"100vh"}}>
-    {mob&&navOpen&&<div onClick={()=>setNavOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.4)",zIndex:800}}/>}
+  return <div className="flex bg-bg min-h-screen">
+    {mob&&navOpen&&<div onClick={()=>setNavOpen(false)} className="fixed inset-0 bg-black/40 z-800"/>}
     {sidebar}
-    <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column"}}>
+    <div className="flex-1 min-w-0 flex flex-col">
       {topbar}
-      <main style={{flex:1}}>{children}</main>
+      <main className="flex-1">{children}</main>
     </div>
   </div>;
 }
