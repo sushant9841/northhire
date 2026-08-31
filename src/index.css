@@ -1,1 +1,40 @@
 @import "tailwindcss";
+
+@theme {
+  /* Design tokens ported from src/design/tokens.js (C, FONT, SH) — keep in sync if those change */
+  --color-brand: #005CCC;
+  --color-brand-dark: #004AA6;
+  --color-brand-deep: #003B85;
+  --color-wash: #EDF4FF;
+  --color-line-2: #C9DEFF;
+  --color-tint: #F6FAFF;
+  --color-ink: #0B1220;
+  --color-ink-2: #151F31;
+  --color-ink-3: #2A3852;
+  --color-text: #0E1727;
+  --color-text-2: #4A5A73;
+  --color-text-3: #8493A9;
+  --color-line: #E3E8EF;
+  --color-line-soft: #EEF1F6;
+  --color-bg: #F7F9FC;
+  --color-surface: #FFFFFF;
+  --color-ok: #07724F;
+  --color-ok-bg: #E9F7F1;
+  --color-ok-ln: #B3E3D1;
+  --color-warn: #8F5B05;
+  --color-warn-bg: #FDF5E6;
+  --color-warn-ln: #F0DDB0;
+  --color-red: #AE2119;
+  --color-red-bg: #FDF0EF;
+  --color-red-ln: #F5CDC9;
+  --color-violet: #5B3BC4;
+  --color-violet-bg: #F1EDFD;
+  --color-violet-ln: #D9CFFA;
+
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  --shadow-xs: 0 1px 2px rgba(11,18,32,.05);
+  --shadow-sm: 0 2px 8px rgba(11,18,32,.07);
+  --shadow-md: 0 8px 26px rgba(11,18,32,.10);
+  --shadow-lg: 0 20px 56px rgba(11,18,32,.18);
+}
