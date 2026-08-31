@@ -37,4 +37,10 @@
   --shadow-sm: 0 2px 8px rgba(11,18,32,.07);
   --shadow-md: 0 8px 26px rgba(11,18,32,.10);
   --shadow-lg: 0 20px 56px rgba(11,18,32,.18);
+
+  /* Page-width containers ported from MAXW in design/primitives.jsx — exact px, not rounded to the
+     default scale, since this drives every page's width site-wide (highest-blast-radius dimension). */
+  --container-site: 1240px;
+  --container-narrow: 820px;
+  --container-wide: 1360px;
 }

@@ -69,7 +69,7 @@ export const IP = {
 export function I({ n, s=20, c="currentColor", w=1.7, fill, style }) {
   const p=IP[n]||[], cc=IP[n+"C"]||[], rr=IP[n+"R"]||[];
   return <svg width={s} height={s} viewBox="0 0 24 24" fill={fill||"none"} stroke={c} strokeWidth={w}
-    strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0,display:"block",...style}}>
+    strokeLinecap="round" strokeLinejoin="round" className="shrink-0 block" style={style}>
     {rr.map((r,i)=><rect key={i} x={r[0]} y={r[1]} width={r[2]} height={r[3]} rx={r[4]}/>)}
     {cc.map((x,i)=><circle key={i} cx={x[0]} cy={x[1]} r={x[2]}/>)}
     {p.map((d,i)=><path key={i} d={d}/>)}

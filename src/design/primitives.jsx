@@ -26,7 +26,7 @@ export const MARKS = {
   hex:    (a,b)=><g><rect width="48" height="48" rx="12" fill={a}/><path d="m24 11 10 6v14l-10 6-10-6V17z" fill={b}/><path d="m24 19 5 3v6l-5 3-5-3v-6z" fill={a}/></g>,
 };
 export function MarkSvg({ kind="hex", a="#005CCC", b="#FFFFFF", size=48, radius }) {
-  return <svg width={size} height={size} viewBox="0 0 48 48" style={{ display:"block", flexShrink:0, borderRadius:radius }}>
+  return <svg width={size} height={size} viewBox="0 0 48 48" className="block shrink-0" style={{ borderRadius:radius }}>
     {(MARKS[kind]||MARKS.hex)(a,b)}</svg>;
 }
 
@@ -39,7 +39,7 @@ export function PortraitSvg({ seed=0, size=48, radius=999, bg }) {
   const style=seed%4, glasses=seed%5===0, beard=seed%3===1;
   const back=bg||["#EDF4FF","#E9F7F1","#FDF5E6","#F1EDFD","#FDF0EF"][seed%5];
   return (
-    <svg width={size} height={size} viewBox="0 0 64 64" style={{ display:"block", flexShrink:0, borderRadius:radius, background:back }}>
+    <svg width={size} height={size} viewBox="0 0 64 64" className="block shrink-0" style={{ borderRadius:radius, background:back }}>
       <circle cx="32" cy="32" r="32" fill={back}/>
       <path d="M8 64c0-12.5 10.7-19 24-19s24 6.5 24 19z" fill={t}/>
       <path d="M26 45.5c1.9 2.6 8.2 2.6 12 0l-2 5.5h-8z" fill="#fff" opacity=".9"/>
@@ -132,7 +132,7 @@ export const SCENES = {
 export function SceneSvg({ kind="office", tone="#005CCC", w="100%", h=180, radius=0, style }) {
   const S = SCENES[kind] || SCENES.office;
   return <svg viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice"
-    style={{ width:w, height:h, display:"block", borderRadius:radius, ...style }}>{S(tone)}</svg>;
+    className="block" style={{ width:w, height:h, borderRadius:radius, ...style }}>{S(tone)}</svg>;
 }
 
 /* --- Real-image URL catalogues, matched to each fallback --- */
@@ -179,16 +179,16 @@ export const portraitUrl = seed => {
 };
 
 /* --- SmartImg: shows real image, swaps in the SVG fallback on error --- */
-export function SmartImg({ src, alt, fallback, style, imgStyle }) {
+export function SmartImg({ src, alt, fallback, className, style, imgStyle }) {
   const [ok, setOk] = useState(true);
   const [loaded, setLoaded] = useState(false);
   useEffect(()=>{ setOk(true); setLoaded(false); }, [src]);
-  if (!src || !ok) return <div style={{ display:"block", ...style }}>{fallback}</div>;
-  return <div style={{ position:"relative", display:"block", overflow:"hidden", ...style }}>
-    {!loaded && <div style={{ position:"absolute", inset:0 }}>{fallback}</div>}
+  if (!src || !ok) return <div className={className} style={style}>{fallback}</div>;
+  return <div className={`relative overflow-hidden ${className||""}`} style={style}>
+    {!loaded && <div className="absolute inset-0">{fallback}</div>}
     <img src={src} alt={alt||""} onError={()=>setOk(false)} onLoad={()=>setLoaded(true)}
-      style={{ display:"block", width:"100%", height:"100%", objectFit:"cover",
-        opacity: loaded ? 1 : 0, transition:"opacity .3s ease", ...imgStyle }}/>
+      className={`block w-full h-full object-cover transition-opacity duration-300 ${loaded?"opacity-100":"opacity-0"}`}
+      style={imgStyle}/>
   </div>;
 }
 
@@ -197,8 +197,8 @@ export function Mark({ kind="hex", a="#005CCC", b="#FFFFFF", size=48, radius, na
   const url = name ? empLogoUrl(name) : null;
   if (!url) return <MarkSvg kind={kind} a={a} b={b} size={size} radius={radius}/>;
   return <SmartImg src={url} alt={name}
-    style={{ width:size, height:size, borderRadius:radius ?? 12, background:"#fff",
-      border:`1px solid ${C.line}`, flexShrink:0 }}
+    className="bg-white border border-line shrink-0"
+    style={{ width:size, height:size, borderRadius:radius ?? 12 }}
     imgStyle={{ objectFit:"contain", padding:"14%" }}
     fallback={<MarkSvg kind={kind} a={a} b={b} size={size} radius={radius}/>}/>;
 }
@@ -206,7 +206,7 @@ export function Portrait({ seed=0, size=48, radius=999, bg, usePhoto=true }) {
   const url = usePhoto ? portraitUrl(seed) : null;
   const fb = <PortraitSvg seed={seed} size={size} radius={radius} bg={bg}/>;
   if (!url) return fb;
-  return <SmartImg src={url} alt="" style={{ width:size, height:size, borderRadius:radius, flexShrink:0 }} fallback={fb}/>;
+  return <SmartImg src={url} alt="" className="shrink-0" style={{ width:size, height:size, borderRadius:radius }} fallback={fb}/>;
 }
 export function Scene({ kind="office", tone="#005CCC", w="100%", h=180, radius=0, style, seed=0, usePhoto=true }) {
   const url = usePhoto ? sceneUrl(kind, seed, h > 220 ? 1000 : 640) : null;
@@ -241,7 +241,8 @@ export function scenePhotoUrl(kind, seed = 0, w = 640) {
 export function SmartScene({ kind = "office", tone = C.brand, w = "100%", h = 180, radius = 0, style, seed = 0 }) {
   return (
     <img src={scenePhotoUrl(kind, seed, 1200)} alt=""
-      style={{ width: w, height: h, objectFit: "cover", display: "block", borderRadius: radius, background: C.bg, ...style }}/>
+      className="block object-cover"
+      style={{ width: w, height: h, borderRadius: radius, background: C.bg, ...style }}/>
   );
 }
 
@@ -254,8 +255,8 @@ export function SmartLogo({ e, size = 46, radius = 12 }) {
     : `https://ui-avatars.com/api/?name=${encodeURIComponent(e.name || "?")}&size=${size * 2}&background=E8F1FF&color=005CCC&bold=true&format=png`;
   return (
     <SmartImg src={url} alt={e.name || ""}
-      style={{ width: size, height: size, borderRadius: radius, background: "#fff",
-        border: `1px solid ${C.line}`, padding: 4, boxSizing: "border-box", flexShrink: 0 }}
+      className="bg-white border border-line shrink-0 p-1"
+      style={{ width: size, height: size, borderRadius: radius }}
       imgStyle={{ objectFit: "contain" }}
       fallback={<MarkSvg kind={e.mark || "hex"} a={e.a || C.brand} b={e.b || "#FFFFFF"} size={size} radius={radius}/>}/>
   );
@@ -279,164 +280,148 @@ export function SmartPortrait({ seed = 0, size = 48, radius = 999, bg }) {
   const url = PORTRAIT_SEEDS[seed] || PORTRAIT_SEEDS[(seed % 8) + 1] || PORTRAIT_SEEDS[0];
   return (
     <img src={url} alt=""
-      style={{ width: size, height: size, borderRadius: radius, objectFit: "cover", background: bg || C.bg,
-        display: "block", flexShrink: 0 }}/>
+      className="block object-cover shrink-0"
+      style={{ width: size, height: size, borderRadius: radius, background: bg || C.bg }}/>
   );
 }
 
 /* ═══════════════ CORE UI ATOMS ═══════════════ */
 export function Btn({children,onClick,kind="primary",size="md",full,disabled,icon,iconR,style,title,type}){
- const[h,setH]=useState(false),[press,setP]=useState(false);
- const S={xs:{f:12.5,p:"7px 12px",r:8,g:6,i:14},sm:{f:13.5,p:"9px 15px",r:10,g:7,i:16},
-   md:{f:14.5,p:"12px 20px",r:11,g:8,i:18},lg:{f:15.5,p:"15px 26px",r:12,g:9,i:19}}[size];
- const K={primary:{background:h&&!disabled?C.brandDark:C.brand,color:"#fff",border:"1px solid transparent"},
-  dark:{background:h&&!disabled?C.ink2:C.ink,color:"#fff",border:"1px solid transparent"},
-  soft:{background:C.wash,color:C.brand,border:`1px solid ${C.line2}`},
-  outline:{background:h?C.bg:"#fff",color:C.text,border:`1px solid ${C.line}`},
-  ghost:{background:h?C.bg:"transparent",color:C.text2,border:"1px solid transparent"},
-  ok:{background:h&&!disabled?"#065C40":C.ok,color:"#fff",border:"1px solid transparent"},
-  danger:{background:h&&!disabled?"#8E1A13":C.red,color:"#fff",border:"1px solid transparent"},
-  dangerSoft:{background:C.redBg,color:C.red,border:`1px solid ${C.redLn}`},
-  onDark:{background:h?"rgba(255,255,255,.2)":"rgba(255,255,255,.12)",color:"#fff",border:"1px solid rgba(255,255,255,.22)"}}[kind];
+ const S={xs:"text-xs py-2 px-3 rounded-lg gap-1.5",sm:"text-sm py-2.5 px-4 rounded-xl gap-2",
+   md:"text-sm py-3 px-5 rounded-xl gap-2",lg:"text-base py-4 px-7 rounded-xl gap-2.5"}[size];
+ const I_SIZE={xs:14,sm:16,md:18,lg:19}[size];
+ const K={primary:"bg-brand hover:bg-brand-dark text-white border border-transparent",
+  dark:"bg-ink hover:bg-ink-2 text-white border border-transparent",
+  soft:"bg-wash text-brand border border-line-2",
+  outline:"bg-white hover:bg-bg text-text border border-line",
+  ghost:"bg-transparent hover:bg-bg text-text-2 border border-transparent",
+  ok:"bg-ok hover:bg-[#065C40] text-white border border-transparent",
+  danger:"bg-red hover:bg-[#8E1A13] text-white border border-transparent",
+  dangerSoft:"bg-red-bg text-red border border-red-ln",
+  onDark:"bg-white/12 hover:bg-white/20 text-white border border-white/22"}[kind];
  return <button type={type||"button"} title={title} disabled={disabled} onClick={disabled?undefined:onClick}
-  onMouseEnter={()=>setH(true)} onMouseLeave={()=>{setH(false);setP(false);}}
-  onMouseDown={()=>setP(true)} onMouseUp={()=>setP(false)}
-  style={{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:S.g,fontFamily:"inherit",fontWeight:600,
-   fontSize:S.f,padding:S.p,borderRadius:S.r,letterSpacing:"-.01em",lineHeight:1.2,whiteSpace:"nowrap",
-   cursor:disabled?"not-allowed":"pointer",opacity:disabled?.45:1,width:full?"100%":undefined,
-   transition:"background .16s,transform .1s,box-shadow .16s",
-   transform:press&&!disabled?"scale(.975)":h&&!disabled?"translateY(-1px)":"none",...K,...style}}>
-  {icon&&<I n={icon} s={S.i} w={2}/>}{children}{iconR&&<I n={iconR} s={S.i} w={2}/>}</button>;
+  className={`inline-flex items-center justify-center font-semibold leading-tight whitespace-nowrap cursor-pointer
+   transition duration-150 hover:-translate-y-px active:scale-95 disabled:opacity-45 disabled:cursor-not-allowed disabled:pointer-events-none
+   ${full?"w-full":""} ${S} ${K}`}
+  style={style}>
+  {icon&&<I n={icon} s={I_SIZE} w={2}/>}{children}{iconR&&<I n={iconR} s={I_SIZE} w={2}/>}</button>;
 }
 export function Tag({children,tone="neutral",icon,sm}){
- const T={neutral:{b:C.bg,f:C.text2,l:C.line},brand:{b:C.wash,f:C.brand,l:C.line2},ok:{b:C.okBg,f:C.ok,l:C.okLn},
-  warn:{b:C.warnBg,f:C.warn,l:C.warnLn},danger:{b:C.redBg,f:C.red,l:C.redLn},violet:{b:C.violetBg,f:C.violet,l:C.violetLn},
-  dark:{b:C.ink,f:"#fff",l:C.ink},onDark:{b:"rgba(255,255,255,.12)",f:"rgba(255,255,255,.9)",l:"rgba(255,255,255,.2)"}}[tone];
- return <span style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:sm?11.5:12.5,fontWeight:600,
-  padding:sm?"3px 8px":"5px 10px",borderRadius:7,background:T.b,color:T.f,border:`1px solid ${T.l}`,whiteSpace:"nowrap",lineHeight:1.35}}>
+ const T={neutral:"bg-bg text-text-2 border-line",brand:"bg-wash text-brand border-line-2",ok:"bg-ok-bg text-ok border-ok-ln",
+  warn:"bg-warn-bg text-warn border-warn-ln",danger:"bg-red-bg text-red border-red-ln",violet:"bg-violet-bg text-violet border-violet-ln",
+  dark:"bg-ink text-white border-ink",onDark:"bg-white/12 text-white/90 border-white/20"}[tone];
+ return <span className={`inline-flex items-center gap-1.5 font-semibold border whitespace-nowrap leading-snug rounded-lg text-xs ${sm?"py-1 px-2":"py-1.5 px-2.5"} ${T}`}>
   {icon&&<I n={icon} s={sm?12:13} w={2}/>}{children}</span>;
 }
 export function Card({children,style,onClick,hover,pad=24,delay=0}){
- const[h,setH]=useState(false);
- return <div onClick={onClick} onMouseEnter={()=>hover&&setH(true)} onMouseLeave={()=>hover&&setH(false)}
-  style={{background:"#fff",border:`1px solid ${h?C.line2:C.line}`,borderRadius:18,padding:pad,
-   boxShadow:h?SH.md:"none",transition:"border-color .18s,box-shadow .18s,transform .18s",
-   transform:h?"translateY(-3px)":"none",cursor:onClick?"pointer":"default",...style}}>{children}</div>;
+ return <div onClick={onClick}
+  className={`bg-white border rounded-2xl transition-[border-color,box-shadow,transform] duration-200 ${onClick?"cursor-pointer":"cursor-default"} ${hover?"border-line hover:border-line-2 hover:shadow-md hover:-translate-y-1":"border-line"}`}
+  style={{padding:pad,...style}}>{children}</div>;
 }
-export const inp={width:"100%",background:"#fff",border:`1px solid ${C.line}`,borderRadius:12,padding:"14px 16px",
- fontSize:15,color:C.text,outline:"none",fontFamily:"inherit",boxSizing:"border-box",transition:"border-color .16s,box-shadow .16s"};
-export function Input({icon,suffix,invalid,style,...r}){const[f,setF]=useState(false);
- return <div style={{position:"relative",display:"flex",alignItems:"center"}}>
-  {icon&&<span style={{position:"absolute",left:13,color:C.text3,pointerEvents:"none",display:"flex"}}><I n={icon} s={17}/></span>}
-  <input {...r} onFocus={e=>{setF(true);r.onFocus?.(e);}} onBlur={e=>{setF(false);r.onBlur?.(e);}}
-   style={{...inp,...(icon?{paddingLeft:40}:{}),...(suffix?{paddingRight:46}:{}),
-   ...(invalid?{borderColor:C.red,boxShadow:`0 0 0 3px ${C.redBg}`}:f?{borderColor:C.brand,boxShadow:`0 0 0 3px ${C.wash}`}:{}),...style}}/>
-  {suffix&&<span style={{position:"absolute",right:13,color:C.text3,fontSize:13,fontWeight:500}}>{suffix}</span>}</div>;}
-export function Area({style,invalid,...r}){const[f,setF]=useState(false);
- return <textarea {...r} onFocus={()=>setF(true)} onBlur={()=>setF(false)}
-  style={{...inp,resize:"none",lineHeight:1.65,...(invalid?{borderColor:C.red}:f?{borderColor:C.brand,boxShadow:`0 0 0 3px ${C.wash}`}:{}),...style}}/>;}
+export const inp = "w-full bg-white border border-line rounded-xl py-3.5 px-4 text-base text-text outline-none transition-[border-color,box-shadow] duration-150";
+export function Input({icon,suffix,invalid,style,...r}){
+ return <div className="relative flex items-center">
+  {icon&&<span className="absolute left-3.5 text-text-3 pointer-events-none flex"><I n={icon} s={17}/></span>}
+  <input {...r}
+   className={`${inp} ${icon?"pl-10":""} ${suffix?"pr-12":""} ${invalid?"border-red ring-4 ring-red-bg":"focus:border-brand focus:ring-4 focus:ring-wash"}`}
+   style={style}/>
+  {suffix&&<span className="absolute right-3.5 text-text-3 text-sm font-medium">{suffix}</span>}</div>;}
+export function Area({style,invalid,...r}){
+ return <textarea {...r}
+  className={`${inp} resize-none leading-relaxed ${invalid?"border-red":"focus:border-brand focus:ring-4 focus:ring-wash"}`}
+  style={style}/>;}
 export function Sel({children,style,invalid,...r}){
- return <select {...r} style={{...inp,appearance:"none",cursor:"pointer",paddingRight:38,
-  backgroundImage:"linear-gradient(45deg,transparent 50%,#8493A9 50%),linear-gradient(135deg,#8493A9 50%,transparent 50%)",
-  backgroundPosition:"calc(100% - 18px) center, calc(100% - 13px) center",backgroundSize:"5px 5px,5px 5px",
-  backgroundRepeat:"no-repeat",...(invalid?{borderColor:C.red}:{}),...style}}>{children}</select>;}
+ return <select {...r} className={`${inp} appearance-none cursor-pointer ${invalid?"border-red":""}`}
+  style={{paddingRight:38,
+   backgroundImage:"linear-gradient(45deg,transparent 50%,#8493A9 50%),linear-gradient(135deg,#8493A9 50%,transparent 50%)",
+   backgroundPosition:"calc(100% - 18px) center, calc(100% - 13px) center",backgroundSize:"5px 5px,5px 5px",
+   backgroundRepeat:"no-repeat",...style}}>{children}</select>;}
 export function Field({label,hint,error,required,children,style}){
  return <div style={style}>
-  {label&&<label style={{display:"block",fontSize:13,fontWeight:600,color:C.text,marginBottom:7}}>
-   {label}{required&&<span style={{color:C.red,marginLeft:3}}>*</span>}</label>}
+  {label&&<label className="block text-sm font-semibold text-text mb-2">
+   {label}{required&&<span className="text-red ml-1">*</span>}</label>}
   {children}
-  {error?<div style={{fontSize:12.5,color:C.red,marginTop:6,display:"flex",gap:5,alignItems:"center",animation:"shake .3s"}}>
-   <I n="alert" s={13}/>{error}</div>:hint?<div style={{fontSize:12.5,color:C.text3,marginTop:6}}>{hint}</div>:null}</div>;}
+  {error?<div className="text-xs text-red mt-1.5 flex gap-1.5 items-center" style={{animation:"shake .3s"}}>
+   <I n="alert" s={13}/>{error}</div>:hint?<div className="text-xs text-text-3 mt-1.5">{hint}</div>:null}</div>;}
 export function Switch({on,onChange,disabled}){
- return <div onClick={()=>!disabled&&onChange(!on)} style={{width:46,height:26,borderRadius:99,
-  background:on?C.brand:C.line,display:"flex",alignItems:"center",padding:3,cursor:disabled?"not-allowed":"pointer",
-  justifyContent:on?"flex-end":"flex-start",transition:"background .22s",flexShrink:0,opacity:disabled?.5:1}}>
-  <div style={{width:20,height:20,borderRadius:99,background:"#fff",boxShadow:"0 1px 3px rgba(0,0,0,.25)",transition:"all .22s"}}/></div>;}
+ return <div onClick={()=>!disabled&&onChange(!on)}
+  className={`w-12 h-7 rounded-full flex items-center p-1 shrink-0 transition-colors duration-200 ${disabled?"cursor-not-allowed opacity-50":"cursor-pointer"} ${on?"bg-brand justify-end":"bg-line justify-start"}`}>
+  <div className="w-5 h-5 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.25)] transition-all duration-200"/></div>;}
 export function CheckRow({on,onChange,label,sub}){
- return <div onClick={()=>onChange(!on)} style={{display:"flex",gap:11,alignItems:"flex-start",cursor:"pointer",
-  padding:"12px 14px",border:`1px solid ${on?C.brand:C.line}`,background:on?C.tint:"#fff",borderRadius:11,transition:"all .16s"}}>
-  <span style={{width:20,height:20,borderRadius:6,flexShrink:0,marginTop:1,border:`1.5px solid ${on?C.brand:C.line}`,
-   background:on?C.brand:"#fff",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .16s"}}>
+ return <div onClick={()=>onChange(!on)}
+  className={`flex gap-3 items-start cursor-pointer py-3 px-3.5 border rounded-xl transition-all duration-150 ${on?"border-brand bg-tint":"border-line bg-white"}`}>
+  <span className={`w-5 h-5 rounded-md shrink-0 mt-px border-2 flex items-center justify-center transition-all duration-150 ${on?"border-brand bg-brand":"border-line bg-white"}`}>
    {on&&<I n="check" s={13} c="#fff" w={3}/>}</span>
-  <span style={{minWidth:0}}><span style={{display:"block",fontSize:14,fontWeight:550,color:C.text}}>{label}</span>
-   {sub&&<span style={{display:"block",fontSize:12.5,color:C.text3,marginTop:2}}>{sub}</span>}</span></div>;}
-export function Bar({v,tone=C.brand,h=6}){return <div style={{height:h,background:C.lineSoft,borderRadius:99,overflow:"hidden"}}>
- <div style={{height:"100%",width:`${Math.min(100,Math.max(0,v))}%`,background:tone,borderRadius:99,transition:"width .7s cubic-bezier(.22,.68,.35,1)"}}/></div>;}
+  <span className="min-w-0"><span className="block text-sm font-semibold text-text">{label}</span>
+   {sub&&<span className="block text-xs text-text-3 mt-0.5">{sub}</span>}</span></div>;}
+export function Bar({v,tone=C.brand,h=6}){return <div className="bg-line-soft rounded-full overflow-hidden" style={{height:h}}>
+ <div className="h-full rounded-full" style={{width:`${Math.min(100,Math.max(0,v))}%`,background:tone,transition:"width .7s cubic-bezier(.22,.68,.35,1)"}}/></div>;}
 export function Ring({v,size=46,label}){
  const r=(size-6)/2,c=size/2,circ=2*Math.PI*r;const col=v>=85?C.ok:v>=65?C.brand:C.warn;
- return <div style={{textAlign:"center",flexShrink:0}}>
-  <svg width={size} height={size} style={{display:"block"}}>
+ return <div className="text-center shrink-0">
+  <svg width={size} height={size} className="block">
    <circle cx={c} cy={c} r={r} fill="none" stroke={C.lineSoft} strokeWidth={3.4}/>
    <circle cx={c} cy={c} r={r} fill="none" stroke={col} strokeWidth={3.4} strokeDasharray={`${v/100*circ} ${circ}`}
     strokeLinecap="round" transform={`rotate(-90 ${c} ${c})`} style={{transition:"stroke-dasharray .8s cubic-bezier(.22,.68,.35,1)"}}/>
    <text x={c} y={c+size*.095} textAnchor="middle" fontSize={size*.28} fontWeight="700" fill={col}>{v}</text></svg>
-  {label&&<div style={{fontSize:10.5,color:C.text3,marginTop:3}}>{label}</div>}</div>;}
+  {label&&<div className="text-xs text-text-3 mt-1">{label}</div>}</div>;}
 export function Empty({icon="search",title,body,action}){
- return <div style={{textAlign:"center",padding:"52px 22px",background:"#fff",border:`1px dashed ${C.line}`,borderRadius:16,animation:"rise .34s ease both"}}>
-  <div style={{width:56,height:56,borderRadius:16,background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",
-   margin:"0 auto 16px",color:C.text3}}><I n={icon} s={26}/></div>
-  <div style={{fontSize:17,fontWeight:650,color:C.text,marginBottom:7,letterSpacing:"-.02em"}}>{title}</div>
-  <div style={{fontSize:14,color:C.text2,lineHeight:1.6,maxWidth:400,margin:"0 auto"}}>{body}</div>
-  {action&&<div style={{marginTop:20}}>{action}</div>}</div>;}
+ return <div className="text-center py-13 px-6 bg-white border border-dashed border-line rounded-2xl" style={{animation:"rise .34s ease both"}}>
+  <div className="w-14 h-14 rounded-2xl bg-bg flex items-center justify-center mx-auto mb-4 text-text-3"><I n={icon} s={26}/></div>
+  <div className="text-lg font-bold text-text mb-2 tracking-tight">{title}</div>
+  <div className="text-sm text-text-2 leading-relaxed max-w-sm mx-auto">{body}</div>
+  {action&&<div className="mt-5">{action}</div>}</div>;}
 export function Banner({tone="brand",icon,title,children,action,onClose,style}){
- const T={brand:{b:C.wash,f:C.brand,l:C.line2},ok:{b:C.okBg,f:C.ok,l:C.okLn},warn:{b:C.warnBg,f:C.warn,l:C.warnLn},
-  danger:{b:C.redBg,f:C.red,l:C.redLn},neutral:{b:C.bg,f:C.text2,l:C.line}}[tone];
- return <div style={{background:T.b,border:`1px solid ${T.l}`,borderRadius:12,padding:"14px 16px",display:"flex",
-  gap:12,alignItems:"flex-start",animation:"rise .3s ease both",...style}}>
-  <span style={{color:T.f,display:"flex",flexShrink:0,marginTop:1}}><I n={icon||"info"} s={18}/></span>
-  <div style={{flex:1,minWidth:0}}>
-   {title&&<div style={{fontSize:14,fontWeight:650,color:T.f,marginBottom:children?4:0}}>{title}</div>}
-   {children&&<div style={{fontSize:13.5,color:C.text2,lineHeight:1.6}}>{children}</div>}</div>
+ const T={brand:"bg-wash border-line-2 text-brand",ok:"bg-ok-bg border-ok-ln text-ok",warn:"bg-warn-bg border-warn-ln text-warn",
+  danger:"bg-red-bg border-red-ln text-red",neutral:"bg-bg border-line text-text-2"}[tone];
+ return <div className={`border rounded-xl py-3.5 px-4 flex gap-3 items-start ${T}`} style={{animation:"rise .3s ease both",...style}}>
+  <span className="flex shrink-0 mt-px"><I n={icon||"info"} s={18}/></span>
+  <div className="flex-1 min-w-0">
+   {title&&<div className={`text-sm font-bold ${children?"mb-1":""}`}>{title}</div>}
+   {children&&<div className="text-sm text-text-2 leading-relaxed">{children}</div>}</div>
   {action}
-  {onClose&&<button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",color:T.f,display:"flex",padding:0,flexShrink:0}}><I n="x" s={16}/></button>}</div>;}
+  {onClose&&<button onClick={onClose} className="border-0 cursor-pointer flex p-0 shrink-0"><I n="x" s={16}/></button>}</div>;}
 export function H1({children,sub,action,style}){
- return <div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between",gap:20,flexWrap:"wrap",marginBottom:32,...style}}>
-  <div><h1 style={{fontSize:38,fontWeight:760,letterSpacing:"-.04em",color:C.text,margin:0,lineHeight:1.1}}>{children}</h1>
-   {sub&&<div style={{fontSize:16.5,color:C.text2,marginTop:10,lineHeight:1.55,maxWidth:600}}>{sub}</div>}</div>{action}</div>;}
+ return <div className="flex items-end justify-between gap-5 flex-wrap mb-8" style={style}>
+  <div><h1 className="text-4xl font-extrabold tracking-tighter text-text m-0 leading-none">{children}</h1>
+   {sub&&<div className="text-base text-text-2 mt-2.5 leading-normal max-w-xl">{sub}</div>}</div>{action}</div>;}
 export function H2({children,sub,action,style}){
- return <div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between",gap:14,flexWrap:"wrap",marginBottom:22,...style}}>
-  <div><div style={{fontSize:24,fontWeight:720,letterSpacing:"-.03em",color:C.text,lineHeight:1.2}}>{children}</div>
-   {sub&&<div style={{fontSize:14.5,color:C.text2,marginTop:6}}>{sub}</div>}</div>{action}</div>;}
-export function Lbl({children,style}){return <div style={{fontSize:11.5,fontWeight:700,color:C.text3,textTransform:"uppercase",
- letterSpacing:".075em",marginBottom:10,...style}}>{children}</div>;}
+ return <div className="flex items-end justify-between gap-3.5 flex-wrap mb-6" style={style}>
+  <div><div className="text-2xl font-bold tracking-tight text-text leading-tight">{children}</div>
+   {sub&&<div className="text-sm text-text-2 mt-1.5">{sub}</div>}</div>{action}</div>;}
+export function Lbl({children,style}){return <div className="text-xs font-bold text-text-3 uppercase tracking-widest mb-2.5" style={style}>{children}</div>;}
 export function Stat({label,value,tone=C.text,icon,delta,onClick}){
- return <div onClick={onClick} style={{background:"#fff",border:`1px solid ${C.line}`,borderRadius:18,padding:"22px 24px",
-  cursor:onClick?"pointer":"default",transition:"border-color .16s,transform .16s"}}
-  onMouseEnter={e=>{if(onClick){e.currentTarget.style.borderColor=C.line2;e.currentTarget.style.transform="translateY(-2px)";}}}
-  onMouseLeave={e=>{if(onClick){e.currentTarget.style.borderColor=C.line;e.currentTarget.style.transform="none";}}}>
-  <div style={{display:"flex",alignItems:"center",gap:9,marginBottom:14,color:C.text3}}>
-   {icon&&<I n={icon} s={16}/>}<span style={{fontSize:13,color:C.text2,fontWeight:550}}>{label}</span></div>
-  <div style={{fontSize:36,fontWeight:760,color:tone,lineHeight:1,letterSpacing:"-.045em"}}>{value}</div>
-  {delta&&<div style={{fontSize:12.5,color:C.ok,marginTop:9,fontWeight:600}}>{delta}</div>}</div>;}
+ return <div onClick={onClick}
+  className={`bg-white border rounded-2xl py-6 px-6 transition-[border-color,transform] duration-150 ${onClick?"cursor-pointer border-line hover:border-line-2 hover:-translate-y-0.5":"cursor-default border-line"}`}>
+  <div className="flex items-center gap-2.5 mb-3.5 text-text-3">
+   {icon&&<I n={icon} s={16}/>}<span className="text-sm text-text-2 font-semibold">{label}</span></div>
+  <div className="text-4xl font-extrabold leading-none tracking-tighter" style={{color:tone}}>{value}</div>
+  {delta&&<div className="text-xs text-ok mt-2.5 font-semibold">{delta}</div>}</div>;}
 export function Modal({open,onClose,title,sub,children,footer,width=520}){
  const mob=useMedia("(max-width: 820px)");
  useEffect(()=>{if(!open||typeof document==="undefined")return;const p=document.body.style.overflow;
   document.body.style.overflow="hidden";return()=>{document.body.style.overflow=p;};},[open]);
  if(!open)return null;
- return <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(11,18,32,.5)",zIndex:700,display:"flex",
-  alignItems:mob?"flex-end":"center",justifyContent:"center",padding:mob?0:24,animation:"fadeIn .16s ease"}}>
-  <div onClick={e=>e.stopPropagation()} style={{background:"#fff",width:"100%",maxWidth:mob?"100%":width,
-   borderRadius:mob?"20px 20px 0 0":18,boxShadow:SH.lg,maxHeight:mob?"92vh":"86vh",display:"flex",flexDirection:"column",
-   animation:mob?"up .26s cubic-bezier(.22,.68,.35,1)":"pop .2s cubic-bezier(.22,.68,.35,1)"}}>
-   {mob&&<div style={{width:40,height:4,background:C.line,borderRadius:99,margin:"10px auto 2px",flexShrink:0}}/>}
-   <div style={{padding:"18px 22px",borderBottom:`1px solid ${C.lineSoft}`,display:"flex",justifyContent:"space-between",gap:14,alignItems:"flex-start",flexShrink:0}}>
-    <div><div style={{fontSize:17.5,fontWeight:690,letterSpacing:"-.025em",color:C.text}}>{title}</div>
-     {sub&&<div style={{fontSize:13.5,color:C.text2,marginTop:3}}>{sub}</div>}</div>
-    <button onClick={onClose} style={{background:C.bg,border:"none",width:34,height:34,borderRadius:99,cursor:"pointer",
-     color:C.text2,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><I n="x" s={17}/></button></div>
-   <div style={{padding:22,overflowY:"auto",flex:1}}>{children}</div>
-   {footer&&<div style={{padding:"16px 22px",borderTop:`1px solid ${C.lineSoft}`,background:C.bg,flexShrink:0,
-    borderRadius:mob?0:"0 0 18px 18px",paddingBottom:mob?"calc(16px + env(safe-area-inset-bottom))":16}}>{footer}</div>}</div></div>;}
+ return <div onClick={onClose} className={`fixed inset-0 bg-ink/50 z-[700] flex justify-center ${mob?"items-end p-0":"items-center p-6"}`}
+  style={{animation:"fadeIn .16s ease"}}>
+  <div onClick={e=>e.stopPropagation()}
+   className={`bg-white w-full shadow-lg flex flex-col ${mob?"rounded-t-3xl max-h-[92vh]":"rounded-2xl max-h-[86vh]"}`}
+   style={{maxWidth:mob?undefined:width, animation:mob?"up .26s cubic-bezier(.22,.68,.35,1)":"pop .2s cubic-bezier(.22,.68,.35,1)"}}>
+   {mob&&<div className="w-10 h-1 bg-line rounded-full mt-2.5 mx-auto mb-0.5 shrink-0"/>}
+   <div className="py-5 px-6 border-b border-line-soft flex justify-between gap-3.5 items-start shrink-0">
+    <div><div className="text-lg font-bold tracking-tight text-text">{title}</div>
+     {sub&&<div className="text-sm text-text-2 mt-1">{sub}</div>}</div>
+    <button onClick={onClose} className="bg-bg border-0 w-9 h-9 rounded-full cursor-pointer text-text-2 flex items-center justify-center shrink-0"><I n="x" s={17}/></button></div>
+   <div className="p-6 overflow-y-auto flex-1">{children}</div>
+   {footer&&<div className={`py-4 px-6 border-t border-line-soft bg-bg shrink-0 ${mob?"":"rounded-b-2xl"}`}
+     style={{paddingBottom: mob ? "calc(16px + env(safe-area-inset-bottom))" : undefined}}>{footer}</div>}</div></div>;}
 export function Tabs({items,value,onChange,style}){
- return <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:2,...style}}>
+ return <div className="flex gap-1.5 overflow-x-auto pb-0.5" style={style}>
   {items.map(it=>{const on=value===it.k;
-   return <button key={it.k} onClick={()=>onChange(it.k)} style={{display:"flex",alignItems:"center",gap:7,
-    padding:"9px 15px",borderRadius:99,cursor:"pointer",fontFamily:"inherit",fontSize:13.5,whiteSpace:"nowrap",flexShrink:0,
-    border:`1px solid ${on?C.brand:C.line}`,background:on?C.wash:"#fff",color:on?C.brand:C.text2,
-    fontWeight:on?650:520,transition:"all .16s"}}>
+   return <button key={it.k} onClick={()=>onChange(it.k)}
+    className={`flex items-center gap-2 py-2.5 px-4 rounded-full cursor-pointer text-sm whitespace-nowrap shrink-0 border transition-all duration-150 ${on?"border-brand bg-wash text-brand font-bold":"border-line bg-white text-text-2 font-medium"}`}>
     {it.icon&&<I n={it.icon} s={15} w={on?2.1:1.8}/>}{it.label}
-    {it.n>0&&<span style={{background:on?C.brand:C.lineSoft,color:on?"#fff":C.text2,fontSize:11,fontWeight:700,
-     minWidth:19,height:19,borderRadius:99,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 5px"}}>{it.n}</span>}
+    {it.n>0&&<span className={`text-xs font-bold min-w-5 h-5 rounded-full flex items-center justify-center px-1.5 ${on?"bg-brand text-white":"bg-line-soft text-text-2"}`}>{it.n}</span>}
    </button>;})}</div>;}
 
 export function DatePicker({value,onChange,min,max,placeholder="Select date"}){
@@ -449,14 +434,12 @@ export const MAXW={site:1240,narrow:820,wide:1360};
 export const PADX={mob:"16px",dt:"32px"};
 export const Page=({children,wide,narrow})=>{
   const mob=useMedia("(max-width: 900px)");
-  return <div style={{width:"100%",maxWidth:narrow?MAXW.narrow:wide?MAXW.wide:MAXW.site,margin:"0 auto",
-    padding:mob?`32px ${PADX.mob} 48px`:`56px ${PADX.dt} 80px`}}>{children}</div>;
+  return <div className={`w-full mx-auto ${narrow?"max-w-narrow":wide?"max-w-wide":"max-w-site"} ${mob?"pt-8 px-4 pb-12":"pt-14 px-8 pb-20"}`}>{children}</div>;
 };
 
 /* ═══════════════ RICH TEXT EDITOR — used across CV builder, job posting, articles ═══════════════ */
 export function RichText({value,onChange,placeholder,rows=6,minHeight}){
   const ref=useRef(null);
-  const [focus,setFocus]=useState(false);
   const [showing,setShowing]=useState(value||"");
   useEffect(()=>{
     if(ref.current&&ref.current.innerHTML!==(value||"")){
@@ -479,23 +462,20 @@ export function RichText({value,onChange,placeholder,rows=6,minHeight}){
     {label:"Clear",act:()=>cmd("removeFormat")},
   ];
   const isEmpty=!showing||showing==="<br>"||showing.trim()==="";
-  return <div style={{border:`1.5px solid ${focus?C.brand:C.line}`,borderRadius:12,background:"#fff",
-    boxShadow:focus?`0 0 0 3px ${C.wash}`:"none",transition:"border-color .16s,box-shadow .16s",overflow:"hidden"}}>
-    <div style={{display:"flex",flexWrap:"wrap",gap:2,padding:"6px 8px",borderBottom:`1px solid ${C.lineSoft}`,background:C.bg}}>
+  return <div className="border-2 border-line has-focus:border-brand rounded-xl bg-white has-focus:ring-4 has-focus:ring-wash transition-[border-color,box-shadow] duration-150 overflow-hidden">
+    <div className="flex flex-wrap gap-0.5 py-1.5 px-2 border-b border-line-soft bg-bg">
       {tools.map((t,i)=>t.sep
-        ? <div key={i} style={{width:1,background:C.line,margin:"4px 4px"}}/>
+        ? <div key={i} className="w-px bg-line m-1"/>
         : <button key={i} type="button" onMouseDown={e=>{e.preventDefault(); t.act();}}
-            style={{background:"transparent",border:"none",cursor:"pointer",padding:"5px 9px",borderRadius:6,
-              fontFamily:"inherit",fontSize:12.5,fontWeight:600,color:C.text2,transition:"background .12s",...(t.style||{})}}
-            onMouseEnter={e=>e.currentTarget.style.background=C.wash}
-            onMouseLeave={e=>e.currentTarget.style.background="transparent"}>{t.ic||t.label}</button>)}
+            className="bg-transparent border-0 cursor-pointer py-1.5 px-2.5 rounded-md text-xs font-semibold text-text-2 transition-colors duration-100 hover:bg-wash"
+            style={t.style}>{t.ic||t.label}</button>)}
     </div>
-    <div style={{position:"relative"}}>
+    <div className="relative">
       <div ref={ref} contentEditable suppressContentEditableWarning
-        onInput={update} onFocus={()=>setFocus(true)} onBlur={()=>setFocus(false)}
-        style={{padding:"12px 14px",fontSize:14.5,color:C.text,lineHeight:1.65,outline:"none",fontFamily:"inherit",
-          minHeight:minHeight||`${rows*22}px`,whiteSpace:"pre-wrap"}}/>
-      {isEmpty&&!focus&&<div style={{position:"absolute",top:12,left:14,color:C.text3,fontSize:14.5,pointerEvents:"none"}}>{placeholder}</div>}
+        onInput={update}
+        className="peer py-3 px-3.5 text-sm text-text leading-relaxed outline-none whitespace-pre-wrap"
+        style={{minHeight:minHeight||`${rows*22}px`}}/>
+      {isEmpty&&<div className="absolute top-3 left-3.5 text-text-3 text-sm pointer-events-none peer-focus:hidden">{placeholder}</div>}
     </div>
   </div>;
 }
