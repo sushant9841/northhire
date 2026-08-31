@@ -153,7 +153,6 @@ export default function NorthHire(){
   return <Ctx.Provider value={A}>
     <div style={{fontFamily:FONT,background:C.bg,color:C.text,minHeight:"100vh",display:"flex",flexDirection:"column",WebkitFontSmoothing:"antialiased"}}>
       <style>{`
-        *{box-sizing:border-box;margin:0;padding:0}
         html,body,#root{height:100%}
         input::placeholder,textarea::placeholder{color:${C.text3}}
         button{font-family:inherit}
