@@ -24,52 +24,49 @@ export function MessagesPage(){
   const markRead=id=>{if(!id)return; threads[id]?.forEach(m=>{if(m.to===A.user.id&&!m.read)A.markMessageRead(m.id);});};
   useEffect(()=>{markRead(openThread);/* eslint-disable-next-line*/},[openThread]);
 
-  const pad=mob?"32px 16px":"48px 32px";
   /* When rendered inside a dashboard shell (employer/admin), skip the site hero and heavy padding — the shell owns the topbar */
   const inShell=A.user.role==="employer"||A.user.role==="admin";
-  return <div style={{background:inShell?C.bg:"#fff",minHeight:"100%"}}>
-    {!inShell&&<section style={{padding:mob?"36px 16px 20px":"56px 32px 32px",background:"#fff",borderBottom:`1px solid ${C.lineSoft}`}}>
-      <div style={{maxWidth:1120,margin:"0 auto"}}>
+  return <div className={`${inShell?"bg-bg":"bg-white"} min-h-full`}>
+    {!inShell&&<section className={`bg-white border-b border-line-soft ${mob?"pt-9 px-4 pb-5":"pt-14 px-8 pb-8"}`}>
+      <div className="max-w-6xl mx-auto">
         <Tag tone="brand" icon="mail">Messages</Tag>
-        <h1 style={{fontSize:mob?32:44,fontWeight:770,letterSpacing:"-.04em",color:C.text,margin:"14px 0 10px",lineHeight:1.1}}>Inbox.</h1>
-        <p style={{fontSize:mob?15.5:17,color:C.text2,margin:0}}>Messages between you and {A.user.role==="seeker"?"employers":"candidates"}.</p></div>
+        <h1 className={`font-extrabold tracking-tighter text-text mt-3.5 mb-2.5 leading-none ${mob?"text-3xl":"text-5xl"}`}>Inbox.</h1>
+        <p className={`text-text-2 ${mob?"text-base":"text-lg"}`}>Messages between you and {A.user.role==="seeker"?"employers":"candidates"}.</p></div>
     </section>}
-    <section style={{padding:inShell?(mob?"20px 16px":"24px 32px"):pad,background:C.bg,minHeight:400}}>
-      <div style={{maxWidth:1120,margin:"0 auto"}}>
-        {inShell&&<div style={{marginBottom:20}}>
-          <div style={{fontSize:mob?22:26,fontWeight:730,color:C.text,letterSpacing:"-.025em",margin:"0 0 4px"}}>Messages</div>
-          <div style={{fontSize:13.5,color:C.text3}}>{threadList.length} {threadList.length===1?"conversation":"conversations"}{threadList.reduce((s,t)=>s+t.unread,0)>0?` · ${threadList.reduce((s,t)=>s+t.unread,0)} unread`:""}</div>
+    <section className={`bg-bg min-h-100 ${inShell?(mob?"py-5 px-4":"py-6 px-8"):(mob?"py-8 px-4":"py-12 px-8")}`}>
+      <div className="max-w-6xl mx-auto">
+        {inShell&&<div className="mb-5">
+          <div className="text-2xl font-bold text-text tracking-tight mb-1">Messages</div>
+          <div className="text-sm text-text-3">{threadList.length} {threadList.length===1?"conversation":"conversations"}{threadList.reduce((s,t)=>s+t.unread,0)>0?` · ${threadList.reduce((s,t)=>s+t.unread,0)} unread`:""}</div>
         </div>}
         {threadList.length===0
           ? <Empty icon="mail" title="No messages yet" body={A.user.role==="seeker"?"When an employer messages you about an application, it lands here.":"When you message a candidate from their profile, the conversation appears here."}/>
-          : <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"320px 1fr",gap:16,alignItems:"start"}}>
+          : <div className={`grid gap-4 items-start ${mob?"grid-cols-1":"grid-cols-[320px_1fr]"}`}>
               <Card pad={0} style={{borderRadius:16,overflow:"hidden"}}>
                 {threadList.map((t,i)=>{const p=A.person(t.otherId)||A.people.find(x=>x.id===t.otherId)||{name:"Unknown",seed:0};
                   const active=t.otherId===openThread;
-                  return <button key={t.otherId} onClick={()=>setOpenThread(t.otherId)} style={{width:"100%",display:"flex",gap:12,alignItems:"center",
-                    padding:"14px 16px",background:active?C.tint:"none",border:"none",cursor:"pointer",fontFamily:"inherit",textAlign:"left",
-                    borderBottom:i<threadList.length-1?`1px solid ${C.lineSoft}`:"none",transition:"background .15s"}}>
+                  return <button key={t.otherId} onClick={()=>setOpenThread(t.otherId)}
+                    className={`w-full flex gap-3 items-center py-3.5 px-4 border-0 cursor-pointer text-left transition-colors duration-150 ${active?"bg-tint":"bg-transparent"} ${i<threadList.length-1?"border-b border-line-soft":""}`}>
                     <SmartPortrait seed={p.seed} size={38}/>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"baseline"}}>
-                        <span style={{fontSize:13.5,fontWeight:t.unread?680:620,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</span>
-                        <span style={{fontSize:11,color:C.text3,flexShrink:0}}>{new Date(t.last.at).toLocaleDateString("en-CA")}</span></div>
-                      <div style={{fontSize:12.5,color:C.text2,marginTop:3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",lineHeight:1.4}}>{t.last.text}</div></div>
-                    {t.unread>0&&<span style={{background:C.brand,color:"#fff",fontSize:11,fontWeight:700,padding:"2px 7px",borderRadius:99,flexShrink:0}}>{t.unread}</span>}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between gap-2 items-baseline">
+                        <span className={`text-sm text-text overflow-hidden text-ellipsis whitespace-nowrap ${t.unread?"font-bold":"font-semibold"}`}>{p.name}</span>
+                        <span className="text-xs text-text-3 shrink-0">{new Date(t.last.at).toLocaleDateString("en-CA")}</span></div>
+                      <div className="text-xs text-text-2 mt-1 overflow-hidden text-ellipsis whitespace-nowrap leading-snug">{t.last.text}</div></div>
+                    {t.unread>0&&<span className="bg-brand text-white text-xs font-bold py-0.5 px-2 rounded-full shrink-0">{t.unread}</span>}
                   </button>;})}</Card>
               {openThread&&other&&<Card style={{borderRadius:16,display:"flex",flexDirection:"column",minHeight:400}}>
-                <div style={{display:"flex",gap:12,alignItems:"center",padding:"14px 18px",borderBottom:`1px solid ${C.lineSoft}`}}>
+                <div className="flex gap-3 items-center py-3.5 px-5 border-b border-line-soft">
                   <SmartPortrait seed={other.seed} size={40}/>
-                  <div><div style={{fontSize:15,fontWeight:660,color:C.text}}>{other.name}</div>
-                    <div style={{fontSize:12.5,color:C.text2,marginTop:2}}>{other.title||"Team member"}</div></div></div>
-                <div style={{flex:1,padding:18,display:"flex",flexDirection:"column",gap:10,overflowY:"auto",maxHeight:420}}>
+                  <div><div className="text-base font-bold text-text">{other.name}</div>
+                    <div className="text-xs text-text-2 mt-0.5">{other.title||"Team member"}</div></div></div>
+                <div className="flex-1 p-5 flex flex-col gap-2.5 overflow-y-auto max-h-105">
                   {thread.map(m=>{const mine=m.from===A.user.id;
-                    return <div key={m.id} style={{display:"flex",justifyContent:mine?"flex-end":"flex-start"}}>
-                      <div style={{maxWidth:"75%",padding:"10px 14px",borderRadius:12,fontSize:14,lineHeight:1.5,
-                        background:mine?C.brand:C.bg,color:mine?"#fff":C.text,border:mine?"none":`1px solid ${C.line}`}}>
+                    return <div key={m.id} className={`flex ${mine?"justify-end":"justify-start"}`}>
+                      <div className={`max-w-3/4 py-2.5 px-3.5 rounded-xl text-sm leading-normal ${mine?"bg-brand text-white border-0":"bg-bg text-text border border-line"}`}>
                         {m.text}
-                        <div style={{fontSize:11,opacity:.7,marginTop:5}}>{new Date(m.at).toLocaleString("en-CA",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})}</div></div></div>;})}</div>
-                <div style={{padding:14,borderTop:`1px solid ${C.lineSoft}`,display:"flex",gap:8}}>
+                        <div className="text-xs opacity-70 mt-1.5">{new Date(m.at).toLocaleString("en-CA",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})}</div></div></div>;})}</div>
+                <div className="p-3.5 border-t border-line-soft flex gap-2">
                   <Input value={reply[openThread]||""} onChange={e=>setReply(r=>({...r,[openThread]:e.target.value}))}
                     onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}} placeholder="Type a reply…"/>
                   <Btn kind="primary" icon="send" disabled={!(reply[openThread]||"").trim()} onClick={send}/></div></Card>}

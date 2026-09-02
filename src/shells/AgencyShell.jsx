@@ -34,7 +34,7 @@ export function AgencyShell({children}){
       <button onClick={()=>A.go("home")} className="flex items-center gap-2.5 bg-transparent border-0 text-white cursor-pointer p-0">
         <div className="w-8 h-8 rounded-lg bg-amber/18 border border-amber/40 flex items-center justify-center"><I n="hex" s={16} c="#F5A524"/></div>
         <div className="text-left">
-          <div className="text-sm font-extrabold tracking-tight">NorthHire</div>
+          <div className="text-sm font-bold tracking-tight">NorthHire</div>
           <div className="text-xs text-amber font-semibold mt-px tracking-wider">STAFFING</div>
         </div>
       </button>

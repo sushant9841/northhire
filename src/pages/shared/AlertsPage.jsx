@@ -14,15 +14,13 @@ export function AlertsPage(){
       body="Updates about your applications, matches and trainings appear here."/>
       :<Card pad={0} style={{overflow:"hidden"}}>
         {list.map((n,i)=><div key={n.id} onClick={()=>A.readNotif(n.id,n.link)}
-          style={{display:"flex",gap:14,padding:"16px 18px",cursor:n.link?"pointer":"default",
-            borderBottom:i<list.length-1?`1px solid ${C.lineSoft}`:"none",background:n.read?"#fff":C.tint,transition:"background .2s"}}>
-          <div style={{width:40,height:40,borderRadius:11,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",
-            background:n.read?C.bg:C.wash,color:n.read?C.text3:C.brand}}><I n={n.icon||"bell"} s={18}/></div>
-          <div style={{flex:1,minWidth:0}}>
-            <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
-              <div style={{flex:1,fontSize:14.5,fontWeight:650,color:C.text}}>{n.title}</div>
-              {!n.read&&<div style={{width:8,height:8,borderRadius:99,background:C.brand,flexShrink:0,marginTop:5}}/>}</div>
-            <div style={{fontSize:13.5,color:C.text2,marginTop:4,lineHeight:1.55}}>{n.body}</div>
-            <div style={{fontSize:12,color:C.text3,marginTop:7}}>{n.at}</div></div></div>)}</Card>}
+          className={`flex gap-3.5 py-4 px-5 transition-colors duration-200 ${n.link?"cursor-pointer":"cursor-default"} ${i<list.length-1?"border-b border-line-soft":""} ${n.read?"bg-white":"bg-tint"}`}>
+          <div className={`w-10 h-10 rounded-xl shrink-0 flex items-center justify-center ${n.read?"bg-bg text-text-3":"bg-wash text-brand"}`}><I n={n.icon||"bell"} s={18}/></div>
+          <div className="flex-1 min-w-0">
+            <div className="flex gap-2.5 items-start">
+              <div className="flex-1 text-sm font-bold text-text">{n.title}</div>
+              {!n.read&&<div className="w-2 h-2 rounded-full bg-brand shrink-0 mt-1.5"/>}</div>
+            <div className="text-sm text-text-2 mt-1 leading-normal">{n.body}</div>
+            <div className="text-xs text-text-3 mt-2">{n.at}</div></div></div>)}</Card>}
   </Page>;
 }

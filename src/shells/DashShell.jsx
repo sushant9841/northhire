@@ -85,7 +85,7 @@ export function UpgradePromptModal({payload,onClose}){
           </div>
           <div className="flex-1 min-w-0">
             <div className="inline-block py-1 px-2.5 bg-[#FEF3E2] text-[#D97706] border border-[#FCD9A8] rounded-full text-xs font-bold tracking-wide uppercase mb-2">Requires {requiredPlan}</div>
-            <h2 className={`font-extrabold tracking-tight text-text mb-1.5 leading-tight ${mob?"text-xl":"text-2xl"}`}>{b.title}</h2>
+            <h2 className={`font-bold tracking-tight text-text mb-1.5 leading-tight ${mob?"text-xl":"text-2xl"}`}>{b.title}</h2>
             <div className="text-sm text-text-3">You're on the <strong className="text-text-2">{currentPlan}</strong> plan</div>
           </div>
           <button onClick={onClose} aria-label="Close" className="bg-transparent border-0 cursor-pointer p-1.5 text-text-3 flex shrink-0"><I n="x" s={20}/></button>
@@ -159,7 +159,7 @@ export function DashShell({modules,children,brandKind}){
     <div className="py-5 px-6 border-b border-white/8">
       <button onClick={()=>A.go("home")} className="flex items-center gap-2.5 bg-transparent border-0 text-white cursor-pointer p-0">
         <div className="w-8 h-8 rounded-lg bg-accent/20 border border-accent/35 flex items-center justify-center"><I n="hex" s={16} c="#6AACFF"/></div>
-        <div><div className="text-sm font-extrabold tracking-tight">NorthHire</div>
+        <div><div className="text-sm font-bold tracking-tight">NorthHire</div>
           <div className="text-xs text-accent font-semibold mt-px">{brandKind}</div></div>
       </button>
     </div>
@@ -179,16 +179,16 @@ export function DashShell({modules,children,brandKind}){
       </div>
       {empStats&&<div className="grid grid-cols-2 gap-2">
         <div className="bg-white/5 rounded-lg py-2.5 px-3">
-          <div className="text-base font-extrabold text-white tracking-tight leading-none">{empStats.jobs}</div>
+          <div className="text-base font-bold text-white tracking-tight leading-none">{empStats.jobs}</div>
           <div className="text-xs text-white/60 mt-1">Live jobs</div></div>
         <div className="bg-white/5 rounded-lg py-2.5 px-3">
-          <div className="text-base font-extrabold text-white tracking-tight leading-none">{empStats.apps}</div>
+          <div className="text-base font-bold text-white tracking-tight leading-none">{empStats.apps}</div>
           <div className="text-xs text-white/60 mt-1">Applicants</div></div>
       </div>}
       {admStats&&<div className="grid grid-cols-3 gap-1.5">
         {[["Users",admStats.users],["Cos",admStats.employers],["Jobs",admStats.jobs]].map(([l,v])=>
           <div key={l} className="bg-white/5 rounded-lg py-2.5 px-2 text-center">
-            <div className="text-sm font-extrabold text-white tracking-tight leading-none">{v}</div>
+            <div className="text-sm font-bold text-white tracking-tight leading-none">{v}</div>
             <div className="text-xs text-white/60 mt-1">{l}</div></div>)}
       </div>}
       {empStats&&<button onClick={()=>A.go("empBilling")} className="mt-2.5 w-full flex justify-between items-center bg-accent/12 border border-accent/25 rounded-lg py-2 px-3 cursor-pointer text-accent">

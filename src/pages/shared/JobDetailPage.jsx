@@ -11,34 +11,32 @@ export function JobDetailPage(){
   const job=A.job(A.jobId); if(!job) return <Page><Empty icon="briefcase" title="Job not found" body="This listing may have been closed or removed."
     action={<Btn kind="primary" onClick={()=>A.go("search")}>Browse jobs</Btn>}/></Page>;
   const e=A.emp(job.e); const applied=A.appliedJobIds.has(job.id); const score=A.score(job);
-  const Meta=({icon,k,v})=><div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
-    <div style={{width:38,height:38,borderRadius:10,background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",color:C.brand,flexShrink:0}}><I n={icon} s={17}/></div>
-    <div style={{minWidth:0}}><div style={{fontSize:12,color:C.text3,marginBottom:3,fontWeight:550,letterSpacing:".02em"}}>{k}</div>
-      <div style={{fontSize:14.5,fontWeight:640,color:C.text,lineHeight:1.4}}>{v}</div></div></div>;
-  const Sec=({title,children})=><section style={{marginBottom:32}}>
-    <div style={{fontSize:mob?18:20,fontWeight:720,color:C.text,letterSpacing:"-.025em",marginBottom:14}}>{title}</div>{children}</section>;
-  const Bul=({items})=><ul style={{margin:0,padding:0,listStyle:"none",display:"flex",flexDirection:"column",gap:11}}>
-    {items.map(x=><li key={x} style={{display:"flex",gap:12,fontSize:15,color:C.text2,lineHeight:1.65}}>
-      <span style={{color:C.brand,marginTop:3,flexShrink:0,display:"flex"}}><I n="check" s={16} w={2.4}/></span>{x}</li>)}</ul>;
+  const Meta=({icon,k,v})=><div className="flex gap-3 items-start">
+    <div className="w-10 h-10 rounded-xl bg-bg flex items-center justify-center text-brand shrink-0"><I n={icon} s={17}/></div>
+    <div className="min-w-0"><div className="text-xs text-text-3 mb-1 font-medium tracking-wide">{k}</div>
+      <div className="text-sm font-semibold text-text leading-snug">{v}</div></div></div>;
+  const Sec=({title,children})=><section className="mb-8">
+    <div className={`font-bold text-text tracking-tight mb-3.5 ${mob?"text-lg":"text-xl"}`}>{title}</div>{children}</section>;
+  const Bul=({items})=><ul className="m-0 p-0 list-none flex flex-col gap-3">
+    {items.map(x=><li key={x} className="flex gap-3 text-base text-text-2 leading-relaxed">
+      <span className="text-brand mt-1 shrink-0 flex"><I n="check" s={16} w={2.4}/></span>{x}</li>)}</ul>;
 
   const apply=()=>{ if(!A.user) return A.go("login"); if(A.user.role!=="seeker") return A.go("denied"); A.beginApply(job.id); };
 
-  return <div style={{background:"#fff",minHeight:"100%"}}>
+  return <div className="bg-white min-h-full">
 
-    <section style={{padding:mob?"20px 16px 32px":"36px 32px 44px",background:"#fff",borderBottom:`1px solid ${C.lineSoft}`}}>
-      <div style={{maxWidth:1120,margin:"0 auto"}}>
-        {!mob&&<button onClick={A.back} style={{display:"inline-flex",alignItems:"center",gap:7,background:"none",border:"none",padding:0,
-          cursor:"pointer",fontFamily:"inherit",fontSize:14,color:C.text2,marginBottom:24}}><I n="arrowL" s={17}/>Back</button>}
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"auto 1fr auto",gap:mob?18:24,alignItems:mob?"flex-start":"center"}}>
+    <section className={`bg-white border-b border-line-soft ${mob?"pt-5 px-4 pb-8":"pt-9 px-8 pb-11"}`}>
+      <div className="max-w-6xl mx-auto">
+        {!mob&&<button onClick={A.back} className="inline-flex items-center gap-2 bg-transparent border-0 p-0 cursor-pointer text-sm text-text-2 mb-6"><I n="arrowL" s={17}/>Back</button>}
+        <div className={`grid ${mob?"grid-cols-1 gap-5 items-start":"grid-cols-[auto_1fr_auto] gap-6 items-center"}`}>
           <EmpMark e={e} size={mob?64:84} radius={18}/>
-          <div style={{minWidth:0}}>
-            <h1 style={{fontSize:mob?26:38,fontWeight:750,letterSpacing:"-.04em",color:C.text,margin:0,lineHeight:1.12}}>{job.t}</h1>
-            <div style={{display:"flex",alignItems:"center",gap:10,marginTop:10,flexWrap:"wrap",fontSize:15,color:C.text2}}>
-              <button onClick={()=>A.openEmployer(e.id)} style={{background:"none",border:"none",padding:0,cursor:"pointer",
-                fontFamily:"inherit",fontSize:15,fontWeight:650,color:C.brand}}>{e.name}</button>
+          <div className="min-w-0">
+            <h1 className={`font-extrabold tracking-tighter text-text m-0 leading-none ${mob?"text-2xl":"text-4xl"}`}>{job.t}</h1>
+            <div className="flex items-center gap-2.5 mt-2.5 flex-wrap text-base text-text-2">
+              <button onClick={()=>A.openEmployer(e.id)} className="bg-transparent border-0 p-0 cursor-pointer text-base font-bold text-brand">{e.name}</button>
               {e.verified&&<Tag tone="brand" sm icon="checkC2">Verified</Tag>}
-              <span style={{color:C.text3}}>•</span><span>{job.city}, {job.prov}</span></div>
-            <div style={{display:"flex",gap:7,flexWrap:"wrap",marginTop:14}}>
+              <span className="text-text-3">•</span><span>{job.city}, {job.prov}</span></div>
+            <div className="flex gap-2 flex-wrap mt-3.5">
               <HiringTypeBadge jobId={job.id}/>
               <Tag icon="clock">{job.type}</Tag>
               {job.mode!=="On-site"&&<Tag tone="ok" icon="globe">{job.mode}</Tag>}
@@ -49,16 +47,16 @@ export function JobDetailPage(){
       </div>
     </section>
 
-    <section style={{padding:mob?"24px 16px 100px":"40px 32px 96px",background:C.bg}}>
-      <div style={{maxWidth:1120,margin:"0 auto",display:"grid",gridTemplateColumns:mob?"1fr":"1fr 340px",gap:mob?20:32,alignItems:"start"}}>
-        <div style={{background:"#fff",borderRadius:20,padding:mob?24:36,border:`1px solid ${C.line}`}}>
-          <div style={{background:C.tint,border:`1px solid ${C.line2}`,borderRadius:16,padding:mob?"20px 22px":"26px 28px",marginBottom:32}}>
-            <div style={{fontSize:12,color:C.brand,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",marginBottom:8}}>Offered salary</div>
-            <div style={{fontSize:mob?32:44,fontWeight:770,color:C.brand,letterSpacing:"-.045em",lineHeight:1}}>
-              {pay(job)} <span style={{fontSize:mob?17:20,fontWeight:600,opacity:.75}}>{payUnit(job)}</span></div>
-            {job.unit!=="yr"&&<div style={{fontSize:13.5,color:C.text2,marginTop:10}}>
+    <section className={`bg-bg ${mob?"pt-6 px-4 pb-25":"pt-10 px-8 pb-24"}`}>
+      <div className={`max-w-6xl mx-auto grid items-start ${mob?"grid-cols-1 gap-5":"grid-cols-[1fr_340px] gap-8"}`}>
+        <div className={`bg-white rounded-3xl border border-line ${mob?"p-6":"p-9"}`}>
+          <div className={`bg-tint border border-line-2 rounded-2xl mb-8 ${mob?"py-5 px-6":"py-7 px-7"}`}>
+            <div className="text-xs text-brand font-bold tracking-widest uppercase mb-2">Offered salary</div>
+            <div className={`font-extrabold text-brand tracking-tighter leading-none ${mob?"text-3xl":"text-5xl"}`}>
+              {pay(job)} <span className={`font-semibold opacity-75 ${mob?"text-lg":"text-xl"}`}>{payUnit(job)}</span></div>
+            {job.unit!=="yr"&&<div className="text-sm text-text-2 mt-2.5">
               Roughly {money(annual(job))} per year at full-time hours</div>}</div>
-          <div style={{display:"grid",gridTemplateColumns:`repeat(auto-fit,minmax(${mob?150:200}px,1fr))`,gap:22,marginBottom:36}}>
+          <div className="grid gap-6 mb-9" style={{gridTemplateColumns:`repeat(auto-fit,minmax(${mob?150:200}px,1fr))`}}>
             <Meta icon="users" k="Vacancies" v={`${job.vac} ${job.vac===1?"position":"positions"}`}/>
             <Meta icon="pin" k="Location" v={`${job.city}, ${job.prov}`}/>
             <Meta icon="award" k="Experience" v={job.exp}/>
@@ -68,75 +66,74 @@ export function JobDetailPage(){
           {A.jobHiringType(job.id)==="agency-perm"&&<Banner tone="brand" icon="award" title="Recruiter search — NorthHire Staffing" style={{marginBottom:24}}>
             NorthHire Staffing is sourcing candidates for {e.name}. If hired, you'll be on {e.name}'s payroll directly. We take a placement fee <em>from the client</em>, never from you. 90-day replacement guarantee applies to us.
           </Banner>}
-          <Sec title="About this role"><p style={{fontSize:mob?15:16,color:C.text2,lineHeight:1.75,margin:0}}>{job.desc}</p></Sec>
+          <Sec title="About this role"><p className="text-base text-text-2 leading-relaxed">{job.desc}</p></Sec>
           <Sec title="What you will be doing"><Bul items={job.duties}/></Sec>
           <Sec title="What we are looking for"><Bul items={job.reqs}/></Sec>
           <Sec title="Skills and certifications">
-            <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+            <div className="flex flex-wrap gap-2">
               {job.skills.map(s=>{const mine=A.user?.role==="seeker"&&(A.user.skills||[]).some(x=>x.toLowerCase()===s.toLowerCase());
                 return <Tag key={s} tone={mine?"ok":"neutral"} icon={mine?"check":undefined}>{s}</Tag>;})}</div>
-            {A.user?.role==="seeker"&&<div style={{fontSize:13,color:C.text3,marginTop:12}}>Highlighted skills are already on your profile.</div>}</Sec>
+            {A.user?.role==="seeker"&&<div className="text-sm text-text-3 mt-3">Highlighted skills are already on your profile.</div>}</Sec>
           <Sec title="Benefits offered">
-            <div style={{display:"grid",gridTemplateColumns:`repeat(auto-fit,minmax(${mob?220:260}px,1fr))`,gap:10}}>
-              {job.perks.map(p=><div key={p} style={{display:"flex",gap:11,alignItems:"center",background:C.okBg,
-                border:`1px solid ${C.okLn}`,borderRadius:12,padding:"13px 15px"}}>
-                <span style={{color:C.ok,display:"flex",flexShrink:0}}><I n="check" s={16} w={2.4}/></span>
-                <span style={{fontSize:14,color:C.text,fontWeight:540}}>{p}</span></div>)}</div></Sec>
-          <Sec title="How to apply"><p style={{fontSize:15,color:C.text2,lineHeight:1.7,margin:0}}>{job.how}</p></Sec>
+            <div className="grid gap-2.5" style={{gridTemplateColumns:`repeat(auto-fit,minmax(${mob?220:260}px,1fr))`}}>
+              {job.perks.map(p=><div key={p} className="flex gap-3 items-center bg-ok-bg border border-ok-ln rounded-xl py-3.5 px-4">
+                <span className="text-ok flex shrink-0"><I n="check" s={16} w={2.4}/></span>
+                <span className="text-sm text-text font-medium">{p}</span></div>)}</div></Sec>
+          <Sec title="How to apply"><p className="text-base text-text-2 leading-relaxed">{job.how}</p></Sec>
         </div>
 
-        {!mob&&<div style={{position:"sticky",top:80,display:"flex",flexDirection:"column",gap:16}}>
-          <div style={{background:"#fff",borderRadius:20,padding:24,border:`1px solid ${C.line}`}}>
-            {A.user?.role==="seeker"&&<div style={{display:"flex",alignItems:"center",gap:14,paddingBottom:18,marginBottom:18,borderBottom:`1px solid ${C.lineSoft}`}}>
-              <Ring v={score} size={56}/><div><div style={{fontSize:14.5,fontWeight:660,color:C.text}}>Your match score</div>
-                <div style={{fontSize:13,color:C.text2,marginTop:3}}>From your skills and preferences</div></div></div>}
+        {!mob&&<div className="sticky top-20 flex flex-col gap-4">
+          <div className="bg-white rounded-3xl p-6 border border-line">
+            {A.user?.role==="seeker"&&<div className="flex items-center gap-3.5 pb-5 mb-5 border-b border-line-soft">
+              <Ring v={score} size={56}/><div><div className="text-sm font-bold text-text">Your match score</div>
+                <div className="text-sm text-text-2 mt-1">From your skills and preferences</div></div></div>}
             <Btn kind={applied?"soft":"primary"} size="lg" full disabled={applied} icon={applied?"check":"send"} onClick={apply}>
               {applied?"Application sent":"Apply for this job"}</Btn>
-            <div style={{display:"flex",gap:10,marginTop:12}}>
+            <div className="flex gap-2.5 mt-3">
               <Btn kind="outline" full onClick={()=>A.toggleSave(job.id)} icon="bookmark">{A.saved.has(job.id)?"Saved":"Save"}</Btn>
               <Btn kind="outline" full icon="share" onClick={()=>A.share(job)}>Share</Btn></div>
-            <div style={{display:"flex",justifyContent:"space-between",fontSize:12.5,color:C.text3,marginTop:18,paddingTop:16,borderTop:`1px solid ${C.lineSoft}`}}>
+            <div className="flex justify-between text-xs text-text-3 mt-5 pt-4 border-t border-line-soft">
               <span>{job.views.toLocaleString()} views</span><span>Posted {job.posted}</span></div></div>
-          <div style={{background:"#fff",borderRadius:20,padding:24,border:`1px solid ${C.line}`}}>
+          <div className="bg-white rounded-3xl p-6 border border-line">
             <Lbl>About the employer</Lbl>
-            <div style={{display:"flex",gap:13,alignItems:"center",marginBottom:14}}>
+            <div className="flex gap-3.5 items-center mb-3.5">
               <EmpMark e={e} size={48} radius={12}/>
-              <div style={{minWidth:0}}><div style={{fontSize:15,fontWeight:660,color:C.text}}>{e.name}</div>
-                <div style={{fontSize:13,color:C.text2,marginTop:2}}>{e.industry} • {e.size} staff</div></div></div>
-            <p style={{fontSize:14,color:C.text2,lineHeight:1.65,margin:"0 0 16px"}}>{e.about}</p>
+              <div className="min-w-0"><div className="text-base font-bold text-text">{e.name}</div>
+                <div className="text-sm text-text-2 mt-0.5">{e.industry} • {e.size} staff</div></div></div>
+            <p className="text-sm text-text-2 leading-relaxed mb-4">{e.about}</p>
             <Btn kind="outline" size="sm" full iconR="chevR" onClick={()=>A.openEmployer(e.id)}>All openings</Btn></div>
           {A.user?.role==="seeker"&&(()=>{const g=A.skillsGap(job);
             if(!g.missing.length)return null;
-            return <div style={{background:"#fff",borderRadius:20,padding:24,border:`1px solid ${C.line}`}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+            return <div className="bg-white rounded-3xl p-6 border border-line">
+              <div className="flex justify-between items-center mb-3">
                 <Lbl style={{margin:0}}>Skills gap</Lbl>
                 <Tag tone="brand" sm>{g.current} → {g.potential}</Tag></div>
-              <p style={{fontSize:13,color:C.text2,margin:"0 0 12px",lineHeight:1.55}}>
-                Add these skills to your profile to raise your match by <strong style={{color:C.brand}}>{g.potential-g.current} points</strong>:</p>
-              <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:14}}>
+              <p className="text-sm text-text-2 mb-3 leading-normal">
+                Add these skills to your profile to raise your match by <strong className="text-brand">{g.potential-g.current} points</strong>:</p>
+              <div className="flex flex-wrap gap-1.5 mb-3.5">
                 {g.missing.map(s=><Tag key={s} sm icon="plus">{s}</Tag>)}</div>
               <Btn kind="outline" size="sm" full onClick={()=>A.go("profile")}>Update my skills</Btn></div>;})()}
           {(()=>{const s=A.salaryInsight(job.t,job.prov);
             if(!s)return null;
-            return <div style={{background:"#fff",borderRadius:20,padding:24,border:`1px solid ${C.line}`}}>
+            return <div className="bg-white rounded-3xl p-6 border border-line">
               <Lbl>Salary insight</Lbl>
-              <p style={{fontSize:13,color:C.text2,margin:"0 0 14px",lineHeight:1.55}}>
+              <p className="text-sm text-text-2 mb-3.5 leading-normal">
                 Based on {s.count} similar {job.prov} listings on NorthHire.</p>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:14}}>
+              <div className="grid grid-cols-3 gap-2 mb-3.5">
                 {[["Low",s.p25],["Median",s.median],["High",s.p75]].map(([l,v],i)=>
-                  <div key={l} style={{textAlign:"center",padding:"12px 6px",background:i===1?C.tint:C.bg,borderRadius:10,border:`1px solid ${i===1?C.line2:C.line}`}}>
-                    <div style={{fontSize:11,color:C.text3,fontWeight:600,letterSpacing:".04em",textTransform:"uppercase"}}>{l}</div>
-                    <div style={{fontSize:15,fontWeight:730,color:i===1?C.brand:C.text,marginTop:4,letterSpacing:"-.02em"}}>${Math.round(v/1000)}k</div></div>)}</div>
-              <div style={{fontSize:12,color:C.text3,textAlign:"center"}}>Estimated annualized totals</div></div>;})()}
+                  <div key={l} className={`text-center py-3 px-1.5 rounded-xl border ${i===1?"bg-tint border-line-2":"bg-bg border-line"}`}>
+                    <div className="text-xs text-text-3 font-semibold tracking-wide uppercase">{l}</div>
+                    <div className={`text-base font-bold mt-1 tracking-tight ${i===1?"text-brand":"text-text"}`}>${Math.round(v/1000)}k</div></div>)}</div>
+              <div className="text-xs text-text-3 text-center">Estimated annualized totals</div></div>;})()}
         </div>}
       </div>
 
       {/* Page-bottom Apply CTA */}
-      <div style={{maxWidth:1240,margin:mob?"0 auto":"32px auto 0",padding:mob?"24px 16px 32px":"0 32px 40px"}}>
-        <div style={{background:`linear-gradient(135deg,${C.tint} 0%,#F0F7FF 100%)`,border:`1px solid ${C.line2}`,borderRadius:20,padding:mob?24:36,textAlign:"center"}}>
-          <div style={{fontSize:mob?18:22,fontWeight:720,color:C.text,letterSpacing:"-.025em",marginBottom:8}}>Ready to apply for this role?</div>
-          <div style={{fontSize:14,color:C.text2,marginBottom:20,maxWidth:480,margin:"0 auto 20px",lineHeight:1.65}}>{applied?"Your application has been sent. Track its progress in My Status.":`Takes about 2 minutes. Your profile and CV go straight to ${e.name}.`}</div>
-          <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
+      <div className={`max-w-site ${mob?"mx-auto pt-6 px-4 pb-8":"mt-8 mx-auto px-8 pb-10"}`}>
+        <div className={`bg-[linear-gradient(135deg,var(--color-tint)_0%,#F0F7FF_100%)] border border-line-2 rounded-3xl text-center ${mob?"p-6":"p-9"}`}>
+          <div className={`font-bold text-text tracking-tight mb-2 ${mob?"text-lg":"text-2xl"}`}>Ready to apply for this role?</div>
+          <div className="text-sm text-text-2 max-w-lg mx-auto mb-5 leading-relaxed">{applied?"Your application has been sent. Track its progress in My Status.":`Takes about 2 minutes. Your profile and CV go straight to ${e.name}.`}</div>
+          <div className="flex gap-2.5 justify-center flex-wrap">
             <Btn kind={applied?"soft":"primary"} size="lg" iconR={applied?"check":"arrowR"} disabled={applied} onClick={apply}>
               {applied?"Application sent":"Apply for this role"}</Btn>
             <Btn kind="outline" size="lg" onClick={()=>A.toggleSave(job.id)} icon="bookmark">{A.saved.has(job.id)?"Saved":"Save for later"}</Btn>
@@ -145,8 +142,7 @@ export function JobDetailPage(){
       </div>
     </section>
 
-    {mob&&<div style={{position:"sticky",bottom:0,background:"rgba(255,255,255,.97)",backdropFilter:"blur(12px)",
-      borderTop:`1px solid ${C.line}`,padding:"12px 16px",display:"flex",gap:10,zIndex:300}}>
+    {mob&&<div className="sticky bottom-0 bg-white/97 backdrop-blur-md border-t border-line py-3 px-4 flex gap-2.5 z-300">
       <Btn kind="outline" onClick={()=>A.toggleSave(job.id)} icon="bookmark" style={{flexShrink:0}}>{A.saved.has(job.id)?"Saved":"Save"}</Btn>
       <Btn kind={applied?"soft":"primary"} full disabled={applied} icon={applied?"check":"send"} onClick={apply}>{applied?"Applied":"Apply now"}</Btn></div>}
   </div>;

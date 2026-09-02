@@ -44,10 +44,10 @@ export function LocationInput({value,onChange,placeholder="City or province",req
       _=>pick("Toronto, ON")
     );
   };
-  return <div style={{position:"relative"}}>
+  return <div className="relative">
     <Input icon="pin" value={q} required={required} placeholder={placeholder}
       suffix={<button type="button" onClick={useGeoloc} title="Use my location"
-        style={{background:"none",border:"none",cursor:"pointer",padding:0,display:"flex",color:C.brand}}>
+        className="bg-transparent border-0 cursor-pointer p-0 flex text-brand">
         <I n="target" s={16}/></button>}
       onChange={e=>{setQ(e.target.value); setOpen(true); setIdx(-1);}}
       onFocus={()=>{if(q.length>=2)setOpen(true);}}
@@ -58,18 +58,13 @@ export function LocationInput({value,onChange,placeholder="City or province",req
         else if(e.key==="Enter"&&idx>=0){e.preventDefault(); pick(matches[idx]);}
         else if(e.key==="Escape"){setOpen(false);}
       }}/>
-    {open&&matches.length>0&&<div ref={listRef} style={{position:"absolute",top:"calc(100% + 4px)",left:0,right:0,
-      background:"#fff",border:`1px solid ${C.line}`,borderRadius:12,boxShadow:SH.md,zIndex:200,maxHeight:280,overflowY:"auto",
-      animation:"pop .16s ease"}}>
+    {open&&matches.length>0&&<div ref={listRef} className="absolute left-0 right-0 bg-white border border-line rounded-xl shadow-md z-200 max-h-70 overflow-y-auto" style={{top:"calc(100% + 4px)",animation:"pop .16s ease"}}>
       {matches.map((m,i)=><button key={m} type="button" onMouseDown={e=>{e.preventDefault(); pick(m);}}
         onMouseEnter={()=>setIdx(i)}
-        style={{display:"flex",gap:10,alignItems:"center",width:"100%",padding:"10px 14px",background:idx===i?C.bg:"#fff",
-          border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:14,color:C.text,textAlign:"left",transition:"background .1s"}}>
+        className={`flex gap-2.5 items-center w-full py-2.5 px-3.5 border-0 cursor-pointer text-sm text-text text-left transition-colors duration-100 ${idx===i?"bg-bg":"bg-white"}`}>
         <I n="pin" s={15} c={C.text3}/>{m}</button>)}
     </div>}
-    {q.length>=2&&open&&matches.length===0&&<div style={{position:"absolute",top:"calc(100% + 4px)",left:0,right:0,
-      background:"#fff",border:`1px solid ${C.line}`,borderRadius:12,boxShadow:SH.md,zIndex:200,padding:"12px 14px",
-      fontSize:13,color:C.text3}}>No Canadian city found. Try a nearby city or use your location.</div>}
+    {q.length>=2&&open&&matches.length===0&&<div className="absolute left-0 right-0 bg-white border border-line rounded-xl shadow-md z-200 py-3 px-3.5 text-sm text-text-3" style={{top:"calc(100% + 4px)"}}>No Canadian city found. Try a nearby city or use your location.</div>}
   </div>;
 }
 
@@ -80,17 +75,14 @@ export function InlineList({value=[],onChange,placeholder="Add and press Enter",
     onChange([...value,t]); setV("");};
   const del=(x)=>onChange(value.filter(y=>y!==x));
   return <div>
-    <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:value.length?10:0}}>
-      {value.map(x=><span key={x} style={{display:"inline-flex",alignItems:"center",gap:6,background:C.tint,color:C.brand,
-        border:`1px solid ${C.line2}`,padding:"5px 6px 5px 11px",borderRadius:99,fontSize:12.5,fontWeight:550,transition:"transform .18s"}}
-        onMouseEnter={e=>e.currentTarget.style.transform="scale(1.03)"}
-        onMouseLeave={e=>e.currentTarget.style.transform="scale(1)"}>{x}
+    <div className={`flex flex-wrap gap-1.5 ${value.length?"mb-2.5":""}`}>
+      {value.map(x=><span key={x} className="inline-flex items-center gap-1.5 bg-tint text-brand border border-line-2 py-1.5 pr-1.5 pl-3 rounded-full text-xs font-medium transition-transform duration-200 hover:scale-105">{x}
         <button type="button" onClick={()=>del(x)} aria-label={`Remove ${x}`}
-          style={{background:"rgba(0,0,0,.08)",border:"none",cursor:"pointer",width:18,height:18,borderRadius:99,display:"flex",alignItems:"center",justifyContent:"center",color:C.text2}}><I n="x" s={11} w={2.4}/></button>
+          className="bg-black/8 border-0 cursor-pointer w-5 h-5 rounded-full flex items-center justify-center text-text-2"><I n="x" s={11} w={2.4}/></button>
       </span>)}
     </div>
-    <div style={{display:"flex",gap:8}}>
-      <div style={{flex:1}}><Input icon={icon} value={v} onChange={e=>setV(e.target.value)}
+    <div className="flex gap-2">
+      <div className="flex-1"><Input icon={icon} value={v} onChange={e=>setV(e.target.value)}
         onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault(); add();}}}
         placeholder={value.length>=max?`Maximum ${max}`:placeholder} disabled={value.length>=max}/></div>
       <Btn kind="outline" onClick={add} disabled={!v.trim()||value.length>=max} icon="plus">Add</Btn>
@@ -128,21 +120,21 @@ export function QuestionBuilder({value=[],onChange}){
   const addPreset=(p)=>onChange([...value,{id:uid("q"),...p,prompt:p.t,required:true,options:p.options||[]}]);
 
   return <div>
-    {value.length>0&&<div style={{display:"flex",flexDirection:"column",gap:12,marginBottom:16}}>
-      {value.map((q,i)=><div key={q.id} style={{border:`1px solid ${C.line}`,borderRadius:12,padding:14,background:"#fff"}}>
-        <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:10}}>
-          <div style={{width:24,height:24,borderRadius:99,background:C.wash,color:C.brand,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>{i+1}</div>
+    {value.length>0&&<div className="flex flex-col gap-3 mb-4">
+      {value.map((q,i)=><div key={q.id} className="border border-line rounded-xl p-3.5 bg-white">
+        <div className="flex gap-2.5 items-center mb-2.5">
+          <div className="w-6 h-6 rounded-full bg-wash text-brand flex items-center justify-center text-xs font-bold shrink-0">{i+1}</div>
           <Tag tone="neutral" sm>{QUESTION_TYPES.find(t=>t.k===q.type)?.label}</Tag>
-          <div style={{marginLeft:"auto",display:"flex",gap:6,alignItems:"center"}}>
-            <label style={{display:"flex",gap:5,alignItems:"center",fontSize:12,color:C.text2,cursor:"pointer"}}>
+          <div className="ml-auto flex gap-1.5 items-center">
+            <label className="flex gap-1.5 items-center text-xs text-text-2 cursor-pointer">
               <input type="checkbox" checked={q.required} onChange={e=>upd(q.id,{required:e.target.checked})}/>Required</label>
             <Btn kind="ghost" size="xs" icon="trash" onClick={()=>del(q.id)}/>
           </div>
         </div>
         <Input value={q.prompt} onChange={e=>upd(q.id,{prompt:e.target.value})} placeholder="Type the question…"/>
-        {(q.type==="radio"||q.type==="checkbox")&&<div style={{marginTop:10,paddingLeft:6,display:"flex",flexDirection:"column",gap:6}}>
-          {q.options.map((o,j)=><div key={j} style={{display:"flex",gap:8,alignItems:"center"}}>
-            <span style={{color:C.text3,fontSize:12}}>{q.type==="radio"?"○":"☐"}</span>
+        {(q.type==="radio"||q.type==="checkbox")&&<div className="mt-2.5 pl-1.5 flex flex-col gap-1.5">
+          {q.options.map((o,j)=><div key={j} className="flex gap-2 items-center">
+            <span className="text-text-3 text-xs">{q.type==="radio"?"○":"☐"}</span>
             <Input value={o} onChange={e=>updOpt(q.id,j,e.target.value)} placeholder={`Option ${j+1}`}/>
             {q.options.length>2&&<Btn kind="ghost" size="xs" icon="x" onClick={()=>delOpt(q.id,j)}/>}
           </div>)}
@@ -151,18 +143,15 @@ export function QuestionBuilder({value=[],onChange}){
       </div>)}
     </div>}
 
-    <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:12}}>
+    <div className="flex flex-wrap gap-1.5 mb-3">
       {QUESTION_TYPES.map(t=><Btn key={t.k} kind="outline" size="sm" icon="plus" onClick={()=>add(t.k)}>{t.label}</Btn>)}
     </div>
 
-    <details style={{marginTop:14}}>
-      <summary style={{cursor:"pointer",fontSize:13,color:C.text2,fontWeight:600}}>Common questions (click to add)</summary>
-      <div style={{marginTop:10,display:"flex",flexDirection:"column",gap:6}}>
+    <details className="mt-3.5">
+      <summary className="cursor-pointer text-sm text-text-2 font-semibold">Common questions (click to add)</summary>
+      <div className="mt-2.5 flex flex-col gap-1.5">
         {presets.map(p=><button key={p.t} type="button" onClick={()=>addPreset(p)}
-          style={{textAlign:"left",background:C.bg,border:`1px solid ${C.line}`,borderRadius:8,padding:"9px 12px",
-            cursor:"pointer",fontFamily:"inherit",fontSize:13,color:C.text,transition:"all .16s"}}
-          onMouseEnter={e=>{e.currentTarget.style.background=C.tint;e.currentTarget.style.borderColor=C.line2;}}
-          onMouseLeave={e=>{e.currentTarget.style.background=C.bg;e.currentTarget.style.borderColor=C.line;}}>
+          className="text-left bg-bg border border-line rounded-lg py-2.5 px-3 cursor-pointer text-sm text-text transition duration-150 hover:bg-tint hover:border-line-2">
           + {p.t}</button>)}
       </div>
     </details>

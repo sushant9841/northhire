@@ -12,7 +12,7 @@ export function ProfilePage(){
   const u=A.user;
   if(!u) return <Page narrow><Empty icon="user" title="Sign in to view your profile"
     body="Create a free account to build a profile, save jobs and track applications."
-    action={<div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
+    action={<div className="flex gap-2.5 justify-center flex-wrap">
       <Btn kind="primary" onClick={()=>A.go("signup")}>Create account</Btn>
       <Btn kind="outline" onClick={()=>A.go("login")}>Sign in</Btn></div>}/></Page>;
   if(u.role!=="seeker") return <EmployerAccountPage/>;
@@ -40,40 +40,40 @@ export function ProfilePage(){
   const tabs=[{k:"about",label:"About",icon:"user"},{k:"skills",label:"Skills",icon:"sparkle"},
     {k:"prefs",label:"Preferences",icon:"target"},{k:"learning",label:"Learning",icon:"cap"},{k:"refs",label:"References",icon:"users"}];
 
-  const pad=mob?"44px 16px":"72px 32px";
-  return <div style={{background:"#fff",minHeight:"100%"}}>
-    <section style={{padding:pad,background:"#fff",borderBottom:`1px solid ${C.lineSoft}`}}>
-      <div style={{maxWidth:1120,margin:"0 auto"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",gap:20,flexWrap:"wrap"}}>
+  const heroPad=mob?"py-11 px-4":"py-18 px-8";
+  return <div className="bg-white min-h-full">
+    <section className={`${heroPad} bg-white border-b border-line-soft`}>
+      <div className="max-w-6xl mx-auto">
+        <div className="flex justify-between items-end gap-5 flex-wrap">
           <div><Tag tone="brand" icon="user">Profile</Tag>
-            <h1 style={{fontSize:mob?32:52,fontWeight:770,letterSpacing:"-.045em",color:C.text,margin:"18px 0 12px",lineHeight:1.08}}>Hi, {u.name.split(" ")[0]}.</h1>
-            <p style={{fontSize:mob?16:19,color:C.text2,lineHeight:1.55,margin:0,maxWidth:520}}>This is what employers see when you apply.</p></div>
-          <div style={{display:"flex",gap:9,flexWrap:"wrap"}}>
+            <h1 className={`font-extrabold tracking-tighter text-text mt-5 mb-3 leading-none ${mob?"text-3xl":"text-5xl"}`}>Hi, {u.name.split(" ")[0]}.</h1>
+            <p className={`text-text-2 leading-normal max-w-lg ${mob?"text-base":"text-lg"}`}>This is what employers see when you apply.</p></div>
+          <div className="flex gap-2.5 flex-wrap">
             <Btn kind="outline" icon="file" onClick={()=>A.go("cvs")}>My CVs ({A.cvs.length})</Btn>
             <Btn kind="outline" icon="gear" onClick={()=>A.go("settings")}>Settings</Btn></div></div>
       </div>
     </section>
-    <section style={{padding:mob?"32px 16px 56px":"48px 32px 96px",background:C.bg,minHeight:400}}>
-      <div style={{maxWidth:1120,margin:"0 auto"}}>
+    <section className={`bg-bg min-h-100 ${mob?"pt-8 px-4 pb-14":"pt-12 px-8 pb-24"}`}>
+      <div className="max-w-6xl mx-auto">
     <Card pad={mob?24:32} style={{marginBottom:18,borderRadius:20}}>
-      <div style={{display:"flex",gap:18,alignItems:"center",flexWrap:"wrap"}}>
+      <div className="flex gap-5 items-center flex-wrap">
         <SmartPortrait seed={u.seed??0} size={mob?64:78} radius={20}/>
-        <div style={{flex:"1 1 220px",minWidth:0}}>
-          <div style={{fontSize:mob?20:23,fontWeight:720,color:C.text,letterSpacing:"-.03em"}}>{u.name}</div>
-          <div style={{fontSize:14.5,color:C.text2,marginTop:4}}>{u.title} • {u.city}, {u.prov}</div>
-          <div style={{fontSize:13.5,color:C.text3,marginTop:3}}>{u.email} • {u.phone}</div></div>
-        <div style={{flex:"0 0 200px",minWidth:180}}>
-          <div style={{display:"flex",justifyContent:"space-between",fontSize:12.5,marginBottom:6}}>
-            <span style={{color:C.text2}}>Profile strength</span><span style={{fontWeight:700,color:A.completeness>=85?C.ok:C.brand}}>{A.completeness}%</span></div>
+        <div className="flex-[1_1_220px] min-w-0">
+          <div className={`font-bold text-text tracking-tight ${mob?"text-xl":"text-2xl"}`}>{u.name}</div>
+          <div className="text-sm text-text-2 mt-1">{u.title} • {u.city}, {u.prov}</div>
+          <div className="text-sm text-text-3 mt-1">{u.email} • {u.phone}</div></div>
+        <div className="flex-[0_0_200px] min-w-45">
+          <div className="flex justify-between text-xs mb-1.5">
+            <span className="text-text-2">Profile strength</span><span className={`font-bold ${A.completeness>=85?"text-ok":"text-brand"}`}>{A.completeness}%</span></div>
           <Bar v={A.completeness} tone={A.completeness>=85?C.ok:C.brand}/>
-          <div style={{fontSize:12,color:C.text3,marginTop:7,lineHeight:1.5}}>{A.completenessHint}</div></div></div></Card>
+          <div className="text-xs text-text-3 mt-2 leading-normal">{A.completenessHint}</div></div></div></Card>
 
     <Tabs items={tabs} value={tab} onChange={setTab} style={{marginBottom:18}}/>
 
     <Card pad={mob?24:32} style={{borderRadius:20}}>
-      {tab==="about"&&<div style={{display:"flex",flexDirection:"column",gap:16}}>
+      {tab==="about"&&<div className="flex flex-col gap-4">
         <H2>Personal details</H2>
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:14}}>
+        <div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
           <Field label="Full name" required><Input value={d.name} onChange={e=>set("name",e.target.value)}/></Field>
           <Field label="Job title or trade" required><Input icon="briefcase" value={d.title} onChange={e=>set("title",e.target.value)}/></Field>
           <Field label="Email" required><Input icon="mail" type="email" value={d.email} onChange={e=>set("email",e.target.value)}/></Field>
@@ -99,43 +99,35 @@ export function ProfilePage(){
 
       {tab==="skills"&&<div>
         <H2 sub="These drive every match score you see">Skills, tickets and certificates</H2>
-        <div style={{display:"flex",gap:9,marginBottom:16}}>
+        <div className="flex gap-2.5 mb-4">
           <Input placeholder="Add a skill, ticket or certificate" value={skill} onChange={e=>setSkill(e.target.value)}
             onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();addSkill(skill);}}}/>
           <Btn kind="primary" icon="plus" disabled={!skill.trim()} onClick={()=>addSkill(skill)}>Add</Btn></div>
-        <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:22}}>
-          {d.skills.map(s=><span key={s} style={{display:"inline-flex",alignItems:"center",gap:7,background:C.brand,color:"#fff",
-            fontSize:13.5,fontWeight:600,padding:"7px 12px",borderRadius:8,animation:"pop .2s ease"}}>{s}
-            <button onClick={()=>set("skills",d.skills.filter(x=>x!==s))} style={{background:"none",border:"none",
-              color:"rgba(255,255,255,.7)",cursor:"pointer",padding:0,display:"flex"}}><I n="x" s={13} w={2.5}/></button></span>)}
-          {d.skills.length===0&&<span style={{fontSize:14,color:C.text3}}>No skills added yet.</span>}</div>
+        <div className="flex flex-wrap gap-2 mb-6">
+          {d.skills.map(s=><span key={s} className="inline-flex items-center gap-2 bg-brand text-white text-sm font-semibold py-1.5 px-3 rounded-lg" style={{animation:"pop .2s ease"}}>{s}
+            <button onClick={()=>set("skills",d.skills.filter(x=>x!==s))} className="bg-transparent border-0 text-white/70 cursor-pointer p-0 flex"><I n="x" s={13} w={2.5}/></button></span>)}
+          {d.skills.length===0&&<span className="text-sm text-text-3">No skills added yet.</span>}</div>
         {SUG.length>0&&<><Lbl>Common in {CATM[d.cat]?.label} — tap to add</Lbl>
-          <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-            {SUG.map(s=><button key={s} onClick={()=>addSkill(s)} style={{display:"inline-flex",alignItems:"center",gap:6,
-              background:"#fff",border:`1.5px dashed ${C.line}`,color:C.text2,fontSize:13.5,fontWeight:520,padding:"7px 12px",
-              borderRadius:8,cursor:"pointer",fontFamily:"inherit"}}><I n="plus" s={13} c={C.brand} w={2.4}/>{s}</button>)}</div></>}</div>}
+          <div className="flex flex-wrap gap-2">
+            {SUG.map(s=><button key={s} onClick={()=>addSkill(s)} className="inline-flex items-center gap-1.5 bg-white border-2 border-dashed border-line text-text-2 text-sm font-medium py-1.5 px-3 rounded-lg cursor-pointer"><I n="plus" s={13} c={C.brand} w={2.4}/>{s}</button>)}</div></>}</div>}
 
-      {tab==="prefs"&&<div style={{display:"flex",flexDirection:"column",gap:20}}>
+      {tab==="prefs"&&<div className="flex flex-col gap-5">
         <H2 sub="Used to rank the jobs we show you">Job preferences</H2>
         <Field label="Minimum pay you would accept" required>
-          <div style={{display:"flex",gap:10}}>
+          <div className="flex gap-2.5">
             <Input icon="wallet" value={d.payMin} onChange={e=>set("payMin",Number(e.target.value.replace(/[^\d.]/g,""))||0)}/>
             <Sel value={d.payUnit} onChange={e=>set("payUnit",e.target.value)} style={{width:135,flexShrink:0}}>
               <option value="hr">per hour</option><option value="yr">per year</option></Sel></div></Field>
         <div><Lbl>Employment type</Lbl>
-          <div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"repeat(3,1fr)",gap:9}}>
+          <div className={`grid gap-2.5 ${mob?"grid-cols-2":"grid-cols-3"}`}>
             {["Full Time","Part Time","Contract","Seasonal","Apprenticeship","Casual"].map(t=>{const on=d.types.includes(t);
               return <button key={t} onClick={()=>set("types",on?d.types.filter(x=>x!==t):[...d.types,t])}
-                style={{padding:"11px 12px",borderRadius:10,cursor:"pointer",fontFamily:"inherit",fontSize:13.5,
-                  fontWeight:on?640:500,border:`1.5px solid ${on?C.brand:C.line}`,background:on?C.tint:"#fff",
-                  color:on?C.brand:C.text,transition:"all .16s"}}>{t}</button>;})}</div></div>
+                className={`py-3 px-3 rounded-xl cursor-pointer text-sm border-2 transition duration-150 ${on?"font-semibold border-brand bg-tint text-brand":"font-medium border-line bg-white text-text"}`}>{t}</button>;})}</div></div>
         <div><Lbl>Where can you work?</Lbl>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:9}}>
+          <div className="grid grid-cols-3 gap-2.5">
             {["On-site","Hybrid","Remote"].map(t=>{const on=d.modes.includes(t);
               return <button key={t} onClick={()=>set("modes",on?d.modes.filter(x=>x!==t):[...d.modes,t])}
-                style={{padding:"11px 12px",borderRadius:10,cursor:"pointer",fontFamily:"inherit",fontSize:13.5,
-                  fontWeight:on?640:500,border:`1.5px solid ${on?C.brand:C.line}`,background:on?C.tint:"#fff",
-                  color:on?C.brand:C.text,transition:"all .16s"}}>{t}</button>;})}</div></div>
+                className={`py-3 px-3 rounded-xl cursor-pointer text-sm border-2 transition duration-150 ${on?"font-semibold border-brand bg-tint text-brand":"font-medium border-line bg-white text-text"}`}>{t}</button>;})}</div></div>
         <Field label="When can you start?"><Sel value={d.startWhen||"Within 2 weeks"} onChange={e=>set("startWhen",e.target.value)}>
           {["Immediately","Within 2 weeks","Within 1 month","More than 1 month"].map(o=><option key={o}>{o}</option>)}</Sel></Field></div>}
 
@@ -144,14 +136,14 @@ export function ProfilePage(){
         {A.enrolled.size===0?<Empty icon="cap" title="No trainings yet"
           body="Free certifications like WHMIS and interview skills are the fastest way to lift your match scores."
           action={<Btn kind="primary" onClick={()=>A.go("trainings")}>Browse trainings</Btn>}/>
-          :<div style={{display:"flex",flexDirection:"column",gap:12}}>
+          :<div className="flex flex-col gap-3">
             {A.trainings.filter(t=>A.enrolled.has(t.id)).map(t=>{const p=A.trainingProgress[t.id]||0;
-              return <div key={t.id} style={{display:"flex",gap:14,alignItems:"center",border:`1px solid ${C.line}`,borderRadius:12,padding:14}}>
-                <div style={{width:60,height:44,borderRadius:9,overflow:"hidden",flexShrink:0}}><SmartScene kind={t.scene} tone={t.tone} h={44} seed={t.id.charCodeAt(1)||0}/></div>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:14.5,fontWeight:640,color:C.text}}>{t.title}</div>
-                  <div style={{marginTop:8}}><Bar v={p} tone={p>=100?C.ok:C.brand} h={5}/></div>
-                  <div style={{fontSize:12.5,color:C.text3,marginTop:5}}>{p>=100?"Completed — certificate available":`${p}% complete`}</div></div>
+              return <div key={t.id} className="flex gap-3.5 items-center border border-line rounded-xl p-3.5">
+                <div className="w-15 h-11 rounded-lg overflow-hidden shrink-0"><SmartScene kind={t.scene} tone={t.tone} h={44} seed={t.id.charCodeAt(1)||0}/></div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold text-text">{t.title}</div>
+                  <div className="mt-2"><Bar v={p} tone={p>=100?C.ok:C.brand} h={5}/></div>
+                  <div className="text-xs text-text-3 mt-1">{p>=100?"Completed — certificate available":`${p}% complete`}</div></div>
                 <Btn kind={p>=100?"outline":"primary"} size="sm" onClick={()=>p>=100?A.printCert(t):A.openTraining(t.id)}>
                   {p>=100?"Certificate":"Continue"}</Btn></div>;})}</div>}</div>}
 
@@ -160,30 +152,30 @@ export function ProfilePage(){
         {A.references.filter(r=>r.user===u.id).length===0
           ? <Empty icon="users" title="No references yet" body="Add 2-3 previous supervisors or colleagues. Employers typically check references before extending an offer."
               action={<Btn kind="primary" icon="plus" onClick={()=>setShowRef(true)}>Add your first reference</Btn>}/>
-          : <div style={{display:"flex",flexDirection:"column",gap:12}}>
-              {A.references.filter(r=>r.user===u.id).map(r=><div key={r.id} style={{display:"flex",gap:14,alignItems:"center",padding:14,border:`1px solid ${C.line}`,borderRadius:12}}>
-                <div style={{width:44,height:44,borderRadius:12,background:C.wash,color:C.brand,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontWeight:730,fontSize:16}}>{r.name?.charAt(0)?.toUpperCase()||"?"}</div>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:14.5,fontWeight:660,color:C.text}}>{r.name}</div>
-                  <div style={{fontSize:13,color:C.text2,marginTop:3}}>{r.title}{r.company?` at ${r.company}`:""}</div>
-                  <div style={{fontSize:12.5,color:C.text3,marginTop:3}}>{r.email} • {r.phone||"No phone"}</div>
-                  {r.relationship&&<div style={{fontSize:12.5,color:C.text3,marginTop:3,fontStyle:"italic"}}>{r.relationship}</div>}</div>
+          : <div className="flex flex-col gap-3">
+              {A.references.filter(r=>r.user===u.id).map(r=><div key={r.id} className="flex gap-3.5 items-center p-3.5 border border-line rounded-xl">
+                <div className="w-11 h-11 rounded-xl bg-wash text-brand flex items-center justify-center shrink-0 font-bold text-base">{r.name?.charAt(0)?.toUpperCase()||"?"}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-bold text-text">{r.name}</div>
+                  <div className="text-sm text-text-2 mt-1">{r.title}{r.company?` at ${r.company}`:""}</div>
+                  <div className="text-xs text-text-3 mt-1">{r.email} • {r.phone||"No phone"}</div>
+                  {r.relationship&&<div className="text-xs text-text-3 mt-1 italic">{r.relationship}</div>}</div>
                 <Btn kind="ghost" size="xs" icon="trash" onClick={()=>A.removeReference(r.id)}/></div>)}</div>}
       </div>}
       {showRef&&<Modal onClose={()=>setShowRef(false)} title="Add a reference">
-        <div style={{display:"flex",flexDirection:"column",gap:14}}>
+        <div className="flex flex-col gap-3.5">
           <Field label="Full name" required><Input value={ref.name} onChange={e=>setRef({...ref,name:e.target.value})} placeholder="Jean Tremblay"/></Field>
-          <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:12}}>
+          <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
             <Field label="Job title"><Input value={ref.title} onChange={e=>setRef({...ref,title:e.target.value})} placeholder="Site Foreman"/></Field>
             <Field label="Company"><Input value={ref.company} onChange={e=>setRef({...ref,company:e.target.value})} placeholder="PCL Construction"/></Field>
             <Field label="Email"><Input icon="mail" type="email" value={ref.email} onChange={e=>setRef({...ref,email:e.target.value})} placeholder="jean@example.ca"/></Field>
             <Field label="Phone"><Input icon="phone" value={ref.phone} onChange={e=>setRef({...ref,phone:e.target.value})} placeholder="416 555 0100"/></Field></div>
           <Field label="Relationship" hint="How did you work together?"><Input value={ref.relationship} onChange={e=>setRef({...ref,relationship:e.target.value})} placeholder="Direct supervisor for 3 years"/></Field>
-          <div style={{display:"flex",gap:9,justifyContent:"flex-end"}}>
+          <div className="flex gap-2.5 justify-end">
             <Btn kind="ghost" onClick={()=>setShowRef(false)}>Cancel</Btn>
             <Btn kind="primary" icon="check" disabled={!ref.name||!ref.email} onClick={()=>{A.addReference(ref);setRef({name:"",title:"",company:"",email:"",phone:"",relationship:""});setShowRef(false);}}>Add reference</Btn></div>
         </div></Modal>}
-      <div style={{display:"flex",gap:10,justifyContent:"flex-end",marginTop:24,paddingTop:20,borderTop:`1px solid ${C.lineSoft}`}}>
+      <div className="flex gap-2.5 justify-end mt-6 pt-5 border-t border-line-soft">
         {dirty&&<Btn kind="ghost" onClick={()=>setD({...u})}>Discard changes</Btn>}
         <Btn kind="primary" icon="check" disabled={!dirty} onClick={()=>A.saveProfile(d)}>{dirty?"Save changes":"Saved"}</Btn></div>
     </Card>
@@ -201,23 +193,21 @@ export function EmployerAccountPage(){
     <H1 sub="Your employer account and company details"
       action={<Btn kind="outline" size="sm" icon="gear" onClick={()=>A.go("settings")}>Settings</Btn>}>Account</H1>
     <Card pad={mob?18:24} style={{marginBottom:16}}>
-      <div style={{display:"flex",gap:16,alignItems:"center",flexWrap:"wrap"}}>
+      <div className="flex gap-4 items-center flex-wrap">
         <EmpMark e={e} size={mob?60:72} radius={18}/>
-        <div style={{flex:"1 1 200px",minWidth:0}}>
-          <div style={{display:"flex",gap:9,alignItems:"center",flexWrap:"wrap"}}>
-            <span style={{fontSize:mob?20:23,fontWeight:720,color:C.text,letterSpacing:"-.03em"}}>{e.name}</span>
+        <div className="flex-[1_1_200px] min-w-0">
+          <div className="flex gap-2.5 items-center flex-wrap">
+            <span className={`font-bold text-text tracking-tight ${mob?"text-xl":"text-2xl"}`}>{e.name}</span>
             {e.verified?<Tag tone="ok" sm icon="checkC2">Verified</Tag>:<Tag tone="warn" sm icon="clock">Pending review</Tag>}</div>
-          <div style={{fontSize:14,color:C.text2,marginTop:5}}>{e.industry} • {e.city}, {e.prov} • {e.size} employees</div>
-          <div style={{fontSize:13.5,color:C.text3,marginTop:3}}>{A.user.email}</div></div>
+          <div className="text-sm text-text-2 mt-1.5">{e.industry} • {e.city}, {e.prov} • {e.size} employees</div>
+          <div className="text-sm text-text-3 mt-1">{A.user.email}</div></div>
         <Btn kind="primary" icon="edit" onClick={()=>A.go("empCompany")}>Edit company</Btn></div></Card>
-    <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:12}}>
+    <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
       {[["home","Dashboard","empHome"],["briefcase","My job listings","empJobs"],["users","Candidates","empPipeline"],
         ["book","Articles and trainings","empContent"],["wallet","Billing and plan","empBilling"],["gear","Settings","settings"]].map(([ic,l,p])=>
-        <button key={p} onClick={()=>A.go(p)} style={{display:"flex",alignItems:"center",gap:13,padding:"16px 18px",
-          background:"#fff",border:`1px solid ${C.line}`,borderRadius:13,cursor:"pointer",fontFamily:"inherit",textAlign:"left",transition:"all .16s"}}
-          onMouseEnter={ev=>ev.currentTarget.style.borderColor=C.brand} onMouseLeave={ev=>ev.currentTarget.style.borderColor=C.line}>
-          <span style={{width:38,height:38,borderRadius:10,background:C.wash,color:C.brand,display:"flex",alignItems:"center",justifyContent:"center"}}><I n={ic} s={18}/></span>
-          <span style={{flex:1,fontSize:14.5,fontWeight:600,color:C.text}}>{l}</span><I n="chevR" s={16} c={C.text3}/></button>)}</div>
+        <button key={p} onClick={()=>A.go(p)} className="flex items-center gap-3.5 py-4 px-5 bg-white border border-line rounded-2xl cursor-pointer text-left transition duration-150 hover:border-brand">
+          <span className="w-10 h-10 rounded-xl bg-wash text-brand flex items-center justify-center"><I n={ic} s={18}/></span>
+          <span className="flex-1 text-sm font-semibold text-text">{l}</span><I n="chevR" s={16} c={C.text3}/></button>)}</div>
   </Page>;
 }
 
@@ -226,20 +216,18 @@ export function AdminAccountPage(){
   return <Page narrow>
     <H1 sub="Administrator account">Account</H1>
     <Card pad={mob?18:24} style={{marginBottom:16}}>
-      <div style={{display:"flex",gap:16,alignItems:"center",flexWrap:"wrap"}}>
+      <div className="flex gap-4 items-center flex-wrap">
         <SmartPortrait seed={A.user.seed??0} size={mob?60:72} radius={18}/>
-        <div style={{flex:"1 1 200px",minWidth:0}}>
-          <div style={{fontSize:mob?20:23,fontWeight:720,color:C.text,letterSpacing:"-.03em"}}>{A.user.name}</div>
-          <div style={{fontSize:14,color:C.text2,marginTop:5}}>Platform administrator</div>
-          <div style={{fontSize:13.5,color:C.text3,marginTop:3}}>{A.user.email}</div></div></div></Card>
-    <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:12}}>
+        <div className="flex-[1_1_200px] min-w-0">
+          <div className={`font-bold text-text tracking-tight ${mob?"text-xl":"text-2xl"}`}>{A.user.name}</div>
+          <div className="text-sm text-text-2 mt-1.5">Platform administrator</div>
+          <div className="text-sm text-text-3 mt-1">{A.user.email}</div></div></div></Card>
+    <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
       {[["home","Overview","admHome"],["users","Users","admUsers"],["building","Employers","admEmployers"],
         ["shield","Job moderation","admJobs"],["book","Articles","admBlogs"],["cap","Trainings","admTrainings"],
         ["trend","Statistics","admStats"],["file","Activity log","admLog"],["gear","Platform settings","admSettings"]].map(([ic,l,p])=>
-        <button key={p} onClick={()=>A.go(p)} style={{display:"flex",alignItems:"center",gap:13,padding:"16px 18px",
-          background:"#fff",border:`1px solid ${C.line}`,borderRadius:13,cursor:"pointer",fontFamily:"inherit",textAlign:"left",transition:"all .16s"}}
-          onMouseEnter={ev=>ev.currentTarget.style.borderColor=C.brand} onMouseLeave={ev=>ev.currentTarget.style.borderColor=C.line}>
-          <span style={{width:38,height:38,borderRadius:10,background:C.wash,color:C.brand,display:"flex",alignItems:"center",justifyContent:"center"}}><I n={ic} s={18}/></span>
-          <span style={{flex:1,fontSize:14.5,fontWeight:600,color:C.text}}>{l}</span><I n="chevR" s={16} c={C.text3}/></button>)}</div>
+        <button key={p} onClick={()=>A.go(p)} className="flex items-center gap-3.5 py-4 px-5 bg-white border border-line rounded-2xl cursor-pointer text-left transition duration-150 hover:border-brand">
+          <span className="w-10 h-10 rounded-xl bg-wash text-brand flex items-center justify-center"><I n={ic} s={18}/></span>
+          <span className="flex-1 text-sm font-semibold text-text">{l}</span><I n="chevR" s={16} c={C.text3}/></button>)}</div>
   </Page>;
 }

@@ -10,36 +10,36 @@ export function InterviewsPage(){
   const list=A.interviews.filter(iv=>iv.candidate===A.user.id||iv.employer===A.company?.id).sort((a,b)=>b.createdAt-a.createdAt);
   const upcoming=list.filter(iv=>iv.status==="scheduled");
   const past=list.filter(iv=>iv.status!=="scheduled");
-  const pad=mob?"44px 16px":"72px 32px";
+  const heroPad=mob?"pt-11 px-4":"pt-18 px-8";
   const IvCard=({iv})=>{const j=A.job(iv.job); const e=A.emp(iv.employer); const cand=A.person(iv.candidate)||{name:"Candidate",seed:0};
     const forSeeker=A.user.role==="seeker";
     return <Card style={{padding:mob?22:26,borderRadius:16,marginBottom:12}}>
-      <div style={{display:"flex",gap:14,alignItems:"flex-start",flexWrap:"wrap"}}>
-        <div style={{width:52,height:52,borderRadius:14,background:iv.status==="cancelled"?C.bg:C.wash,color:iv.status==="cancelled"?C.text3:C.brand,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><I n="calendar" s={24}/></div>
-        <div style={{flex:1,minWidth:0}}>
-          <div style={{fontSize:16,fontWeight:680,color:C.text,letterSpacing:"-.02em"}}>
+      <div className="flex gap-3.5 items-start flex-wrap">
+        <div className={`w-13 h-13 rounded-2xl flex items-center justify-center shrink-0 ${iv.status==="cancelled"?"bg-bg text-text-3":"bg-wash text-brand"}`}><I n="calendar" s={24}/></div>
+        <div className="flex-1 min-w-0">
+          <div className="text-base font-bold text-text tracking-tight">
             {j?.t||"Interview"} — {forSeeker?e?.name:cand.name}</div>
-          <div style={{fontSize:13.5,color:C.text2,marginTop:5}}>
+          <div className="text-sm text-text-2 mt-1.5">
             <strong>{iv.when}</strong> • {iv.mode==="video"?"Video call":"On-site interview"}</div>
-          {iv.notes&&<div style={{fontSize:13,color:C.text2,marginTop:8,padding:"10px 12px",background:C.bg,borderRadius:8,lineHeight:1.6}}>{iv.notes}</div>}</div>
+          {iv.notes&&<div className="text-sm text-text-2 mt-2 py-2.5 px-3 bg-bg rounded-lg leading-relaxed">{iv.notes}</div>}</div>
         {iv.status==="cancelled"?<Tag tone="danger" sm>Cancelled</Tag>
-          :<div style={{display:"flex",gap:8,flexDirection:"column"}}>
+          :<div className="flex gap-2 flex-col">
             <Tag tone="warn" sm>Scheduled</Tag>
             {A.user.role==="employer"&&<Btn kind="ghost" size="xs" icon="x" onClick={()=>A.cancelInterview(iv.id)}>Cancel</Btn>}</div>}
       </div></Card>;};
   const inShell=A.user.role==="employer"||A.user.role==="admin";
-  return <div style={{background:inShell?C.bg:"#fff",minHeight:"100%"}}>
-    {!inShell&&<section style={{padding:pad,background:"#fff",borderBottom:`1px solid ${C.lineSoft}`}}>
-      <div style={{maxWidth:1120,margin:"0 auto"}}>
+  return <div className={`${inShell?"bg-bg":"bg-white"} min-h-full`}>
+    {!inShell&&<section className={`${heroPad} bg-white border-b border-line-soft`}>
+      <div className="max-w-6xl mx-auto">
         <Tag tone="brand" icon="calendar">Interviews</Tag>
-        <h1 style={{fontSize:mob?32:52,fontWeight:770,letterSpacing:"-.045em",color:C.text,margin:"18px 0 12px",lineHeight:1.08}}>Your schedule.</h1>
-        <p style={{fontSize:mob?16:19,color:C.text2,lineHeight:1.55,margin:0}}>{upcoming.length} upcoming, {past.length} past.</p></div>
+        <h1 className={`font-extrabold tracking-tighter text-text mt-5 mb-3 leading-none ${mob?"text-3xl":"text-5xl"}`}>Your schedule.</h1>
+        <p className={`text-text-2 leading-normal ${mob?"text-base":"text-lg"}`}>{upcoming.length} upcoming, {past.length} past.</p></div>
     </section>}
-    <section style={{padding:inShell?(mob?"20px 16px":"24px 32px"):(mob?"32px 16px 56px":"48px 32px 96px"),background:C.bg,minHeight:400}}>
-      <div style={{maxWidth:880,margin:"0 auto"}}>
-        {inShell&&<div style={{marginBottom:20}}>
-          <div style={{fontSize:mob?22:26,fontWeight:730,color:C.text,letterSpacing:"-.025em",margin:"0 0 4px"}}>Interviews</div>
-          <div style={{fontSize:13.5,color:C.text3}}>{upcoming.length} upcoming, {past.length} past.</div>
+    <section className={`bg-bg min-h-100 ${inShell?(mob?"py-5 px-4":"py-6 px-8"):(mob?"pt-8 px-4 pb-14":"pt-12 px-8 pb-24")}`}>
+      <div className="max-w-4xl mx-auto">
+        {inShell&&<div className="mb-5">
+          <div className="text-2xl font-bold text-text tracking-tight mb-1">Interviews</div>
+          <div className="text-sm text-text-3">{upcoming.length} upcoming, {past.length} past.</div>
         </div>}
         {list.length===0?<Empty icon="calendar" title="No interviews scheduled" body={A.user.role==="employer"?"Schedule one from a candidate's profile.":"When an employer schedules an interview, it appears here."}/>:<>
           {upcoming.length>0&&<><H2>Upcoming</H2>{upcoming.map(iv=><IvCard key={iv.id} iv={iv}/>)}</>}

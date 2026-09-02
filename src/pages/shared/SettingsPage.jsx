@@ -14,10 +14,10 @@ export function SettingsPage(){
   const [show2FA,setShow2FA]=useState(false); const [tfaPhone,setTfaPhone]=useState(""); const [tfaResult,setTfaResult]=useState(null);
   const [showOutbox,setShowOutbox]=useState(false);
   const S=A.userSettings;
-  const Row=({icon,title,sub,children})=><div style={{display:"flex",gap:14,alignItems:"center",padding:"16px 0",borderBottom:`1px solid ${C.lineSoft}`}}>
-    <div style={{width:38,height:38,borderRadius:10,background:C.bg,color:C.text2,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><I n={icon} s={18}/></div>
-    <div style={{flex:1,minWidth:0}}><div style={{fontSize:14.5,fontWeight:620,color:C.text}}>{title}</div>
-      {sub&&<div style={{fontSize:13,color:C.text2,marginTop:3,lineHeight:1.5}}>{sub}</div>}</div>{children}</div>;
+  const Row=({icon,title,sub,children})=><div className="flex gap-3.5 items-center py-4 border-b border-line-soft">
+    <div className="w-10 h-10 rounded-xl bg-bg text-text-2 flex items-center justify-center shrink-0"><I n={icon} s={18}/></div>
+    <div className="flex-1 min-w-0"><div className="text-sm font-semibold text-text">{title}</div>
+      {sub&&<div className="text-sm text-text-2 mt-1 leading-normal">{sub}</div>}</div>{children}</div>;
   return <Page narrow>
     <H1 sub="Account, notifications and privacy">Settings</H1>
     <Card pad={mob?18:24} style={{marginBottom:16}}>
@@ -70,32 +70,32 @@ export function SettingsPage(){
     {show2FA&&<Modal onClose={()=>setShow2FA(false)} title="Set up two-factor authentication">
       {tfaResult?<div>
         <Banner tone="ok" icon="check" title="Two-factor is now on">Save your backup codes somewhere safe — each one can be used once if you lose your phone.</Banner>
-        <div style={{marginTop:16,padding:16,background:C.bg,borderRadius:12,fontFamily:"ui-monospace,monospace",fontSize:14}}>
-          <div style={{fontSize:12,color:C.text3,fontWeight:600,textTransform:"uppercase",letterSpacing:".05em",marginBottom:10,fontFamily:"inherit"}}>Backup codes</div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-            {tfaResult.codes.map(c=><div key={c} style={{padding:"8px 10px",background:"#fff",border:`1px solid ${C.line}`,borderRadius:6,textAlign:"center"}}>{c}</div>)}</div></div>
+        <div className="mt-4 p-4 bg-bg rounded-xl font-mono text-sm">
+          <div className="text-xs text-text-3 font-semibold uppercase tracking-wide mb-2.5">Backup codes</div>
+          <div className="grid grid-cols-2 gap-2">
+            {tfaResult.codes.map(c=><div key={c} className="py-2 px-2.5 bg-white border border-line rounded-md text-center">{c}</div>)}</div></div>
         <Btn kind="primary" full style={{marginTop:16}} onClick={()=>{setShow2FA(false);setTfaResult(null);}}>Done</Btn>
-      </div>:<div style={{display:"flex",flexDirection:"column",gap:14}}>
+      </div>:<div className="flex flex-col gap-3.5">
         <Banner tone="brand" icon="shield" title="Demo mode">Real 2FA would send an SMS code via Twilio. Here we just save your phone and issue backup codes.</Banner>
         <Field label="Phone number" hint="Where verification codes would be sent.">
           <Input icon="phone" value={tfaPhone} onChange={e=>setTfaPhone(e.target.value)} placeholder="416 555 0100"/></Field>
-        <div style={{display:"flex",gap:9,justifyContent:"flex-end"}}>
+        <div className="flex gap-2.5 justify-end">
           <Btn kind="ghost" onClick={()=>setShow2FA(false)}>Cancel</Btn>
           <Btn kind="primary" icon="shield" disabled={tfaPhone.replace(/\D/g,"").length<10} onClick={()=>{const r=A.enable2FA(tfaPhone);if(r.ok)setTfaResult(r);}}>Enable 2FA</Btn></div></div>}</Modal>}
 
     {showOutbox&&<Modal onClose={()=>setShowOutbox(false)} title="Outbox — all sent messages">
       {A.outbox.length===0?<Empty icon="mail" title="Nothing sent" body="Password resets and notification emails would appear here."/>
-        :<div style={{display:"flex",flexDirection:"column",gap:10,maxHeight:400,overflowY:"auto"}}>
-          {A.outbox.map(m=><div key={m.id} style={{padding:14,background:C.bg,borderRadius:10,border:`1px solid ${C.line}`}}>
-            <div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"baseline",marginBottom:6}}>
-              <div style={{fontSize:14,fontWeight:640,color:C.text}}>{m.subject}</div>
-              <div style={{fontSize:11.5,color:C.text3,flexShrink:0}}>{m.at}</div></div>
-            <div style={{fontSize:12.5,color:C.text3,marginBottom:8}}>To: {m.to}</div>
-            <div style={{fontSize:13.5,color:C.text2,lineHeight:1.55}}>{m.body}</div></div>)}</div>}</Modal>}
+        :<div className="flex flex-col gap-2.5 max-h-100 overflow-y-auto">
+          {A.outbox.map(m=><div key={m.id} className="p-3.5 bg-bg rounded-xl border border-line">
+            <div className="flex justify-between gap-2.5 items-baseline mb-1.5">
+              <div className="text-sm font-semibold text-text">{m.subject}</div>
+              <div className="text-xs text-text-3 shrink-0">{m.at}</div></div>
+            <div className="text-xs text-text-3 mb-2">To: {m.to}</div>
+            <div className="text-sm text-text-2 leading-normal">{m.body}</div></div>)}</div>}</Modal>}
     <Modal open={confirm} onClose={()=>setConfirm(false)} title="Delete your account?" sub="This cannot be undone"
-      footer={<div style={{display:"flex",gap:10}}><Btn kind="outline" full onClick={()=>setConfirm(false)}>Keep my account</Btn>
+      footer={<div className="flex gap-2.5"><Btn kind="outline" full onClick={()=>setConfirm(false)}>Keep my account</Btn>
         <Btn kind="danger" full icon="trash" onClick={()=>{setConfirm(false);A.deleteAccount();}}>Delete permanently</Btn></div>}>
-      <p style={{fontSize:15,color:C.text2,lineHeight:1.7,margin:0}}>
+      <p className="text-base text-text-2 leading-relaxed">
         Deleting removes your profile, your {A.cvs.length} saved {A.cvs.length===1?"CV":"CVs"}, your saved jobs and your notification history.
         Applications you have already sent remain with those employers, who become responsible for that copy under PIPEDA.</p></Modal>
   </Page>;

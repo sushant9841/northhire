@@ -38,36 +38,36 @@ export function HireOnboardingModal({payload,onClose}){
     onClose();
   };
 
-  return <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(15,23,42,.72)",zIndex:9998,display:"flex",alignItems:"center",justifyContent:"center",padding:mob?16:24,backdropFilter:"blur(4px)"}}>
-    <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:mob?16:20,maxWidth:640,width:"100%",maxHeight:"92vh",overflow:"auto",boxShadow:"0 24px 60px rgba(0,0,0,.4)"}}>
+  return <div onClick={onClose} className={`fixed inset-0 bg-[rgba(15,23,42,0.72)] z-9998 flex items-center justify-center backdrop-blur-sm ${mob?"p-4":"p-6"}`}>
+    <div onClick={e=>e.stopPropagation()} className={`bg-white max-w-2xl w-full max-h-[92vh] overflow-auto shadow-[0_24px_60px_rgba(0,0,0,0.4)] ${mob?"rounded-2xl":"rounded-3xl"}`}>
       {/* Celebration header */}
-      <div style={{padding:mob?"24px 22px 20px":"32px 32px 24px",background:`linear-gradient(180deg, ${C.tint} 0%, #fff 100%)`,borderBottom:`1px solid ${C.line}`}}>
-        <div style={{display:"flex",gap:14,alignItems:"flex-start"}}>
-          <div style={{width:52,height:52,borderRadius:14,background:C.brand,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+      <div className={`bg-[linear-gradient(180deg,var(--color-tint)_0%,#fff_100%)] border-b border-line ${mob?"pt-6 px-6 pb-5":"pt-8 px-8 pb-6"}`}>
+        <div className="flex gap-3.5 items-start">
+          <div className="w-13 h-13 rounded-2xl bg-brand text-white flex items-center justify-center shrink-0">
             <I n="award" s={26}/>
           </div>
-          <div style={{flex:1,minWidth:0}}>
-            <div style={{display:"inline-block",padding:"3px 10px",background:C.okBg,color:C.ok,border:`1px solid ${C.okLn}`,borderRadius:99,fontSize:10.5,fontWeight:700,letterSpacing:".05em",textTransform:"uppercase",marginBottom:8}}>Hire confirmed</div>
-            <h2 style={{fontSize:mob?20:24,fontWeight:730,color:C.text,letterSpacing:"-.025em",margin:"0 0 6px",lineHeight:1.2}}>Welcome {person.name.split(" ")[0]} to {company.name}</h2>
-            <div style={{fontSize:13.5,color:C.text2}}>Hired for <strong>{job.t}</strong> · Set up their HR Suite profile now.</div>
+          <div className="flex-1 min-w-0">
+            <div className="inline-block py-1 px-2.5 bg-ok-bg text-ok border border-ok-ln rounded-full text-xs font-bold tracking-wide uppercase mb-2">Hire confirmed</div>
+            <h2 className={`font-bold tracking-tight text-text mb-1.5 leading-tight ${mob?"text-xl":"text-2xl"}`}>Welcome {person.name.split(" ")[0]} to {company.name}</h2>
+            <div className="text-sm text-text-2">Hired for <strong>{job.t}</strong> · Set up their HR Suite profile now.</div>
           </div>
-          <button onClick={onClose} aria-label="Close" style={{background:"none",border:"none",cursor:"pointer",padding:6,color:C.text3,display:"flex",flexShrink:0}}><I n="x" s={20}/></button>
+          <button onClick={onClose} aria-label="Close" className="bg-transparent border-0 cursor-pointer p-1.5 text-text-3 flex shrink-0"><I n="x" s={20}/></button>
         </div>
       </div>
 
       {/* Toggle */}
-      <div style={{padding:mob?"18px 22px":"22px 32px",borderBottom:`1px solid ${C.lineSoft}`,background:addToHr?C.okBg+"40":"#fff"}}>
-        <label style={{display:"flex",gap:12,alignItems:"flex-start",cursor:"pointer"}}>
-          <input type="checkbox" checked={addToHr} onChange={e=>setAddToHr(e.target.checked)} style={{width:20,height:20,marginTop:2,accentColor:C.brand,cursor:"pointer",flexShrink:0}}/>
-          <div style={{flex:1}}>
-            <div style={{fontSize:14,fontWeight:660,color:C.text,marginBottom:3}}>Add {person.name.split(" ")[0]} to HR Suite</div>
-            <div style={{fontSize:12.5,color:C.text3,lineHeight:1.5}}>Creates their employee record for attendance, leave, payroll, expenses, and reviews. They'll receive an email with sign-in details for their employee portal.</div>
+      <div className={`border-b border-line-soft ${mob?"py-5 px-6":"py-6 px-8"}`} style={{background:addToHr?C.okBg+"40":"#fff"}}>
+        <label className="flex gap-3 items-start cursor-pointer">
+          <input type="checkbox" checked={addToHr} onChange={e=>setAddToHr(e.target.checked)} className="w-5 h-5 mt-0.5 cursor-pointer shrink-0" style={{accentColor:C.brand}}/>
+          <div className="flex-1">
+            <div className="text-sm font-bold text-text mb-1">Add {person.name.split(" ")[0]} to HR Suite</div>
+            <div className="text-xs text-text-3 leading-normal">Creates their employee record for attendance, leave, payroll, expenses, and reviews. They'll receive an email with sign-in details for their employee portal.</div>
           </div>
         </label>
       </div>
 
-      {addToHr&&<div style={{padding:mob?"18px 22px":"22px 32px"}}>
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:12,marginBottom:14}}>
+      {addToHr&&<div className={mob?"py-5 px-6":"py-6 px-8"}>
+        <div className={`grid gap-3 mb-3.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
           <Field label="Job title" required><Input value={title} onChange={e=>setTitle(e.target.value)}/></Field>
           <Field label="Start date" required><Input type="date" value={startDate} onChange={e=>setStartDate(e.target.value)}/></Field>
           <Field label="Department" required><Sel value={dept} onChange={e=>setDept(e.target.value)}>
@@ -90,7 +90,7 @@ export function HireOnboardingModal({payload,onClose}){
       </div>}
 
       {/* Footer */}
-      <div style={{padding:mob?"16px 22px 20px":"18px 32px 24px",borderTop:`1px solid ${C.line}`,background:C.bg,display:"flex",gap:10,justifyContent:"flex-end",flexWrap:"wrap"}}>
+      <div className={`border-t border-line bg-bg flex gap-2.5 justify-end flex-wrap ${mob?"pt-4 px-6 pb-5":"pt-5 px-8 pb-6"}`}>
         <Btn kind="ghost" onClick={onClose}>{addToHr?"Skip for now":"Close"}</Btn>
         {addToHr&&<Btn kind="primary" icon="check" onClick={finish}>Create HR record</Btn>}
       </div>
