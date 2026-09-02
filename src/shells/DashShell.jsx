@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { use } from "../store/context.js";
 import { useMedia } from "../helpers/hooks.js";
 import { C, SH } from "../design/tokens.js";
@@ -136,6 +137,7 @@ export function DashShell({modules,children,brandKind}){
   const [navOpen,setNavOpen]=useState(!mob);
   const [upgradeModal,setUpgradeModal]=useState(null); /* {feature, requiredPlan, label} */
   const [accountMenu,setAccountMenu]=useState(false);
+  const [lockHover,setLockHover]=useState(null); /* {key, top, left} of currently-hovered locked item, for the portaled tooltip */
   useEffect(()=>{setNavOpen(!mob);},[mob]);
 
   const user=A.user; const company=A.company;
@@ -205,7 +207,10 @@ export function DashShell({modules,children,brandKind}){
             const requiredPlan=locked?A.planRequires(m.feature):null;
             /* Build the "which plans have this" phrase */
             const planPhrase=requiredPlan==="Enterprise"?"the Enterprise plan":"the Growth and Enterprise plans";
-            return <div key={m.k} className="relative group">
+            return <div key={m.k} className="relative"
+              onMouseEnter={locked?e=>{const r=e.currentTarget.getBoundingClientRect();
+                setLockHover({key:m.k,top:r.top+r.height/2,left:r.right+12});}:undefined}
+              onMouseLeave={locked?()=>setLockHover(h=>h?.key===m.k?null:h):undefined}>
               <button onClick={()=>{
                 if(locked){setUpgradeModal({feature:m.feature,requiredPlan,label:m.label,icon:m.icon}); return;}
                 if(m.section==="hrsuite"){if(typeof window!=="undefined")window.open("#hr","_blank"); return;}
@@ -217,17 +222,20 @@ export function DashShell({modules,children,brandKind}){
               <span className="flex-1">{m.label}</span>
               {locked&&<I n="lock" s={13} c="rgba(245,165,36,.85)"/>}
               </button>
-              {/* Floating tooltip on hover — pure CSS group-hover, no JS hover state needed */}
-              {locked&&<div className="hidden group-hover:block absolute top-1/2 -translate-y-1/2 bg-ink text-white py-2.5 px-3.5 rounded-xl text-xs leading-normal w-56 z-9999 shadow-[0_8px_24px_rgba(0,0,0,0.25)] pointer-events-none border border-amber/30" style={{left:"calc(100% + 12px)"}}>
-                <div className="flex gap-1.5 items-center mb-1.5">
-                  <I n="lock" s={13} c="#F5A524"/>
-                  <span className="text-xs font-bold text-amber tracking-wide uppercase">Locked</span>
-                </div>
-                <div className="text-white/90">This feature is only available on {planPhrase}.</div>
-                <div className="mt-1.5 text-xs text-white/55">Click to see upgrade options.</div>
-                {/* Arrow pointing left toward the sidebar item */}
-                <div className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-t-8 border-t-transparent border-b-8 border-b-transparent border-r-8 border-r-ink"/>
-              </div>}
+              {/* Floating tooltip, portaled to <body> and positioned via a fixed pixel offset so it
+                  isn't clipped by this nav's own overflow-y:auto scroll box */}
+              {locked&&lockHover?.key===m.k&&typeof document!=="undefined"&&createPortal(
+                <div className="fixed bg-ink text-white py-2.5 px-3.5 rounded-xl text-xs leading-normal w-56 z-9999 shadow-[0_8px_24px_rgba(0,0,0,0.25)] pointer-events-none border border-amber/30"
+                 style={{top:lockHover.top,left:lockHover.left,transform:"translateY(-50%)"}}>
+                  <div className="flex gap-1.5 items-center mb-1.5">
+                    <I n="lock" s={13} c="#F5A524"/>
+                    <span className="text-xs font-bold text-amber tracking-wide uppercase">Locked</span>
+                  </div>
+                  <div className="text-white/90">This feature is only available on {planPhrase}.</div>
+                  <div className="mt-1.5 text-xs text-white/55">Click to see upgrade options.</div>
+                  {/* Arrow pointing left toward the sidebar item */}
+                  <div className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-t-8 border-t-transparent border-b-8 border-b-transparent border-r-8 border-r-ink"/>
+                </div>, document.body)}
             </div>;})}
         </div>;})}
     </nav>
