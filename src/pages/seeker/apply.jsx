@@ -12,27 +12,25 @@ import { JobCard, EmpMark } from "../shared/cards.jsx";
 function ApplyShell({step,job,children,onNext,onBack,nextLabel,nextDisabled}){
   const A=use(); const mob=useMedia("(max-width: 900px)"); const e=A.emp(job.e);
   const steps=["Your profile","Questions","Review"];
-  return <div style={{background:C.bg,minHeight:"100%"}}>
-    <div style={{background:"#fff",borderBottom:`1px solid ${C.line}`}}>
-      <div style={{maxWidth:760,margin:"0 auto",padding:mob?"16px 16px":"20px 24px"}}>
-        <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:18}}>
+  return <div className="bg-bg min-h-full">
+    <div className="bg-white border-b border-line">
+      <div className={`max-w-3xl mx-auto ${mob?"p-4":"py-5 px-6"}`}>
+        <div className="flex gap-3 items-center mb-5">
           <EmpMark e={e} size={42} radius={11}/>
-          <div style={{minWidth:0}}>
-            <div style={{fontSize:15,fontWeight:660,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{job.t}</div>
-            <div style={{fontSize:13,color:C.text2,marginTop:2}}>{e.name} • {job.city}, {job.prov}</div></div></div>
-        <div style={{display:"flex",alignItems:"center"}}>
-          {steps.map((s,i)=><div key={s} style={{display:"flex",alignItems:"center",flex:i<2?1:"0 0 auto",minWidth:0}}>
-            <div style={{display:"flex",alignItems:"center",gap:8,minWidth:0}}>
-              <div style={{width:26,height:26,borderRadius:99,display:"flex",alignItems:"center",justifyContent:"center",
-                fontSize:12,fontWeight:700,flexShrink:0,transition:"all .25s",
-                background:step>i+1?C.ok:step===i+1?C.brand:C.lineSoft,color:step>=i+1?"#fff":C.text3}}>
+          <div className="min-w-0">
+            <div className="text-base font-bold text-text overflow-hidden text-ellipsis whitespace-nowrap">{job.t}</div>
+            <div className="text-sm text-text-2 mt-0.5">{e.name} • {job.city}, {job.prov}</div></div></div>
+        <div className="flex items-center">
+          {steps.map((s,i)=><div key={s} className={`flex items-center min-w-0 ${i<2?"flex-1":"flex-none"}`}>
+            <div className="flex items-center gap-2 min-w-0">
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition duration-300 ${step>i+1?"bg-ok text-white":step===i+1?"bg-brand text-white":"bg-line-soft text-text-3"}`}>
                 {step>i+1?<I n="check" s={13} c="#fff" w={3}/>:i+1}</div>
-              {!mob&&<span style={{fontSize:13,fontWeight:step===i+1?650:500,color:step===i+1?C.text:C.text3,whiteSpace:"nowrap"}}>{s}</span>}</div>
-            {i<2&&<div style={{flex:1,height:2,background:step>i+1?C.ok:C.lineSoft,margin:"0 10px",borderRadius:99,minWidth:14,transition:"background .3s"}}/>}
+              {!mob&&<span className={`text-sm whitespace-nowrap ${step===i+1?"font-bold text-text":"font-medium text-text-3"}`}>{s}</span>}</div>
+            {i<2&&<div className={`flex-1 h-0.5 mx-2.5 rounded-full min-w-3.5 transition-colors duration-300 ${step>i+1?"bg-ok":"bg-line-soft"}`}/>}
           </div>)}</div></div></div>
-    <div style={{maxWidth:760,margin:"0 auto",padding:mob?"18px 16px 30px":"26px 24px 46px"}}>
+    <div className={`max-w-3xl mx-auto ${mob?"pt-5 px-4 pb-8":"pt-7 px-6 pb-12"}`}>
       <div key={step} style={{animation:"slideIn .28s cubic-bezier(.22,.68,.35,1) both"}}>{children}</div>
-      <div style={{display:"flex",gap:10,justifyContent:"space-between",marginTop:22}}>
+      <div className="flex gap-2.5 justify-between mt-6">
         <Btn kind="ghost" icon="arrowL" onClick={onBack}>{step===1?"Cancel":"Back"}</Btn>
         <Btn kind="primary" size="lg" iconR={step===3?"send":"arrowR"} onClick={onNext} disabled={nextDisabled}>{nextLabel}</Btn></div></div>
   </div>;
@@ -53,33 +51,32 @@ function _CvPicker(){
   }
 
   return <>
-    <div style={{display:"flex",alignItems:"center",gap:12,border:`1px solid ${C.line}`,borderRadius:11,padding:"13px 15px"}}>
-      <div style={{width:36,height:36,borderRadius:9,background:C.wash,color:C.brand,display:"flex",alignItems:"center",justifyContent:"center"}}><I n="file" s={18}/></div>
-      <div style={{flex:1,minWidth:0}}>
-        <div style={{fontSize:14,fontWeight:620,color:C.text}}>{active?.name||"No CV selected"}</div>
-        <div style={{fontSize:12.5,color:C.text3,marginTop:2}}>{active?`${CV_TEMPLATES.find(t=>t.id===active.template)?.name||"Standard"} template • updated ${active.updated||"—"}`:""}</div>
+    <div className="flex items-center gap-3 border border-line rounded-xl py-3.5 px-4">
+      <div className="w-9 h-9 rounded-lg bg-wash text-brand flex items-center justify-center"><I n="file" s={18}/></div>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-semibold text-text">{active?.name||"No CV selected"}</div>
+        <div className="text-xs text-text-3 mt-0.5">{active?`${CV_TEMPLATES.find(t=>t.id===active.template)?.name||"Standard"} template • updated ${active.updated||"—"}`:""}</div>
       </div>
       <Btn kind="ghost" size="sm" onClick={()=>setOpen(true)}>Change</Btn>
     </div>
 
     {open&&<Modal onClose={()=>setOpen(false)} title="Choose a CV to send">
-      <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:14}}>
+      <div className="flex flex-col gap-2 mb-3.5">
         {myCvs.map(cv=>{const isActive=activeId===cv.id;
           return <button key={cv.id} onClick={()=>setActive(cv.id)}
-            style={{display:"flex",alignItems:"center",gap:12,padding:"14px 16px",background:isActive?C.tint:"#fff",
-              border:`1.5px solid ${isActive?C.brand:C.line}`,borderRadius:12,cursor:"pointer",fontFamily:"inherit",textAlign:"left",transition:"all .16s"}}>
-            <div style={{width:36,height:36,borderRadius:9,background:isActive?C.brand:C.wash,color:isActive?"#fff":C.brand,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><I n="file" s={18}/></div>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:14,fontWeight:660,color:C.text}}>{cv.name}</div>
-              <div style={{fontSize:12,color:C.text3,marginTop:2}}>{CV_TEMPLATES.find(t=>t.id===cv.template)?.name||"Standard"} template • {cv.updated||"just now"}</div>
+            className={`flex items-center gap-3 py-3.5 px-4 rounded-xl cursor-pointer text-left transition duration-150 border-2 ${isActive?"bg-tint border-brand":"bg-white border-line"}`}>
+            <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${isActive?"bg-brand text-white":"bg-wash text-brand"}`}><I n="file" s={18}/></div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-bold text-text">{cv.name}</div>
+              <div className="text-xs text-text-3 mt-0.5">{CV_TEMPLATES.find(t=>t.id===cv.template)?.name||"Standard"} template • {cv.updated||"just now"}</div>
             </div>
             {isActive&&<Tag tone="brand" sm icon="check">Selected</Tag>}
           </button>;})}
       </div>
-      <div style={{padding:14,background:C.bg,borderRadius:11,display:"flex",gap:12,alignItems:"center",justifyContent:"space-between",flexWrap:"wrap"}}>
+      <div className="p-3.5 bg-bg rounded-xl flex gap-3 items-center justify-between flex-wrap">
         <div>
-          <div style={{fontSize:13,fontWeight:600,color:C.text}}>Need a different CV?</div>
-          <div style={{fontSize:12,color:C.text3,marginTop:2}}>You can have up to 5 CVs for different job types.</div>
+          <div className="text-sm font-semibold text-text">Need a different CV?</div>
+          <div className="text-xs text-text-3 mt-0.5">You can have up to 5 CVs for different job types.</div>
         </div>
         <Btn kind="outline" size="sm" icon="plus" onClick={()=>{setOpen(false); A.editCv("new");}}>Create new CV</Btn>
       </div>
@@ -94,26 +91,26 @@ export function Apply1(){
   return <ApplyShell step={1} job={job} onBack={()=>A.go("job")} onNext={()=>A.go("apply2")} nextLabel="Continue">
     <Card pad={22}>
       <H2 sub="This is exactly what the employer will receive">Confirm your details</H2>
-      <div style={{display:"flex",gap:14,alignItems:"center",background:C.tint,border:`1px solid ${C.line2}`,borderRadius:13,padding:16,marginBottom:18}}>
+      <div className="flex gap-3.5 items-center bg-tint border border-line-2 rounded-xl p-4 mb-5">
         <SmartPortrait seed={u.seed??0} size={54} radius={13}/>
-        <div style={{minWidth:0,flex:1}}>
-          <div style={{fontSize:15.5,fontWeight:660,color:C.text}}>{u.name}</div>
-          <div style={{fontSize:13,color:C.text2,marginTop:3}}>{u.title} • {u.city}, {u.prov}</div>
-          <div style={{fontSize:13,color:C.text2,marginTop:2}}>{u.email} • {u.phone}</div></div>
+        <div className="min-w-0 flex-1">
+          <div className="text-base font-bold text-text">{u.name}</div>
+          <div className="text-sm text-text-2 mt-1">{u.title} • {u.city}, {u.prov}</div>
+          <div className="text-sm text-text-2 mt-0.5">{u.email} • {u.phone}</div></div>
         <Btn kind="outline" size="sm" icon="edit" onClick={()=>A.go("profile")}>Edit</Btn></div>
-      <div style={{marginBottom:18}}>
+      <div className="mb-5">
         <Lbl>Attached CV</Lbl>
         <_CvPicker/>
       </div>
       {(job.mustHave||[]).length>0&&(()=>{
         const mustMissing=job.mustHave.filter(s=>!(u.skills||[]).some(x=>x.toLowerCase()===s.toLowerCase()));
         const mustPresent=job.mustHave.filter(s=>(u.skills||[]).some(x=>x.toLowerCase()===s.toLowerCase()));
-        return <div style={{marginBottom:18}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+        return <div className="mb-5">
+          <div className="flex justify-between items-center mb-2">
             <Lbl style={{margin:0}}>Must-have skills</Lbl>
             <Tag tone={mustMissing.length===0?"ok":"warn"} sm>{mustPresent.length} of {job.mustHave.length}</Tag>
           </div>
-          <div style={{display:"flex",flexWrap:"wrap",gap:7}}>
+          <div className="flex flex-wrap gap-2">
             {job.mustHave.map(s=>{const mine=(u.skills||[]).some(x=>x.toLowerCase()===s.toLowerCase());
               return <Tag key={s} tone={mine?"ok":"danger"} icon={mine?"check":"alert"}>{s}</Tag>;})}
           </div>
@@ -122,12 +119,12 @@ export function Apply1(){
             The employer flagged these as required: <strong>{mustMissing.join(", ")}</strong>. You can still apply, but add them to your profile first if you actually have them.
           </Banner>}
         </div>;})()}
-      <div style={{marginBottom:18}}>
+      <div className="mb-5">
         <Lbl>Nice-to-have skills</Lbl>
-        <div style={{display:"flex",flexWrap:"wrap",gap:7}}>
+        <div className="flex flex-wrap gap-2">
           {job.skills.map(s=>{const mine=(u.skills||[]).some(x=>x.toLowerCase()===s.toLowerCase());
             return <Tag key={s} tone={mine?"ok":"neutral"} icon={mine?"check":undefined}>{s}</Tag>;})}</div>
-        {missing.length>0&&<div style={{fontSize:13,color:C.text2,marginTop:11,lineHeight:1.6}}>
+        {missing.length>0&&<div className="text-sm text-text-2 mt-3 leading-relaxed">
           Bonus if you have {missing.slice(0,3).join(", ")}. Add them to your profile so the employer sees them.</div>}</div>
       <Banner tone="neutral" icon="shield" title="How your data is used">
         {e.name} receives your profile, CV and answers for this application only. You can withdraw at any time from My Status, in line with PIPEDA.</Banner>
@@ -139,7 +136,7 @@ export function Apply2(){
   return <ApplyShell step={2} job={job} onBack={()=>A.go("apply1")} onNext={()=>A.go("apply3")} nextLabel="Review application">
     <Card pad={22}>
       <H2 sub="Three quick questions the employer asked for">A few questions</H2>
-      <div style={{display:"flex",flexDirection:"column",gap:20}}>
+      <div className="flex flex-col gap-5">
         <Field label="When could you start?" required>
           <Sel value={d.avail} onChange={e=>set("avail",e.target.value)}>
             {["Immediately","Within 2 weeks","Within 1 month","More than 1 month"].map(o=><option key={o}>{o}</option>)}</Sel></Field>
@@ -152,11 +149,9 @@ export function Apply2(){
             placeholder={`I am applying for the ${job.t} role because…`}/></Field>
         {job.exp!=="No experience required"&&job.exp!=="Entry level welcome"&&
           <Field label={`This role asks for ${job.exp}. Do you meet that?`} required>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-              {["Yes","Close to it"].map(o=><button key={o} onClick={()=>set("meets",o)} style={{padding:"12px",borderRadius:10,
-                cursor:"pointer",fontFamily:"inherit",fontSize:14,fontWeight:d.meets===o?650:520,
-                border:`1.5px solid ${d.meets===o?C.brand:C.line}`,background:d.meets===o?C.tint:"#fff",
-                color:d.meets===o?C.brand:C.text,transition:"all .16s"}}>{o}</button>)}</div></Field>}
+            <div className="grid grid-cols-2 gap-2.5">
+              {["Yes","Close to it"].map(o=><button key={o} onClick={()=>set("meets",o)}
+                className={`p-3 rounded-xl cursor-pointer text-sm border-2 transition duration-150 ${d.meets===o?"font-bold border-brand bg-tint text-brand":"font-medium border-line bg-white text-text"}`}>{o}</button>)}</div></Field>}
       </div></Card></ApplyShell>;
 }
 export function Apply3(){
@@ -170,15 +165,13 @@ export function Apply3(){
   return <ApplyShell step={3} job={job} onBack={()=>A.go("apply2")} onNext={()=>A.submitApply()} nextLabel="Send application">
     <Card pad={22}>
       <H2 sub="Check everything, then send">Review your application</H2>
-      <div style={{border:`1px solid ${C.line}`,borderRadius:13,overflow:"hidden",marginBottom:16}}>
-        {rows.map(([k,v],i)=><div key={k} style={{display:"flex",justifyContent:"space-between",gap:16,padding:"12px 15px",
-          borderBottom:i<rows.length-1?`1px solid ${C.lineSoft}`:"none",fontSize:13.5,background:i%2?C.bg:"#fff"}}>
-          <span style={{color:C.text2,flexShrink:0}}>{k}</span>
-          <span style={{fontWeight:600,color:C.text,textAlign:"right"}}>{v}</span></div>)}</div>
-      {d.letter.trim()&&<div style={{marginBottom:16}}>
+      <div className="border border-line rounded-xl overflow-hidden mb-4">
+        {rows.map(([k,v],i)=><div key={k} className={`flex justify-between gap-4 py-3 px-4 text-sm ${i<rows.length-1?"border-b border-line-soft":""} ${i%2?"bg-bg":"bg-white"}`}>
+          <span className="text-text-2 shrink-0">{k}</span>
+          <span className="font-semibold text-text text-right">{v}</span></div>)}</div>
+      {d.letter.trim()&&<div className="mb-4">
         <Lbl>Your note</Lbl>
-        <div style={{background:C.bg,border:`1px solid ${C.line}`,borderRadius:11,padding:14,fontSize:14,
-          color:C.text2,lineHeight:1.7,whiteSpace:"pre-wrap"}}>{d.letter}</div></div>}
+        <div className="bg-bg border border-line rounded-xl p-3.5 text-sm text-text-2 leading-relaxed whitespace-pre-wrap">{d.letter}</div></div>}
       <Banner tone="brand" icon="sparkle" title="What happens next">
         Your application goes straight into {e.name}'s pipeline. You will see every stage change in My Status, and get a notification when they review it.</Banner>
     </Card></ApplyShell>;
@@ -188,17 +181,16 @@ export function ApplyDone(){
   const e=job?A.emp(job.e):null;
   const more=A.jobs.filter(j=>j.status==="live"&&j.cat===job?.cat&&j.id!==job?.id).slice(0,3);
   return <Page narrow>
-    <div style={{textAlign:"center",padding:"20px 0 8px",animation:"rise .4s ease both"}}>
-      <div style={{width:76,height:76,borderRadius:99,background:C.okBg,border:`2px solid ${C.okLn}`,display:"flex",
-        alignItems:"center",justifyContent:"center",margin:"0 auto 20px",animation:"pop .45s cubic-bezier(.22,.68,.35,1) both"}}>
+    <div className="text-center pt-5 pb-2" style={{animation:"rise .4s ease both"}}>
+      <div className="w-19 h-19 rounded-full bg-ok-bg border-2 border-ok-ln flex items-center justify-center mx-auto mb-5" style={{animation:"pop .45s cubic-bezier(.22,.68,.35,1) both"}}>
         <I n="check" s={38} c={C.ok} w={2.6}/></div>
-      <h1 style={{fontSize:26,fontWeight:730,letterSpacing:"-.035em",color:C.text,margin:"0 0 10px"}}>Application sent</h1>
-      <p style={{fontSize:15.5,color:C.text2,lineHeight:1.65,margin:"0 auto 26px",maxWidth:440}}>
-        {e?<>Your application for <strong style={{color:C.text}}>{job.t}</strong> is now with {e.name}. You will be notified the moment they review it.</>:"Your application has been submitted."}</p>
-      <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap",marginBottom:32}}>
+      <h1 className="text-2xl font-bold tracking-tight text-text mb-2.5">Application sent</h1>
+      <p className="text-base text-text-2 leading-relaxed mx-auto mb-7 max-w-md">
+        {e?<>Your application for <strong className="text-text">{job.t}</strong> is now with {e.name}. You will be notified the moment they review it.</>:"Your application has been submitted."}</p>
+      <div className="flex gap-2.5 justify-center flex-wrap mb-8">
         <Btn kind="primary" icon="activity" onClick={()=>A.go("status")}>Track in My Status</Btn>
         <Btn kind="outline" icon="search" onClick={()=>A.go("search")}>Keep searching</Btn></div></div>
     {more.length>0&&<><H2 sub="Other openings in the same field">Similar jobs</H2>
-      <div style={{display:"flex",flexDirection:"column",gap:12}}>{more.map((j,i)=><JobCard key={j.id} job={j} delay={i*0.05}/>)}</div></>}
+      <div className="flex flex-col gap-3">{more.map((j,i)=><JobCard key={j.id} job={j} delay={i*0.05}/>)}</div></>}
   </Page>;
 }

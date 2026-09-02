@@ -27,33 +27,33 @@ export function AccountMenuPage(){
     {k:"contact",l:"Contact support",s:"Get help from a real person",ic:"phone"},
   ];
   return <Page narrow>
-    <div style={{display:"flex",gap:16,alignItems:"center",marginBottom:24}}>
+    <div className="flex gap-4 items-center mb-6">
       <SmartPortrait seed={u.seed??0} size={64} radius={16}/>
-      <div style={{flex:1,minWidth:0}}>
-        <div style={{fontSize:mob?22:26,fontWeight:730,color:C.text,letterSpacing:"-.025em"}}>{u.name}</div>
-        <div style={{fontSize:14,color:C.text2,marginTop:4}}>{u.city?`${u.city}, ${u.prov}`:"Add your location"}</div>
+      <div className="flex-1 min-w-0">
+        <div className="text-2xl font-bold text-text tracking-tight">{u.name}</div>
+        <div className="text-sm text-text-2 mt-1">{u.city?`${u.city}, ${u.prov}`:"Add your location"}</div>
       </div>
     </div>
 
     <Card pad={mob?18:22} style={{marginBottom:16,borderRadius:14,background:seeking?C.okBg:C.bg,border:`1px solid ${seeking?C.okLn:C.line}`}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
-        <div style={{flex:1}}>
-          <div style={{fontSize:14,fontWeight:660,color:C.text}}>Actively seeking work</div>
-          <div style={{fontSize:12.5,color:C.text2,marginTop:3}}>{seeking?"Employers can find your profile when browsing candidates.":"Your profile is hidden from employer searches."}</div>
+      <div className="flex justify-between items-center gap-3">
+        <div className="flex-1">
+          <div className="text-sm font-bold text-text">Actively seeking work</div>
+          <div className="text-xs text-text-2 mt-1">{seeking?"Employers can find your profile when browsing candidates.":"Your profile is hidden from employer searches."}</div>
         </div>
-        <button onClick={()=>A.updateProfile({actively_seeking:!seeking})} style={{background:seeking?C.ok:C.text3,border:"none",width:44,height:24,borderRadius:99,cursor:"pointer",position:"relative",transition:"background .2s"}}>
-          <span style={{position:"absolute",top:2,left:seeking?22:2,width:20,height:20,background:"#fff",borderRadius:99,transition:"left .2s"}}/>
+        <button onClick={()=>A.updateProfile({actively_seeking:!seeking})} className={`border-0 w-11 h-6 rounded-full cursor-pointer relative transition-colors duration-200 ${seeking?"bg-ok":"bg-text-3"}`}>
+          <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-[left] duration-200 ${seeking?"left-6":"left-0.5"}`}/>
         </button>
       </div>
     </Card>
 
     {(()=>{const w=A.workerByPersonId?.(u.id);
       return <Card pad={mob?18:22} style={{marginBottom:16,borderRadius:14,background:C.ink,color:"#fff",cursor:"pointer"}} onClick={()=>A.go("workerDashboard")}>
-        <div style={{display:"flex",gap:14,alignItems:"center"}}>
-          <div style={{width:44,height:44,borderRadius:11,background:"rgba(106,172,255,.2)",border:"1px solid rgba(106,172,255,.35)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><I n="users" s={20} c="#6AACFF"/></div>
-          <div style={{flex:1,minWidth:0}}>
-            <div style={{fontSize:14.5,fontWeight:660,color:"#fff"}}>{w?"NorthHire Staffing worker":"Try NorthHire Staffing"}</div>
-            <div style={{fontSize:12.5,color:"rgba(255,255,255,.65)",marginTop:3,lineHeight:1.5}}>
+        <div className="flex gap-3.5 items-center">
+          <div className="w-11 h-11 rounded-xl bg-accent/20 border border-accent/35 flex items-center justify-center shrink-0"><I n="users" s={20} c="#6AACFF"/></div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-bold text-white">{w?"NorthHire Staffing worker":"Try NorthHire Staffing"}</div>
+            <div className="text-xs text-white/65 mt-1 leading-normal">
               {w?`Assignments, timesheets, pay stubs. ${w.availability==="on-assignment"?"Currently on assignment.":"Available for work."}`:"Get placed on contract work. We pay you, we cover taxes, WSIB, and vacation."}</div>
           </div>
           <I n="chevR" s={17} c="rgba(255,255,255,.5)"/>
@@ -62,18 +62,17 @@ export function AccountMenuPage(){
     })()}
 
     <Card pad={0} style={{overflow:"hidden",borderRadius:14}}>
-      {items.map((it,i)=><button key={it.k} onClick={()=>A.go(it.k)} style={{display:"flex",alignItems:"center",gap:14,width:"100%",padding:mob?"14px 16px":"16px 20px",background:"transparent",border:"none",borderTop:i>0?`1px solid ${C.lineSoft}`:"none",cursor:"pointer",fontFamily:"inherit",textAlign:"left",transition:"background .16s"}}
-        onMouseEnter={e=>e.currentTarget.style.background=C.bg}
-        onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-        <div style={{width:36,height:36,borderRadius:10,background:C.wash,color:C.brand,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><I n={it.ic} s={17}/></div>
-        <div style={{flex:1,minWidth:0}}>
-          <div style={{fontSize:14.5,fontWeight:600,color:C.text}}>{it.l}</div>
-          <div style={{fontSize:12.5,color:C.text3,marginTop:2}}>{it.s}</div>
+      {items.map((it,i)=><button key={it.k} onClick={()=>A.go(it.k)}
+        className={`flex items-center gap-3.5 w-full bg-transparent border-0 cursor-pointer text-left transition-colors duration-150 hover:bg-bg ${i>0?"border-t border-line-soft":""} ${mob?"py-3.5 px-4":"py-4 px-5"}`}>
+        <div className="w-9 h-9 rounded-xl bg-wash text-brand flex items-center justify-center shrink-0"><I n={it.ic} s={17}/></div>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-semibold text-text">{it.l}</div>
+          <div className="text-xs text-text-3 mt-0.5">{it.s}</div>
         </div>
         <I n="chevR" s={17} c={C.text3}/></button>)}
     </Card>
 
-    <div style={{marginTop:16,textAlign:"center"}}>
+    <div className="mt-4 text-center">
       <Btn kind="ghost" size="sm" onClick={()=>{A.logout(); A.go("home");}}>Sign out</Btn>
     </div>
   </Page>;

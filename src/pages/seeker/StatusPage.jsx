@@ -19,7 +19,7 @@ export function StatusPage(){
   return <Page>
     <H1 sub="Live status pulled straight from each employer's pipeline"
       action={<Btn kind="outline" size="sm" icon="bookmark" onClick={()=>A.go("saved")}>Saved ({A.saved.size})</Btn>}>My status</H1>
-    <div style={{display:"grid",gridTemplateColumns:`repeat(auto-fit,minmax(${mob?140:160}px,1fr))`,gap:12,marginBottom:20}}>
+    <div className="grid gap-3 mb-5" style={{gridTemplateColumns:`repeat(auto-fit,minmax(${mob?140:160}px,1fr))`}}>
       <Stat icon="send" label="Applications" value={mine.length} tone={C.brand}/>
       <Stat icon="eye" label="Reviewed" value={(counts.Reviewed||0)+(counts.Shortlisted||0)+(counts.Interview||0)+(counts.Offer||0)}/>
       <Stat icon="calendar" label="Interviews" value={counts.Interview||0} tone={C.warn}/>
@@ -28,30 +28,28 @@ export function StatusPage(){
     {list.length===0?<Empty icon="activity" title={tab==="all"?"No applications yet":`Nothing at the ${tab} stage`}
       body={tab==="all"?"When you apply, every stage the employer moves you through shows up here in real time.":"Applications move through stages as employers review them."}
       action={<Btn kind="primary" onClick={()=>A.go("search")}>Browse jobs</Btn>}/>
-      :<div style={{display:"flex",flexDirection:"column",gap:12}}>
+      :<div className="flex flex-col gap-3">
         {list.map((a,i)=>{const j=A.job(a.job); if(!j) return null; const e=A.emp(j.e);
           const idx=STAGES.indexOf(a.stage); const pct=a.stage==="Withdrawn"?0:((idx+1)/STAGES.length)*100;
           return <Card key={a.id} pad={0} delay={Math.min(i,6)*0.05} style={{overflow:"hidden"}}>
-            <div style={{padding:mob?16:18,display:"flex",gap:14,alignItems:"flex-start"}}>
+            <div className={`flex gap-3.5 items-start ${mob?"p-4":"p-5"}`}>
               <EmpMark e={e} size={46}/>
-              <div style={{flex:1,minWidth:0}}>
-                <button onClick={()=>A.openJob(j.id)} style={{background:"none",border:"none",padding:0,cursor:"pointer",
-                  fontFamily:"inherit",textAlign:"left",fontSize:16,fontWeight:660,color:C.text,letterSpacing:"-.02em"}}>{j.t}</button>
-                <div style={{fontSize:13.5,color:C.text2,marginTop:4}}>{e.name} • {j.city}, {j.prov} • {pay(j)}{payShort(j)}</div>
-                <div style={{display:"flex",gap:9,alignItems:"center",marginTop:10,flexWrap:"wrap"}}>
+              <div className="flex-1 min-w-0">
+                <button onClick={()=>A.openJob(j.id)} className="bg-transparent border-0 p-0 cursor-pointer text-left text-base font-bold text-text tracking-tight">{j.t}</button>
+                <div className="text-sm text-text-2 mt-1">{e.name} • {j.city}, {j.prov} • {pay(j)}{payShort(j)}</div>
+                <div className="flex gap-2.5 items-center mt-2.5 flex-wrap">
                   <Tag tone={a.stage==="Offer"?"ok":a.stage==="Interview"?"warn":a.stage==="Withdrawn"?"neutral":"brand"} sm>{a.stage}</Tag>
-                  <span style={{fontSize:13,color:a.stage==="Withdrawn"?C.text3:C.text2}}>{a.note}</span></div></div>
-              {!mob&&<div style={{textAlign:"right",flexShrink:0}}>
-                <div style={{fontSize:12.5,color:C.text3}}>Applied</div>
-                <div style={{fontSize:13.5,fontWeight:600,color:C.text,marginTop:2}}>{a.at}</div></div>}</div>
-            {a.stage!=="Withdrawn"&&<div style={{padding:"13px 18px",background:C.bg,borderTop:`1px solid ${C.lineSoft}`}}>
+                  <span className={`text-sm ${a.stage==="Withdrawn"?"text-text-3":"text-text-2"}`}>{a.note}</span></div></div>
+              {!mob&&<div className="text-right shrink-0">
+                <div className="text-xs text-text-3">Applied</div>
+                <div className="text-sm font-semibold text-text mt-0.5">{a.at}</div></div>}</div>
+            {a.stage!=="Withdrawn"&&<div className="py-3.5 px-5 bg-bg border-t border-line-soft">
               <Bar v={pct} tone={a.stage==="Offer"?C.ok:C.brand} h={6}/>
-              <div style={{display:"flex",justifyContent:"space-between",marginTop:9}}>
-                {STAGES.map((s,k)=><div key={s} style={{textAlign:"center",flex:1}}>
-                  <div style={{width:8,height:8,borderRadius:99,margin:"0 auto 4px",transition:"background .4s",
-                    background:k<=idx?(a.stage==="Offer"?C.ok:C.brand):C.line}}/>
-                  <div style={{fontSize:10.5,color:k<=idx?C.text2:C.text3,fontWeight:k===idx?650:400}}>{s}</div></div>)}</div></div>}
-            <div style={{padding:"12px 18px",borderTop:`1px solid ${C.lineSoft}`,display:"flex",gap:9,flexWrap:"wrap"}}>
+              <div className="flex justify-between mt-2.5">
+                {STAGES.map((s,k)=><div key={s} className="text-center flex-1">
+                  <div className={`w-2 h-2 rounded-full mx-auto mb-1 transition-colors duration-500 ${k<=idx?(a.stage==="Offer"?"bg-ok":"bg-brand"):"bg-line"}`}/>
+                  <div className={`text-xs ${k<=idx?"text-text-2":"text-text-3"} ${k===idx?"font-bold":"font-normal"}`}>{s}</div></div>)}</div></div>}
+            <div className="py-3 px-5 border-t border-line-soft flex gap-2.5 flex-wrap">
               <Btn kind="outline" size="sm" iconR="chevR" onClick={()=>A.openJob(j.id)}>View job</Btn>
               {a.stage!=="Withdrawn"&&a.stage!=="Offer"&&<Btn kind="ghost" size="sm" onClick={()=>A.withdraw(a.id)}>Withdraw</Btn>}
               {a.stage==="Offer"&&<Btn kind="ok" size="sm" icon="check" onClick={()=>A.acceptOffer(a.id)}>Accept offer</Btn>}
