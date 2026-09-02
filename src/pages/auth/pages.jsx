@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
@@ -72,49 +72,44 @@ export function SignupPage(){
 
   if(!A.settings.publicSignup) return <Page narrow>
     <Card pad={34} style={{textAlign:"center"}}>
-      <div style={{width:64,height:64,borderRadius:99,background:C.warnBg,border:`2px solid ${C.warnLn}`,display:"flex",
-        alignItems:"center",justifyContent:"center",margin:"0 auto 18px"}}><I n="lock" s={28} c={C.warn}/></div>
-      <h1 style={{fontSize:22,fontWeight:730,color:C.text,margin:"0 0 10px",letterSpacing:"-.03em"}}>Registration is temporarily closed</h1>
-      <p style={{fontSize:15,color:C.text2,lineHeight:1.65,margin:"0 auto 22px",maxWidth:400}}>
+      <div className="w-16 h-16 rounded-full bg-warn-bg border-2 border-warn-ln flex items-center justify-center mx-auto mb-5"><I n="lock" s={28} c={C.warn}/></div>
+      <h1 className="text-2xl font-bold text-text mb-2.5 tracking-tight">Registration is temporarily closed</h1>
+      <p className="text-base text-text-2 leading-relaxed mx-auto mb-6 max-w-sm">
         New sign-ups have been paused by an administrator. You can still browse every job on the platform.</p>
       <Btn kind="primary" onClick={()=>A.go("search")}>Browse jobs</Btn></Card></Page>;
 
-  return <div style={{background:C.bg,minHeight:"100%"}}>
-    <div style={{maxWidth:620,width:"100%",margin:"0 auto",padding:mob?"18px 16px 34px":"32px 24px 50px"}}>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
-        <button onClick={()=>A.go("home")} style={{display:"flex",alignItems:"center",gap:8,background:"none",border:"none",cursor:"pointer",padding:0,color:C.text2,fontFamily:"inherit",fontSize:13.5,fontWeight:600}}
-          onMouseEnter={e=>e.currentTarget.style.color=C.text}
-          onMouseLeave={e=>e.currentTarget.style.color=C.text2}>
+  return <div className="bg-bg min-h-full">
+    <div className={`max-w-xl w-full mx-auto ${mob?"pt-5 px-4 pb-9":"pt-8 px-6 pb-13"}`}>
+      <div className="flex items-center justify-between mb-3.5">
+        <button onClick={()=>A.go("home")} className="flex items-center gap-2 bg-transparent border-0 cursor-pointer p-0 text-text-2 text-sm font-semibold hover:text-text">
           <I n="chevL" s={16} w={2}/> Back to NorthHire</button>
-        <button onClick={()=>A.go("login")} style={{background:"none",border:"none",cursor:"pointer",padding:0,color:C.brand,fontFamily:"inherit",fontSize:13.5,fontWeight:640}}>Already have an account?</button>
+        <button onClick={()=>A.go("login")} className="bg-transparent border-0 cursor-pointer p-0 text-brand text-sm font-semibold">Already have an account?</button>
       </div>
-      {i>0&&<div style={{marginBottom:20}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-          <span style={{fontSize:13.5,fontWeight:630,color:C.text}}>Step {i} of {STEPS.length-1}</span>
-          <span style={{fontSize:13.5,color:C.text2}}>{Math.round((i/(STEPS.length-1))*100)}% complete</span></div>
+      {i>0&&<div className="mb-5">
+        <div className="flex justify-between items-center mb-2.5">
+          <span className="text-sm font-semibold text-text">Step {i} of {STEPS.length-1}</span>
+          <span className="text-sm text-text-2">{Math.round((i/(STEPS.length-1))*100)}% complete</span></div>
         <Bar v={(i/(STEPS.length-1))*100} h={7}/></div>}
 
       <Card pad={mob?22:30} style={{borderRadius:20}}>
         <div key={step.k}>
-          <div style={{marginBottom:22}}>
-            <h1 style={{fontSize:mob?24:28,fontWeight:740,letterSpacing:"-.035em",color:C.text,margin:0}}>{step.t}</h1>
-            <p style={{fontSize:15,color:C.text2,margin:"7px 0 0"}}>{step.d}</p></div>
+          <div className="mb-6">
+            <h1 className={`font-bold tracking-tight text-text ${mob?"text-2xl":"text-3xl"}`}>{step.t}</h1>
+            <p className="text-base text-text-2 mt-2">{step.d}</p></div>
 
-          {step.k==="role"&&<div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:14}}>
+          {step.k==="role"&&<div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
             {[{k:"seeker",ic:"user",t:"I'm looking for work",d:"Build a profile, browse jobs, apply in one tap. Free forever."},
               {k:"employer",ic:"building",t:"I'm hiring",d:"Post jobs, review scored applicants, manage your pipeline. From $49/mo."}].map(r=>{
               const on=d.role===r.k;
-              return <button key={r.k} onClick={()=>set("role",r.k)} style={{padding:mob?"22px 20px":"28px 24px",borderRadius:16,
-                cursor:"pointer",fontFamily:"inherit",textAlign:"left",transition:"all .18s",
-                border:`2px solid ${on?C.brand:C.line}`,background:on?C.tint:"#fff"}}>
-                <div style={{width:44,height:44,borderRadius:12,background:on?C.brand:C.wash,color:on?"#fff":C.brand,
-                  display:"flex",alignItems:"center",justifyContent:"center",marginBottom:14,transition:"all .18s"}}>
+              return <button key={r.k} onClick={()=>set("role",r.k)}
+                className={`rounded-2xl cursor-pointer text-left transition duration-200 border-2 ${mob?"py-6 px-5":"py-7 px-6"} ${on?"border-brand bg-tint":"border-line bg-white"}`}>
+                <div className={`w-11 h-11 rounded-xl flex items-center justify-center mb-3.5 transition duration-200 ${on?"bg-brand text-white":"bg-wash text-brand"}`}>
                   <I n={r.ic} s={22}/></div>
-                <div style={{fontSize:16.5,fontWeight:680,color:on?C.brand:C.text,letterSpacing:"-.02em",marginBottom:6}}>{r.t}</div>
-                <div style={{fontSize:13.5,color:C.text2,lineHeight:1.5}}>{r.d}</div></button>;})}
-            {err.role&&<div style={{gridColumn:"1/-1",color:C.danger,fontSize:13.5,marginTop:6}}>{err.role}</div>}</div>}
+                <div className={`text-base font-bold tracking-tight mb-1.5 ${on?"text-brand":"text-text"}`}>{r.t}</div>
+                <div className="text-sm text-text-2 leading-normal">{r.d}</div></button>;})}
+            {err.role&&<div className="col-span-full text-sm mt-1.5" style={{color:C.danger}}>{err.role}</div>}</div>}
 
-          {step.k==="account"&&<div style={{display:"flex",flexDirection:"column",gap:16}}>
+          {step.k==="account"&&<div className="flex flex-col gap-4">
             <Field label="Email address" required error={err.email}>
               <Input icon="mail" type="email" value={d.email} onChange={e=>set("email",e.target.value)}
                 placeholder={d.role==="employer"?"you@yourcompany.ca":"you@example.ca"} invalid={!!err.email}/></Field>
@@ -125,15 +120,15 @@ export function SignupPage(){
             <Banner tone="neutral" icon="shield" title="Your details stay yours">
               We never sell candidate data. An employer only sees your profile when you choose to apply.</Banner></div>}
 
-          {step.k==="company"&&<div style={{display:"flex",flexDirection:"column",gap:16}}>
+          {step.k==="company"&&<div className="flex flex-col gap-4">
             <Field label="Your name" required error={err.name}><Input icon="user" value={d.name} onChange={e=>set("name",e.target.value)} placeholder="Jean Tremblay" invalid={!!err.name}/></Field>
             <Field label="Company name" required error={err.company}><Input icon="building" value={d.company} onChange={e=>set("company",e.target.value)} placeholder="Northern Trades Ltd." invalid={!!err.company}/></Field>
-            <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:14}}>
+            <div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
               <Field label="Industry"><Sel value={d.industry} onChange={e=>set("industry",e.target.value)}>
                 <option value="">Select…</option>{["Construction","Healthcare","Transport","Retail","Hospitality","Manufacturing","Professional Services","Education","Finance","Technology","Agriculture","Security"].map(o=><option key={o}>{o}</option>)}</Sel></Field>
               <Field label="Company size"><Sel value={d.size} onChange={e=>set("size",e.target.value)}>
                 {["1-50","50-200","200-1000","1000+"].map(o=><option key={o}>{o} employees</option>)}</Sel></Field></div>
-            <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:14}}>
+            <div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
               <Field label="City"><Input icon="pin" value={d.city} onChange={e=>set("city",e.target.value)} placeholder="Toronto"/></Field>
               <Field label="Province"><Sel value={d.prov} onChange={e=>set("prov",e.target.value)}>{PROVS.map(p=><option key={p}>{p}</option>)}</Sel></Field></div>
             <Field label="About your company (optional)" hint="A sentence or two candidates see on your profile.">
@@ -141,30 +136,29 @@ export function SignupPage(){
             <Banner tone="brand" icon="shield" title="Verification usually takes 1 business day">
               Our Toronto team checks your business number and incorporation. Your listings go live immediately, with the verified badge added once approved.</Banner></div>}
 
-          {step.k==="about"&&<div style={{display:"flex",flexDirection:"column",gap:16}}>
-            <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:14}}>
+          {step.k==="about"&&<div className="flex flex-col gap-4">
+            <div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
               <Field label="First name" required error={err.first}><Input value={d.first} onChange={e=>set("first",e.target.value)} placeholder="Jean" invalid={!!err.first}/></Field>
               <Field label="Last name" required error={err.last}><Input value={d.last} onChange={e=>set("last",e.target.value)} placeholder="Tremblay" invalid={!!err.last}/></Field>
               <Field label="City or town" required error={err.city}><Input icon="pin" value={d.city} onChange={e=>set("city",e.target.value)} placeholder="Calgary" invalid={!!err.city}/></Field>
               <Field label="Province or territory" required><Sel value={d.prov} onChange={e=>set("prov",e.target.value)}>{PROVS.map(p=><option key={p}>{p}</option>)}</Sel></Field></div>
             <Field label="Are you legally allowed to work in Canada?" required error={err.eligible}>
-              <div style={{display:"flex",flexDirection:"column",gap:9}}>
+              <div className="flex flex-col gap-2.5">
                 {[["citizen","Canadian citizen or permanent resident"],["permit","I hold a valid work permit"],
                   ["student","Student permit with work authorisation"],["need","I would need employer sponsorship"]].map(([v,l])=>
                   <CheckRow key={v} on={d.eligible===v} onChange={()=>set("eligible",v)} label={l}/>)}</div></Field></div>}
 
-          {step.k==="work"&&<div style={{display:"flex",flexDirection:"column",gap:18}}>
+          {step.k==="work"&&<div className="flex flex-col gap-5">
             <Field label="Which sector do you work in?" required error={err.cat}>
-              <div style={{display:"grid",gridTemplateColumns:`repeat(auto-fill,minmax(${mob?140:160}px,1fr))`,gap:9}}>
+              <div className="grid gap-2.5" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?140:160}px,1fr))`}}>
                 {CATS.map(c=>{const on=d.cat===c.id;
-                  return <button key={c.id} onClick={()=>set("cat",c.id)} style={{display:"flex",alignItems:"center",gap:10,
-                    padding:"12px 13px",borderRadius:11,cursor:"pointer",fontFamily:"inherit",textAlign:"left",
-                    border:`1.5px solid ${on?C.brand:C.line}`,background:on?C.tint:"#fff",transition:"all .16s"}}>
-                    <span style={{color:on?C.brand:C.text3,display:"flex",flexShrink:0}}><I n={c.icon} s={19}/></span>
-                    <span style={{fontSize:13.5,fontWeight:on?640:500,color:on?C.brand:C.text,lineHeight:1.3}}>{c.label}</span></button>;})}</div></Field>
+                  return <button key={c.id} onClick={()=>set("cat",c.id)}
+                    className={`flex items-center gap-2.5 py-3 px-3.5 rounded-xl cursor-pointer text-left border-2 transition duration-150 ${on?"border-brand bg-tint":"border-line bg-white"}`}>
+                    <span className={`flex shrink-0 ${on?"text-brand":"text-text-3"}`}><I n={c.icon} s={19}/></span>
+                    <span className={`text-sm leading-tight ${on?"font-semibold text-brand":"font-medium text-text"}`}>{c.label}</span></button>;})}</div></Field>
             <Field label="Your job title or trade" required error={err.title} hint="For example: Journeyperson Electrician, PSW, Line Cook.">
               <Input icon="briefcase" value={d.title} onChange={e=>set("title",e.target.value)} placeholder="Journeyperson Electrician" invalid={!!err.title}/></Field>
-            <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:14}}>
+            <div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
               <Field label="Years of experience" required error={err.years}>
                 <Sel value={d.years} onChange={e=>set("years",e.target.value)} invalid={!!err.years}>
                   <option value="">Select…</option>
@@ -176,56 +170,50 @@ export function SignupPage(){
           {step.k==="skills"&&<div>
             <Field label="Add your skills, tickets and certificates" required error={err.skills}
               hint="At least three. These drive every match score you will see.">
-              <div style={{display:"flex",gap:9}}>
+              <div className="flex gap-2.5">
                 <Input value={d.draft} onChange={e=>set("draft",e.target.value)} placeholder="Type a skill and press Enter"
                   onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();add(d.draft);}}} invalid={!!err.skills}/>
                 <Btn kind="primary" icon="plus" disabled={!d.draft.trim()} onClick={()=>add(d.draft)}>Add</Btn></div></Field>
-            {d.skills.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:8,marginTop:16}}>
-              {d.skills.map(s=><span key={s} style={{display:"inline-flex",alignItems:"center",gap:7,background:C.brand,
-                color:"#fff",fontSize:13.5,fontWeight:600,padding:"7px 12px",borderRadius:8}}>{s}
-                <button onClick={()=>set("skills",d.skills.filter(x=>x!==s))} style={{background:"none",border:"none",
-                  color:"rgba(255,255,255,.7)",cursor:"pointer",padding:0,display:"flex"}}><I n="x" s={13} w={2.5}/></button></span>)}</div>}
-            {SUG.filter(s=>!d.skills.includes(s)).length>0&&<div style={{marginTop:22}}>
+            {d.skills.length>0&&<div className="flex flex-wrap gap-2 mt-4">
+              {d.skills.map(s=><span key={s} className="inline-flex items-center gap-2 bg-brand text-white text-sm font-semibold py-1.5 px-3 rounded-lg">{s}
+                <button onClick={()=>set("skills",d.skills.filter(x=>x!==s))} className="bg-transparent border-0 text-white/70 cursor-pointer p-0 flex"><I n="x" s={13} w={2.5}/></button></span>)}</div>}
+            {SUG.filter(s=>!d.skills.includes(s)).length>0&&<div className="mt-6">
               <Lbl>Common in {CATM[d.cat]?.label} — tap to add</Lbl>
-              <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+              <div className="flex flex-wrap gap-2">
                 {SUG.filter(s=>!d.skills.includes(s)).map(s=><button key={s} onClick={()=>add(s)}
-                  style={{display:"inline-flex",alignItems:"center",gap:6,background:"#fff",border:`1.5px dashed ${C.line}`,
-                    color:C.text2,fontSize:13.5,fontWeight:520,padding:"7px 12px",borderRadius:8,cursor:"pointer",fontFamily:"inherit"}}>
+                  className="inline-flex items-center gap-1.5 bg-white border-2 border-dashed border-line text-text-2 text-sm font-medium py-1.5 px-3 rounded-lg cursor-pointer">
                   <I n="plus" s={13} c={C.brand} w={2.4}/>{s}</button>)}</div></div>}</div>}
 
-          {step.k==="prefs"&&<div style={{display:"flex",flexDirection:"column",gap:20}}>
+          {step.k==="prefs"&&<div className="flex flex-col gap-5">
             <Field label="Minimum pay you would accept" required error={err.payMin}>
-              <div style={{display:"flex",gap:10}}>
+              <div className="flex gap-2.5">
                 <Input icon="wallet" value={d.payMin} onChange={e=>set("payMin",e.target.value.replace(/[^\d.]/g,""))}
                   placeholder={d.payUnit==="hr"?"28.00":"60,000"} invalid={!!err.payMin}/>
                 <Sel value={d.payUnit} onChange={e=>set("payUnit",e.target.value)} style={{width:135,flexShrink:0}}>
                   <option value="hr">per hour</option><option value="yr">per year</option></Sel></div></Field>
             <div><Lbl>Employment type — pick any that suit you</Lbl>
-              <div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"repeat(3,1fr)",gap:9}}>
+              <div className={`grid gap-2.5 ${mob?"grid-cols-2":"grid-cols-3"}`}>
                 {["Full Time","Part Time","Contract","Seasonal","Apprenticeship","Casual"].map(t=>{const on=d.types.includes(t);
-                  return <button key={t} onClick={()=>tog("types",t)} style={{padding:"11px 12px",borderRadius:10,cursor:"pointer",
-                    fontFamily:"inherit",fontSize:13.5,fontWeight:on?640:500,border:`1.5px solid ${on?C.brand:C.line}`,
-                    background:on?C.tint:"#fff",color:on?C.brand:C.text,transition:"all .16s"}}>{t}</button>;})}</div></div>
+                  return <button key={t} onClick={()=>tog("types",t)}
+                    className={`py-3 px-3 rounded-xl cursor-pointer text-sm border-2 transition duration-150 ${on?"font-semibold border-brand bg-tint text-brand":"font-medium border-line bg-white text-text"}`}>{t}</button>;})}</div></div>
             <div><Lbl>Where can you work?</Lbl>
-              <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:9}}>
+              <div className="grid grid-cols-3 gap-2.5">
                 {["On-site","Hybrid","Remote"].map(t=>{const on=d.modes.includes(t);
-                  return <button key={t} onClick={()=>tog("modes",t)} style={{padding:"11px 12px",borderRadius:10,cursor:"pointer",
-                    fontFamily:"inherit",fontSize:13.5,fontWeight:on?640:500,border:`1.5px solid ${on?C.brand:C.line}`,
-                    background:on?C.tint:"#fff",color:on?C.brand:C.text,transition:"all .16s"}}>{t}</button>;})}</div></div>
+                  return <button key={t} onClick={()=>tog("modes",t)}
+                    className={`py-3 px-3 rounded-xl cursor-pointer text-sm border-2 transition duration-150 ${on?"font-semibold border-brand bg-tint text-brand":"font-medium border-line bg-white text-text"}`}>{t}</button>;})}</div></div>
             <Field label="When can you start?"><Sel value={d.startWhen} onChange={e=>set("startWhen",e.target.value)}>
               {["Immediately","Within 2 weeks","Within 1 month","More than 1 month"].map(o=><option key={o}>{o}</option>)}</Sel></Field>
             <CheckRow on={d.alerts} onChange={v=>set("alerts",v)} label="Email me new matching jobs"
               sub="A short digest, at most twice a week. You can turn this off any time."/></div>}
         </div>
         {submitErr&&<Banner tone="danger" icon="alert" title="Sign-up failed" style={{marginTop:18}}>{submitErr}</Banner>}
-        <div style={{display:"flex",gap:10,justifyContent:"space-between",marginTop:26,paddingTop:20,borderTop:`1px solid ${C.lineSoft}`}}>
+        <div className="flex gap-2.5 justify-between mt-7 pt-5 border-t border-line-soft">
           <Btn kind="ghost" icon="arrowL" onClick={()=>i===0?A.go("home"):setI(i-1)}>{i===0?"Cancel":"Back"}</Btn>
           <Btn kind="primary" size="lg" iconR={i===STEPS.length-1?"check":"arrowR"} onClick={next} disabled={step.k==="role"&&!d.role}>
             {i===STEPS.length-1?(d.role==="employer"?"Create employer account":"Finish and start matching"):"Continue"}</Btn></div>
       </Card>
-      <div style={{textAlign:"center",marginTop:20,fontSize:14,color:C.text2}}>
-        Already have an account? <button onClick={()=>A.go("login")} style={{background:"none",border:"none",padding:0,
-          cursor:"pointer",fontFamily:"inherit",fontSize:14,fontWeight:640,color:C.brand}}>Sign in</button></div>
+      <div className="text-center mt-5 text-sm text-text-2">
+        Already have an account? <button onClick={()=>A.go("login")} className="bg-transparent border-0 p-0 cursor-pointer text-sm font-semibold text-brand">Sign in</button></div>
     </div></div>;
 }
 
@@ -237,20 +225,17 @@ export function LoginPage(){
     setTimeout(()=>{const r=A.loginWithPassword(email,pw); if(!r.ok)setErr(r.msg); setBusy(false);},120);};
   const demoAs=(e,p)=>{setEmail(e);setPw(p);setErr("");
     setTimeout(()=>{const r=A.loginWithPassword(e,p); if(!r.ok)setErr(r.msg);},60);};
-  return <div style={{background:C.bg,minHeight:"100%",display:"flex",justifyContent:"center",
-    padding:mob?"22px 16px 40px":"48px 24px 80px"}}>
-    <div style={{width:"100%",maxWidth:440}}>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:18}}>
-        <button onClick={()=>A.go("home")} style={{display:"flex",alignItems:"center",gap:8,background:"none",border:"none",cursor:"pointer",padding:0,color:C.text2,fontFamily:"inherit",fontSize:13.5,fontWeight:600}}
-          onMouseEnter={e=>e.currentTarget.style.color=C.text}
-          onMouseLeave={e=>e.currentTarget.style.color=C.text2}>
+  return <div className={`bg-bg min-h-full flex justify-center ${mob?"pt-6 px-4 pb-10":"pt-12 px-6 pb-20"}`}>
+    <div className="w-full max-w-md">
+      <div className="flex items-center justify-between mb-5">
+        <button onClick={()=>A.go("home")} className="flex items-center gap-2 bg-transparent border-0 cursor-pointer p-0 text-text-2 text-sm font-semibold hover:text-text">
           <I n="chevL" s={16} w={2}/> Back to NorthHire</button>
-        <button onClick={()=>A.go("signup")} style={{background:"none",border:"none",cursor:"pointer",padding:0,color:C.brand,fontFamily:"inherit",fontSize:13.5,fontWeight:640}}>Create account</button>
+        <button onClick={()=>A.go("signup")} className="bg-transparent border-0 cursor-pointer p-0 text-brand text-sm font-semibold">Create account</button>
       </div>
       <Card pad={mob?24:34} style={{borderRadius:20}}>
-        <h1 style={{fontSize:28,fontWeight:740,letterSpacing:"-.035em",color:C.text,margin:"0 0 8px"}}>Welcome back</h1>
-        <p style={{fontSize:15,color:C.text2,margin:"0 0 24px"}}>Sign in to continue.</p>
-        <div style={{display:"flex",flexDirection:"column",gap:14}}>
+        <h1 className="text-3xl font-bold tracking-tight text-text mb-2">Welcome back</h1>
+        <p className="text-base text-text-2 mb-6">Sign in to continue.</p>
+        <div className="flex flex-col gap-3.5">
           <Field label="Email address">
             <Input icon="mail" type="email" value={email} onChange={e=>{setEmail(e.target.value);setErr("");}} placeholder="you@example.ca"
               onKeyDown={e=>e.key==="Enter"&&submit()}/></Field>
@@ -260,24 +245,23 @@ export function LoginPage(){
           {err&&<Banner tone="danger" icon="alert" title="Sign-in failed">{err}</Banner>}
           <Btn kind="primary" size="lg" full iconR="arrowR" onClick={submit} disabled={busy}>{busy?"Signing in…":"Sign in"}</Btn>
         </div>
-        <div style={{display:"flex",justifyContent:"space-between",marginTop:16,fontSize:13.5}}>
-          <button onClick={()=>A.go("signup")} style={{background:"none",border:"none",padding:0,cursor:"pointer",fontFamily:"inherit",color:C.brand,fontWeight:640}}>Create account</button>
-          <button onClick={()=>A.go("forgot")} style={{background:"none",border:"none",padding:0,cursor:"pointer",fontFamily:"inherit",color:C.brand,fontWeight:640}}>Forgot password?</button>
+        <div className="flex justify-between mt-4 text-sm">
+          <button onClick={()=>A.go("signup")} className="bg-transparent border-0 p-0 cursor-pointer font-semibold text-brand">Create account</button>
+          <button onClick={()=>A.go("forgot")} className="bg-transparent border-0 p-0 cursor-pointer font-semibold text-brand">Forgot password?</button>
         </div>
       </Card>
       <Card pad={mob?18:22} style={{marginTop:14,borderRadius:16,background:C.tint,border:`1px solid ${C.line2}`}}>
-        <div style={{fontSize:12.5,fontWeight:700,color:C.brand,letterSpacing:".05em",textTransform:"uppercase",marginBottom:10}}>Demo accounts</div>
-        <div style={{display:"flex",flexDirection:"column",gap:6}}>
+        <div className="text-xs font-bold text-brand tracking-wide uppercase mb-2.5">Demo accounts</div>
+        <div className="flex flex-col gap-1.5">
           {[["sarah.chen@example.ca","Password123","Job seeker — Sarah Chen"],
             ["marcus.b@example.ca","Password123","Job seeker — Marcus (trades)"],
             ["hr@pcl.com","Employer123","Employer — PCL Construction"],
             ["admin@northhire.ca","Admin1234","Administrator"]].map(([e,p,r])=>
-            <button key={e} onClick={()=>demoAs(e,p)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
-              background:"#fff",border:`1px solid ${C.line}`,borderRadius:10,padding:"10px 12px",cursor:"pointer",fontFamily:"inherit"}}>
-              <span style={{display:"flex",flexDirection:"column",alignItems:"flex-start",minWidth:0}}>
-                <span style={{fontSize:13,fontWeight:640,color:C.text}}>{r}</span>
-                <span style={{fontSize:12,color:C.text3,marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e}</span></span>
-              <span style={{fontSize:12,color:C.brand,fontWeight:640}}>Sign in →</span></button>)}</div>
+            <button key={e} onClick={()=>demoAs(e,p)} className="flex justify-between items-center bg-white border border-line rounded-xl py-2.5 px-3 cursor-pointer">
+              <span className="flex flex-col items-start min-w-0">
+                <span className="text-sm font-semibold text-text">{r}</span>
+                <span className="text-xs text-text-3 mt-0.5 overflow-hidden text-ellipsis whitespace-nowrap">{e}</span></span>
+              <span className="text-xs text-brand font-semibold">Sign in →</span></button>)}</div>
       </Card>
     </div></div>;
 }
@@ -292,46 +276,42 @@ export function ForgotPasswordPage(){
   const confirm=()=>{setErr(""); if(newPw.length<8){setErr("Password must be at least 8 characters");return;}
     const r=A.resetPasswordConfirm(email,code,newPw); if(!r.ok){setErr(r.msg);return;} setStage("done");};
 
-  return <div style={{background:C.bg,minHeight:"100%",display:"flex",justifyContent:"center",
-    padding:mob?"22px 16px 40px":"48px 24px 80px"}}>
-    <div style={{width:"100%",maxWidth:440}}>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:18}}>
-        <button onClick={()=>A.go("home")} style={{display:"flex",alignItems:"center",gap:8,background:"none",border:"none",cursor:"pointer",padding:0,color:C.text2,fontFamily:"inherit",fontSize:13.5,fontWeight:600}}
-          onMouseEnter={e=>e.currentTarget.style.color=C.text}
-          onMouseLeave={e=>e.currentTarget.style.color=C.text2}>
+  return <div className={`bg-bg min-h-full flex justify-center ${mob?"pt-6 px-4 pb-10":"pt-12 px-6 pb-20"}`}>
+    <div className="w-full max-w-md">
+      <div className="flex items-center justify-between mb-5">
+        <button onClick={()=>A.go("home")} className="flex items-center gap-2 bg-transparent border-0 cursor-pointer p-0 text-text-2 text-sm font-semibold hover:text-text">
           <I n="chevL" s={16} w={2}/> Back to NorthHire</button>
-        <button onClick={()=>A.go("signup")} style={{background:"none",border:"none",cursor:"pointer",padding:0,color:C.brand,fontFamily:"inherit",fontSize:13.5,fontWeight:640}}>Create account</button>
+        <button onClick={()=>A.go("signup")} className="bg-transparent border-0 cursor-pointer p-0 text-brand text-sm font-semibold">Create account</button>
       </div>
       <Card pad={mob?24:34} style={{borderRadius:20}}>
         {stage==="request"&&<>
-          <h1 style={{fontSize:26,fontWeight:740,letterSpacing:"-.035em",color:C.text,margin:"0 0 8px"}}>Reset your password</h1>
-          <p style={{fontSize:14.5,color:C.text2,margin:"0 0 22px",lineHeight:1.55}}>Enter your email and we'll send a 6-digit code.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-text mb-2">Reset your password</h1>
+          <p className="text-sm text-text-2 mb-6 leading-normal">Enter your email and we'll send a 6-digit code.</p>
           <Field label="Email address"><Input icon="mail" type="email" value={email} onChange={e=>{setEmail(e.target.value);setErr("");}}
             placeholder="you@example.ca" onKeyDown={e=>e.key==="Enter"&&request()}/></Field>
           {err&&<Banner tone="danger" icon="alert" title="Cannot send code" style={{marginTop:14}}>{err}</Banner>}
           <Btn kind="primary" size="lg" full icon="send" onClick={request} style={{marginTop:18}}>Send reset code</Btn>
         </>}
         {stage==="verify"&&<>
-          <h1 style={{fontSize:26,fontWeight:740,letterSpacing:"-.035em",color:C.text,margin:"0 0 8px"}}>Enter your code</h1>
-          <p style={{fontSize:14.5,color:C.text2,margin:"0 0 18px",lineHeight:1.55}}>
-            We sent a 6-digit code to <strong style={{color:C.text}}>{email}</strong>. Check your inbox.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-text mb-2">Enter your code</h1>
+          <p className="text-sm text-text-2 mb-5 leading-normal">
+            We sent a 6-digit code to <strong className="text-text">{email}</strong>. Check your inbox.</p>
           <Banner tone="brand" icon="sparkle" title="Demo mode" style={{marginBottom:18}}>
-            No email is really sent — your code is <strong style={{color:C.brand,letterSpacing:".08em"}}>{sentCode}</strong>. In production this is emailed. See Settings → Outbox to inspect all "sent" messages.</Banner>
-          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            No email is really sent — your code is <strong className="text-brand tracking-widest">{sentCode}</strong>. In production this is emailed. See Settings → Outbox to inspect all "sent" messages.</Banner>
+          <div className="flex flex-col gap-3.5">
             <Field label="6-digit code"><Input value={code} onChange={e=>{setCode(e.target.value.replace(/\D/g,"").slice(0,6));setErr("");}}
               placeholder="000000" style={{letterSpacing:".15em",fontWeight:640}}/></Field>
             <Field label="New password" hint="At least 8 characters."><Input icon="lock" type="password" value={newPw}
               onChange={e=>{setNewPw(e.target.value);setErr("");}} placeholder="At least 8 characters"/></Field>
             {err&&<Banner tone="danger" icon="alert" title="Cannot reset">{err}</Banner>}
             <Btn kind="primary" size="lg" full icon="check" onClick={confirm}>Set new password</Btn>
-            <button onClick={()=>setStage("request")} style={{background:"none",border:"none",padding:0,cursor:"pointer",fontFamily:"inherit",fontSize:13.5,color:C.text2,marginTop:6}}>← Different email</button>
+            <button onClick={()=>setStage("request")} className="bg-transparent border-0 p-0 cursor-pointer text-sm text-text-2 mt-1.5">← Different email</button>
           </div>
         </>}
-        {stage==="done"&&<div style={{textAlign:"center"}}>
-          <div style={{width:72,height:72,borderRadius:99,background:C.okBg,border:`2px solid ${C.okLn}`,display:"flex",
-            alignItems:"center",justifyContent:"center",margin:"0 auto 18px"}}><I n="check" s={36} c={C.ok} w={2.6}/></div>
-          <h1 style={{fontSize:24,fontWeight:740,letterSpacing:"-.035em",color:C.text,margin:"0 0 10px"}}>Password reset</h1>
-          <p style={{fontSize:14.5,color:C.text2,margin:"0 auto 22px",lineHeight:1.6,maxWidth:340}}>Your new password is active. Sign in to continue.</p>
+        {stage==="done"&&<div className="text-center">
+          <div className="w-18 h-18 rounded-full bg-ok-bg border-2 border-ok-ln flex items-center justify-center mx-auto mb-5"><I n="check" s={36} c={C.ok} w={2.6}/></div>
+          <h1 className="text-2xl font-bold tracking-tight text-text mb-2.5">Password reset</h1>
+          <p className="text-sm text-text-2 mx-auto mb-6 leading-relaxed max-w-xs">Your new password is active. Sign in to continue.</p>
           <Btn kind="primary" size="lg" full onClick={()=>A.go("login")}>Sign in</Btn>
         </div>}
       </Card>
@@ -413,44 +393,44 @@ export function WelcomeTourPage({kind}){
   const skip=()=>A.go(kind==="employer"?"empHome":"home");
   const nextStep=()=>{if(isLast){if(cur.cta)A.go(cur.cta.go); else skip();} else setStep(step+1);};
 
-  return <div style={{background:C.bg,minHeight:"100vh",padding:mob?"16px 16px 30px":"32px 32px 50px",display:"flex",flexDirection:"column"}}>
-    <div style={{maxWidth:640,width:"100%",margin:"0 auto",flex:1,display:"flex",flexDirection:"column"}}>
+  return <div className={`bg-bg min-h-screen flex flex-col ${mob?"pt-4 px-4 pb-8":"pt-8 px-8 pb-13"}`}>
+    <div className="max-w-2xl w-full mx-auto flex-1 flex flex-col">
 
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24}}>
-        <div style={{display:"flex",gap:6}}>
-          {steps.map((_,i)=><div key={i} style={{width:i===step?24:8,height:8,borderRadius:99,background:i<=step?C.brand:C.line,transition:"all .3s"}}/>)}
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex gap-1.5">
+          {steps.map((_,i)=><div key={i} className={`h-2 rounded-full transition-all duration-300 ${i===step?"w-6":"w-2"} ${i<=step?"bg-brand":"bg-line"}`}/>)}
         </div>
         <Btn kind="ghost" size="sm" onClick={skip}>Skip tour</Btn>
       </div>
 
       <Card pad={mob?26:38} style={{flex:1,display:"flex",flexDirection:"column",borderRadius:24,animation:"rise .4s cubic-bezier(.22,.9,.32,1)",justifyContent:"center"}}>
         <div key={step} style={{animation:"fadeIn .3s ease"}}>
-          <div style={{width:72,height:72,borderRadius:20,background:`linear-gradient(135deg,${C.brand} 0%,#003D8C 100%)`,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:24,boxShadow:"0 8px 20px -6px rgba(0,92,204,.4)"}}>
+          <div className="w-18 h-18 rounded-2xl text-white flex items-center justify-center mb-6 shadow-[0_8px_20px_-6px_rgba(0,92,204,0.4)]" style={{background:`linear-gradient(135deg,${C.brand} 0%,#003D8C 100%)`}}>
             <I n={cur.ic} s={34}/>
           </div>
-          <h1 style={{fontSize:mob?26:32,fontWeight:750,letterSpacing:"-.035em",color:C.text,margin:"0 0 14px",lineHeight:1.2}}>{cur.t}</h1>
-          <p style={{fontSize:mob?15:16.5,color:C.text2,lineHeight:1.7,margin:"0 0 28px"}}>{cur.s}</p>
+          <h1 className={`font-extrabold tracking-tight text-text mb-3.5 leading-tight ${mob?"text-2xl":"text-3xl"}`}>{cur.t}</h1>
+          <p className="text-base text-text-2 leading-relaxed mb-7">{cur.s}</p>
 
-          {cur.visual==="cv"&&<div style={{padding:16,background:C.bg,border:`1px solid ${C.line}`,borderRadius:12,marginBottom:20,display:"flex",gap:12,alignItems:"center"}}>
-            <div style={{width:44,height:44,borderRadius:10,background:C.wash,color:C.brand,display:"flex",alignItems:"center",justifyContent:"center"}}><I n="file" s={22}/></div>
-            <div><div style={{fontSize:14,fontWeight:640,color:C.text}}>Primary CV</div>
-              <div style={{fontSize:12.5,color:C.text3,marginTop:2}}>Auto-created from your signup details</div></div>
+          {cur.visual==="cv"&&<div className="p-4 bg-bg border border-line rounded-xl mb-5 flex gap-3 items-center">
+            <div className="w-11 h-11 rounded-xl bg-wash text-brand flex items-center justify-center"><I n="file" s={22}/></div>
+            <div><div className="text-sm font-semibold text-text">Primary CV</div>
+              <div className="text-xs text-text-3 mt-0.5">Auto-created from your signup details</div></div>
           </div>}
-          {cur.visual==="match"&&<div style={{padding:16,background:C.tint,border:`1px solid ${C.line2}`,borderRadius:12,marginBottom:20,display:"flex",gap:12,alignItems:"center"}}>
+          {cur.visual==="match"&&<div className="p-4 bg-tint border border-line-2 rounded-xl mb-5 flex gap-3 items-center">
             <Ring v={87} size={54}/>
-            <div><div style={{fontSize:14,fontWeight:640,color:C.text}}>Your match score</div>
-              <div style={{fontSize:12.5,color:C.text2,marginTop:2}}>Shown on every job listing you view</div></div>
+            <div><div className="text-sm font-semibold text-text">Your match score</div>
+              <div className="text-xs text-text-2 mt-0.5">Shown on every job listing you view</div></div>
           </div>}
-          {cur.visual==="jobs"&&<div style={{padding:12,background:C.okBg,border:`1px solid ${C.okLn}`,borderRadius:12,marginBottom:20,display:"flex",alignItems:"center",gap:12}}>
+          {cur.visual==="jobs"&&<div className="p-3 bg-ok-bg border border-ok-ln rounded-xl mb-5 flex items-center gap-3">
             <I n="wallet" s={20} c={C.ok}/>
-            <div style={{fontSize:14,fontWeight:640,color:C.text}}>$32 – $48 per hour</div>
+            <div className="text-sm font-semibold text-text">$32 – $48 per hour</div>
             <Tag tone="ok" sm>Every listing</Tag>
           </div>}
         </div>
 
-        <div style={{marginTop:"auto",paddingTop:20,display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
+        <div className="mt-auto pt-5 flex justify-between items-center gap-3">
           <Btn kind="ghost" size="md" icon="chevL" disabled={step===0} onClick={()=>setStep(step-1)}>Back</Btn>
-          <div style={{fontSize:12.5,color:C.text3}}>{step+1} of {steps.length}</div>
+          <div className="text-xs text-text-3">{step+1} of {steps.length}</div>
           <Btn kind="primary" size="md" iconR={isLast?"check":"chevR"} onClick={nextStep}>
             {isLast?(cur.cta?.label||"Finish"):"Next"}
           </Btn>
