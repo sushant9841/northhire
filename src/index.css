@@ -36,6 +36,12 @@
   --color-accent: #6AACFF;
   --color-amber: #F5A524;
 
+  /* NorthHire Staffing's own brand accent (marketing/forEmployers.jsx) — distinct hex from
+     --color-amber above (used by DashShell's locked-feature badge), so it needs its own token. */
+  --color-staffing: #D97706;
+  --color-staffing-bg: #FEF3E2;
+  --color-staffing-line: #FCD9A8;
+
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
   --shadow-xs: 0 1px 2px rgba(11,18,32,.05);
