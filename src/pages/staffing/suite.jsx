@@ -11,6 +11,15 @@ import { _fmtDate, _weekStart } from "../../helpers/utils.js";
 import { InlineList } from "../shared/formControls.jsx";
 import { SEED_AGENCY_LICENSE } from "../../store/seed/agency.js";
 
+/* Quick-action tile tones — literal lookup (not string-interpolated into a className)
+   so Tailwind's static scanner can see every class it needs to generate. */
+const TONE_CLS={
+  brand:{text:"text-brand",hoverBorder:"hover:border-brand"},
+  ok:{text:"text-ok",hoverBorder:"hover:border-ok"},
+  violet:{text:"text-violet",hoverBorder:"hover:border-violet"},
+  warn:{text:"text-warn",hoverBorder:"hover:border-warn"},
+};
+
 export function AgencyLoginPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [id,setId]=useState(""); const [pw,setPw]=useState("");
@@ -25,53 +34,53 @@ export function AgencyLoginPage(){
     A.go("agencyDashboard");
   };
 
-  return <div style={{background:C.ink,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:mob?16:32}}>
-    <div style={{width:"100%",maxWidth:440}}>
-      <div style={{marginBottom:24,textAlign:"center"}}>
-        <button onClick={()=>A.go("home")} style={{background:"transparent",border:"none",cursor:"pointer",display:"inline-flex",alignItems:"center",gap:10,color:"rgba(255,255,255,.75)",fontFamily:"inherit",padding:0,marginBottom:16}}>
-          <div style={{width:36,height:36,borderRadius:10,background:"rgba(245,165,36,.18)",border:"1px solid rgba(245,165,36,.4)",display:"flex",alignItems:"center",justifyContent:"center"}}><I n="hex" s={18} c="#F5A524"/></div>
-          <div style={{textAlign:"left"}}>
-            <div style={{fontSize:15,fontWeight:720,color:"#fff",letterSpacing:"-.02em"}}>NorthHire</div>
-            <div style={{fontSize:11,color:"#F5A524",fontWeight:600,marginTop:1,letterSpacing:".02em"}}>STAFFING · Agency Console</div>
+  return <div className={`bg-ink min-h-screen flex items-center justify-center ${mob?"p-4":"p-8"}`}>
+    <div className="w-full max-w-110">
+      <div className="mb-6 text-center">
+        <button onClick={()=>A.go("home")} className="bg-transparent border-0 cursor-pointer inline-flex items-center gap-2.5 text-white/75 p-0 mb-4">
+          <div className="w-9 h-9 rounded-xl bg-[rgba(245,165,36,.18)] border border-[rgba(245,165,36,.4)] flex items-center justify-center"><I n="hex" s={18} c="#F5A524"/></div>
+          <div className="text-left">
+            <div className="text-sm font-bold text-white tracking-tight">NorthHire</div>
+            <div className="text-xs text-[#F5A524] font-semibold mt-px tracking-wide">STAFFING · Agency Console</div>
           </div>
         </button>
       </div>
 
       <Card pad={mob?24:32} style={{borderRadius:20,background:"#fff"}}>
-        <div style={{marginBottom:20}}>
-          <h1 style={{fontSize:22,fontWeight:730,color:C.text,margin:"0 0 6px",letterSpacing:"-.025em"}}>Sign in to the agency console</h1>
-          <p style={{fontSize:13.5,color:C.text3,margin:0,lineHeight:1.55}}>
+        <div className="mb-5">
+          <h1 className="text-2xl font-bold text-text mb-1.5 tracking-tight">Sign in to the agency console</h1>
+          <p className="text-sm text-text-3 m-0 leading-snug">
             For NorthHire Staffing recruiters, payroll and management.
             Not for job seekers or clients.</p>
         </div>
 
-        <div style={{display:"flex",flexDirection:"column",gap:14}}>
+        <div className="flex flex-col gap-3.5">
           <Field label="Login ID" required>
             <Input icon="user" value={id} onChange={e=>setId(e.target.value)} placeholder="firstname.lastname"/></Field>
           <Field label="Password" required>
             <Input icon="lock" type="password" value={pw} onChange={e=>setPw(e.target.value)} placeholder="At least 8 characters"/></Field>
-          <label style={{display:"flex",alignItems:"center",gap:8,fontSize:13.5,color:C.text2,cursor:"pointer"}}>
+          <label className="flex items-center gap-2 text-sm text-text-2 cursor-pointer">
             <input type="checkbox" checked={remember} onChange={e=>setRemember(e.target.checked)}/> Remember me for 14 days</label>
           {err&&<Banner tone="danger" icon="alert">{err}</Banner>}
           <Btn kind="primary" size="lg" onClick={attempt} disabled={busy||!id||!pw} full>
             {busy?"Signing in…":"Sign in"}</Btn>
         </div>
 
-        <div style={{marginTop:22,padding:14,background:C.bg,borderRadius:11,fontSize:12.5,color:C.text3}}>
-          <div style={{fontWeight:640,color:C.text2,marginBottom:8}}>Demo agency accounts (password: <code style={{fontFamily:"ui-monospace,monospace",color:C.brand}}>staff2026</code>)</div>
-          <div style={{display:"flex",flexDirection:"column",gap:6}}>
+        <div className="mt-6 p-3.5 bg-bg rounded-xl text-xs text-text-3">
+          <div className="font-semibold text-text-2 mb-2">Demo agency accounts (password: <code className="font-mono text-brand">staff2026</code>)</div>
+          <div className="flex flex-col gap-1.5">
             {[["nadia.singh","Owner — Managing Director"],
               ["joel.tremblay","Senior Recruiter"],
               ["aisha.mohamed","Payroll & Compliance"]].map(([lid,role])=>
-              <button key={lid} onClick={()=>{setId(lid); setPw("staff2026");}} style={{background:"#fff",border:`1px solid ${C.line}`,borderRadius:8,padding:"7px 10px",cursor:"pointer",fontFamily:"inherit",fontSize:12,textAlign:"left",color:C.text2,display:"flex",justifyContent:"space-between",gap:8}}>
-                <code style={{color:C.brand,fontFamily:"ui-monospace,monospace"}}>{lid}</code>
+              <button key={lid} onClick={()=>{setId(lid); setPw("staff2026");}} className="bg-white border border-line rounded-lg py-1.5 px-2.5 cursor-pointer text-xs text-left text-text-2 flex justify-between gap-2">
+                <code className="text-brand font-mono">{lid}</code>
                 <span>{role}</span>
               </button>)}
           </div>
         </div>
       </Card>
 
-      <div style={{textAlign:"center",marginTop:16,fontSize:12,color:"rgba(255,255,255,.5)"}}>
+      <div className="text-center mt-4 text-xs text-white/50">
         License: {SEED_AGENCY_LICENSE}
       </div>
     </div>
@@ -88,90 +97,90 @@ export function AgencyDashboard(){
     const uw={high:0,medium:1,low:2};return (uw[a.urgency]||9)-(uw[b.urgency]||9);}).slice(0,4);
 
   return <div>
-    <div style={{marginBottom:24}}>
-      <div style={{fontSize:mob?22:28,fontWeight:730,color:C.text,letterSpacing:"-.03em"}}>
+    <div className="mb-6">
+      <div className={`font-bold text-text tracking-tight ${mob?"text-2xl":"text-3xl"}`}>
         {(()=>{const h=new Date().getHours();return h<12?"Good morning":h<17?"Good afternoon":"Good evening";})()}, {staff.name.split(" ")[0]}
       </div>
-      <div style={{fontSize:13.5,color:C.text3,marginTop:6}}>
+      <div className="text-sm text-text-3 mt-1.5">
         {new Date().toLocaleDateString("en-CA",{weekday:"long",month:"long",day:"numeric"})} · Here's the state of the desk.
       </div>
     </div>
 
     {/* KPI Row */}
-    <div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"repeat(4,1fr)",gap:12,marginBottom:20}}>
+    <div className={`grid gap-3 mb-5 ${mob?"grid-cols-2":"grid-cols-4"}`}>
       {[
         {l:"Active assignments",v:kpi.activeCount,t:C.brand,ic:"activity",clk:"agencyAssignments"},
         {l:"Open positions",v:kpi.openPositions,t:C.warn,ic:"briefcase",clk:"agencyJobOrders",sub:`${kpi.openOrdersCount} orders`},
         {l:"Available workers",v:kpi.availableWorkers,t:C.ok,ic:"users",clk:"agencyBench"},
         {l:"Weekly run rate",v:`$${(kpi.runRateWeekly/1000).toFixed(1)}k`,t:C.violet,ic:"trend",clk:"agencyMargins",sub:"Billings @ 40hr"},
-      ].map(k=><div key={k.l} data-card onClick={()=>A.go(k.clk)} style={{background:"#fff",borderRadius:14,padding:mob?16:20,border:`1px solid ${C.line}`,cursor:"pointer"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
-          <div style={{width:36,height:36,borderRadius:9,background:C.bg,color:k.t,display:"flex",alignItems:"center",justifyContent:"center"}}><I n={k.ic} s={17}/></div>
+      ].map(k=><div key={k.l} data-card onClick={()=>A.go(k.clk)} className={`bg-white rounded-2xl border border-line cursor-pointer ${mob?"p-4":"p-5"}`}>
+        <div className="flex justify-between items-start mb-2.5">
+          <div className="w-9 h-9 rounded-lg bg-bg flex items-center justify-center" style={{color:k.t}}><I n={k.ic} s={17}/></div>
         </div>
-        <div style={{fontSize:mob?24:28,fontWeight:730,color:k.t,letterSpacing:"-.025em"}}>{k.v}</div>
-        <div style={{fontSize:12,color:C.text3,marginTop:4}}>{k.l}</div>
-        {k.sub&&<div style={{fontSize:11,color:C.text3,marginTop:2}}>{k.sub}</div>}
+        <div className={`font-bold tracking-tight ${mob?"text-2xl":"text-3xl"}`} style={{color:k.t}}>{k.v}</div>
+        <div className="text-xs text-text-3 mt-1">{k.l}</div>
+        {k.sub&&<div className="text-xs text-text-3 mt-0.5">{k.sub}</div>}
       </div>)}
     </div>
 
     {/* Action queue + money row */}
-    <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1.4fr 1fr",gap:16,marginBottom:16}}>
+    <div className="grid gap-4 mb-4" style={{gridTemplateColumns:mob?"1fr":"1.4fr 1fr"}}>
       <div>
         <Card pad={mob?18:24} style={{borderRadius:16}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+          <div className="flex justify-between items-center mb-3.5">
             <Lbl style={{margin:0}}>Urgent job orders</Lbl>
             <Btn kind="ghost" size="sm" onClick={()=>A.go("agencyJobOrders")}>See all</Btn>
           </div>
           {openOrders.length===0
             ? <Empty icon="briefcase" title="No open orders" body="You're all filled. Time to prospect for new clients."
                 action={<Btn kind="primary" size="sm" icon="plus" onClick={()=>A.go("agencyJobOrders")}>Add job order</Btn>}/>
-            : <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            : <div className="flex flex-col gap-2.5">
                 {openOrders.map(jo=>{const client=A.staffingClient(jo.client); const remaining=jo.positions-jo.filled;
                   return <div key={jo.id} data-card onClick={()=>A.go("agencyJobOrders")}
-                    style={{padding:"12px 14px",background:C.bg,borderRadius:11,border:`1px solid ${C.line}`,cursor:"pointer",display:"flex",gap:12,alignItems:"center"}}>
+                    className="py-3 px-3.5 bg-bg rounded-xl border border-line cursor-pointer flex gap-3 items-center">
                     <Tag tone={jo.urgency==="high"?"danger":jo.urgency==="medium"?"warn":"neutral"} sm>{jo.urgency}</Tag>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:14,fontWeight:640,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{jo.title}</div>
-                      <div style={{fontSize:12,color:C.text3,marginTop:3}}>{client?.name||"—"} · {jo.location.split(" — ")[0]}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap">{jo.title}</div>
+                      <div className="text-xs text-text-3 mt-1">{client?.name||"—"} · {jo.location.split(" — ")[0]}</div>
                     </div>
-                    <div style={{textAlign:"right",flexShrink:0}}>
-                      <div style={{fontSize:14,fontWeight:700,color:C.brand}}>{jo.filled}/{jo.positions}</div>
-                      <div style={{fontSize:11,color:C.text3,marginTop:2}}>{remaining} to fill</div>
+                    <div className="text-right shrink-0">
+                      <div className="text-sm font-bold text-brand">{jo.filled}/{jo.positions}</div>
+                      <div className="text-xs text-text-3 mt-0.5">{remaining} to fill</div>
                     </div>
                   </div>;})}
               </div>}
         </Card>
       </div>
 
-      <div style={{display:"flex",flexDirection:"column",gap:16}}>
+      <div className="flex flex-col gap-4">
         <Card pad={mob?18:20} style={{borderRadius:16}}>
           <Lbl>Money on the desk</Lbl>
-          <div style={{display:"flex",flexDirection:"column",gap:10}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"11px 12px",background:C.bg,borderRadius:9}}>
-              <span style={{fontSize:13,color:C.text2}}>AR outstanding</span>
-              <span style={{fontSize:15,fontWeight:700,color:C.brand}}>${kpi.arTotal.toLocaleString()}</span>
+          <div className="flex flex-col gap-2.5">
+            <div className="flex justify-between items-center py-2.5 px-3 bg-bg rounded-lg">
+              <span className="text-sm text-text-2">AR outstanding</span>
+              <span className="text-base font-bold text-brand">${kpi.arTotal.toLocaleString()}</span>
             </div>
-            {kpi.overdueTotal>0&&<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"11px 12px",background:C.dangerBg,borderRadius:9,border:`1px solid ${C.dangerLn}`}}>
-              <span style={{fontSize:13,color:C.text2}}>Overdue (chase)</span>
-              <span style={{fontSize:15,fontWeight:700,color:C.danger}}>${kpi.overdueTotal.toLocaleString()}</span>
+            {kpi.overdueTotal>0&&<div className="flex justify-between items-center py-2.5 px-3 bg-red-bg rounded-lg border border-red-ln">
+              <span className="text-sm text-text-2">Overdue (chase)</span>
+              <span className="text-base font-bold text-red">${kpi.overdueTotal.toLocaleString()}</span>
             </div>}
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"11px 12px",background:C.bg,borderRadius:9}}>
-              <span style={{fontSize:13,color:C.text2}}>Placements in flight</span>
-              <span style={{fontSize:15,fontWeight:700,color:C.violet}}>{kpi.inProgressPlacements}</span>
+            <div className="flex justify-between items-center py-2.5 px-3 bg-bg rounded-lg">
+              <span className="text-sm text-text-2">Placements in flight</span>
+              <span className="text-base font-bold text-violet">{kpi.inProgressPlacements}</span>
             </div>
-            {kpi.guaranteeExpiring>0&&<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"11px 12px",background:C.warnBg,borderRadius:9,border:`1px solid ${C.warnLn}`}}>
-              <span style={{fontSize:13,color:C.text2}}>Guarantees ending soon</span>
-              <span style={{fontSize:15,fontWeight:700,color:C.warn}}>{kpi.guaranteeExpiring}</span>
+            {kpi.guaranteeExpiring>0&&<div className="flex justify-between items-center py-2.5 px-3 bg-warn-bg rounded-lg border border-warn-ln">
+              <span className="text-sm text-text-2">Guarantees ending soon</span>
+              <span className="text-base font-bold text-warn">{kpi.guaranteeExpiring}</span>
             </div>}
           </div>
         </Card>
 
         {submittedTs.length>0&&<Card pad={mob?18:20} style={{borderRadius:16,background:C.warnBg,border:`1px solid ${C.warnLn}`}}>
-          <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:12}}>
-            <div style={{width:36,height:36,borderRadius:10,background:"#fff",color:C.warn,display:"flex",alignItems:"center",justifyContent:"center"}}><I n="clock" s={18}/></div>
+          <div className="flex gap-3 items-center mb-3">
+            <div className="w-9 h-9 rounded-xl bg-white text-warn flex items-center justify-center"><I n="clock" s={18}/></div>
             <div>
-              <div style={{fontSize:14,fontWeight:660,color:C.text}}>Timesheets waiting</div>
-              <div style={{fontSize:12,color:C.text2,marginTop:2}}>{submittedTs.length} submitted, awaiting client approval</div>
+              <div className="text-sm font-semibold text-text">Timesheets waiting</div>
+              <div className="text-xs text-text-2 mt-0.5">{submittedTs.length} submitted, awaiting client approval</div>
             </div>
           </div>
           <Btn kind="warn" size="sm" full onClick={()=>A.go("agencyTimesheets")}>Chase supervisors</Btn>
@@ -182,15 +191,14 @@ export function AgencyDashboard(){
     {/* Quick actions */}
     <Card pad={mob?18:24} style={{borderRadius:16}}>
       <Lbl>Quick actions</Lbl>
-      <div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"repeat(4,1fr)",gap:10}}>
-        {[["Add job order","plus","agencyJobOrders",C.brand],
-          ["Place a worker","user","agencyBench",C.ok],
-          ["Run payroll","wallet","agencyPayroll",C.violet],
-          ["Generate invoices","file","agencyInvoicing",C.warn]].map(([l,ic,go,tone])=>
-          <button key={l} onClick={()=>A.go(go)} style={{padding:14,borderRadius:11,cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:600,color:C.text,textAlign:"left",background:C.bg,border:`1px solid ${C.line}`,display:"flex",gap:10,alignItems:"center"}}
-            onMouseEnter={e=>{e.currentTarget.style.borderColor=tone;e.currentTarget.style.background=C.tint;}}
-            onMouseLeave={e=>{e.currentTarget.style.borderColor=C.line;e.currentTarget.style.background=C.bg;}}>
-            <div style={{width:32,height:32,borderRadius:8,background:"#fff",color:tone,display:"flex",alignItems:"center",justifyContent:"center"}}><I n={ic} s={16}/></div>
+      <div className={`grid gap-2.5 ${mob?"grid-cols-2":"grid-cols-4"}`}>
+        {[["Add job order","plus","agencyJobOrders","brand"],
+          ["Place a worker","user","agencyBench","ok"],
+          ["Run payroll","wallet","agencyPayroll","violet"],
+          ["Generate invoices","file","agencyInvoicing","warn"]].map(([l,ic,go,tone])=>
+          <button key={l} onClick={()=>A.go(go)}
+            className={`p-3.5 rounded-xl cursor-pointer text-sm font-semibold text-text text-left bg-bg border border-line flex gap-2.5 items-center ${TONE_CLS[tone].hoverBorder}`}>
+            <div className={`w-8 h-8 rounded-lg bg-white flex items-center justify-center ${TONE_CLS[tone].text}`}><I n={ic} s={16}/></div>
             {l}
           </button>)}
       </div>
@@ -201,6 +209,17 @@ export function AgencyDashboard(){
 /* ═══════════════════════════════════════════════════════════════════════════
    AGENCY CONSOLE — Modules
    ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Reusable pill-tab bar — {label, count?} */
+function _PillTabs({items,value,onChange}){
+  return <div className="flex bg-bg rounded-lg p-0.5 border border-line flex-wrap" style={{width:"fit-content"}}>
+    {items.map(([v,l])=><button key={v} onClick={()=>onChange(v)}
+      className={`border-0 py-1.5 px-3.5 rounded-md cursor-pointer text-xs font-semibold ${value===v?"bg-white text-brand":"bg-transparent text-text-3"}`}>{l}</button>)}
+  </div>;
+}
+
+const TH_CLS="py-3 px-3.5 text-xs font-bold text-text-3 tracking-wide uppercase";
+const TD_CLS="py-3 px-3.5";
 
 /* ─── Job Orders: client requests for workers ─── */
 export function AgencyJobOrders(){
@@ -217,49 +236,46 @@ export function AgencyJobOrders(){
   }).sort((a,b)=>b.createdAt-a.createdAt);
 
   return <div>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:10}}>
+    <div className="flex justify-between items-center mb-4 flex-wrap gap-2.5">
       <div>
-        <div style={{fontSize:18,fontWeight:720,color:C.text,letterSpacing:"-.02em"}}>{list.length} job orders</div>
-        <div style={{fontSize:13,color:C.text3,marginTop:3}}>Client requests for workers.</div>
+        <div className="text-lg font-bold text-text tracking-tight">{list.length} job orders</div>
+        <div className="text-sm text-text-3 mt-0.5">Client requests for workers.</div>
       </div>
       <Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowAdd(true)}>New job order</Btn>
     </div>
 
     <Card pad={mob?14:18} style={{marginBottom:14,borderRadius:12}}>
-      <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
-        <div style={{display:"flex",background:C.bg,borderRadius:8,padding:2,border:`1px solid ${C.line}`}}>
-          {[["open","Open"],["filled","Filled"],["closed","Closed"],["all","All"]].map(([v,l])=>
-            <button key={v} onClick={()=>setTab(v)} style={{background:tab===v?"#fff":"transparent",border:"none",padding:"7px 13px",borderRadius:6,cursor:"pointer",fontFamily:"inherit",fontSize:12.5,fontWeight:640,color:tab===v?C.brand:C.text3}}>{l}</button>)}
-        </div>
-        <div style={{flex:"1 1 220px",minWidth:0}}>
+      <div className="flex gap-2.5 flex-wrap items-center">
+        <_PillTabs items={[["open","Open"],["filled","Filled"],["closed","Closed"],["all","All"]]} value={tab} onChange={setTab}/>
+        <div className="grow shrink basis-55 min-w-0">
           <Input icon="search" value={q} onChange={e=>setQ(e.target.value)} placeholder="Search title or location"/></div>
       </div>
     </Card>
 
-    <div style={{display:"grid",gridTemplateColumns:`repeat(auto-fill,minmax(${mob?280:340}px,1fr))`,gap:12}}>
+    <div className="grid gap-3" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?280:340}px,1fr))`}}>
       {list.map(jo=>{const client=A.staffingClient(jo.client);
         const remaining=jo.positions-jo.filled;
         const daysOld=Math.floor((Date.now()-jo.createdAt)/864e5);
         return <div key={jo.id} data-card onClick={()=>setSelected(jo.id)}
-          style={{background:"#fff",borderRadius:14,padding:mob?16:18,border:`1px solid ${jo.urgency==="high"?C.dangerLn:C.line}`,cursor:"pointer"}}>
-          <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8,flexWrap:"wrap"}}>
+          className={`bg-white rounded-2xl cursor-pointer ${mob?"p-4":"p-5"}`} style={{border:`1px solid ${jo.urgency==="high"?C.dangerLn:C.line}`}}>
+          <div className="flex gap-2 items-center mb-2 flex-wrap">
             <Tag tone={jo.urgency==="high"?"danger":jo.urgency==="medium"?"warn":"neutral"} sm>{jo.urgency}</Tag>
             <Tag tone={jo.status==="open"?"brand":jo.status==="filled"?"ok":"neutral"} sm>{jo.status}</Tag>
-            <span style={{fontSize:11,color:C.text3,marginLeft:"auto"}}>{daysOld}d old</span>
+            <span className="text-xs text-text-3 ml-auto">{daysOld}d old</span>
           </div>
-          <div style={{fontSize:15,fontWeight:660,color:C.text,letterSpacing:"-.015em",lineHeight:1.35,marginBottom:6}}>{jo.title}</div>
-          <div style={{fontSize:12.5,color:C.text2,marginBottom:12}}>{client?.name} · {jo.location.split(" — ")[0]}</div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
-            <div style={{padding:"9px 11px",background:C.bg,borderRadius:9}}>
-              <div style={{fontSize:10.5,color:C.text3,fontWeight:600,letterSpacing:".04em",textTransform:"uppercase"}}>Pay/Bill</div>
-              <div style={{fontSize:13,fontWeight:660,color:C.text,marginTop:3}}>${jo.payRate} / ${jo.billRate}/hr</div>
+          <div className="font-semibold text-text tracking-tight leading-snug mb-1.5" style={{fontSize:15}}>{jo.title}</div>
+          <div className="text-xs text-text-2 mb-3">{client?.name} · {jo.location.split(" — ")[0]}</div>
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <div className="py-2.5 px-3 bg-bg rounded-lg">
+              <div className="text-xs text-text-3 font-semibold tracking-wide uppercase" style={{fontSize:10.5}}>Pay/Bill</div>
+              <div className="text-sm font-semibold text-text mt-1">${jo.payRate} / ${jo.billRate}/hr</div>
             </div>
-            <div style={{padding:"9px 11px",background:C.bg,borderRadius:9}}>
-              <div style={{fontSize:10.5,color:C.text3,fontWeight:600,letterSpacing:".04em",textTransform:"uppercase"}}>Filled</div>
-              <div style={{fontSize:13,fontWeight:660,color:C.brand,marginTop:3}}>{jo.filled}/{jo.positions}{remaining>0?` (${remaining} left)`:""}</div>
+            <div className="py-2.5 px-3 bg-bg rounded-lg">
+              <div className="text-xs text-text-3 font-semibold tracking-wide uppercase" style={{fontSize:10.5}}>Filled</div>
+              <div className="text-sm font-semibold text-brand mt-1">{jo.filled}/{jo.positions}{remaining>0?` (${remaining} left)`:""}</div>
             </div>
           </div>
-          <div style={{fontSize:11.5,color:C.text3}}>Starts {jo.startDate} · {jo.ongoing?"Ongoing":`Ends ${jo.endDate}`}</div>
+          <div className="text-xs text-text-3">Starts {jo.startDate} · {jo.ongoing?"Ongoing":`Ends ${jo.endDate}`}</div>
         </div>;})}
       {list.length===0&&<Empty icon="briefcase" title="No job orders" body="Add a new order or change the filter."/>}
     </div>
@@ -284,70 +300,70 @@ function _JobOrderDetail({id,onClose}){
   }).sort((a,b)=>b.score-a.score);
 
   return <Modal onClose={onClose} title="Job order" wide>
-    <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 320px",gap:20}}>
+    <div className="grid gap-5" style={{gridTemplateColumns:mob?"1fr":"1fr 320px"}}>
       <div>
-        <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
+        <div className="flex gap-2 mb-3 flex-wrap">
           <Tag tone={jo.urgency==="high"?"danger":jo.urgency==="medium"?"warn":"neutral"} sm>{jo.urgency}</Tag>
           <Tag tone={jo.status==="open"?"brand":jo.status==="filled"?"ok":"neutral"} sm>{jo.status}</Tag>
         </div>
-        <div style={{fontSize:22,fontWeight:730,color:C.text,letterSpacing:"-.025em"}}>{jo.title}</div>
-        <div style={{fontSize:14,color:C.text2,marginTop:6}}>{client?.name} · {jo.location}</div>
+        <div className="text-2xl font-bold text-text tracking-tight">{jo.title}</div>
+        <div className="text-sm text-text-2 mt-1.5">{client?.name} · {jo.location}</div>
 
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginTop:18,marginBottom:16}}>
+        <div className="grid grid-cols-2 gap-3 mt-5 mb-4">
           {[["Positions",`${jo.filled}/${jo.positions}`],
             ["Pay/Bill",`$${jo.payRate}/$${jo.billRate}/hr`],
             ["Starts",jo.startDate],
             ["Ends",jo.ongoing?"Ongoing":jo.endDate],
             ["Shift",jo.shiftPattern],
             ["OT",jo.overtimeAvailable?"Available (1.5x)":"None"]].map(([l,v])=>
-            <div key={l}><div style={{fontSize:11,fontWeight:700,color:C.text3,letterSpacing:".05em",textTransform:"uppercase",marginBottom:3}}>{l}</div>
-              <div style={{fontSize:13,color:C.text}}>{v}</div></div>)}
+            <div key={l}><div className="text-xs font-bold text-text-3 tracking-wide uppercase mb-1">{l}</div>
+              <div className="text-sm text-text">{v}</div></div>)}
         </div>
 
-        <div style={{marginBottom:14}}>
+        <div className="mb-3.5">
           <Lbl>Must-have tickets</Lbl>
-          <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+          <div className="flex flex-wrap gap-1.5">
             {jo.mustHave.map(m=><Tag key={m} tone="danger" sm icon="alert">{m}</Tag>)}
           </div>
         </div>
-        {jo.niceToHave.length>0&&<div style={{marginBottom:14}}>
+        {jo.niceToHave.length>0&&<div className="mb-3.5">
           <Lbl>Nice to have</Lbl>
-          <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+          <div className="flex flex-wrap gap-1.5">
             {jo.niceToHave.map(m=><Tag key={m} tone="brand" sm>{m}</Tag>)}
           </div>
         </div>}
 
         <Lbl>Supervisor</Lbl>
-        <div style={{padding:12,background:C.bg,borderRadius:9,marginBottom:14}}>
-          <div style={{fontSize:13.5,fontWeight:600,color:C.text}}>{jo.supervisor}</div>
-          <div style={{fontSize:12,color:C.text3,marginTop:3}}>{jo.supervisorEmail}{jo.supervisorPhone?` · ${jo.supervisorPhone}`:""}</div>
+        <div className="p-3 bg-bg rounded-lg mb-3.5">
+          <div className="text-sm font-semibold text-text">{jo.supervisor}</div>
+          <div className="text-xs text-text-3 mt-1">{jo.supervisorEmail}{jo.supervisorPhone?` · ${jo.supervisorPhone}`:""}</div>
         </div>
 
-        {jo.ppe&&<div style={{marginBottom:14}}>
+        {jo.ppe&&<div className="mb-3.5">
           <Lbl>PPE</Lbl>
-          <div style={{fontSize:13,color:C.text2,lineHeight:1.6}}>{jo.ppe}</div>
+          <div className="text-sm text-text-2 leading-relaxed">{jo.ppe}</div>
         </div>}
         {jo.notes&&<div>
           <Lbl>Notes</Lbl>
-          <div style={{fontSize:13,color:C.text2,lineHeight:1.6}}>{jo.notes}</div>
+          <div className="text-sm text-text-2 leading-relaxed">{jo.notes}</div>
         </div>}
       </div>
 
       <div>
         <Lbl>Matched from bench</Lbl>
-        <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:12}}>
+        <div className="flex flex-col gap-2 mb-3">
           {matched.slice(0,6).map(({w,score,hasAll})=>{const person=(A.people||[]).find(p=>p.id===w.personId);
-            return <div key={w.id} style={{padding:"10px 12px",background:C.bg,borderRadius:10,border:`1px solid ${hasAll?C.okLn:C.line}`,display:"flex",gap:10,alignItems:"center"}}>
+            return <div key={w.id} className="py-2.5 px-3 bg-bg rounded-lg flex gap-2.5 items-center" style={{border:`1px solid ${hasAll?C.okLn:C.line}`}}>
               <SmartPortrait seed={person?.seed||0} size={32} radius={8}/>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:13,fontWeight:600,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{person?.name||"—"}</div>
-                <div style={{fontSize:11.5,color:C.text3,marginTop:2}}>{w.city} · ${w.payRateTarget}/hr target</div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap">{person?.name||"—"}</div>
+                <div className="text-xs text-text-3 mt-0.5">{w.city} · ${w.payRateTarget}/hr target</div>
               </div>
-              <div style={{textAlign:"right",flexShrink:0}}>
-                <div style={{fontSize:13,fontWeight:700,color:hasAll?C.ok:score>=50?C.warn:C.text3}}>{score}%</div>
+              <div className="text-right shrink-0">
+                <div className="text-sm font-bold" style={{color:hasAll?C.ok:score>=50?C.warn:C.text3}}>{score}%</div>
               </div>
             </div>;})}
-          {matched.length===0&&<div style={{fontSize:12.5,color:C.text3,padding:12,textAlign:"center"}}>No available workers.</div>}
+          {matched.length===0&&<div className="text-xs text-text-3 p-3 text-center">No available workers.</div>}
         </div>
         {jo.status==="open"&&<Btn kind="primary" size="sm" full icon="plus" onClick={()=>setShowPlace(true)}>Place a worker</Btn>}
       </div>
@@ -379,7 +395,7 @@ function _PlaceWorkerModal({jobOrder,onClose,onPlace}){
   };
 
   return <Modal onClose={onClose} title="Place a worker">
-    <div style={{display:"flex",flexDirection:"column",gap:14}}>
+    <div className="flex flex-col gap-3.5">
       <Field label="Worker" required>
         <Sel value={workerId} onChange={e=>{setWorkerId(e.target.value); const w=availableWorkers.find(x=>x.id===e.target.value); if(w){setPayRate(w.payRateTarget||jobOrder.payRate);}}}>
           <option value="">Select from bench…</option>
@@ -387,36 +403,36 @@ function _PlaceWorkerModal({jobOrder,onClose,onPlace}){
             return <option key={w.id} value={w.id}>{p?.name||w.id} — {w.city}, {w.province}</option>;})}
         </Sel>
       </Field>
-      {selectedW&&<div style={{padding:12,background:C.tint,border:`1px solid ${C.line2}`,borderRadius:10}}>
-        <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:10}}>
+      {selectedW&&<div className="p-3 bg-tint border border-line-2 rounded-lg">
+        <div className="flex gap-2.5 items-center">
           <SmartPortrait seed={person?.seed||0} size={36} radius={9}/>
-          <div style={{flex:1,minWidth:0}}>
-            <div style={{fontSize:13.5,fontWeight:640,color:C.text}}>{person?.name}</div>
-            <div style={{fontSize:11.5,color:C.text3,marginTop:2}}>{selectedW.tickets.slice(0,3).join(", ")}</div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold text-text">{person?.name}</div>
+            <div className="text-xs text-text-3 mt-0.5">{selectedW.tickets.slice(0,3).join(", ")}</div>
           </div>
         </div>
       </div>}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+      <div className="grid grid-cols-2 gap-2.5">
         <Field label="Pay rate ($/hr)" required><Input type="number" step="0.5" value={payRate} onChange={e=>setPayRate(e.target.value)}/></Field>
         <Field label="Bill rate ($/hr)" required><Input type="number" step="0.5" value={billRate} onChange={e=>setBillRate(e.target.value)}/></Field>
       </div>
       {selectedW&&<Card pad={14} style={{borderRadius:11,background:marginOk?C.okBg:C.warnBg,border:`1px solid ${marginOk?C.okLn:C.warnLn}`}}>
-        <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:6}}>
-          <span style={{color:C.text3,fontWeight:600}}>MARKUP</span>
-          <span style={{color:marginOk?C.ok:C.warn,fontWeight:700}}>{econ.markupPct}%</span>
+        <div className="flex justify-between text-xs mb-1.5">
+          <span className="text-text-3 font-semibold">MARKUP</span>
+          <span className="font-bold" style={{color:marginOk?C.ok:C.warn}}>{econ.markupPct}%</span>
         </div>
-        <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:6}}>
-          <span style={{color:C.text3,fontWeight:600}}>TRUE COST/HR (after burden)</span>
-          <span style={{color:C.text,fontWeight:700}}>${econ.trueCost}</span>
+        <div className="flex justify-between text-xs mb-1.5">
+          <span className="text-text-3 font-semibold">TRUE COST/HR (after burden)</span>
+          <span className="font-bold text-text">${econ.trueCost}</span>
         </div>
-        <div style={{display:"flex",justifyContent:"space-between",fontSize:12}}>
-          <span style={{color:C.text3,fontWeight:600}}>MARGIN/HR</span>
-          <span style={{color:econ.margin>0?C.ok:C.danger,fontWeight:700}}>${econ.margin}</span>
+        <div className="flex justify-between text-xs">
+          <span className="text-text-3 font-semibold">MARGIN/HR</span>
+          <span className="font-bold" style={{color:econ.margin>0?C.ok:C.danger}}>${econ.margin}</span>
         </div>
-        {!marginOk&&<div style={{fontSize:11,color:C.warn,marginTop:8,paddingTop:8,borderTop:`1px solid ${C.warnLn}`}}>
+        {!marginOk&&<div className="text-xs text-warn mt-2 pt-2 border-t border-warn-ln">
           Below {A.STAFFING_AGENCY.markupFloor}% markup floor. Reconsider rates or you're losing money on WSIB claims.</div>}
       </Card>}
-      <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+      <div className="flex gap-2.5 justify-end">
         <Btn kind="ghost" onClick={onClose}>Cancel</Btn>
         <Btn kind="primary" onClick={place} disabled={!workerId||!payRate||!billRate}>Confirm placement</Btn>
       </div>
@@ -440,8 +456,8 @@ function _NewJobOrderModal({onClose}){
     A.createJobOrder(d); onClose();
   };
   return <Modal onClose={onClose} title="New job order" wide>
-    <div style={{display:"flex",flexDirection:"column",gap:14}}>
-      <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:12}}>
+    <div className="flex flex-col gap-3.5">
+      <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
         <Field label="Client" required>
           <Sel value={d.client} onChange={e=>set("client",e.target.value)}>
             <option value="">Select client…</option>
@@ -452,31 +468,31 @@ function _NewJobOrderModal({onClose}){
           {["low","medium","high"].map(u=><option key={u}>{u}</option>)}</Sel></Field>
       </div>
       <Field label="Job title" required><Input value={d.title} onChange={e=>set("title",e.target.value)} placeholder="e.g. Journeyperson Electricians — Commercial Site"/></Field>
-      <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr 1fr",gap:12}}>
+      <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-3"}`}>
         <Field label="Positions"><Input type="number" min="1" value={d.positions} onChange={e=>set("positions",Number(e.target.value)||1)}/></Field>
         <Field label="Pay rate ($/hr)" required><Input type="number" step="0.5" value={d.payRate} onChange={e=>set("payRate",Number(e.target.value)||0)}/></Field>
         <Field label="Bill rate ($/hr)" required><Input type="number" step="0.5" value={d.billRate} onChange={e=>set("billRate",Number(e.target.value)||0)}/></Field>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:12}}>
+      <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
         <Field label="Location"><Input icon="pin" value={d.location} onChange={e=>set("location",e.target.value)} placeholder="Calgary AB — Foothills Hospital"/></Field>
         <Field label="Province"><Sel value={d.province} onChange={e=>set("province",e.target.value)}>
           {Object.keys(A.STAFFING_RATES).map(p=><option key={p} value={p}>{A.STAFFING_RATES[p].label}</option>)}</Sel></Field>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr 1fr",gap:12}}>
+      <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-3"}`}>
         <Field label="Start date" required><DatePicker value={d.startDate} onChange={v=>set("startDate",v)}/></Field>
         <Field label="End date"><DatePicker value={d.endDate} onChange={v=>set("endDate",v)} min={d.startDate}/></Field>
-        <Field label=" "><label style={{display:"flex",alignItems:"center",gap:8,padding:"8px 0",fontSize:13.5,color:C.text2}}>
+        <Field label=" "><label className="flex items-center gap-2 py-2 text-sm text-text-2">
           <input type="checkbox" checked={d.ongoing} onChange={e=>set("ongoing",e.target.checked)}/> Ongoing</label></Field>
       </div>
       <Field label="Shift pattern"><Input value={d.shiftPattern} onChange={e=>set("shiftPattern",e.target.value)}/></Field>
       <Field label="Must-have tickets"><InlineList value={d.mustHave} onChange={v=>set("mustHave",v)} icon="alert" placeholder="e.g. Red Seal Electrician"/></Field>
       <Field label="Nice-to-have"><InlineList value={d.niceToHave} onChange={v=>set("niceToHave",v)} icon="sparkle" placeholder="e.g. Blueprint Reading"/></Field>
-      <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:12}}>
+      <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
         <Field label="Client supervisor"><Input value={d.supervisor} onChange={e=>set("supervisor",e.target.value)} placeholder="Site foreman name"/></Field>
         <Field label="Supervisor email"><Input icon="mail" value={d.supervisorEmail} onChange={e=>set("supervisorEmail",e.target.value)}/></Field>
       </div>
       <Field label="Notes"><Area rows={3} value={d.notes} onChange={e=>set("notes",e.target.value)}/></Field>
-      <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+      <div className="flex gap-2.5 justify-end">
         <Btn kind="ghost" onClick={onClose}>Cancel</Btn>
         <Btn kind="primary" onClick={submit} disabled={!d.title||!d.client||!d.payRate||!d.billRate}>Create order</Btn>
       </div>
@@ -498,14 +514,14 @@ export function AgencyBench(){
     return true;
   });
   return <div>
-    <div style={{marginBottom:14}}>
-      <div style={{fontSize:18,fontWeight:720,color:C.text}}>{list.length} workers on bench</div>
-      <div style={{fontSize:13,color:C.text3,marginTop:3}}>Search by name, city, or ticket. Filter by province and availability.</div>
+    <div className="mb-3.5">
+      <div className="text-lg font-bold text-text">{list.length} workers on bench</div>
+      <div className="text-sm text-text-3 mt-0.5">Search by name, city, or ticket. Filter by province and availability.</div>
     </div>
 
     <Card pad={mob?14:18} style={{marginBottom:14,borderRadius:12}}>
-      <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
-        <div style={{flex:"1 1 240px",minWidth:0}}>
+      <div className="flex gap-2.5 flex-wrap items-center">
+        <div className="grow shrink basis-60 min-w-0">
           <Input icon="search" value={q} onChange={e=>setQ(e.target.value)} placeholder="Search name, city, or ticket"/></div>
         <Sel value={prov} onChange={e=>setProv(e.target.value)} style={{maxWidth:160}}>
           <option value="all">All provinces</option>
@@ -519,37 +535,34 @@ export function AgencyBench(){
     </Card>
 
     <Card pad={0} style={{borderRadius:14,overflow:"hidden"}}>
-      <div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",minWidth:720}}>
-        <thead><tr style={{borderBottom:`2px solid ${C.line}`,textAlign:"left"}}>
+      <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:720}}>
+        <thead><tr className="border-b-2 border-line text-left">
           {["Worker","Location","Availability","Rate target","Tickets","Vac accrued"].map(h=>
-            <th key={h} style={{padding:"12px 14px",fontSize:11.5,fontWeight:700,color:C.text3,letterSpacing:".05em",textTransform:"uppercase"}}>{h}</th>)}
+            <th key={h} className={TH_CLS}>{h}</th>)}
         </tr></thead>
         <tbody>{list.map(w=>{const person=(A.people||[]).find(p=>p.id===w.personId);
-          return <tr key={w.id} style={{borderBottom:`1px solid ${C.lineSoft}`,transition:"background .16s",cursor:"pointer"}}
-            onMouseEnter={e=>e.currentTarget.style.background=C.bg}
-            onMouseLeave={e=>e.currentTarget.style.background="transparent"}
-            onClick={()=>A.go("agencyWorkers")}>
-            <td style={{padding:"11px 14px"}}>
-              <div style={{display:"flex",gap:10,alignItems:"center"}}>
+          return <tr key={w.id} className="border-b border-line-soft transition-colors duration-150 cursor-pointer hover:bg-bg" onClick={()=>A.go("agencyWorkers")}>
+            <td className={TD_CLS}>
+              <div className="flex gap-2.5 items-center">
                 <SmartPortrait seed={person?.seed||0} size={30} radius={8}/>
-                <div style={{minWidth:0}}>
-                  <div style={{fontSize:13.5,fontWeight:600,color:C.text}}>{person?.name||"—"}</div>
-                  <div style={{fontSize:11.5,color:C.text3,marginTop:2}}>Since {w.onboarded}</div>
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-text">{person?.name||"—"}</div>
+                  <div className="text-xs text-text-3 mt-0.5">Since {w.onboarded}</div>
                 </div>
               </div>
             </td>
-            <td style={{padding:"11px 14px",fontSize:13,color:C.text2}}>{w.city}, {w.province}</td>
-            <td style={{padding:"11px 14px"}}><Tag tone={w.availability==="available"?"ok":w.availability==="on-assignment"?"brand":"neutral"} sm>{w.availability}</Tag></td>
-            <td style={{padding:"11px 14px",fontSize:13,color:C.text,fontWeight:600}}>${w.payRateTarget||"—"}/hr</td>
-            <td style={{padding:"11px 14px"}}>
-              <div style={{display:"flex",flexWrap:"wrap",gap:4,maxWidth:280}}>
+            <td className={`${TD_CLS} text-sm text-text-2`}>{w.city}, {w.province}</td>
+            <td className={TD_CLS}><Tag tone={w.availability==="available"?"ok":w.availability==="on-assignment"?"brand":"neutral"} sm>{w.availability}</Tag></td>
+            <td className={`${TD_CLS} text-sm text-text font-semibold`}>${w.payRateTarget||"—"}/hr</td>
+            <td className={TD_CLS}>
+              <div className="flex flex-wrap gap-1" style={{maxWidth:280}}>
                 {w.tickets.slice(0,3).map(t=><Tag key={t} tone="neutral" sm>{t}</Tag>)}
                 {w.tickets.length>3&&<Tag tone="neutral" sm>+{w.tickets.length-3}</Tag>}
               </div>
             </td>
-            <td style={{padding:"11px 14px",fontSize:12.5,color:C.brand,fontWeight:600}}>${w.vacBalance.toFixed(2)}</td>
+            <td className={`${TD_CLS} text-xs text-brand font-semibold`}>${w.vacBalance.toFixed(2)}</td>
           </tr>;})}
-          {list.length===0&&<tr><td colSpan={6} style={{padding:24,textAlign:"center",color:C.text3,fontSize:13}}>No matching workers.</td></tr>}
+          {list.length===0&&<tr><td colSpan={6} className="p-6 text-center text-text-3 text-sm">No matching workers.</td></tr>}
         </tbody>
       </table></div>
     </Card>
@@ -562,41 +575,38 @@ export function AgencyAssignments(){
   const [tab,setTab]=useState("active");
   const list=A.assignments.filter(a=>tab==="all"?true:a.status===tab).sort((a,b)=>b.startDate.localeCompare(a.startDate));
   return <div>
-    <div style={{marginBottom:14}}>
-      <div style={{fontSize:18,fontWeight:720,color:C.text}}>{list.length} assignments</div>
-      <div style={{fontSize:13,color:C.text3,marginTop:3}}>Every worker deployed across every client.</div>
+    <div className="mb-3.5">
+      <div className="text-lg font-bold text-text">{list.length} assignments</div>
+      <div className="text-sm text-text-3 mt-0.5">Every worker deployed across every client.</div>
     </div>
 
-    <div style={{display:"flex",background:C.bg,borderRadius:8,padding:2,border:`1px solid ${C.line}`,marginBottom:14,width:"fit-content"}}>
-      {[["active","Active"],["completed","Completed"],["all","All"]].map(([v,l])=>
-        <button key={v} onClick={()=>setTab(v)} style={{background:tab===v?"#fff":"transparent",border:"none",padding:"7px 13px",borderRadius:6,cursor:"pointer",fontFamily:"inherit",fontSize:12.5,fontWeight:640,color:tab===v?C.brand:C.text3}}>{l}</button>)}
-    </div>
+    <div className="mb-3.5"><_PillTabs items={[["active","Active"],["completed","Completed"],["all","All"]]} value={tab} onChange={setTab}/></div>
 
     <Card pad={0} style={{borderRadius:14,overflow:"hidden"}}>
-      <div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",minWidth:720}}>
-        <thead><tr style={{borderBottom:`2px solid ${C.line}`,textAlign:"left"}}>
+      <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:720}}>
+        <thead><tr className="border-b-2 border-line text-left">
           {["Worker","Client","Site","Rates","Duration","Margin","Status"].map(h=>
-            <th key={h} style={{padding:"12px 14px",fontSize:11.5,fontWeight:700,color:C.text3,letterSpacing:".05em",textTransform:"uppercase"}}>{h}</th>)}
+            <th key={h} className={TH_CLS}>{h}</th>)}
         </tr></thead>
         <tbody>{list.map(a=>{const w=A.worker(a.worker); const person=w?(A.people||[]).find(p=>p.id===w.personId):null;
           const client=A.staffingClient(a.client);
           const emp=client?A.employers.find(e=>e.id===client.employerId):null;
           const econ=A.assignmentMargin(a.id);
-          return <tr key={a.id} style={{borderBottom:`1px solid ${C.lineSoft}`}}>
-            <td style={{padding:"11px 14px"}}>
-              <div style={{display:"flex",gap:10,alignItems:"center"}}>
+          return <tr key={a.id} className="border-b border-line-soft">
+            <td className={TD_CLS}>
+              <div className="flex gap-2.5 items-center">
                 <SmartPortrait seed={person?.seed||0} size={30} radius={8}/>
-                <span style={{fontSize:13.5,fontWeight:600,color:C.text}}>{person?.name||"—"}</span>
+                <span className="text-sm font-semibold text-text">{person?.name||"—"}</span>
               </div>
             </td>
-            <td style={{padding:"11px 14px",fontSize:13,color:C.text2}}>{emp?.name||"—"}</td>
-            <td style={{padding:"11px 14px",fontSize:12.5,color:C.text3,maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.site.split(" — ").pop()}</td>
-            <td style={{padding:"11px 14px",fontSize:12.5,color:C.text}}>${a.payRate}/${a.billRate}</td>
-            <td style={{padding:"11px 14px",fontSize:12.5,color:C.text3}}>{a.startDate} → {a.endDate||"ongoing"}</td>
-            <td style={{padding:"11px 14px",fontSize:12.5,color:econ?.margin>0?C.ok:C.danger,fontWeight:640}}>
-              {econ?<>${econ.margin}/hr <span style={{color:C.text3,fontWeight:500}}>({econ.markupPct}%)</span></>:"—"}
+            <td className={`${TD_CLS} text-sm text-text-2`}>{emp?.name||"—"}</td>
+            <td className={`${TD_CLS} text-xs text-text-3 overflow-hidden text-ellipsis whitespace-nowrap`} style={{maxWidth:200}}>{a.site.split(" — ").pop()}</td>
+            <td className={`${TD_CLS} text-xs text-text`}>${a.payRate}/${a.billRate}</td>
+            <td className={`${TD_CLS} text-xs text-text-3`}>{a.startDate} → {a.endDate||"ongoing"}</td>
+            <td className={`${TD_CLS} text-xs font-semibold`} style={{color:econ?.margin>0?C.ok:C.danger}}>
+              {econ?<>${econ.margin}/hr <span className="text-text-3 font-medium">({econ.markupPct}%)</span></>:"—"}
             </td>
-            <td style={{padding:"11px 14px"}}><Tag tone={a.status==="active"?"ok":"neutral"} sm>{a.status}</Tag></td>
+            <td className={TD_CLS}><Tag tone={a.status==="active"?"ok":"neutral"} sm>{a.status}</Tag></td>
           </tr>;})}
         </tbody>
       </table></div>
@@ -610,46 +620,43 @@ export function AgencyTimesheets(){
   const [tab,setTab]=useState("submitted");
   const list=A.timesheets.filter(t=>tab==="all"?true:t.status===tab).sort((a,b)=>b.weekStart.localeCompare(a.weekStart));
   return <div>
-    <div style={{marginBottom:14}}>
-      <div style={{fontSize:18,fontWeight:720,color:C.text}}>Timesheets</div>
-      <div style={{fontSize:13,color:C.text3,marginTop:3}}>Weekly hours submitted by workers, approved by client supervisors.</div>
+    <div className="mb-3.5">
+      <div className="text-lg font-bold text-text">Timesheets</div>
+      <div className="text-sm text-text-3 mt-0.5">Weekly hours submitted by workers, approved by client supervisors.</div>
     </div>
 
-    <div style={{display:"flex",background:C.bg,borderRadius:8,padding:2,border:`1px solid ${C.line}`,marginBottom:14,width:"fit-content",flexWrap:"wrap"}}>
-      {[["draft","Draft"],["submitted","Submitted"],["approved","Approved"],["paid","Paid"],["all","All"]].map(([v,l])=>{
-        const count=A.timesheets.filter(t=>v==="all"?true:t.status===v).length;
-        return <button key={v} onClick={()=>setTab(v)} style={{background:tab===v?"#fff":"transparent",border:"none",padding:"7px 13px",borderRadius:6,cursor:"pointer",fontFamily:"inherit",fontSize:12.5,fontWeight:640,color:tab===v?C.brand:C.text3}}>{l} ({count})</button>;})}
-    </div>
+    <div className="mb-3.5"><_PillTabs items={[["draft","Draft"],["submitted","Submitted"],["approved","Approved"],["paid","Paid"],["all","All"]].map(([v,l])=>
+      [v,`${l} (${A.timesheets.filter(t=>v==="all"?true:t.status===v).length})`])} value={tab} onChange={setTab}/></div>
 
     <Card pad={0} style={{borderRadius:14,overflow:"hidden"}}>
-      <div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",minWidth:720}}>
-        <thead><tr style={{borderBottom:`2px solid ${C.line}`,textAlign:"left"}}>
+      <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:720}}>
+        <thead><tr className="border-b-2 border-line text-left">
           {["Week","Worker","Client","Hours","Gross pay","Bill","Status","Actions"].map(h=>
-            <th key={h} style={{padding:"12px 14px",fontSize:11.5,fontWeight:700,color:C.text3,letterSpacing:".05em",textTransform:"uppercase"}}>{h}</th>)}
+            <th key={h} className={TH_CLS}>{h}</th>)}
         </tr></thead>
         <tbody>{list.map(t=>{const w=A.worker(t.worker); const person=w?(A.people||[]).find(p=>p.id===w.personId):null;
           const asn=A.assignment(t.assignment); const client=asn?A.staffingClient(asn.client):null;
           const emp=client?A.employers.find(e=>e.id===client.employerId):null;
           const totalHrs=A.timesheetTotal(t); const gross=A.timesheetGross(t); const bill=A.timesheetBill(t);
-          return <tr key={t.id} style={{borderBottom:`1px solid ${C.lineSoft}`}}>
-            <td style={{padding:"11px 14px",fontSize:12.5,color:C.text2,fontFamily:"ui-monospace,monospace"}}>{t.weekStart}</td>
-            <td style={{padding:"11px 14px"}}><div style={{display:"flex",gap:10,alignItems:"center"}}>
+          return <tr key={t.id} className="border-b border-line-soft">
+            <td className={`${TD_CLS} text-xs text-text-2 font-mono`}>{t.weekStart}</td>
+            <td className={TD_CLS}><div className="flex gap-2.5 items-center">
               <SmartPortrait seed={person?.seed||0} size={28} radius={7}/>
-              <span style={{fontSize:13,color:C.text,fontWeight:600}}>{person?.name||"—"}</span></div></td>
-            <td style={{padding:"11px 14px",fontSize:12.5,color:C.text2}}>{emp?.name||"—"}</td>
-            <td style={{padding:"11px 14px",fontSize:13,color:C.text,fontWeight:600}}>{totalHrs}h{t.otHours>0?` (${t.otHours} OT)`:""}</td>
-            <td style={{padding:"11px 14px",fontSize:13,color:C.text}}>${gross.toFixed(2)}</td>
-            <td style={{padding:"11px 14px",fontSize:13,color:C.brand,fontWeight:600}}>${bill.toFixed(2)}</td>
-            <td style={{padding:"11px 14px"}}><Tag tone={t.status==="approved"?"ok":t.status==="submitted"?"warn":t.status==="paid"?"brand":"neutral"} sm>{t.status}</Tag></td>
-            <td style={{padding:"11px 14px"}}>
-              {t.status==="submitted"&&<div style={{display:"flex",gap:4}}>
+              <span className="text-sm text-text font-semibold">{person?.name||"—"}</span></div></td>
+            <td className={`${TD_CLS} text-xs text-text-2`}>{emp?.name||"—"}</td>
+            <td className={`${TD_CLS} text-sm text-text font-semibold`}>{totalHrs}h{t.otHours>0?` (${t.otHours} OT)`:""}</td>
+            <td className={`${TD_CLS} text-sm text-text`}>${gross.toFixed(2)}</td>
+            <td className={`${TD_CLS} text-sm text-brand font-semibold`}>${bill.toFixed(2)}</td>
+            <td className={TD_CLS}><Tag tone={t.status==="approved"?"ok":t.status==="submitted"?"warn":t.status==="paid"?"brand":"neutral"} sm>{t.status}</Tag></td>
+            <td className={TD_CLS}>
+              {t.status==="submitted"&&<div className="flex gap-1">
                 <Btn kind="dangerSoft" size="xs" onClick={()=>A.rejectTimesheet(t.id,"Ask client to resubmit")}>Return</Btn>
                 <Btn kind="primary" size="xs" onClick={()=>A.approveTimesheet(t.id,client?.defaultSupervisorEmail||"—")}>Approve on client's behalf</Btn>
               </div>}
-              {t.status==="submitted"&&<div style={{fontSize:10.5,color:C.text3,marginTop:2}}>Chase: {client?.defaultSupervisorEmail}</div>}
+              {t.status==="submitted"&&<div className="text-xs text-text-3 mt-0.5" style={{fontSize:10.5}}>Chase: {client?.defaultSupervisorEmail}</div>}
             </td>
           </tr>;})}
-          {list.length===0&&<tr><td colSpan={8} style={{padding:24,textAlign:"center",color:C.text3,fontSize:13}}>No timesheets in this state.</td></tr>}
+          {list.length===0&&<tr><td colSpan={8} className="p-6 text-center text-text-3 text-sm">No timesheets in this state.</td></tr>}
         </tbody>
       </table></div>
     </Card>
@@ -663,53 +670,53 @@ export function AgencyPayroll(){
   const readyToPay=A.timesheets.filter(t=>t.status==="approved").length;
   const readyGross=A.timesheets.filter(t=>t.status==="approved").reduce((s,t)=>s+A.timesheetGross(t),0);
   return <div>
-    <div style={{marginBottom:14}}>
-      <div style={{fontSize:18,fontWeight:720,color:C.text}}>Staffing payroll</div>
-      <div style={{fontSize:13,color:C.text3,marginTop:3}}>Biweekly runs. Workers paid Thursday for the previous two weeks' approved hours.</div>
+    <div className="mb-3.5">
+      <div className="text-lg font-bold text-text">Staffing payroll</div>
+      <div className="text-sm text-text-3 mt-0.5">Biweekly runs. Workers paid Thursday for the previous two weeks' approved hours.</div>
     </div>
 
     <Card pad={mob?18:22} style={{marginBottom:14,borderRadius:14,background:readyToPay>0?C.tint:C.bg,border:`1px solid ${readyToPay>0?C.line2:C.line}`}}>
-      <div style={{display:"flex",gap:14,alignItems:"center",flexWrap:"wrap"}}>
-        <div style={{width:44,height:44,borderRadius:11,background:"#fff",color:C.brand,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><I n="wallet" s={22}/></div>
-        <div style={{flex:1,minWidth:0}}>
-          <div style={{fontSize:15,fontWeight:660,color:C.text}}>Ready for next run</div>
-          <div style={{fontSize:12.5,color:C.text2,marginTop:3}}>{readyToPay} approved timesheets · ${readyGross.toFixed(2)} gross</div>
+      <div className="flex gap-3.5 items-center flex-wrap">
+        <div className="w-11 h-11 rounded-xl bg-white text-brand flex items-center justify-center shrink-0"><I n="wallet" s={22}/></div>
+        <div className="flex-1 min-w-0">
+          <div className="text-base font-semibold text-text">Ready for next run</div>
+          <div className="text-xs text-text-2 mt-0.5">{readyToPay} approved timesheets · ${readyGross.toFixed(2)} gross</div>
         </div>
         <Btn kind="primary" size="sm" icon="play" disabled={readyToPay===0} onClick={()=>setShowRun(true)}>Run biweekly payroll</Btn>
       </div>
     </Card>
 
     <Card pad={0} style={{borderRadius:14,overflow:"hidden"}}>
-      <div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",minWidth:720}}>
-        <thead><tr style={{borderBottom:`2px solid ${C.line}`,textAlign:"left"}}>
+      <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:720}}>
+        <thead><tr className="border-b-2 border-line text-left">
           {["Period","Run date","Workers","Hours","Gross","Net","Status","Actions"].map(h=>
-            <th key={h} style={{padding:"12px 14px",fontSize:11.5,fontWeight:700,color:C.text3,letterSpacing:".05em",textTransform:"uppercase"}}>{h}</th>)}
+            <th key={h} className={TH_CLS}>{h}</th>)}
         </tr></thead>
-        <tbody>{A.staffingPayruns.map(p=><tr key={p.id} style={{borderBottom:`1px solid ${C.lineSoft}`}}>
-          <td style={{padding:"11px 14px",fontSize:12.5,color:C.text2,fontFamily:"ui-monospace,monospace"}}>{p.periodStart} → {p.periodEnd}</td>
-          <td style={{padding:"11px 14px",fontSize:12.5,color:C.text3}}>{p.runDate}</td>
-          <td style={{padding:"11px 14px",fontSize:13,color:C.text}}>{p.workers}</td>
-          <td style={{padding:"11px 14px",fontSize:13,color:C.text}}>{p.totalHours}</td>
-          <td style={{padding:"11px 14px",fontSize:13,color:C.text}}>${p.totalGross.toLocaleString()}</td>
-          <td style={{padding:"11px 14px",fontSize:13,color:C.brand,fontWeight:600}}>${p.totalNet.toLocaleString()}</td>
-          <td style={{padding:"11px 14px"}}><Tag tone={p.status==="paid"?"ok":"warn"} sm>{p.status}</Tag></td>
-          <td style={{padding:"11px 14px"}}>{p.status==="pending"&&<Btn kind="primary" size="xs" onClick={()=>A.finalizeStaffingPayrun(p.id)}>Finalize</Btn>}</td>
+        <tbody>{A.staffingPayruns.map(p=><tr key={p.id} className="border-b border-line-soft">
+          <td className={`${TD_CLS} text-xs text-text-2 font-mono`}>{p.periodStart} → {p.periodEnd}</td>
+          <td className={`${TD_CLS} text-xs text-text-3`}>{p.runDate}</td>
+          <td className={`${TD_CLS} text-sm text-text`}>{p.workers}</td>
+          <td className={`${TD_CLS} text-sm text-text`}>{p.totalHours}</td>
+          <td className={`${TD_CLS} text-sm text-text`}>${p.totalGross.toLocaleString()}</td>
+          <td className={`${TD_CLS} text-sm text-brand font-semibold`}>${p.totalNet.toLocaleString()}</td>
+          <td className={TD_CLS}><Tag tone={p.status==="paid"?"ok":"warn"} sm>{p.status}</Tag></td>
+          <td className={TD_CLS}>{p.status==="pending"&&<Btn kind="primary" size="xs" onClick={()=>A.finalizeStaffingPayrun(p.id)}>Finalize</Btn>}</td>
         </tr>)}
-        {A.staffingPayruns.length===0&&<tr><td colSpan={8} style={{padding:24,textAlign:"center",color:C.text3,fontSize:13}}>No payroll runs yet.</td></tr>}
+        {A.staffingPayruns.length===0&&<tr><td colSpan={8} className="p-6 text-center text-text-3 text-sm">No payroll runs yet.</td></tr>}
         </tbody>
       </table></div>
     </Card>
 
     {showRun&&<Modal onClose={()=>setShowRun(false)} title="Run biweekly payroll">
-      <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      <div className="flex flex-col gap-3.5">
         <Banner tone="brand" icon="info" title="This will">
           Batch all approved timesheets from the last 2 weeks into a payroll run. Timesheets will be locked (marked "paid" in the system). Workers receive direct deposit Thursday.
         </Banner>
-        <div style={{padding:14,background:C.bg,borderRadius:10}}>
-          <div style={{fontSize:13,color:C.text2}}>Ready timesheets: <strong>{readyToPay}</strong></div>
-          <div style={{fontSize:13,color:C.text2,marginTop:4}}>Total gross: <strong style={{color:C.brand}}>${readyGross.toFixed(2)}</strong></div>
+        <div className="p-3.5 bg-bg rounded-lg">
+          <div className="text-sm text-text-2">Ready timesheets: <strong>{readyToPay}</strong></div>
+          <div className="text-sm text-text-2 mt-1">Total gross: <strong className="text-brand">${readyGross.toFixed(2)}</strong></div>
         </div>
-        <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+        <div className="flex gap-2.5 justify-end">
           <Btn kind="ghost" onClick={()=>setShowRun(false)}>Cancel</Btn>
           <Btn kind="primary" onClick={()=>{
             const twoWksAgo=new Date(); twoWksAgo.setDate(twoWksAgo.getDate()-14);
@@ -736,63 +743,60 @@ export function AgencyInvoicing(){
   };
 
   return <div>
-    <div style={{marginBottom:14}}>
-      <div style={{fontSize:18,fontWeight:720,color:C.text}}>Client invoicing</div>
-      <div style={{fontSize:13,color:C.text3,marginTop:3}}>Weekly invoice cycle. Approved timesheets → client invoice.</div>
+    <div className="mb-3.5">
+      <div className="text-lg font-bold text-text">Client invoicing</div>
+      <div className="text-sm text-text-3 mt-0.5">Weekly invoice cycle. Approved timesheets → client invoice.</div>
     </div>
 
-    <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:12,marginBottom:16}}>
+    <div className={`grid gap-3 mb-4 ${mob?"grid-cols-1":"grid-cols-3"}`}>
       {[["AR outstanding",kpis.pending,C.brand],
         ["Overdue",kpis.overdue,C.danger],
         ["Paid last 30 days",kpis.paid30d,C.ok]].map(([l,v,t])=>
         <Card key={l} pad={mob?16:20} style={{borderRadius:14}}>
-          <div style={{fontSize:mob?20:24,fontWeight:720,color:t,letterSpacing:"-.025em"}}>${(v/1000).toFixed(1)}k</div>
-          <div style={{fontSize:12,color:C.text3,marginTop:6}}>{l}</div>
+          <div className={`font-bold tracking-tight ${mob?"text-xl":"text-2xl"}`} style={{color:t}}>${(v/1000).toFixed(1)}k</div>
+          <div className="text-xs text-text-3 mt-1.5">{l}</div>
         </Card>)}
     </div>
 
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:10}}>
-      <div style={{display:"flex",background:C.bg,borderRadius:8,padding:2,border:`1px solid ${C.line}`}}>
-        {[["pending","Pending"],["overdue","Overdue"],["paid","Paid"],["all","All"]].map(([v,l])=>
-          <button key={v} onClick={()=>setTab(v)} style={{background:tab===v?"#fff":"transparent",border:"none",padding:"7px 13px",borderRadius:6,cursor:"pointer",fontFamily:"inherit",fontSize:12.5,fontWeight:640,color:tab===v?C.brand:C.text3}}>{l}</button>)}
-      </div>
+    <div className="flex justify-between items-center mb-3.5 flex-wrap gap-2.5">
+      <_PillTabs items={[["pending","Pending"],["overdue","Overdue"],["paid","Paid"],["all","All"]]} value={tab} onChange={setTab}/>
       <Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowGen(true)}>Generate weekly invoices</Btn>
     </div>
 
     <Card pad={0} style={{borderRadius:14,overflow:"hidden"}}>
-      <div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",minWidth:720}}>
-        <thead><tr style={{borderBottom:`2px solid ${C.line}`,textAlign:"left"}}>
+      <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:720}}>
+        <thead><tr className="border-b-2 border-line text-left">
           {["Number","Client","Week","Total","Due","Status","Actions"].map(h=>
-            <th key={h} style={{padding:"12px 14px",fontSize:11.5,fontWeight:700,color:C.text3,letterSpacing:".05em",textTransform:"uppercase"}}>{h}</th>)}
+            <th key={h} className={TH_CLS}>{h}</th>)}
         </tr></thead>
         <tbody>{list.map(inv=>{const client=A.staffingClient(inv.client);
           const emp=client?A.employers.find(e=>e.id===client.employerId):null;
           const daysOverdue=inv.status==="overdue"&&inv.due?Math.floor((Date.now()-new Date(inv.due).getTime())/864e5):0;
-          return <tr key={inv.id} style={{borderBottom:`1px solid ${C.lineSoft}`}}>
-            <td style={{padding:"11px 14px",fontSize:12.5,color:C.text2,fontFamily:"ui-monospace,monospace"}}>{inv.number}</td>
-            <td style={{padding:"11px 14px",fontSize:13,color:C.text,fontWeight:600}}>{emp?.name||"—"}</td>
-            <td style={{padding:"11px 14px",fontSize:12.5,color:C.text3}}>{inv.weekStart}</td>
-            <td style={{padding:"11px 14px",fontSize:13.5,color:C.text,fontWeight:660}}>${inv.total.toLocaleString()}</td>
-            <td style={{padding:"11px 14px",fontSize:12.5,color:daysOverdue>0?C.danger:C.text3}}>{inv.due}{daysOverdue>0?` (+${daysOverdue}d)`:""}</td>
-            <td style={{padding:"11px 14px"}}><Tag tone={inv.status==="paid"?"ok":inv.status==="overdue"?"danger":"warn"} sm>{inv.status}</Tag></td>
-            <td style={{padding:"11px 14px"}}>
+          return <tr key={inv.id} className="border-b border-line-soft">
+            <td className={`${TD_CLS} text-xs text-text-2 font-mono`}>{inv.number}</td>
+            <td className={`${TD_CLS} text-sm text-text font-semibold`}>{emp?.name||"—"}</td>
+            <td className={`${TD_CLS} text-xs text-text-3`}>{inv.weekStart}</td>
+            <td className={`${TD_CLS} text-sm text-text font-semibold`}>${inv.total.toLocaleString()}</td>
+            <td className={TD_CLS} style={{fontSize:12.5,color:daysOverdue>0?C.danger:C.text3}}>{inv.due}{daysOverdue>0?` (+${daysOverdue}d)`:""}</td>
+            <td className={TD_CLS}><Tag tone={inv.status==="paid"?"ok":inv.status==="overdue"?"danger":"warn"} sm>{inv.status}</Tag></td>
+            <td className={TD_CLS}>
               {inv.status!=="paid"&&<Btn kind="ghost" size="xs" onClick={()=>A.markStaffingInvoicePaid(inv.id)}>Mark paid</Btn>}
             </td>
           </tr>;})}
-          {list.length===0&&<tr><td colSpan={7} style={{padding:24,textAlign:"center",color:C.text3,fontSize:13}}>No invoices.</td></tr>}
+          {list.length===0&&<tr><td colSpan={7} className="p-6 text-center text-text-3 text-sm">No invoices.</td></tr>}
         </tbody>
       </table></div>
     </Card>
 
     {showGen&&<Modal onClose={()=>setShowGen(false)} title="Generate weekly invoices">
-      <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      <div className="flex flex-col gap-3.5">
         <Banner tone="brand" icon="info" title="Weekly cycle">
           This will batch all approved timesheets for a given week into per-client invoices. HST/GST added per province. Emailed to each client's billing contact.
         </Banner>
         <Field label="Week starting" required>
           <DatePicker value={_weekStart(1)} onChange={()=>{}}/>
         </Field>
-        <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+        <div className="flex gap-2.5 justify-end">
           <Btn kind="ghost" onClick={()=>setShowGen(false)}>Cancel</Btn>
           <Btn kind="primary" onClick={()=>{A.generateStaffingInvoices(_weekStart(1)); setShowGen(false);}}>Generate</Btn>
         </div>
@@ -807,37 +811,34 @@ export function AgencyPlacements(){
   const [tab,setTab]=useState("in-progress");
   const list=A.placements.filter(p=>tab==="all"?true:p.status===tab).sort((a,b)=>b.offeredAt.localeCompare(a.offeredAt));
   return <div>
-    <div style={{marginBottom:14}}>
-      <div style={{fontSize:18,fontWeight:720,color:C.text}}>Permanent placements</div>
-      <div style={{fontSize:13,color:C.text3,marginTop:3}}>Perm hires we source. Fee due on start. 90-day guarantee.</div>
+    <div className="mb-3.5">
+      <div className="text-lg font-bold text-text">Permanent placements</div>
+      <div className="text-sm text-text-3 mt-0.5">Perm hires we source. Fee due on start. 90-day guarantee.</div>
     </div>
 
-    <div style={{display:"flex",background:C.bg,borderRadius:8,padding:2,border:`1px solid ${C.line}`,marginBottom:14,width:"fit-content",flexWrap:"wrap"}}>
-      {[["in-progress","In progress"],["accepted","Accepted"],["guaranteed","In guarantee"],["clawed-back","Clawed back"],["all","All"]].map(([v,l])=>{
-        const count=A.placements.filter(p=>v==="all"?true:p.status===v).length;
-        return <button key={v} onClick={()=>setTab(v)} style={{background:tab===v?"#fff":"transparent",border:"none",padding:"7px 13px",borderRadius:6,cursor:"pointer",fontFamily:"inherit",fontSize:12.5,fontWeight:640,color:tab===v?C.brand:C.text3}}>{l} ({count})</button>;})}
-    </div>
+    <div className="mb-3.5"><_PillTabs items={[["in-progress","In progress"],["accepted","Accepted"],["guaranteed","In guarantee"],["clawed-back","Clawed back"],["all","All"]].map(([v,l])=>
+      [v,`${l} (${A.placements.filter(p=>v==="all"?true:p.status===v).length})`])} value={tab} onChange={setTab}/></div>
 
-    <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(auto-fill,minmax(340px,1fr))",gap:12}}>
+    <div className="grid gap-3" style={{gridTemplateColumns:mob?"1fr":"repeat(auto-fill,minmax(340px,1fr))"}}>
       {list.map(p=>{const client=A.staffingClient(p.client);
         const emp=client?A.employers.find(e=>e.id===client.employerId):null;
         const guaranteeDaysLeft=p.guaranteeEnds?Math.floor((new Date(p.guaranteeEnds)-Date.now())/864e5):null;
-        return <div key={p.id} data-card style={{background:"#fff",borderRadius:14,padding:mob?16:20,border:`1px solid ${C.line}`}}>
-          <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
+        return <div key={p.id} data-card className={`bg-white rounded-2xl border border-line ${mob?"p-4":"p-5"}`}>
+          <div className="flex gap-2 mb-2.5 flex-wrap">
             <Tag tone={p.status==="guaranteed"?"ok":p.status==="clawed-back"?"danger":p.status==="accepted"?"warn":"brand"} sm>{p.status}</Tag>
             {guaranteeDaysLeft!==null&&guaranteeDaysLeft>0&&guaranteeDaysLeft<=30&&
               <Tag tone="warn" sm>{guaranteeDaysLeft}d guarantee left</Tag>}
           </div>
-          <div style={{fontSize:16,fontWeight:660,color:C.text,letterSpacing:"-.015em"}}>{p.role}</div>
-          <div style={{fontSize:13,color:C.text2,marginTop:4}}>{emp?.name||"—"}</div>
+          <div className="text-base font-semibold text-text tracking-tight">{p.role}</div>
+          <div className="text-sm text-text-2 mt-1">{emp?.name||"—"}</div>
 
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:14,marginBottom:12}}>
-            <div><div style={{fontSize:11,fontWeight:700,color:C.text3,letterSpacing:".05em",textTransform:"uppercase"}}>Salary</div>
-              <div style={{fontSize:14,fontWeight:660,color:C.text,marginTop:3}}>${p.salary.toLocaleString()}</div></div>
-            <div><div style={{fontSize:11,fontWeight:700,color:C.text3,letterSpacing:".05em",textTransform:"uppercase"}}>Fee ({p.feePct}%)</div>
-              <div style={{fontSize:14,fontWeight:700,color:C.brand,marginTop:3}}>${p.fee.toLocaleString()}</div></div>
+          <div className="grid grid-cols-2 gap-2.5 mt-3.5 mb-3">
+            <div><div className="text-xs font-bold text-text-3 tracking-wide uppercase">Salary</div>
+              <div className="text-sm font-semibold text-text mt-1">${p.salary.toLocaleString()}</div></div>
+            <div><div className="text-xs font-bold text-text-3 tracking-wide uppercase">Fee ({p.feePct}%)</div>
+              <div className="text-sm font-bold text-brand mt-1">${p.fee.toLocaleString()}</div></div>
           </div>
-          <div style={{fontSize:11.5,color:C.text3,marginBottom:10}}>
+          <div className="text-xs text-text-3 mb-2.5">
             Offered {p.offeredAt}{p.startDate?` · Started ${p.startDate}`:""}
             {p.invoicedOn?` · Invoiced ${p.invoicedOn}`:""}
             {p.paidOn?` · Paid ${p.paidOn}`:""}
@@ -856,37 +857,37 @@ export function AgencyClients(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const list=A.staffingClients;
   return <div>
-    <div style={{marginBottom:14}}>
-      <div style={{fontSize:18,fontWeight:720,color:C.text}}>{list.length} clients</div>
-      <div style={{fontSize:13,color:C.text3,marginTop:3}}>Employers we have (or want) a staffing relationship with.</div>
+    <div className="mb-3.5">
+      <div className="text-lg font-bold text-text">{list.length} clients</div>
+      <div className="text-sm text-text-3 mt-0.5">Employers we have (or want) a staffing relationship with.</div>
     </div>
 
-    <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(auto-fill,minmax(340px,1fr))",gap:12}}>
+    <div className="grid gap-3" style={{gridTemplateColumns:mob?"1fr":"repeat(auto-fill,minmax(340px,1fr))"}}>
       {list.map(c=>{const emp=A.employers.find(e=>e.id===c.employerId);
         const activeAsns=A.assignments.filter(a=>a.client===c.id&&a.status==="active").length;
         const openOrds=A.jobOrders.filter(j=>j.client===c.id&&j.status==="open").length;
         return <Card key={c.id} pad={mob?18:22} style={{borderRadius:14}}>
-          <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:12}}>
+          <div className="flex gap-3 items-center mb-3">
             <SmartLogo e={emp||{mark:"hex",a:C.brand,b:"#fff"}} size={44} radius={11}/>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:15,fontWeight:660,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{emp?.name||"—"}</div>
-              <div style={{fontSize:12,color:C.text3,marginTop:3}}>{c.industry} · Net {c.paymentTermsDays}</div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap">{emp?.name||"—"}</div>
+              <div className="text-xs text-text-3 mt-1">{c.industry} · Net {c.paymentTermsDays}</div>
             </div>
             <Tag tone={c.status==="active"?"ok":c.status==="prospect"?"warn":"neutral"} sm>{c.status}</Tag>
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:12}}>
-            <div style={{padding:"9px 11px",background:C.bg,borderRadius:9,textAlign:"center"}}>
-              <div style={{fontSize:16,fontWeight:730,color:C.brand}}>{activeAsns}</div>
-              <div style={{fontSize:10.5,color:C.text3,marginTop:2}}>Active</div></div>
-            <div style={{padding:"9px 11px",background:C.bg,borderRadius:9,textAlign:"center"}}>
-              <div style={{fontSize:16,fontWeight:730,color:C.warn}}>{openOrds}</div>
-              <div style={{fontSize:10.5,color:C.text3,marginTop:2}}>Open orders</div></div>
-            <div style={{padding:"9px 11px",background:C.bg,borderRadius:9,textAlign:"center"}}>
-              <div style={{fontSize:16,fontWeight:730,color:c.currentAR>c.creditLimit*0.8?C.danger:C.text}}>${(c.currentAR/1000).toFixed(0)}k</div>
-              <div style={{fontSize:10.5,color:C.text3,marginTop:2}}>AR</div></div>
+          <div className="grid grid-cols-3 gap-2 mb-3">
+            <div className="py-2.5 px-3 bg-bg rounded-lg text-center">
+              <div className="text-base font-bold text-brand">{activeAsns}</div>
+              <div className="text-xs text-text-3 mt-0.5" style={{fontSize:10.5}}>Active</div></div>
+            <div className="py-2.5 px-3 bg-bg rounded-lg text-center">
+              <div className="text-base font-bold text-warn">{openOrds}</div>
+              <div className="text-xs text-text-3 mt-0.5" style={{fontSize:10.5}}>Open orders</div></div>
+            <div className="py-2.5 px-3 bg-bg rounded-lg text-center">
+              <div className="text-base font-bold" style={{color:c.currentAR>c.creditLimit*0.8?C.danger:C.text}}>${(c.currentAR/1000).toFixed(0)}k</div>
+              <div className="text-xs text-text-3 mt-0.5" style={{fontSize:10.5}}>AR</div></div>
           </div>
-          <div style={{fontSize:12,color:C.text3,paddingTop:12,borderTop:`1px solid ${C.lineSoft}`}}>
-            {c.signedMsa?<>MSA signed {c.signedMsa}</>:<span style={{color:C.warn,fontWeight:600}}>MSA not signed</span>}
+          <div className="text-xs text-text-3 pt-3 border-t border-line-soft">
+            {c.signedMsa?<>MSA signed {c.signedMsa}</>:<span className="text-warn font-semibold">MSA not signed</span>}
             {" · "}Markup target {c.markup}%
           </div>
           {!c.signedMsa&&<Btn kind="primary" size="xs" full style={{marginTop:10}} onClick={()=>A.signMsa(c.id)}>Mark MSA signed</Btn>}
@@ -901,33 +902,33 @@ export function AgencyWorkers(){
   const [selected,setSelected]=useState(null);
   const list=A.workers;
   return <div>
-    <div style={{marginBottom:14}}>
-      <div style={{fontSize:18,fontWeight:720,color:C.text}}>{list.length} workers on record</div>
-      <div style={{fontSize:13,color:C.text3,marginTop:3}}>All seekers who opted into agency representation. Includes documents and compliance.</div>
+    <div className="mb-3.5">
+      <div className="text-lg font-bold text-text">{list.length} workers on record</div>
+      <div className="text-sm text-text-3 mt-0.5">All seekers who opted into agency representation. Includes documents and compliance.</div>
     </div>
 
     <Card pad={0} style={{borderRadius:14,overflow:"hidden"}}>
-      <div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",minWidth:800}}>
-        <thead><tr style={{borderBottom:`2px solid ${C.line}`,textAlign:"left"}}>
+      <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:800}}>
+        <thead><tr className="border-b-2 border-line text-left">
           {["Worker","Location","Availability","Work eligibility","Docs complete","Vac accrued","Actions"].map(h=>
-            <th key={h} style={{padding:"12px 14px",fontSize:11.5,fontWeight:700,color:C.text3,letterSpacing:".05em",textTransform:"uppercase"}}>{h}</th>)}
+            <th key={h} className={TH_CLS}>{h}</th>)}
         </tr></thead>
         <tbody>{list.map(w=>{const person=(A.people||[]).find(p=>p.id===w.personId);
           const docsComplete=w.tdOnFile&&w.directDepositOnFile&&w.workEligibility;
-          return <tr key={w.id} style={{borderBottom:`1px solid ${C.lineSoft}`,cursor:"pointer"}} onClick={()=>setSelected(w.id)}>
-            <td style={{padding:"11px 14px"}}>
-              <div style={{display:"flex",gap:10,alignItems:"center"}}>
+          return <tr key={w.id} className="border-b border-line-soft cursor-pointer" onClick={()=>setSelected(w.id)}>
+            <td className={TD_CLS}>
+              <div className="flex gap-2.5 items-center">
                 <SmartPortrait seed={person?.seed||0} size={30} radius={8}/>
-                <div><div style={{fontSize:13.5,fontWeight:600,color:C.text}}>{person?.name||"—"}</div>
-                  <div style={{fontSize:11.5,color:C.text3,marginTop:2}}>SIN ***-***-{w.sinLast3||"—"}</div></div>
+                <div><div className="text-sm font-semibold text-text">{person?.name||"—"}</div>
+                  <div className="text-xs text-text-3 mt-0.5">SIN ***-***-{w.sinLast3||"—"}</div></div>
               </div>
             </td>
-            <td style={{padding:"11px 14px",fontSize:13,color:C.text2}}>{w.city}, {w.province}</td>
-            <td style={{padding:"11px 14px"}}><Tag tone={w.availability==="available"?"ok":w.availability==="on-assignment"?"brand":"neutral"} sm>{w.availability}</Tag></td>
-            <td style={{padding:"11px 14px",fontSize:12.5,color:C.text2}}>{w.workEligibility}{w.weExpiry?<div style={{fontSize:11,color:new Date(w.weExpiry)<Date.now()+90*864e5?C.warn:C.text3}}>Exp {w.weExpiry}</div>:null}</td>
-            <td style={{padding:"11px 14px"}}><Tag tone={docsComplete?"ok":"warn"} sm icon={docsComplete?"check":"alert"}>{docsComplete?"Complete":"Missing"}</Tag></td>
-            <td style={{padding:"11px 14px",fontSize:13,color:C.brand,fontWeight:600}}>${w.vacBalance.toFixed(2)}</td>
-            <td style={{padding:"11px 14px"}}>
+            <td className={`${TD_CLS} text-sm text-text-2`}>{w.city}, {w.province}</td>
+            <td className={TD_CLS}><Tag tone={w.availability==="available"?"ok":w.availability==="on-assignment"?"brand":"neutral"} sm>{w.availability}</Tag></td>
+            <td className={`${TD_CLS} text-xs text-text-2`}>{w.workEligibility}{w.weExpiry?<div className="text-xs" style={{color:new Date(w.weExpiry)<Date.now()+90*864e5?C.warn:C.text3}}>Exp {w.weExpiry}</div>:null}</td>
+            <td className={TD_CLS}><Tag tone={docsComplete?"ok":"warn"} sm icon={docsComplete?"check":"alert"}>{docsComplete?"Complete":"Missing"}</Tag></td>
+            <td className={`${TD_CLS} text-sm text-brand font-semibold`}>${w.vacBalance.toFixed(2)}</td>
+            <td className={TD_CLS}>
               <Sel value={w.status} onChange={e=>{e.stopPropagation();A.updateWorker(w.id,{status:e.target.value});}} style={{fontSize:12,padding:"5px 8px"}} onClick={e=>e.stopPropagation()}>
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
@@ -940,14 +941,14 @@ export function AgencyWorkers(){
 
     {selected&&(()=>{const w=A.worker(selected); const person=(A.people||[]).find(p=>p.id===w.personId);
       return <Modal onClose={()=>setSelected(null)} title="Worker file" wide>
-        <div style={{display:"flex",gap:14,alignItems:"center",marginBottom:16}}>
+        <div className="flex gap-3.5 items-center mb-4">
           <SmartPortrait seed={person?.seed||0} size={54} radius={13}/>
           <div>
-            <div style={{fontSize:18,fontWeight:720,color:C.text,letterSpacing:"-.02em"}}>{person?.name}</div>
-            <div style={{fontSize:13,color:C.text2,marginTop:3}}>{person?.email} · {person?.phone}</div>
+            <div className="text-lg font-bold text-text tracking-tight">{person?.name}</div>
+            <div className="text-sm text-text-2 mt-1">{person?.email} · {person?.phone}</div>
           </div>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:14,fontSize:13}}>
+        <div className={`grid gap-3.5 text-sm ${mob?"grid-cols-1":"grid-cols-2"}`}>
           {[["Location",`${w.city}, ${w.province}`],
             ["Onboarded",w.onboarded],
             ["SIN (last 3)",w.sinLast3||"Not on file"],
@@ -956,29 +957,29 @@ export function AgencyWorkers(){
             ["Direct deposit",w.directDepositOnFile?"On file":"Missing"],
             ["TD1 forms",w.tdOnFile?"On file":"Missing"],
             ["Vacation accrued",`$${w.vacBalance.toFixed(2)}`]].map(([l,v])=>
-            <div key={l}><div style={{fontSize:11,fontWeight:700,color:C.text3,letterSpacing:".05em",textTransform:"uppercase",marginBottom:3}}>{l}</div>
-              <div style={{color:C.text}}>{v}</div></div>)}
+            <div key={l}><div className="text-xs font-bold text-text-3 tracking-wide uppercase mb-1">{l}</div>
+              <div className="text-text">{v}</div></div>)}
         </div>
-        {w.tickets.length>0&&<div style={{marginTop:16}}>
+        {w.tickets.length>0&&<div className="mt-4">
           <Lbl>Tickets & certifications</Lbl>
-          <div style={{display:"flex",flexWrap:"wrap",gap:6}}>{w.tickets.map(t=><Tag key={t} tone="brand" sm>{t}</Tag>)}</div>
+          <div className="flex flex-wrap gap-1.5">{w.tickets.map(t=><Tag key={t} tone="brand" sm>{t}</Tag>)}</div>
         </div>}
-        {w.documents.length>0&&<div style={{marginTop:16}}>
+        {w.documents.length>0&&<div className="mt-4">
           <Lbl>Documents on file</Lbl>
-          <div style={{display:"flex",flexDirection:"column",gap:6}}>
-            {w.documents.map((d,i)=><div key={i} style={{padding:"10px 12px",background:C.bg,borderRadius:9,display:"flex",gap:10,alignItems:"center"}}>
+          <div className="flex flex-col gap-1.5">
+            {w.documents.map((d,i)=><div key={i} className="py-2.5 px-3 bg-bg rounded-lg flex gap-2.5 items-center">
               <I n="file" s={16} c={C.brand}/>
-              <div style={{flex:1}}>
-                <div style={{fontSize:13,fontWeight:600,color:C.text}}>{d.label}</div>
-                <div style={{fontSize:11.5,color:C.text3,marginTop:2}}>Uploaded {d.uploaded}{d.expires?` · Expires ${d.expires}`:""}</div>
+              <div className="flex-1">
+                <div className="text-sm font-semibold text-text">{d.label}</div>
+                <div className="text-xs text-text-3 mt-0.5">Uploaded {d.uploaded}{d.expires?` · Expires ${d.expires}`:""}</div>
               </div>
               {d.expires&&new Date(d.expires)<Date.now()+90*864e5&&<Tag tone="warn" sm>Expiring</Tag>}
             </div>)}
           </div>
         </div>}
-        {w.notes&&<div style={{marginTop:16}}>
+        {w.notes&&<div className="mt-4">
           <Lbl>Recruiter notes</Lbl>
-          <div style={{fontSize:13,color:C.text2,lineHeight:1.6,padding:12,background:C.bg,borderRadius:9,fontStyle:"italic"}}>{w.notes}</div>
+          <div className="text-sm text-text-2 leading-relaxed p-3 bg-bg rounded-lg italic">{w.notes}</div>
         </div>}
       </Modal>;
     })()}
@@ -997,19 +998,19 @@ export function AgencyMargins(){
   const belowFloor=margins.filter(m=>(m.econ?.markupPct||0)<A.STAFFING_AGENCY.markupFloor);
 
   return <div>
-    <div style={{marginBottom:14}}>
-      <div style={{fontSize:18,fontWeight:720,color:C.text}}>Margins & run rate</div>
-      <div style={{fontSize:13,color:C.text3,marginTop:3}}>Real-time margin per active assignment (at 40 hrs/week).</div>
+    <div className="mb-3.5">
+      <div className="text-lg font-bold text-text">Margins & run rate</div>
+      <div className="text-sm text-text-3 mt-0.5">Real-time margin per active assignment (at 40 hrs/week).</div>
     </div>
 
-    <div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"repeat(4,1fr)",gap:12,marginBottom:16}}>
+    <div className={`grid gap-3 mb-4 ${mob?"grid-cols-2":"grid-cols-4"}`}>
       {[["Weekly bill",`$${(totalWeeklyBill/1000).toFixed(1)}k`,C.brand],
         ["Weekly wage",`$${(totalWeeklyPay/1000).toFixed(1)}k`,C.text2],
         ["Weekly margin",`$${(totalWeeklyMargin/1000).toFixed(2)}k`,C.ok],
         ["Avg markup",`${avgMarkup.toFixed(1)}%`,avgMarkup>=A.STAFFING_AGENCY.markupTarget?C.ok:C.warn]].map(([l,v,t])=>
         <Card key={l} pad={mob?16:20} style={{borderRadius:14}}>
-          <div style={{fontSize:mob?20:24,fontWeight:730,color:t,letterSpacing:"-.025em"}}>{v}</div>
-          <div style={{fontSize:12,color:C.text3,marginTop:6}}>{l}</div>
+          <div className={`font-bold tracking-tight ${mob?"text-xl":"text-2xl"}`} style={{color:t}}>{v}</div>
+          <div className="text-xs text-text-3 mt-1.5">{l}</div>
         </Card>)}
     </div>
 
@@ -1018,24 +1019,24 @@ export function AgencyMargins(){
     </Banner>}
 
     <Card pad={0} style={{borderRadius:14,overflow:"hidden"}}>
-      <div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",minWidth:800}}>
-        <thead><tr style={{borderBottom:`2px solid ${C.line}`,textAlign:"left"}}>
+      <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:800}}>
+        <thead><tr className="border-b-2 border-line text-left">
           {["Worker","Client","Pay","Burden","True cost","Bill","Margin/hr","Markup %"].map(h=>
-            <th key={h} style={{padding:"12px 14px",fontSize:11.5,fontWeight:700,color:C.text3,letterSpacing:".05em",textTransform:"uppercase"}}>{h}</th>)}
+            <th key={h} className={TH_CLS}>{h}</th>)}
         </tr></thead>
         <tbody>{margins.sort((a,b)=>(a.econ?.markupPct||0)-(b.econ?.markupPct||0)).map(m=>{
           const person=m.worker?(A.people||[]).find(p=>p.id===m.worker.personId):null;
           const emp=m.client?A.employers.find(e=>e.id===m.client.employerId):null;
           const below=(m.econ?.markupPct||0)<A.STAFFING_AGENCY.markupFloor;
-          return <tr key={m.a.id} style={{borderBottom:`1px solid ${C.lineSoft}`,background:below?C.dangerBg:"transparent"}}>
-            <td style={{padding:"11px 14px",fontSize:13,color:C.text,fontWeight:600}}>{person?.name||"—"}</td>
-            <td style={{padding:"11px 14px",fontSize:12.5,color:C.text2}}>{emp?.name||"—"}</td>
-            <td style={{padding:"11px 14px",fontSize:13,color:C.text}}>${m.a.payRate}</td>
-            <td style={{padding:"11px 14px",fontSize:12.5,color:C.text3}}>${m.econ?.burden||0}</td>
-            <td style={{padding:"11px 14px",fontSize:13,color:C.text}}>${m.econ?.trueCost||0}</td>
-            <td style={{padding:"11px 14px",fontSize:13,color:C.text}}>${m.a.billRate}</td>
-            <td style={{padding:"11px 14px",fontSize:13,color:m.econ?.margin>0?C.ok:C.danger,fontWeight:700}}>${m.econ?.margin||0}</td>
-            <td style={{padding:"11px 14px",fontSize:13,color:below?C.danger:m.econ?.markupPct>=A.STAFFING_AGENCY.markupTarget?C.ok:C.warn,fontWeight:700}}>{m.econ?.markupPct||0}%</td>
+          return <tr key={m.a.id} className="border-b border-line-soft" style={{background:below?C.dangerBg:"transparent"}}>
+            <td className={`${TD_CLS} text-sm text-text font-semibold`}>{person?.name||"—"}</td>
+            <td className={`${TD_CLS} text-xs text-text-2`}>{emp?.name||"—"}</td>
+            <td className={`${TD_CLS} text-sm text-text`}>${m.a.payRate}</td>
+            <td className={`${TD_CLS} text-xs text-text-3`}>${m.econ?.burden||0}</td>
+            <td className={`${TD_CLS} text-sm text-text`}>${m.econ?.trueCost||0}</td>
+            <td className={`${TD_CLS} text-sm text-text`}>${m.a.billRate}</td>
+            <td className={`${TD_CLS} text-sm font-bold`} style={{color:m.econ?.margin>0?C.ok:C.danger}}>${m.econ?.margin||0}</td>
+            <td className={`${TD_CLS} text-sm font-bold`} style={{color:below?C.danger:m.econ?.markupPct>=A.STAFFING_AGENCY.markupTarget?C.ok:C.warn}}>{m.econ?.markupPct||0}%</td>
           </tr>;})}
         </tbody>
       </table></div>
@@ -1061,18 +1062,18 @@ export function AgencyCompliance(){
   ];
 
   return <div>
-    <div style={{marginBottom:14}}>
-      <div style={{fontSize:18,fontWeight:720,color:C.text}}>Compliance dashboard</div>
-      <div style={{fontSize:13,color:C.text3,marginTop:3}}>Licensing, documentation, and audit-readiness across the desk.</div>
+    <div className="mb-3.5">
+      <div className="text-lg font-bold text-text">Compliance dashboard</div>
+      <div className="text-sm text-text-3 mt-0.5">Licensing, documentation, and audit-readiness across the desk.</div>
     </div>
 
-    <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:12}}>
+    <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
       {items.map(item=><Card key={item.title} pad={mob?18:22} style={{borderRadius:14,borderLeft:`4px solid ${item.ok?C.ok:C.warn}`}}>
-        <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
-          <div style={{width:36,height:36,borderRadius:10,background:item.ok?C.okBg:C.warnBg,color:item.ok?C.ok:C.warn,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><I n={item.ok?"check":"alert"} s={18}/></div>
-          <div style={{flex:1,minWidth:0}}>
-            <div style={{fontSize:14,fontWeight:660,color:C.text}}>{item.title}</div>
-            <div style={{fontSize:12.5,color:C.text2,marginTop:4,lineHeight:1.55}}>{item.body}</div>
+        <div className="flex gap-3 items-start">
+          <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{background:item.ok?C.okBg:C.warnBg,color:item.ok?C.ok:C.warn}}><I n={item.ok?"check":"alert"} s={18}/></div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold text-text">{item.title}</div>
+            <div className="text-xs text-text-2 mt-1 leading-snug">{item.body}</div>
           </div>
           {item.count>0&&<Tag tone={item.ok?"ok":"warn"} sm>{item.count}</Tag>}
         </div>
@@ -1081,17 +1082,17 @@ export function AgencyCompliance(){
 
     <Card pad={mob?18:22} style={{marginTop:16,borderRadius:14,background:C.bg}}>
       <Lbl>Statutory reminders</Lbl>
-      <div style={{display:"flex",flexDirection:"column",gap:10,fontSize:13,color:C.text2}}>
-        <div style={{padding:"10px 12px",background:"#fff",borderRadius:9,border:`1px solid ${C.line}`}}>
+      <div className="flex flex-col gap-2.5 text-sm text-text-2">
+        <div className="py-2.5 px-3 bg-white rounded-lg border border-line">
           <strong>ROEs</strong> must issue within 5 days of any assignment ending with a 7+ day break.
         </div>
-        <div style={{padding:"10px 12px",background:"#fff",borderRadius:9,border:`1px solid ${C.line}`}}>
+        <div className="py-2.5 px-3 bg-white rounded-lg border border-line">
           <strong>T4s</strong> must issue by end of February each year for all workers paid in the prior year.
         </div>
-        <div style={{padding:"10px 12px",background:"#fff",borderRadius:9,border:`1px solid ${C.line}`}}>
+        <div className="py-2.5 px-3 bg-white rounded-lg border border-line">
           <strong>Vacation pay</strong> accrues at 4% of gross (federally) — configured to accrue rather than pay-out per pay period.
         </div>
-        <div style={{padding:"10px 12px",background:"#fff",borderRadius:9,border:`1px solid ${C.line}`}}>
+        <div className="py-2.5 px-3 bg-white rounded-lg border border-line">
           <strong>Pay equity certification</strong> required for Ontario assignments over 3 months. Client to certify equivalent-role rates.
         </div>
       </div>
