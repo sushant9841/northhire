@@ -397,7 +397,7 @@ export function Stat({label,value,tone=C.text,icon,delta,onClick}){
    {icon&&<I n={icon} s={16}/>}<span className="text-sm text-text-2 font-semibold">{label}</span></div>
   <div className="text-4xl font-extrabold leading-none tracking-tighter" style={{color:tone}}>{value}</div>
   {delta&&<div className="text-xs text-ok mt-2.5 font-semibold">{delta}</div>}</div>;}
-export function Modal({open,onClose,title,sub,children,footer,width=520}){
+export function Modal({open=true,onClose,title,sub,children,footer,width=520}){
  const mob=useMedia("(max-width: 820px)");
  useEffect(()=>{if(!open||typeof document==="undefined")return;const p=document.body.style.overflow;
   document.body.style.overflow="hidden";return()=>{document.body.style.overflow=p;};},[open]);
