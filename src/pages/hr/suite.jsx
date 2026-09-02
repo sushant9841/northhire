@@ -13,6 +13,18 @@ import { HR_DEPARTMENTS } from "../../store/seed/hrDepartments.js";
 import { InlineList } from "../shared/formControls.jsx";
 import { TrainingCard } from "../shared/cards.jsx";
 
+/* Small pill-style tab bar reused across most HR Suite modules (attendance view,
+   leave/tasks/calendar/invoices scope switches). Not string-interpolated into a
+   className — each branch is a complete literal so Tailwind's scanner sees both. */
+function _PillTabs({items,value,onChange}){
+  return <div className="flex bg-bg rounded-lg p-0.5 border border-line flex-wrap" style={{width:"fit-content"}}>
+    {items.map(([v,l])=><button key={v} onClick={()=>onChange(v)}
+      className={`border-0 py-1.5 px-3.5 rounded-md cursor-pointer text-xs font-semibold ${value===v?"bg-white text-brand":"bg-transparent text-text-3"}`}>{l}</button>)}
+  </div>;
+}
+const TH_CLS="py-2.5 px-3 text-xs font-bold text-text-3 tracking-wide uppercase";
+const TD_CLS="py-3 px-3";
+
 export function HrLoginPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const remembered=(()=>{try{return JSON.parse(localStorage.getItem("northhire.hr.remember")||"null");}catch{return null;}})();
@@ -32,41 +44,36 @@ export function HrLoginPage(){
   const demoAs=(id)=>{setLoginId(id); setPw("pcl2026");
     setTimeout(()=>{const r=A.hrLogin("PCL Construction",id,"pcl2026",remember); if(!r.ok)setErr(r.msg); else A.go("hrDashboard");},60);};
 
-  return <div style={{background:`linear-gradient(135deg,#0A1929 0%,${C.ink} 60%,#152538 100%)`,minHeight:"100vh",
-    display:"flex",flexDirection:"column",color:"#fff"}}>
-    <div style={{padding:mob?"24px 20px":"32px 40px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-      <button onClick={()=>A.go("home")} style={{display:"flex",alignItems:"center",gap:10,background:"none",border:"none",
-        color:"#fff",cursor:"pointer",fontFamily:"inherit"}}>
-        <div style={{width:34,height:34,borderRadius:9,background:"rgba(255,255,255,.1)",border:"1px solid rgba(255,255,255,.15)",
-          display:"flex",alignItems:"center",justifyContent:"center"}}><I n="hex" s={18} c="#fff"/></div>
-        <span style={{fontSize:16.5,fontWeight:720,letterSpacing:"-.02em"}}>NorthHire <span style={{color:"#6AACFF",fontWeight:600}}>HR Suite</span></span>
+  return <div className="min-h-screen flex flex-col text-white" style={{background:`linear-gradient(135deg,#0A1929 0%,${C.ink} 60%,#152538 100%)`}}>
+    <div className={`flex items-center justify-between ${mob?"py-6 px-5":"py-8 px-10"}`}>
+      <button onClick={()=>A.go("home")} className="flex items-center gap-2.5 bg-transparent border-0 text-white cursor-pointer">
+        <div className="w-9 h-9 rounded-lg bg-white/10 border border-white/15 flex items-center justify-center"><I n="hex" s={18} c="#fff"/></div>
+        <span className="font-bold tracking-tight" style={{fontSize:16.5}}>NorthHire <span className="text-accent font-semibold">HR Suite</span></span>
       </button>
-      <button onClick={()=>A.go("home")} style={{background:"none",border:"1px solid rgba(255,255,255,.2)",color:"#fff",
-        padding:"7px 14px",borderRadius:8,cursor:"pointer",fontFamily:"inherit",fontSize:13.5,fontWeight:600}}>← Back to NorthHire</button>
+      <button onClick={()=>A.go("home")} className="bg-transparent border border-white/20 text-white py-1.5 px-3.5 rounded-lg cursor-pointer text-sm font-semibold">← Back to NorthHire</button>
     </div>
-    <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",padding:mob?"12px 20px 32px":"20px 40px 60px"}}>
-      <div style={{width:"100%",maxWidth:mob?420:960,display:"grid",gridTemplateColumns:mob?"1fr":"1.05fr .95fr",
-        gap:mob?24:44,alignItems:"center"}}>
+    <div className={`flex-1 flex items-center justify-center ${mob?"pt-3 px-5 pb-8":"pt-5 px-10 pb-15"}`}>
+      <div className={`w-full grid items-center ${mob?"grid-cols-1 gap-6":"gap-11"}`} style={{maxWidth:mob?420:960,gridTemplateColumns:mob?undefined:"1.05fr .95fr"}}>
         {!mob&&<div>
-          <div style={{fontSize:13,fontWeight:700,color:"#6AACFF",letterSpacing:".08em",textTransform:"uppercase",marginBottom:16}}>Enterprise HR Suite</div>
-          <h1 style={{fontSize:44,fontWeight:750,letterSpacing:"-.04em",margin:"0 0 16px",lineHeight:1.08}}>
+          <div className="text-sm font-bold text-accent tracking-wide uppercase mb-4">Enterprise HR Suite</div>
+          <h1 className="text-5xl font-bold tracking-tight mb-4 leading-tight">
             Your entire workforce.<br/>One place.</h1>
-          <p style={{fontSize:16,color:"rgba(255,255,255,.65)",lineHeight:1.65,marginBottom:22,maxWidth:400}}>
+          <p className="text-base text-white/65 leading-relaxed mb-6 max-w-100">
             Directory, attendance, leave, tasks, chat, calendar, invoices, payroll — every employee record synced with their public NorthHire profile.</p>
-          <div style={{display:"flex",flexDirection:"column",gap:12,fontSize:14,color:"rgba(255,255,255,.75)"}}>
+          <div className="flex flex-col gap-3 text-sm text-white/75">
             {[["shield","Role-based access — Owner, Admin, HR, Finance, Employee"],
               ["users","Directory synced with public NorthHire profiles"],
               ["calendar","Attendance, leave, calendar & tasks in one flow"],
               ["mail","Internal chat with 1:1 and group threads"]].map(([ic,txt])=>
-              <div key={txt} style={{display:"flex",gap:10,alignItems:"center"}}>
-                <span style={{color:"#6AACFF",display:"flex"}}><I n={ic} s={17}/></span>{txt}</div>)}
+              <div key={txt} className="flex gap-2.5 items-center">
+                <span className="text-accent flex"><I n={ic} s={17}/></span>{txt}</div>)}
           </div>
         </div>}
-        <div style={{background:"#fff",borderRadius:20,padding:mob?24:34,color:C.text,boxShadow:"0 40px 80px -20px rgba(0,0,0,.5)"}}>
-          <div style={{marginBottom:22}}>
-            <h2 style={{fontSize:24,fontWeight:730,letterSpacing:"-.03em",margin:"0 0 8px"}}>Sign in to HR Suite</h2>
-            <p style={{fontSize:14,color:C.text2,margin:0}}>Your Enterprise workforce login.</p></div>
-          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+        <div className={`bg-white rounded-3xl text-text ${mob?"p-6":"p-9"}`} style={{boxShadow:"0 40px 80px -20px rgba(0,0,0,.5)"}}>
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold tracking-tight mb-2">Sign in to HR Suite</h2>
+            <p className="text-sm text-text-2 m-0">Your Enterprise workforce login.</p></div>
+          <div className="flex flex-col gap-3.5">
             <Field label="Company"><Input icon="building" value={company} onChange={e=>{setCompany(e.target.value);setErr("");}}
               placeholder="e.g. PCL Construction" onKeyDown={e=>e.key==="Enter"&&submit()}/></Field>
             <Field label="Login ID" hint="Your work email or the part before @ (e.g. sofia.r).">
@@ -79,15 +86,14 @@ export function HrLoginPage(){
             {err&&<Banner tone="danger" icon="alert" title="Sign-in failed">{err}</Banner>}
             <Btn kind="primary" size="lg" full iconR="arrowR" onClick={submit} disabled={busy}>{busy?"Signing in…":"Enter HR Suite"}</Btn>
           </div>
-          <div style={{marginTop:16,padding:14,background:C.tint,borderRadius:12,border:`1px solid ${C.line2}`}}>
-            <div style={{fontSize:11.5,fontWeight:700,color:C.brand,letterSpacing:".05em",textTransform:"uppercase",marginBottom:8}}>Demo accounts — PCL Construction</div>
-            <div style={{display:"grid",gap:6}}>
+          <div className="mt-4 p-3.5 bg-tint rounded-xl border border-line-2">
+            <div className="text-xs font-bold text-brand tracking-wide uppercase mb-2">Demo accounts — PCL Construction</div>
+            <div className="grid gap-1.5">
               {[["rachel.martel","Owner"],["priya.r","Admin"],["linda.o","HR"],["isaac.c","Finance"],["daniel.k","Employee"]].map(([id,r])=>
-                <button key={id} onClick={()=>demoAs(id)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
-                  background:"#fff",border:`1px solid ${C.line}`,borderRadius:8,padding:"8px 12px",cursor:"pointer",fontFamily:"inherit"}}>
-                  <span style={{fontSize:12.5,color:C.text,fontWeight:640}}>{id}</span>
-                  <span style={{fontSize:11.5,color:C.brand,fontWeight:640}}>{r} →</span></button>)}
-              <div style={{fontSize:11,color:C.text3,marginTop:6,textAlign:"center"}}>Password for all demo accounts: <strong style={{color:C.text}}>pcl2026</strong></div>
+                <button key={id} onClick={()=>demoAs(id)} className="flex justify-between items-center bg-white border border-line rounded-lg py-2 px-3 cursor-pointer">
+                  <span className="text-xs font-semibold text-text">{id}</span>
+                  <span className="text-xs font-semibold text-brand">{r} →</span></button>)}
+              <div className="text-xs text-text-3 mt-1.5 text-center">Password for all demo accounts: <strong className="text-text">pcl2026</strong></div>
             </div>
           </div>
         </div>
@@ -102,10 +108,10 @@ export function HrLoginPage(){
 /* Placeholder for each HR module — Round C/D will replace with real content */
 function _HrPlaceholder({title,body,icon="hex"}){
   return <Card pad={40} style={{borderRadius:20,textAlign:"center",maxWidth:600,margin:"0 auto"}}>
-    <div style={{width:64,height:64,borderRadius:16,background:C.wash,color:C.brand,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 20px"}}>
+    <div className="w-16 h-16 rounded-2xl bg-wash text-brand flex items-center justify-center mx-auto mb-5">
       <I n={icon} s={32}/></div>
-    <h2 style={{fontSize:22,fontWeight:730,letterSpacing:"-.03em",color:C.text,margin:"0 0 10px"}}>{title}</h2>
-    <p style={{fontSize:14.5,color:C.text2,lineHeight:1.65,margin:0}}>{body}</p>
+    <h2 className="text-2xl font-bold tracking-tight text-text mb-2.5">{title}</h2>
+    <p className="text-sm text-text-2 leading-relaxed m-0">{body}</p>
   </Card>;
 }
 
@@ -150,54 +156,54 @@ export function HrDashboard(){
   })();
 
   return <div>
-    <div style={{marginBottom:24}}>
-      <div style={{fontSize:mob?24:30,fontWeight:740,color:C.text,letterSpacing:"-.03em"}}>Welcome back, {emp.name.split(" ")[0]}.</div>
-      <div style={{fontSize:14,color:C.text2,marginTop:6}}>
+    <div className="mb-6">
+      <div className={`font-bold text-text tracking-tight ${mob?"text-2xl":"text-3xl"}`}>Welcome back, {emp.name.split(" ")[0]}.</div>
+      <div className="text-sm text-text-2 mt-1.5">
         {new Date().toLocaleDateString("en-CA",{weekday:"long",month:"long",day:"numeric",year:"numeric"})}
         {dept&&<> • {dept.name}</>}</div>
     </div>
 
-    <div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"repeat(4,1fr)",gap:12,marginBottom:22}}>
+    <div className={`grid gap-3 mb-6 ${mob?"grid-cols-2":"grid-cols-4"}`}>
       {kpis.map(k=><Card key={k.label} pad={mob?18:22} style={{borderRadius:16}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
-          <div style={{width:36,height:36,borderRadius:10,background:C.wash,color:k.tone||C.brand,display:"flex",alignItems:"center",justifyContent:"center"}}>
+        <div className="flex justify-between items-start mb-3">
+          <div className="w-9 h-9 rounded-lg bg-wash flex items-center justify-center" style={{color:k.tone||C.brand}}>
             <I n={k.icon} s={17}/></div></div>
-        <div style={{fontSize:mob?22:26,fontWeight:730,color:k.tone||C.text,letterSpacing:"-.03em",lineHeight:1}}>{k.value}</div>
-        <div style={{fontSize:12.5,color:C.text3,marginTop:6}}>{k.label}</div>
+        <div className={`font-bold tracking-tight leading-none ${mob?"text-2xl":"text-3xl"}`} style={{color:k.tone||C.text}}>{k.value}</div>
+        <div className="text-xs text-text-3 mt-1.5">{k.label}</div>
       </Card>)}
     </div>
 
-    <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1.3fr 1fr",gap:16}}>
+    <div className="grid gap-4" style={{gridTemplateColumns:mob?"1fr":"1.3fr 1fr"}}>
       <div>
         <Card pad={mob?20:26} style={{borderRadius:20,marginBottom:16}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+          <div className="flex justify-between items-center mb-4">
             <Lbl style={{margin:0}}>Attendance today</Lbl>
             <Tag tone={todayAttendance?"ok":"neutral"} sm>{todayAttendance?(todayAttendance.clockOut?"Signed out":"On the clock"):"Not clocked in"}</Tag>
           </div>
           {!todayAttendance?<div>
-            <p style={{fontSize:14,color:C.text2,margin:"0 0 14px",lineHeight:1.6}}>Start your day by punching in.</p>
+            <p className="text-sm text-text-2 mb-3.5 leading-relaxed">Start your day by punching in.</p>
             <Btn kind="primary" icon="clock" onClick={()=>{const r=A.punchIn(emp.id,"web"); if(!r.ok)alert(r.msg);}}>Punch in</Btn>
           </div>:!todayAttendance.clockOut?<div>
-            <div style={{fontSize:15,color:C.text,marginBottom:8}}>Punched in at <strong>{todayAttendance.clockIn}</strong></div>
-            <p style={{fontSize:13,color:C.text2,margin:"0 0 14px"}}>Have a great day. Punch out when you're wrapping up.</p>
+            <div className="text-base text-text mb-2">Punched in at <strong>{todayAttendance.clockIn}</strong></div>
+            <p className="text-sm text-text-2 mb-3.5">Have a great day. Punch out when you're wrapping up.</p>
             <Btn kind="outline" icon="clock" onClick={()=>{const r=A.punchOut(emp.id); if(!r.ok)alert(r.msg);}}>Punch out</Btn>
           </div>:<div>
-            <div style={{fontSize:14.5,color:C.text}}>In: <strong>{todayAttendance.clockIn}</strong> · Out: <strong>{todayAttendance.clockOut}</strong> · Total: <strong style={{color:C.brand}}>{todayAttendance.hours}h</strong></div>
-            <p style={{fontSize:13,color:C.text2,margin:"8px 0 0"}}>Good work today. See you tomorrow.</p></div>}
+            <div className="text-sm text-text">In: <strong>{todayAttendance.clockIn}</strong> · Out: <strong>{todayAttendance.clockOut}</strong> · Total: <strong className="text-brand">{todayAttendance.hours}h</strong></div>
+            <p className="text-sm text-text-2 mt-2">Good work today. See you tomorrow.</p></div>}
         </Card>
 
         <Card pad={mob?20:26} style={{borderRadius:20}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+          <div className="flex justify-between items-center mb-3.5">
             <Lbl style={{margin:0}}>My tasks</Lbl>
             <Btn kind="ghost" size="sm" onClick={()=>A.go("hrTasks")}>View all</Btn>
           </div>
-          {myTasks.length===0?<div style={{padding:"16px 0",color:C.text3,fontSize:14}}>No open tasks — nicely done.</div>
-            :<div style={{display:"flex",flexDirection:"column",gap:8}}>
-              {myTasks.slice(0,5).map(t=><div key={t.id} style={{display:"flex",gap:12,alignItems:"center",padding:"12px 14px",background:C.bg,borderRadius:10,border:`1px solid ${C.line}`}}>
-                <input type="checkbox" checked={t.status==="done"} onChange={()=>A.updateTaskStatus(t.id,t.status==="done"?"todo":"done")} style={{width:18,height:18,cursor:"pointer",flexShrink:0}}/>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:13.5,fontWeight:600,color:C.text}}>{t.title}</div>
-                  <div style={{fontSize:12,color:C.text3,marginTop:2}}>Due {t.due}</div></div>
+          {myTasks.length===0?<div className="py-4 text-text-3 text-sm">No open tasks — nicely done.</div>
+            :<div className="flex flex-col gap-2">
+              {myTasks.slice(0,5).map(t=><div key={t.id} className="flex gap-3 items-center py-3 px-3.5 bg-bg rounded-lg border border-line">
+                <input type="checkbox" checked={t.status==="done"} onChange={()=>A.updateTaskStatus(t.id,t.status==="done"?"todo":"done")} className="w-5 h-5 cursor-pointer shrink-0"/>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold text-text">{t.title}</div>
+                  <div className="text-xs text-text-3 mt-0.5">Due {t.due}</div></div>
                 <Tag tone={t.priority==="high"?"danger":t.priority==="medium"?"warn":"neutral"} sm>{t.priority}</Tag>
               </div>)}</div>}
         </Card>
@@ -205,35 +211,35 @@ export function HrDashboard(){
 
       <div>
         <Card pad={mob?20:24} style={{borderRadius:20,marginBottom:16}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+          <div className="flex justify-between items-center mb-3">
             <Lbl style={{margin:0}}>Upcoming events</Lbl>
             <Btn kind="ghost" size="sm" onClick={()=>A.go("hrCalendar")}>Calendar</Btn>
           </div>
-          {upcomingEvents.length===0?<div style={{padding:"12px 0",color:C.text3,fontSize:13.5}}>Nothing coming up.</div>
-            :<div style={{display:"flex",flexDirection:"column",gap:8}}>
-              {upcomingEvents.map(ev=><div key={ev.id} style={{padding:"10px 12px",background:C.bg,borderRadius:10,border:`1px solid ${C.line}`}}>
-                <div style={{fontSize:13.5,fontWeight:640,color:C.text}}>{ev.title}</div>
-                <div style={{fontSize:12,color:C.text3,marginTop:2}}>{new Date(ev.when).toLocaleDateString("en-CA",{weekday:"short",month:"short",day:"numeric"})} • {ev.time}</div>
+          {upcomingEvents.length===0?<div className="py-3 text-text-3 text-sm">Nothing coming up.</div>
+            :<div className="flex flex-col gap-2">
+              {upcomingEvents.map(ev=><div key={ev.id} className="py-2.5 px-3 bg-bg rounded-lg border border-line">
+                <div className="text-sm font-semibold text-text">{ev.title}</div>
+                <div className="text-xs text-text-3 mt-0.5">{new Date(ev.when).toLocaleDateString("en-CA",{weekday:"short",month:"short",day:"numeric"})} • {ev.time}</div>
               </div>)}</div>}
         </Card>
 
         {(emp.role==="hr"||emp.role==="admin"||emp.role==="owner")&&<Card pad={mob?20:24} style={{borderRadius:20,marginBottom:16}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+          <div className="flex justify-between items-center mb-3">
             <Lbl style={{margin:0}}>Pending leave requests</Lbl>
             <Btn kind="ghost" size="sm" onClick={()=>A.go("hrLeave")}>Review</Btn>
           </div>
-          {pendingLeave.length===0?<div style={{padding:"12px 0",color:C.text3,fontSize:13.5}}>Nothing to review.</div>
-            :<div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {pendingLeave.length===0?<div className="py-3 text-text-3 text-sm">Nothing to review.</div>
+            :<div className="flex flex-col gap-2">
               {pendingLeave.slice(0,3).map(r=>{const who=A.hrEmp(r.employee);
-                return <div key={r.id} style={{padding:"10px 12px",background:C.bg,borderRadius:10,border:`1px solid ${C.line}`}}>
-                  <div style={{fontSize:13.5,fontWeight:640,color:C.text}}>{who?.name}</div>
-                  <div style={{fontSize:12,color:C.text3,marginTop:2}}>{r.type} • {r.from} → {r.to} ({r.days}d)</div>
+                return <div key={r.id} className="py-2.5 px-3 bg-bg rounded-lg border border-line">
+                  <div className="text-sm font-semibold text-text">{who?.name}</div>
+                  <div className="text-xs text-text-3 mt-0.5">{r.type} • {r.from} → {r.to} ({r.days}d)</div>
                 </div>;})}</div>}
         </Card>}
 
         <Card pad={mob?20:24} style={{borderRadius:20}}>
           <Lbl>Quick actions</Lbl>
-          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          <div className="flex flex-col gap-2">
             <Btn kind="outline" size="sm" full icon="calendar" onClick={()=>A.go("hrLeave")}>Request leave</Btn>
             <Btn kind="outline" size="sm" full icon="mail" onClick={()=>A.go("hrChat")}>Open chat</Btn>
             <Btn kind="outline" size="sm" full icon="user" onClick={()=>A.go("hrProfile")}>Edit my profile</Btn>
@@ -269,8 +275,8 @@ function HrDirectory(){
   const selectedEmp=selected?A.hrEmp(selected):null;
   return <div>
     <Card pad={mob?16:20} style={{marginBottom:16,borderRadius:14}}>
-      <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
-        <div style={{flex:"1 1 240px",minWidth:0}}>
+      <div className="flex gap-2.5 flex-wrap items-center">
+        <div className="grow shrink basis-60 min-w-0">
           <Input icon="search" value={q} onChange={e=>setQ(e.target.value)} placeholder="Search by name, title, or email"/></div>
         <Sel value={dept} onChange={e=>setDept(e.target.value)} style={{maxWidth:200}}>
           <option value="all">All departments</option>
@@ -278,25 +284,26 @@ function HrDirectory(){
         <Sel value={role} onChange={e=>setRole(e.target.value)} style={{maxWidth:160}}>
           <option value="all">All roles</option>
           {A.HR_ROLES.map(r=><option key={r.k} value={r.k}>{r.label}</option>)}</Sel>
-        <div style={{display:"flex",background:C.bg,borderRadius:9,padding:3,border:`1px solid ${C.line}`}}>
-          {[["grid","layout"],["list","file"]].map(([v,ic])=><button key={v} onClick={()=>setView(v)} style={{background:view===v?"#fff":"transparent",border:"none",padding:"7px 10px",borderRadius:6,cursor:"pointer",color:view===v?C.brand:C.text3,boxShadow:view===v?SH.sm:"none",display:"flex"}}><I n={ic} s={15}/></button>)}
+        <div className="flex bg-bg rounded-lg p-1 border border-line">
+          {[["grid","layout"],["list","file"]].map(([v,ic])=><button key={v} onClick={()=>setView(v)}
+            className={`border-0 py-2 px-2.5 rounded-md cursor-pointer flex ${view===v?"bg-white text-brand shadow-sm":"bg-transparent text-text-3"}`}><I n={ic} s={15}/></button>)}
         </div>
       </div>
-      <div style={{fontSize:12.5,color:C.text3,marginTop:12}}>{filtered.length} of {all.length} employees</div>
+      <div className="text-xs text-text-3 mt-3">{filtered.length} of {all.length} employees</div>
     </Card>
 
     {view==="grid"?
-      <div style={{display:"grid",gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:280}px,1fr))`,gap:12}}>
+      <div className="grid gap-3" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:280}px,1fr))`}}>
         {filtered.map(e=>{const d=A.HR_DEPARTMENTS.find(x=>x.id===e.dept);
-          return <div key={e.id} data-card onClick={()=>setSelected(e.id)} style={{background:"#fff",border:`1px solid ${C.line}`,borderRadius:14,padding:18,cursor:"pointer"}}>
-            <div style={{display:"flex",gap:12,marginBottom:12}}>
+          return <div key={e.id} data-card onClick={()=>setSelected(e.id)} className="bg-white border border-line rounded-2xl p-5 cursor-pointer">
+            <div className="flex gap-3 mb-3">
               <SmartPortrait seed={e.seed} size={48} radius={12}/>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:14.5,fontWeight:660,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.name}</div>
-                <div style={{fontSize:12.5,color:C.text3,marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.title}</div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap" style={{fontSize:14.5}}>{e.name}</div>
+                <div className="text-xs text-text-3 mt-0.5 overflow-hidden text-ellipsis whitespace-nowrap">{e.title}</div>
               </div>
             </div>
-            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+            <div className="flex gap-1.5 flex-wrap">
               {d&&<Tag tone="neutral" sm>{d.name}</Tag>}
               <Tag tone={e.role==="owner"?"warn":e.role==="admin"?"brand":e.role==="hr"?"ok":e.role==="finance"?"violet":"neutral"} sm>{e.role}</Tag>
             </div>
@@ -305,16 +312,14 @@ function HrDirectory(){
       :
       <Card pad={0} style={{borderRadius:14,overflow:"hidden"}}>
         {filtered.map((e,i)=>{const d=A.HR_DEPARTMENTS.find(x=>x.id===e.dept);
-          return <div key={e.id} onClick={()=>setSelected(e.id)} style={{display:"flex",gap:14,alignItems:"center",padding:mob?"12px 14px":"14px 20px",borderTop:i>0?`1px solid ${C.lineSoft}`:"none",cursor:"pointer",transition:"background .16s"}}
-            onMouseEnter={ev=>ev.currentTarget.style.background=C.bg}
-            onMouseLeave={ev=>ev.currentTarget.style.background="transparent"}>
+          return <div key={e.id} onClick={()=>setSelected(e.id)} className={`flex gap-3.5 items-center cursor-pointer transition-colors duration-150 hover:bg-bg ${mob?"py-3 px-3.5":"py-3.5 px-5"} ${i>0?"border-t border-line-soft":""}`}>
             <SmartPortrait seed={e.seed} size={38} radius={10}/>
-            <div style={{flex:"1 1 200px",minWidth:0}}>
-              <div style={{fontSize:14,fontWeight:640,color:C.text}}>{e.name}</div>
-              <div style={{fontSize:12,color:C.text3,marginTop:2}}>{e.title}</div>
+            <div className="grow shrink basis-50 min-w-0">
+              <div className="text-sm font-semibold text-text">{e.name}</div>
+              <div className="text-xs text-text-3 mt-0.5">{e.title}</div>
             </div>
-            {!mob&&d&&<div style={{fontSize:12.5,color:C.text2,minWidth:140}}>{d.name}</div>}
-            {!mob&&<div style={{fontSize:12.5,color:C.text2,minWidth:120}}>{e.city}, {e.prov}</div>}
+            {!mob&&d&&<div className="text-xs text-text-2" style={{minWidth:140}}>{d.name}</div>}
+            {!mob&&<div className="text-xs text-text-2" style={{minWidth:120}}>{e.city}, {e.prov}</div>}
             <Tag tone={e.role==="owner"?"warn":e.role==="admin"?"brand":e.role==="hr"?"ok":e.role==="finance"?"violet":"neutral"} sm>{e.role}</Tag>
           </div>;})}
       </Card>
@@ -332,34 +337,34 @@ function _HrEmpDetail({e,onClose}){
   const mgr=e.manager?A.hrEmp(e.manager):null;
   const publicProfile=A.hrPublicProfile(e.id);
   return <div>
-    <div style={{display:"flex",gap:16,alignItems:"center",marginBottom:20,flexWrap:"wrap"}}>
+    <div className="flex gap-4 items-center mb-5 flex-wrap">
       <SmartPortrait seed={e.seed} size={64} radius={16}/>
-      <div style={{flex:1,minWidth:0}}>
-        <div style={{fontSize:20,fontWeight:730,color:C.text,letterSpacing:"-.025em"}}>{e.name}</div>
-        <div style={{fontSize:14,color:C.text2,marginTop:3}}>{e.title}</div>
-        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:8}}>
+      <div className="flex-1 min-w-0">
+        <div className="text-xl font-bold text-text tracking-tight">{e.name}</div>
+        <div className="text-sm text-text-2 mt-1">{e.title}</div>
+        <div className="flex gap-1.5 flex-wrap mt-2">
           {d&&<Tag tone="neutral" sm>{d.name}</Tag>}
           <Tag tone={e.role==="owner"?"warn":e.role==="admin"?"brand":e.role==="hr"?"ok":e.role==="finance"?"violet":"neutral"} sm>{e.role}</Tag>
         </div>
       </div>
     </div>
-    <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:14,fontSize:13.5}}>
+    <div className={`grid gap-3.5 text-sm ${mob?"grid-cols-1":"grid-cols-2"}`}>
       {[["Location",`${e.city}, ${e.prov}`],["Email",e.email],["Phone",e.phone],
         ["Manager",mgr?.name||"—"],["Hired",e.hired],["Tenure",publicProfile.tenureYears?`${publicProfile.tenureYears} years`:"—"]].map(([l,v])=>
-        <div key={l}><div style={{fontSize:11,fontWeight:700,color:C.text3,letterSpacing:".05em",textTransform:"uppercase",marginBottom:4}}>{l}</div>
-          <div style={{color:C.text}}>{v}</div></div>)}
+        <div key={l}><div className="text-xs font-bold text-text-3 tracking-wide uppercase mb-1">{l}</div>
+          <div className="text-text">{v}</div></div>)}
     </div>
-    {e.skills.length>0&&<div style={{marginTop:16}}>
-      <div style={{fontSize:11,fontWeight:700,color:C.text3,letterSpacing:".05em",textTransform:"uppercase",marginBottom:8}}>Skills</div>
-      <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+    {e.skills.length>0&&<div className="mt-4">
+      <div className="text-xs font-bold text-text-3 tracking-wide uppercase mb-2">Skills</div>
+      <div className="flex flex-wrap gap-1.5">
         {e.skills.map(s=><Tag key={s} tone="brand" sm>{s}</Tag>)}</div>
     </div>}
-    {e.badges.length>0&&<div style={{marginTop:16}}>
-      <div style={{fontSize:11,fontWeight:700,color:C.text3,letterSpacing:".05em",textTransform:"uppercase",marginBottom:8}}>Badges & recognition</div>
-      <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+    {e.badges.length>0&&<div className="mt-4">
+      <div className="text-xs font-bold text-text-3 tracking-wide uppercase mb-2">Badges & recognition</div>
+      <div className="flex flex-wrap gap-1.5">
         {e.badges.map(b=><Tag key={b} tone="warn" sm icon="award">{b}</Tag>)}</div>
     </div>}
-    <div style={{marginTop:20,display:"flex",gap:10,justifyContent:"flex-end"}}>
+    <div className="mt-5 flex gap-2.5 justify-end">
       <Btn kind="outline" size="sm" icon="mail" onClick={()=>{A.go("hrChat"); onClose();}}>Message</Btn>
       <Btn kind="primary" size="sm" onClick={onClose}>Close</Btn>
     </div>
@@ -393,19 +398,19 @@ export function HrProfile(){
   ];
 
   return <div>
-    <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 380px",gap:16,alignItems:"start"}}>
+    <div className="grid gap-4 items-start" style={{gridTemplateColumns:mob?"1fr":"1fr 380px"}}>
       <div>
         <Card pad={mob?20:26} style={{marginBottom:16,borderRadius:16}}>
-          <div style={{display:"flex",gap:14,alignItems:"center",marginBottom:20}}>
+          <div className="flex gap-3.5 items-center mb-5">
             <SmartPortrait seed={emp.seed} size={70} radius={16}/>
             <div>
-              <div style={{fontSize:20,fontWeight:720,color:C.text,letterSpacing:"-.025em"}}>{emp.name}</div>
-              <div style={{fontSize:13.5,color:C.text2,marginTop:4}}>{emp.title}</div>
+              <div className="text-xl font-bold text-text tracking-tight">{emp.name}</div>
+              <div className="text-sm text-text-2 mt-1">{emp.title}</div>
             </div>
           </div>
 
           <Lbl>Personal details</Lbl>
-          <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:12,marginBottom:20}}>
+          <div className={`grid gap-3 mb-5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
             <Field label="Full name"><Input value={d.name} onChange={e=>set("name",e.target.value)}/></Field>
             <Field label="Job title"><Input value={d.title} onChange={e=>set("title",e.target.value)}/></Field>
             <Field label="Email"><Input icon="mail" value={d.email} onChange={e=>set("email",e.target.value)}/></Field>
@@ -415,11 +420,11 @@ export function HrProfile(){
           </div>
 
           <Lbl>Skills</Lbl>
-          <div style={{marginBottom:20}}>
+          <div className="mb-5">
             <InlineList value={d.skills||[]} onChange={v=>set("skills",v)} icon="sparkle" placeholder="Add a skill and press Enter"/>
           </div>
 
-          <div style={{display:"flex",gap:10,justifyContent:"flex-end",paddingTop:18,borderTop:`1px solid ${C.lineSoft}`}}>
+          <div className="flex gap-2.5 justify-end pt-5 border-t border-line-soft">
             {dirty&&<Btn kind="ghost" onClick={()=>setD({...emp})}>Discard</Btn>}
             <Btn kind="primary" icon="check" disabled={!dirty} onClick={save}>{dirty?"Save changes":"Saved"}</Btn>
           </div>
@@ -429,14 +434,12 @@ export function HrProfile(){
           <Lbl>Public NorthHire profile visibility</Lbl>
           <Banner tone="brand" icon="info" title="How this works" style={{marginBottom:16}}>
             Everything you show here appears on your public profile page across NorthHire. Employers searching for talent, and anyone viewing your company's page, will see what you allow.</Banner>
-          <div style={{display:"flex",flexDirection:"column",gap:2}}>
+          <div className="flex flex-col gap-0.5">
             {visItems.map(item=>{const on=d.visibility?.[item.k]!==false;
-              return <div key={item.k} style={{display:"flex",gap:12,alignItems:"center",padding:"12px 12px",borderRadius:9,transition:"background .16s"}}
-                onMouseEnter={e=>e.currentTarget.style.background=C.bg}
-                onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:13.5,fontWeight:600,color:C.text}}>{item.l}</div>
-                  <div style={{fontSize:12,color:C.text3,marginTop:2}}>{on?"Visible publicly":"Hidden from public profile"}{item.v?` — currently: ${item.v}`:""}</div>
+              return <div key={item.k} className="flex gap-3 items-center py-3 px-3 rounded-lg transition-colors duration-150 hover:bg-bg">
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold text-text">{item.l}</div>
+                  <div className="text-xs text-text-3 mt-0.5">{on?"Visible publicly":"Hidden from public profile"}{item.v?` — currently: ${item.v}`:""}</div>
                 </div>
                 <Switch on={on} onChange={v=>setVis(item.k,v)}/>
               </div>;})}
@@ -444,27 +447,27 @@ export function HrProfile(){
         </Card>
       </div>
 
-      <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      <div className="flex flex-col gap-3.5">
         <Card pad={20} style={{borderRadius:16,background:`linear-gradient(135deg,${C.tint} 0%,#F0F7FF 100%)`,border:`1px solid ${C.line2}`}}>
-          <div style={{fontSize:11,fontWeight:700,color:C.brand,letterSpacing:".05em",textTransform:"uppercase",marginBottom:10}}>Public profile preview</div>
-          <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:14}}>
+          <div className="text-xs font-bold text-brand tracking-wide uppercase mb-2.5">Public profile preview</div>
+          <div className="flex gap-3 items-center mb-3.5">
             <SmartPortrait seed={emp.seed} size={50} radius={12}/>
             <div>
-              <div style={{fontSize:15,fontWeight:660,color:C.text}}>{emp.name}</div>
-              {publicView.title&&<div style={{fontSize:12.5,color:C.text2,marginTop:2}}>{publicView.title}</div>}
+              <div className="text-sm font-semibold text-text">{emp.name}</div>
+              {publicView.title&&<div className="text-xs text-text-2 mt-0.5">{publicView.title}</div>}
             </div>
           </div>
-          <div style={{fontSize:13,color:C.text2,lineHeight:1.7}}>
+          <div className="text-sm text-text-2 leading-loose">
             {publicView.department&&<div>• {publicView.department} at {publicView.company}</div>}
             {publicView.tenureYears&&<div>• {publicView.tenureYears} years at company</div>}
             {publicView.manager&&<div>• Reports to {publicView.manager}</div>}
             {publicView.trainingsCompleted>0&&<div>• {publicView.trainingsCompleted} trainings completed</div>}
-            {publicView.badges?.length>0&&<div style={{marginTop:8}}>
-              <div style={{fontSize:11,color:C.text3,marginBottom:6}}>Recognitions:</div>
-              <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+            {publicView.badges?.length>0&&<div className="mt-2">
+              <div className="text-xs text-text-3 mb-1.5">Recognitions:</div>
+              <div className="flex flex-wrap gap-1">
                 {publicView.badges.map(b=><Tag key={b} tone="warn" sm icon="award">{b}</Tag>)}</div>
             </div>}
-            {publicView.phone&&<div style={{marginTop:8}}>• Phone: {publicView.phone}</div>}
+            {publicView.phone&&<div className="mt-2">• Phone: {publicView.phone}</div>}
             {publicView.email&&<div>• Email: {publicView.email}</div>}
           </div>
         </Card>
@@ -472,11 +475,11 @@ export function HrProfile(){
         <Card pad={20} style={{borderRadius:16}}>
           <Lbl>Your badges</Lbl>
           {emp.badges.length===0
-            ? <div style={{fontSize:13,color:C.text3}}>No badges yet.</div>
-            : <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                {emp.badges.map(b=><div key={b} style={{display:"flex",gap:11,alignItems:"center",padding:"10px 12px",background:C.bg,borderRadius:10}}>
-                  <div style={{width:32,height:32,borderRadius:9,background:C.warnBg,color:C.warn,display:"flex",alignItems:"center",justifyContent:"center"}}><I n="award" s={16}/></div>
-                  <div style={{fontSize:13,fontWeight:600,color:C.text}}>{b}</div>
+            ? <div className="text-sm text-text-3">No badges yet.</div>
+            : <div className="flex flex-col gap-2">
+                {emp.badges.map(b=><div key={b} className="flex gap-3 items-center py-2.5 px-3 bg-bg rounded-lg">
+                  <div className="w-8 h-8 rounded-lg bg-warn-bg text-warn flex items-center justify-center"><I n="award" s={16}/></div>
+                  <div className="text-sm font-semibold text-text">{b}</div>
                 </div>)}
               </div>}
         </Card>
@@ -505,68 +508,64 @@ export function HrAttendance(){
 
   return <div>
     <Card pad={mob?20:24} style={{marginBottom:16,borderRadius:16}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:12}}>
+      <div className="flex justify-between items-center mb-3.5 flex-wrap gap-3">
         <div>
           <Lbl style={{margin:0}}>Your attendance today</Lbl>
-          <div style={{fontSize:12.5,color:C.text3,marginTop:4}}>{new Date().toLocaleDateString("en-CA",{weekday:"long",month:"long",day:"numeric"})}</div>
+          <div className="text-xs text-text-3 mt-1">{new Date().toLocaleDateString("en-CA",{weekday:"long",month:"long",day:"numeric"})}</div>
         </div>
         <Tag tone={todayRecord?"ok":"neutral"} sm>{todayRecord?(todayRecord.clockOut?"Signed out":"On the clock"):"Not clocked in"}</Tag>
       </div>
       {!todayRecord?
         <Btn kind="primary" size="lg" icon="clock" onClick={()=>{const r=A.punchIn(emp.id,"web"); if(!r.ok)alert(r.msg);}}>Punch in now</Btn>
         :!todayRecord.clockOut?
-        <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
-          <div style={{fontSize:15,color:C.text2}}>Punched in at <strong style={{color:C.text}}>{todayRecord.clockIn}</strong> via {todayRecord.source}</div>
+        <div className="flex gap-3 flex-wrap items-center">
+          <div className="text-base text-text-2">Punched in at <strong className="text-text">{todayRecord.clockIn}</strong> via {todayRecord.source}</div>
           <Btn kind="outline" icon="clock" onClick={()=>{const r=A.punchOut(emp.id); if(!r.ok)alert(r.msg);}}>Punch out</Btn>
         </div>
         :
-        <div style={{fontSize:15,color:C.text2}}>In: <strong>{todayRecord.clockIn}</strong> · Out: <strong>{todayRecord.clockOut}</strong> · Total: <strong style={{color:C.brand}}>{todayRecord.hours}h</strong></div>}
+        <div className="text-base text-text-2">In: <strong>{todayRecord.clockIn}</strong> · Out: <strong>{todayRecord.clockOut}</strong> · Total: <strong className="text-brand">{todayRecord.hours}h</strong></div>}
     </Card>
 
     {canSeeAll&&<Card pad={mob?16:20} style={{marginBottom:16,borderRadius:14,background:punchConn?C.okBg:C.warnBg,border:`1px solid ${punchConn?C.okLn:C.warnLn}`}}>
-      <div style={{display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}>
-        <div style={{width:40,height:40,borderRadius:10,background:"#fff",color:punchConn?C.ok:C.warn,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><I n={punchConn?"check":"clock"} s={20}/></div>
-        <div style={{flex:1,minWidth:0}}>
-          <div style={{fontSize:14,fontWeight:660,color:C.text}}>{punchConn?`Punch machine connected: ${settings.integrations.punchMachine.vendor}`:"No punch machine connected"}</div>
-          <div style={{fontSize:12.5,color:C.text2,marginTop:3}}>{punchConn?`Last sync: ${new Date(settings.integrations.punchMachine.lastSync).toLocaleString("en-CA")}`:"Connect your on-site punch clock or biometric reader to auto-sync attendance."}</div>
+      <div className="flex gap-3 items-center flex-wrap">
+        <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center shrink-0" style={{color:punchConn?C.ok:C.warn}}><I n={punchConn?"check":"clock"} s={20}/></div>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-semibold text-text">{punchConn?`Punch machine connected: ${settings.integrations.punchMachine.vendor}`:"No punch machine connected"}</div>
+          <div className="text-xs text-text-2 mt-1">{punchConn?`Last sync: ${new Date(settings.integrations.punchMachine.lastSync).toLocaleString("en-CA")}`:"Connect your on-site punch clock or biometric reader to auto-sync attendance."}</div>
         </div>
         <Btn kind={punchConn?"outline":"primary"} size="sm" onClick={()=>A.go("hrIntegrations")}>{punchConn?"Manage":"Connect"}</Btn>
       </div>
     </Card>}
 
     <Card pad={mob?16:20} style={{borderRadius:14}}>
-      <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:14,flexWrap:"wrap"}}>
+      <div className="flex gap-2.5 items-center mb-3.5 flex-wrap">
         <Lbl style={{margin:0,flex:1}}>{view==="mine"?"My history":"Team log"}</Lbl>
-        {canSeeAll&&<div style={{display:"flex",background:C.bg,borderRadius:8,padding:2,border:`1px solid ${C.line}`}}>
-          {[["mine","Mine"],["team","Team"]].map(([v,l])=><button key={v} onClick={()=>setView(v)} style={{background:view===v?"#fff":"transparent",border:"none",padding:"6px 12px",borderRadius:6,cursor:"pointer",fontFamily:"inherit",fontSize:12.5,fontWeight:640,color:view===v?C.brand:C.text3}}>{l}</button>)}
-        </div>}
+        {canSeeAll&&<_PillTabs items={[["mine","Mine"],["team","Team"]]} value={view} onChange={setView}/>}
         {canSeeAll&&view==="team"&&<Sel value={empFilter} onChange={e=>setEmpFilter(e.target.value)} style={{maxWidth:200}}>
           <option value="all">All employees</option>
           {A.hrEmpsAtCompany(company.id).map(e=><option key={e.id} value={e.id}>{e.name}</option>)}</Sel>}
       </div>
-      <div style={{overflowX:"auto"}}>
-        <table style={{width:"100%",borderCollapse:"collapse",minWidth:600}}>
-          <thead><tr style={{borderBottom:`2px solid ${C.line}`,textAlign:"left"}}>
-            <th style={{padding:"10px 12px",fontSize:11.5,fontWeight:700,color:C.text3,letterSpacing:".05em",textTransform:"uppercase"}}>Date</th>
-            {view==="team"&&<th style={{padding:"10px 12px",fontSize:11.5,fontWeight:700,color:C.text3,letterSpacing:".05em",textTransform:"uppercase"}}>Employee</th>}
-            <th style={{padding:"10px 12px",fontSize:11.5,fontWeight:700,color:C.text3,letterSpacing:".05em",textTransform:"uppercase"}}>In</th>
-            <th style={{padding:"10px 12px",fontSize:11.5,fontWeight:700,color:C.text3,letterSpacing:".05em",textTransform:"uppercase"}}>Out</th>
-            <th style={{padding:"10px 12px",fontSize:11.5,fontWeight:700,color:C.text3,letterSpacing:".05em",textTransform:"uppercase"}}>Hours</th>
-            <th style={{padding:"10px 12px",fontSize:11.5,fontWeight:700,color:C.text3,letterSpacing:".05em",textTransform:"uppercase"}}>Source</th>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse" style={{minWidth:600}}>
+          <thead><tr className="border-b-2 border-line text-left">
+            <th className={TH_CLS}>Date</th>
+            {view==="team"&&<th className={TH_CLS}>Employee</th>}
+            <th className={TH_CLS}>In</th>
+            <th className={TH_CLS}>Out</th>
+            <th className={TH_CLS}>Hours</th>
+            <th className={TH_CLS}>Source</th>
           </tr></thead>
           <tbody>
             {sorted.slice(0,50).map(r=>{const who=A.hrEmp(r.employee);
-              return <tr key={r.id} style={{borderBottom:`1px solid ${C.lineSoft}`,transition:"background .16s"}}
-                onMouseEnter={e=>e.currentTarget.style.background=C.bg}
-                onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                <td style={{padding:"12px 12px",fontSize:13,color:C.text}}>{r.date}</td>
-                {view==="team"&&<td style={{padding:"12px 12px",fontSize:13,color:C.text}}>{who?.name||"—"}</td>}
-                <td style={{padding:"12px 12px",fontSize:13,color:C.text}}>{r.clockIn||"—"}</td>
-                <td style={{padding:"12px 12px",fontSize:13,color:C.text2}}>{r.clockOut||"—"}</td>
-                <td style={{padding:"12px 12px",fontSize:13,color:C.brand,fontWeight:600}}>{r.hours||0}h</td>
-                <td style={{padding:"12px 12px",fontSize:12.5,color:C.text3}}>{r.source}</td>
+              return <tr key={r.id} className="border-b border-line-soft transition-colors duration-150 hover:bg-bg">
+                <td className={`${TD_CLS} text-sm text-text`}>{r.date}</td>
+                {view==="team"&&<td className={`${TD_CLS} text-sm text-text`}>{who?.name||"—"}</td>}
+                <td className={`${TD_CLS} text-sm text-text`}>{r.clockIn||"—"}</td>
+                <td className={`${TD_CLS} text-sm text-text-2`}>{r.clockOut||"—"}</td>
+                <td className={`${TD_CLS} text-sm text-brand font-semibold`}>{r.hours||0}h</td>
+                <td className={`${TD_CLS} text-xs text-text-3`}>{r.source}</td>
               </tr>;})}
-            {sorted.length===0&&<tr><td colSpan={view==="team"?6:5} style={{padding:24,textAlign:"center",color:C.text3,fontSize:13}}>No attendance records yet.</td></tr>}
+            {sorted.length===0&&<tr><td colSpan={view==="team"?6:5} className="p-6 text-center text-text-3 text-sm">No attendance records yet.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -594,39 +593,36 @@ export function HrLeave(){
     A.requestLeave({...req,days}); setReq({type:"Vacation",from:"",to:"",reason:""}); setShowReq(false);};
 
   return <div>
-    <div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"repeat(4,1fr)",gap:12,marginBottom:16}}>
+    <div className={`grid gap-3 mb-4 ${mob?"grid-cols-2":"grid-cols-4"}`}>
       {[
         {l:"Vacation days used",v:usedVacation,total:settings.leave.annualVacationDays,tone:C.brand},
         {l:"Sick days available",v:settings.leave.sickDays,tone:C.ok},
         {l:"Personal days",v:settings.leave.personalDays,tone:C.violet},
         {l:"My open requests",v:myLeave.filter(l=>l.status==="pending").length,tone:C.warn}
       ].map(k=><Card key={k.l} pad={mob?16:20} style={{borderRadius:14}}>
-        <div style={{fontSize:mob?22:26,fontWeight:720,color:k.tone,letterSpacing:"-.025em"}}>{k.v}{k.total?<span style={{fontSize:14,color:C.text3,fontWeight:500}}> / {k.total}</span>:""}</div>
-        <div style={{fontSize:12,color:C.text3,marginTop:6}}>{k.l}</div>
+        <div className={`font-bold tracking-tight ${mob?"text-2xl":"text-3xl"}`} style={{color:k.tone}}>{k.v}{k.total?<span className="text-sm text-text-3 font-medium"> / {k.total}</span>:""}</div>
+        <div className="text-xs text-text-3 mt-1.5">{k.l}</div>
       </Card>)}
     </div>
 
     <Card pad={mob?16:20} style={{borderRadius:14}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:10}}>
-        <div style={{display:"flex",background:C.bg,borderRadius:8,padding:2,border:`1px solid ${C.line}`}}>
-          {[["mine","My requests"],...(canApprove?[["pending","Pending ("+pending.length+")"],["all","All"]]:[])].map(([v,l])=>
-            <button key={v} onClick={()=>setTab(v)} style={{background:tab===v?"#fff":"transparent",border:"none",padding:"7px 13px",borderRadius:6,cursor:"pointer",fontFamily:"inherit",fontSize:12.5,fontWeight:640,color:tab===v?C.brand:C.text3}}>{l}</button>)}
-        </div>
+      <div className="flex justify-between items-center mb-3.5 flex-wrap gap-2.5">
+        <_PillTabs items={[["mine","My requests"],...(canApprove?[["pending","Pending ("+pending.length+")"],["all","All"]]:[])]} value={tab} onChange={setTab}/>
         <Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowReq(true)}>Request leave</Btn>
       </div>
 
       {sorted.length===0
-        ? <div style={{padding:32,textAlign:"center",color:C.text3,fontSize:14}}>No leave records to show.</div>
-        : <div style={{display:"flex",flexDirection:"column",gap:8}}>
+        ? <div className="p-8 text-center text-text-3 text-sm">No leave records to show.</div>
+        : <div className="flex flex-col gap-2">
             {sorted.map(r=>{const who=A.hrEmp(r.employee);
-              return <div key={r.id} style={{display:"flex",gap:14,alignItems:"center",padding:"12px 14px",background:C.bg,borderRadius:11,border:`1px solid ${C.line}`,flexWrap:"wrap"}}>
+              return <div key={r.id} className="flex gap-3.5 items-center py-3 px-3.5 bg-bg rounded-xl border border-line flex-wrap">
                 <SmartPortrait seed={who?.seed||0} size={38} radius={10}/>
-                <div style={{flex:"1 1 200px",minWidth:0}}>
-                  <div style={{fontSize:14,fontWeight:640,color:C.text}}>{who?.name} • {r.type}</div>
-                  <div style={{fontSize:12.5,color:C.text3,marginTop:2}}>{r.from} → {r.to} ({r.days} day{r.days===1?"":"s"})</div>
-                  {r.reason&&<div style={{fontSize:12.5,color:C.text2,marginTop:4,fontStyle:"italic"}}>"{r.reason}"</div>}
+                <div className="grow shrink basis-50 min-w-0">
+                  <div className="text-sm font-semibold text-text">{who?.name} • {r.type}</div>
+                  <div className="text-xs text-text-3 mt-0.5">{r.from} → {r.to} ({r.days} day{r.days===1?"":"s"})</div>
+                  {r.reason&&<div className="text-xs text-text-2 mt-1 italic">"{r.reason}"</div>}
                 </div>
-                {r.status==="pending"&&canApprove&&r.employee!==emp.id?<div style={{display:"flex",gap:6}}>
+                {r.status==="pending"&&canApprove&&r.employee!==emp.id?<div className="flex gap-1.5">
                   <Btn kind="dangerSoft" size="xs" onClick={()=>A.decideLeave(r.id,"denied",emp.id)}>Deny</Btn>
                   <Btn kind="primary" size="xs" onClick={()=>A.decideLeave(r.id,"approved",emp.id)}>Approve</Btn>
                 </div>:<Tag tone={r.status==="approved"?"ok":r.status==="denied"?"danger":"warn"} sm>{r.status}</Tag>}
@@ -635,15 +631,15 @@ export function HrLeave(){
     </Card>
 
     {showReq&&<Modal onClose={()=>setShowReq(false)} title="Request leave">
-      <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      <div className="flex flex-col gap-3.5">
         <Field label="Type" required><Sel value={req.type} onChange={e=>setReq({...req,type:e.target.value})}>
           {["Vacation","Sick","Personal","Bereavement","Parental","Unpaid","Other"].map(t=><option key={t}>{t}</option>)}</Sel></Field>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+        <div className="grid grid-cols-2 gap-2.5">
           <Field label="From" required><DatePicker value={req.from} onChange={v=>setReq({...req,from:v})}/></Field>
           <Field label="To" required><DatePicker value={req.to} onChange={v=>setReq({...req,to:v})} min={req.from}/></Field>
         </div>
         <Field label="Reason" hint="Optional but helpful for approver."><Area rows={3} value={req.reason} onChange={e=>setReq({...req,reason:e.target.value})} placeholder="Family trip, medical appointment, etc."/></Field>
-        <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+        <div className="flex gap-2.5 justify-end">
           <Btn kind="ghost" onClick={()=>setShowReq(false)}>Cancel</Btn>
           <Btn kind="primary" icon="check" onClick={submitReq} disabled={!req.from||!req.to}>Submit request</Btn>
         </div>
@@ -669,51 +665,48 @@ export function HrTasks(){
     A.addTask({...nt,title:nt.title.trim()}); setNt({title:"",assignee:emp.id,due:"",priority:"medium",tags:[]}); setShowAdd(false);};
 
   return <div>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:10}}>
-      <div style={{display:"flex",background:C.bg,borderRadius:8,padding:2,border:`1px solid ${C.line}`}}>
-        {[["mine","My tasks"],...(canAssignOthers?[["assigned","Assigned by me"],["all","All company"]]:[])].map(([v,l])=>
-          <button key={v} onClick={()=>setScope(v)} style={{background:scope===v?"#fff":"transparent",border:"none",padding:"7px 13px",borderRadius:6,cursor:"pointer",fontFamily:"inherit",fontSize:12.5,fontWeight:640,color:scope===v?C.brand:C.text3}}>{l}</button>)}
-      </div>
+    <div className="flex justify-between items-center mb-4 flex-wrap gap-2.5">
+      <_PillTabs items={[["mine","My tasks"],...(canAssignOthers?[["assigned","Assigned by me"],["all","All company"]]:[])]} value={scope} onChange={setScope}/>
       <Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowAdd(true)}>New task</Btn>
     </div>
 
-    <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:12}}>
+    <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-3"}`}>
       {cols.map(col=>{const tasks=source.filter(t=>t.status===col.k);
-        return <div key={col.k} style={{background:C.bg,borderRadius:14,padding:12,minHeight:200}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 6px",marginBottom:10}}>
-            <div style={{display:"flex",gap:8,alignItems:"center"}}>
-              <div style={{width:8,height:8,borderRadius:99,background:col.tone}}/>
-              <div style={{fontSize:12.5,fontWeight:700,color:C.text,letterSpacing:"-.01em"}}>{col.label}</div>
+        return <div key={col.k} className="bg-bg rounded-2xl p-3" style={{minHeight:200}}>
+          <div className="flex justify-between items-center py-1 px-1.5 mb-2.5">
+            <div className="flex gap-2 items-center">
+              <div className="w-2 h-2 rounded-full" style={{background:col.tone}}/>
+              <div className="text-xs font-bold text-text tracking-tight">{col.label}</div>
             </div>
             <Tag tone="neutral" sm>{tasks.length}</Tag>
           </div>
-          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          <div className="flex flex-col gap-2">
             {tasks.map(t=>{const assn=A.hrEmp(t.assignee); const by=A.hrEmp(t.assignedBy);
-              return <div key={t.id} data-card style={{background:"#fff",border:`1px solid ${C.line}`,borderRadius:11,padding:12}}>
-                <div style={{fontSize:13.5,fontWeight:600,color:C.text,marginBottom:8,lineHeight:1.4}}>{t.title}</div>
-                <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
+              return <div key={t.id} data-card className="bg-white border border-line rounded-xl p-3">
+                <div className="text-sm font-semibold text-text mb-2 leading-snug">{t.title}</div>
+                <div className="flex gap-1.5 flex-wrap mb-2.5">
                   <Tag tone={t.priority==="high"?"danger":t.priority==="medium"?"warn":"neutral"} sm>{t.priority}</Tag>
                   {t.tags?.map(tag=><Tag key={tag} tone="neutral" sm>{tag}</Tag>)}
                 </div>
-                <div style={{fontSize:11.5,color:C.text3,marginBottom:10,display:"flex",gap:8,flexWrap:"wrap"}}>
+                <div className="text-xs text-text-3 mb-2.5 flex gap-2 flex-wrap">
                   <span>Due {t.due}</span>
                   {assn&&<span>• {assn.name.split(" ")[0]}</span>}
                 </div>
-                <div style={{display:"flex",gap:4}}>
+                <div className="flex gap-1">
                   {col.k!=="todo"&&<Btn kind="ghost" size="xs" onClick={()=>A.updateTaskStatus(t.id,cols[cols.findIndex(c=>c.k===col.k)-1].k)}>←</Btn>}
                   {col.k!=="done"&&<Btn kind="ghost" size="xs" onClick={()=>A.updateTaskStatus(t.id,cols[cols.findIndex(c=>c.k===col.k)+1].k)}>→</Btn>}
                   {(t.assignedBy===emp.id||emp.role==="owner"||emp.role==="admin")&&<Btn kind="ghost" size="xs" icon="trash" onClick={()=>A.deleteTask(t.id)}/>}
                 </div>
               </div>;})}
-            {tasks.length===0&&<div style={{padding:20,textAlign:"center",fontSize:12.5,color:C.text3}}>No tasks here.</div>}
+            {tasks.length===0&&<div className="p-5 text-center text-xs text-text-3">No tasks here.</div>}
           </div>
         </div>;})}
     </div>
 
     {showAdd&&<Modal onClose={()=>setShowAdd(false)} title="New task">
-      <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      <div className="flex flex-col gap-3.5">
         <Field label="What needs doing?" required><Input value={nt.title} onChange={e=>setNt({...nt,title:e.target.value})} placeholder="e.g. Review Q4 budget"/></Field>
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:12}}>
+        <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
           <Field label="Assign to">
             <Sel value={nt.assignee} onChange={e=>setNt({...nt,assignee:e.target.value})}>
               {A.hrEmpsAtCompany(company.id).filter(e=>e.status==="active").map(e=><option key={e.id} value={e.id}>{e.name}</option>)}</Sel></Field>
@@ -722,7 +715,7 @@ export function HrTasks(){
         </div>
         <Field label="Due date" required><DatePicker value={nt.due} onChange={v=>setNt({...nt,due:v})} min={_fmtDate(new Date())}/></Field>
         <Field label="Tags"><InlineList value={nt.tags} onChange={v=>setNt({...nt,tags:v})} icon="sparkle" placeholder="Add tag"/></Field>
-        <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+        <div className="flex gap-2.5 justify-end">
           <Btn kind="ghost" onClick={()=>setShowAdd(false)}>Cancel</Btn>
           <Btn kind="primary" icon="check" onClick={submit} disabled={!nt.title.trim()||!nt.due}>Create task</Btn>
         </div>
@@ -750,38 +743,35 @@ export function HrCalendar(){
   const typeTone={meeting:"brand",training:"warn",social:"ok",other:"neutral"};
 
   return <div>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:10}}>
-      <div style={{display:"flex",background:C.bg,borderRadius:8,padding:2,border:`1px solid ${C.line}`}}>
-        {[["upcoming","Upcoming ("+upcoming.length+")"],["past","Past"]].map(([v,l])=>
-          <button key={v} onClick={()=>setTab(v)} style={{background:tab===v?"#fff":"transparent",border:"none",padding:"7px 13px",borderRadius:6,cursor:"pointer",fontFamily:"inherit",fontSize:12.5,fontWeight:640,color:tab===v?C.brand:C.text3}}>{l}</button>)}
-      </div>
+    <div className="flex justify-between items-center mb-4 flex-wrap gap-2.5">
+      <_PillTabs items={[["upcoming","Upcoming ("+upcoming.length+")"],["past","Past"]]} value={tab} onChange={setTab}/>
       {canAdd&&<Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowAdd(true)}>New event</Btn>}
     </div>
 
     {list.length===0
       ? <Card pad={40} style={{borderRadius:14,textAlign:"center"}}>
-          <div style={{width:56,height:56,borderRadius:14,background:C.wash,color:C.brand,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px"}}><I n="calendar" s={26}/></div>
-          <div style={{fontSize:16,fontWeight:660,color:C.text,marginBottom:6}}>{tab==="upcoming"?"Nothing coming up":"No past events"}</div>
-          <div style={{fontSize:13,color:C.text3}}>{tab==="upcoming"?"Add your first event to get the team on the same page.":"Past events will appear here as they happen."}</div>
+          <div className="w-14 h-14 rounded-2xl bg-wash text-brand flex items-center justify-center mx-auto mb-4"><I n="calendar" s={26}/></div>
+          <div className="text-base font-semibold text-text mb-1.5">{tab==="upcoming"?"Nothing coming up":"No past events"}</div>
+          <div className="text-sm text-text-3">{tab==="upcoming"?"Add your first event to get the team on the same page.":"Past events will appear here as they happen."}</div>
         </Card>
-      : <div style={{display:"flex",flexDirection:"column",gap:10}}>
+      : <div className="flex flex-col gap-2.5">
           {list.map(ev=><Card key={ev.id} pad={mob?16:20} style={{borderRadius:14}}>
-            <div style={{display:"flex",gap:14,alignItems:"flex-start",flexWrap:"wrap"}}>
-              <div style={{width:60,textAlign:"center",background:C.tint,borderRadius:10,padding:"10px 6px",flexShrink:0}}>
-                <div style={{fontSize:10.5,fontWeight:700,color:C.brand,letterSpacing:".05em",textTransform:"uppercase"}}>{new Date(ev.when).toLocaleDateString("en-CA",{month:"short"})}</div>
-                <div style={{fontSize:22,fontWeight:730,color:C.brand,letterSpacing:"-.03em",lineHeight:1}}>{new Date(ev.when).getDate()}</div>
-                <div style={{fontSize:10.5,color:C.brand,marginTop:3}}>{new Date(ev.when).toLocaleDateString("en-CA",{weekday:"short"})}</div>
+            <div className="flex gap-3.5 items-start flex-wrap">
+              <div className="text-center bg-tint rounded-lg py-2.5 px-1.5 shrink-0" style={{width:60}}>
+                <div className="text-xs font-bold text-brand tracking-wide uppercase" style={{fontSize:10.5}}>{new Date(ev.when).toLocaleDateString("en-CA",{month:"short"})}</div>
+                <div className="text-2xl font-bold text-brand tracking-tight leading-none">{new Date(ev.when).getDate()}</div>
+                <div className="text-xs text-brand mt-1" style={{fontSize:10.5}}>{new Date(ev.when).toLocaleDateString("en-CA",{weekday:"short"})}</div>
               </div>
-              <div style={{flex:"1 1 220px",minWidth:0}}>
-                <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:6}}>
-                  <div style={{fontSize:16,fontWeight:660,color:C.text,letterSpacing:"-.015em"}}>{ev.title}</div>
+              <div className="grow shrink basis-55 min-w-0">
+                <div className="flex gap-2 items-center flex-wrap mb-1.5">
+                  <div className="text-base font-semibold text-text tracking-tight">{ev.title}</div>
                   <Tag tone={typeTone[ev.type]||"neutral"} sm icon={typeIcon[ev.type]||"calendar"}>{ev.type}</Tag>
                 </div>
-                <div style={{fontSize:13,color:C.text3,marginBottom:6,display:"flex",gap:12,flexWrap:"wrap"}}>
+                <div className="text-sm text-text-3 mb-1.5 flex gap-3 flex-wrap">
                   <span>{ev.time} • {ev.duration} min</span>
                   {ev.location&&<span>• {ev.location}</span>}
                 </div>
-                {ev.description&&<div style={{fontSize:13,color:C.text2,lineHeight:1.6}}>{ev.description}</div>}
+                {ev.description&&<div className="text-sm text-text-2 leading-relaxed">{ev.description}</div>}
               </div>
               {canAdd&&<Btn kind="ghost" size="xs" icon="trash" onClick={()=>A.deleteEvent(ev.id)}/>}
             </div>
@@ -789,14 +779,14 @@ export function HrCalendar(){
         </div>}
 
     {showAdd&&<Modal onClose={()=>setShowAdd(false)} title="Add event" wide>
-      <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      <div className="flex flex-col gap-3.5">
         <Field label="Event title" required><Input value={ne.title} onChange={e=>setNe({...ne,title:e.target.value})} placeholder="e.g. Q4 Kickoff Meeting"/></Field>
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:12}}>
+        <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
           <Field label="Type"><Sel value={ne.type} onChange={e=>setNe({...ne,type:e.target.value})}>
             {["meeting","training","social","other"].map(t=><option key={t}>{t}</option>)}</Sel></Field>
           <Field label="Location"><Input value={ne.location} onChange={e=>setNe({...ne,location:e.target.value})} placeholder="Boardroom, Zoom, etc."/></Field>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr 1fr",gap:12}}>
+        <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-3"}`}>
           <Field label="Date" required><DatePicker value={ne.when} onChange={v=>setNe({...ne,when:v})} min={_fmtDate(new Date())}/></Field>
           <Field label="Time"><Input type="time" value={ne.time} onChange={e=>setNe({...ne,time:e.target.value})}/></Field>
           <Field label="Duration (min)"><Input type="number" min="15" step="15" value={ne.duration} onChange={e=>setNe({...ne,duration:Number(e.target.value)||60})}/></Field>
@@ -805,7 +795,7 @@ export function HrCalendar(){
           <option value="all">Everyone</option>
           {A.HR_DEPARTMENTS.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}</Sel></Field>
         <Field label="Description"><Area rows={3} value={ne.description} onChange={e=>setNe({...ne,description:e.target.value})}/></Field>
-        <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+        <div className="flex gap-2.5 justify-end">
           <Btn kind="ghost" onClick={()=>setShowAdd(false)}>Cancel</Btn>
           <Btn kind="primary" icon="check" onClick={submit}>Create event</Btn>
         </div>
@@ -836,55 +826,55 @@ export function HrChat(){
 
   const send=()=>{if(!msg.trim())return; A.sendHrMessage(selected,msg.trim()); setMsg("");};
 
-  return <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"280px 1fr",gap:12,height:"calc(100vh - 130px)"}}>
+  return <div className="grid gap-3" style={{gridTemplateColumns:mob?"1fr":"280px 1fr",height:"calc(100vh - 130px)"}}>
     {(showThreads||!mob)&&<Card pad={0} style={{borderRadius:14,overflow:"hidden",display:"flex",flexDirection:"column"}}>
-      <div style={{padding:"14px 16px",borderBottom:`1px solid ${C.lineSoft}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-        <div style={{fontSize:13,fontWeight:640,color:C.text}}>Conversations</div>
+      <div className="py-3.5 px-4 border-b border-line-soft flex justify-between items-center">
+        <div className="text-sm font-semibold text-text">Conversations</div>
         <Btn kind="ghost" size="xs" icon="plus" onClick={()=>setShowNew(true)}/>
       </div>
-      <div style={{flex:1,overflowY:"auto"}}>
+      <div className="flex-1 overflow-y-auto">
         {myChats.map(c=>{const isActive=selected===c.id;
           const lastMsg=A.hrChatMsgs.filter(m=>m.chat===c.id).sort((a,b)=>b.at-a.at)[0];
           return <button key={c.id} onClick={()=>{setSelected(c.id); if(mob)setShowThreads(false);}}
-            style={{width:"100%",padding:"12px 14px",background:isActive?C.tint:"transparent",border:"none",borderBottom:`1px solid ${C.lineSoft}`,cursor:"pointer",fontFamily:"inherit",textAlign:"left",transition:"background .16s"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",gap:8,marginBottom:3}}>
-              <div style={{fontSize:13.5,fontWeight:isActive?660:600,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.name}</div>
-              {lastMsg&&<div style={{fontSize:10.5,color:C.text3,flexShrink:0}}>{new Date(lastMsg.at).toLocaleDateString("en-CA",{month:"short",day:"numeric"})}</div>}
+            className={`w-full py-3 px-3.5 border-0 border-b border-line-soft cursor-pointer text-left transition-colors duration-150 ${isActive?"bg-tint":"bg-transparent"}`}>
+            <div className="flex justify-between items-baseline gap-2 mb-1">
+              <div className={`text-sm overflow-hidden text-ellipsis whitespace-nowrap ${isActive?"font-bold":"font-semibold"} text-text`}>{c.name}</div>
+              {lastMsg&&<div className="text-xs text-text-3 shrink-0" style={{fontSize:10.5}}>{new Date(lastMsg.at).toLocaleDateString("en-CA",{month:"short",day:"numeric"})}</div>}
             </div>
-            <div style={{fontSize:12,color:C.text3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{lastMsg?lastMsg.text:c.about}</div>
+            <div className="text-xs text-text-3 overflow-hidden text-ellipsis whitespace-nowrap">{lastMsg?lastMsg.text:c.about}</div>
           </button>;})}
       </div>
     </Card>}
 
     {(!showThreads||!mob)&&chat&&<Card pad={0} style={{borderRadius:14,overflow:"hidden",display:"flex",flexDirection:"column"}}>
-      <div style={{padding:"14px 18px",borderBottom:`1px solid ${C.lineSoft}`,display:"flex",justifyContent:"space-between",alignItems:"center",background:"#fff"}}>
+      <div className="py-3.5 px-5 border-b border-line-soft flex justify-between items-center bg-white">
         <div>
           {mob&&<Btn kind="ghost" size="xs" icon="chevL" onClick={()=>setShowThreads(true)}>Back</Btn>}
-          <div style={{fontSize:15,fontWeight:660,color:C.text}}>{chat.name}</div>
-          <div style={{fontSize:12,color:C.text3,marginTop:2}}>{chat.about}</div>
+          <div className="text-base font-semibold text-text">{chat.name}</div>
+          <div className="text-xs text-text-3 mt-0.5">{chat.about}</div>
         </div>
-        <div style={{display:"flex",gap:6}}>
+        <div className="flex gap-1.5">
           <Btn kind="ghost" size="xs" icon="phone" onClick={()=>alert("Voice call — connecting via NorthHire Voice…")}/>
           <Btn kind="ghost" size="xs" icon="play" onClick={()=>alert("Video call — starting NorthHire Meet room…")}/>
         </div>
       </div>
 
-      <div style={{flex:1,overflowY:"auto",padding:16,background:C.bg,display:"flex",flexDirection:"column",gap:10}}>
+      <div className="flex-1 overflow-y-auto p-4 bg-bg flex flex-col gap-2.5">
         {messages.length===0
-          ? <div style={{textAlign:"center",color:C.text3,fontSize:13,padding:20}}>No messages yet. Start the conversation.</div>
+          ? <div className="text-center text-text-3 text-sm p-5">No messages yet. Start the conversation.</div>
           : messages.map(m=>{const from=A.hrEmp(m.from); const isMe=m.from===emp.id;
-              return <div key={m.id} style={{display:"flex",gap:10,flexDirection:isMe?"row-reverse":"row",maxWidth:"85%",alignSelf:isMe?"flex-end":"flex-start"}}>
+              return <div key={m.id} className={`flex gap-2.5 ${isMe?"flex-row-reverse self-end":"flex-row self-start"}`} style={{maxWidth:"85%"}}>
                 {!isMe&&<SmartPortrait seed={from?.seed||0} size={30} radius={8}/>}
-                <div style={{background:isMe?C.brand:"#fff",color:isMe?"#fff":C.text,borderRadius:12,padding:"9px 13px",boxShadow:isMe?"none":SH.sm}}>
-                  {!isMe&&<div style={{fontSize:11,fontWeight:640,marginBottom:3,color:C.text3}}>{from?.name||"Unknown"}</div>}
-                  <div style={{fontSize:13.5,lineHeight:1.5,whiteSpace:"pre-wrap"}}>{m.text}</div>
-                  <div style={{fontSize:10.5,marginTop:5,opacity:.7,textAlign:isMe?"right":"left"}}>{new Date(m.at).toLocaleTimeString("en-CA",{hour:"2-digit",minute:"2-digit"})}</div>
+                <div className="rounded-xl py-2.5 px-3.5" style={{background:isMe?C.brand:"#fff",color:isMe?"#fff":C.text,boxShadow:isMe?"none":SH.sm}}>
+                  {!isMe&&<div className="text-xs font-semibold mb-1 text-text-3">{from?.name||"Unknown"}</div>}
+                  <div className="text-sm leading-snug whitespace-pre-wrap">{m.text}</div>
+                  <div className={`text-xs mt-1.5 opacity-70 ${isMe?"text-right":"text-left"}`} style={{fontSize:10.5}}>{new Date(m.at).toLocaleTimeString("en-CA",{hour:"2-digit",minute:"2-digit"})}</div>
                 </div>
               </div>;})}
       </div>
 
-      <div style={{padding:14,borderTop:`1px solid ${C.lineSoft}`,display:"flex",gap:8}}>
-        <div style={{flex:1}}><Input value={msg} onChange={e=>setMsg(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault(); send();}}} placeholder="Type a message…"/></div>
+      <div className="p-3.5 border-t border-line-soft flex gap-2">
+        <div className="flex-1"><Input value={msg} onChange={e=>setMsg(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault(); send();}}} placeholder="Type a message…"/></div>
         <Btn kind="primary" icon="send" onClick={send} disabled={!msg.trim()}>Send</Btn>
       </div>
     </Card>}
@@ -911,27 +901,27 @@ function _HrNewChat({onClose,onCreate}){
       onCreate(c.id);
     }
   };
-  return <div style={{display:"flex",flexDirection:"column",gap:14}}>
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+  return <div className="flex flex-col gap-3.5">
+    <div className="grid grid-cols-2 gap-2.5">
       {[["dm","Direct message"],["group","Group chat"]].map(([k,l])=>
-        <button key={k} onClick={()=>setKind(k)} style={{padding:14,borderRadius:11,cursor:"pointer",fontFamily:"inherit",fontSize:13.5,fontWeight:kind===k?650:520,border:`1.5px solid ${kind===k?C.brand:C.line}`,background:kind===k?C.tint:"#fff",color:kind===k?C.brand:C.text}}>{l}</button>)}
+        <button key={k} onClick={()=>setKind(k)} className={`p-3.5 rounded-xl cursor-pointer text-sm border-2 ${kind===k?"border-brand bg-tint font-bold text-brand":"border-line bg-white font-medium text-text"}`}>{l}</button>)}
     </div>
     {kind==="group"&&<Field label="Group name"><Input value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. field-crew-calgary"/></Field>}
     <div>
       <Lbl>Select {kind==="dm"?"someone":"members"}</Lbl>
-      <div style={{maxHeight:280,overflowY:"auto",border:`1px solid ${C.line}`,borderRadius:10}}>
-        {all.map(e=><label key={e.id} style={{display:"flex",gap:10,alignItems:"center",padding:"10px 14px",borderBottom:`1px solid ${C.lineSoft}`,cursor:"pointer"}}>
+      <div className="border border-line rounded-lg overflow-y-auto" style={{maxHeight:280}}>
+        {all.map(e=><label key={e.id} className="flex gap-2.5 items-center py-2.5 px-3.5 border-b border-line-soft cursor-pointer">
           <input type={kind==="dm"?"radio":"checkbox"} name="who" checked={selected.includes(e.id)}
             onChange={()=>kind==="dm"?setSelected([e.id]):toggle(e.id)}/>
           <SmartPortrait seed={e.seed} size={30} radius={8}/>
-          <div style={{flex:1,minWidth:0}}>
-            <div style={{fontSize:13.5,fontWeight:600,color:C.text}}>{e.name}</div>
-            <div style={{fontSize:12,color:C.text3}}>{e.title}</div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold text-text">{e.name}</div>
+            <div className="text-xs text-text-3">{e.title}</div>
           </div>
         </label>)}
       </div>
     </div>
-    <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+    <div className="flex gap-2.5 justify-end">
       <Btn kind="ghost" onClick={onClose}>Cancel</Btn>
       <Btn kind="primary" onClick={create} disabled={selected.length===0||(kind==="group"&&!name.trim())}>Start conversation</Btn>
     </div>
@@ -950,34 +940,32 @@ function HrPeople(){
     setNe({name:"",email:"",role:"employee",dept:"d1",title:"",city:"",prov:"AB",phone:"",salary:60000});
     setShowAdd(false);};
   return <div>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:10}}>
-      <div><div style={{fontSize:18,fontWeight:720,color:C.text}}>{all.filter(e=>e.status==="active").length} active employees</div>
-        <div style={{fontSize:13,color:C.text3,marginTop:3}}>Add new hires, change roles, and manage the org chart.</div></div>
+    <div className="flex justify-between items-center mb-4 flex-wrap gap-2.5">
+      <div><div className="text-lg font-bold text-text">{all.filter(e=>e.status==="active").length} active employees</div>
+        <div className="text-sm text-text-3 mt-1">Add new hires, change roles, and manage the org chart.</div></div>
       <Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowAdd(true)}>Add employee</Btn>
     </div>
 
     <Card pad={0} style={{borderRadius:14,overflow:"hidden"}}>
-      <div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",minWidth:720}}>
-        <thead><tr style={{borderBottom:`2px solid ${C.line}`,textAlign:"left"}}>
+      <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:720}}>
+        <thead><tr className="border-b-2 border-line text-left">
           {["Name","Title","Dept","Role","Hired","Status","Actions"].map(h=>
-            <th key={h} style={{padding:"12px 14px",fontSize:11.5,fontWeight:700,color:C.text3,letterSpacing:".05em",textTransform:"uppercase"}}>{h}</th>)}
+            <th key={h} className={TH_CLS}>{h}</th>)}
         </tr></thead>
         <tbody>{all.map(e=>{const d=A.HR_DEPARTMENTS.find(x=>x.id===e.dept);
-          return <tr key={e.id} style={{borderBottom:`1px solid ${C.lineSoft}`,transition:"background .16s"}}
-            onMouseEnter={ev=>ev.currentTarget.style.background=C.bg}
-            onMouseLeave={ev=>ev.currentTarget.style.background="transparent"}>
-            <td style={{padding:"11px 14px"}}><div style={{display:"flex",gap:10,alignItems:"center"}}>
+          return <tr key={e.id} className="border-b border-line-soft transition-colors duration-150 hover:bg-bg">
+            <td className={TD_CLS}><div className="flex gap-2.5 items-center">
               <SmartPortrait seed={e.seed} size={30} radius={8}/>
-              <span style={{fontSize:13.5,fontWeight:600,color:C.text}}>{e.name}</span></div></td>
-            <td style={{padding:"11px 14px",fontSize:13,color:C.text2}}>{e.title}</td>
-            <td style={{padding:"11px 14px",fontSize:13,color:C.text2}}>{d?.name||"—"}</td>
-            <td style={{padding:"11px 14px"}}>
+              <span className="text-sm font-semibold text-text">{e.name}</span></div></td>
+            <td className={`${TD_CLS} text-sm text-text-2`}>{e.title}</td>
+            <td className={`${TD_CLS} text-sm text-text-2`}>{d?.name||"—"}</td>
+            <td className={TD_CLS}>
               <Sel value={e.role} onChange={ev=>A.updateEmp(e.id,{role:ev.target.value})} style={{fontSize:12,padding:"5px 8px",minWidth:0}}>
                 {A.HR_ROLES.map(r=><option key={r.k} value={r.k}>{r.label}</option>)}</Sel>
             </td>
-            <td style={{padding:"11px 14px",fontSize:12.5,color:C.text3}}>{e.hired}</td>
-            <td style={{padding:"11px 14px"}}><Tag tone={e.status==="active"?"ok":"neutral"} sm>{e.status}</Tag></td>
-            <td style={{padding:"11px 14px"}}><div style={{display:"flex",gap:4}}>
+            <td className={`${TD_CLS} text-xs text-text-3`}>{e.hired}</td>
+            <td className={TD_CLS}><Tag tone={e.status==="active"?"ok":"neutral"} sm>{e.status}</Tag></td>
+            <td className={TD_CLS}><div className="flex gap-1">
               {e.status==="active"&&e.id!==emp.id&&<Btn kind="dangerSoft" size="xs" onClick={()=>{if(confirm(`Offboard ${e.name}?`))A.removeEmployee(e.id);}}>Offboard</Btn>}
             </div></td>
           </tr>;})}</tbody>
@@ -985,8 +973,8 @@ function HrPeople(){
     </Card>
 
     {showAdd&&<Modal onClose={()=>setShowAdd(false)} title="Add employee" wide>
-      <div style={{display:"flex",flexDirection:"column",gap:14}}>
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:12}}>
+      <div className="flex flex-col gap-3.5">
+        <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
           <Field label="Full name" required><Input value={ne.name} onChange={e=>setNe({...ne,name:e.target.value})}/></Field>
           <Field label="Email" required><Input icon="mail" value={ne.email} onChange={e=>setNe({...ne,email:e.target.value})}/></Field>
           <Field label="Job title"><Input value={ne.title} onChange={e=>setNe({...ne,title:e.target.value})}/></Field>
@@ -999,7 +987,7 @@ function HrPeople(){
           <Field label="Annual salary (CAD)"><Input type="number" value={ne.salary} onChange={e=>setNe({...ne,salary:Number(e.target.value)||0})}/></Field>
         </div>
         <Banner tone="brand" icon="mail" title="Invitation">The new employee will receive an email with sign-in instructions. They can then set their password and start using the HR Suite.</Banner>
-        <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+        <div className="flex gap-2.5 justify-end">
           <Btn kind="ghost" onClick={()=>setShowAdd(false)}>Cancel</Btn>
           <Btn kind="primary" icon="check" onClick={submit} disabled={!ne.name.trim()||!ne.email.trim()}>Add employee</Btn>
         </div>
@@ -1039,34 +1027,31 @@ export function HrInvoices(){
     overdue:A.hrInvoices.filter(i=>i.status==="overdue").reduce((s,i)=>s+i.amount,0),
   };
   return <div>
-    <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:12,marginBottom:16}}>
+    <div className={`grid gap-3 mb-4 ${mob?"grid-cols-1":"grid-cols-3"}`}>
       {[["Paid this year",totals.paid,C.ok],["Pending",totals.pending,C.warn],["Overdue",totals.overdue,C.danger]].map(([l,v,t])=>
         <Card key={l} pad={mob?16:20} style={{borderRadius:14}}>
-          <div style={{fontSize:mob?20:24,fontWeight:720,color:t,letterSpacing:"-.025em"}}>${(v/1000).toFixed(0)}k</div>
-          <div style={{fontSize:12,color:C.text3,marginTop:6}}>{l}</div>
+          <div className={`font-bold tracking-tight ${mob?"text-xl":"text-2xl"}`} style={{color:t}}>${(v/1000).toFixed(0)}k</div>
+          <div className="text-xs text-text-3 mt-1.5">{l}</div>
         </Card>)}
     </div>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:10}}>
-      <div style={{display:"flex",background:C.bg,borderRadius:8,padding:2,border:`1px solid ${C.line}`}}>
-        {[["all","All"],["pending","Pending"],["paid","Paid"],["overdue","Overdue"]].map(([v,l])=>
-          <button key={v} onClick={()=>setTab(v)} style={{background:tab===v?"#fff":"transparent",border:"none",padding:"7px 13px",borderRadius:6,cursor:"pointer",fontFamily:"inherit",fontSize:12.5,fontWeight:640,color:tab===v?C.brand:C.text3}}>{l}</button>)}
-      </div>
+    <div className="flex justify-between items-center mb-3.5 flex-wrap gap-2.5">
+      <_PillTabs items={[["all","All"],["pending","Pending"],["paid","Paid"],["overdue","Overdue"]]} value={tab} onChange={setTab}/>
       {canManage&&<Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowAdd(true)}>New invoice</Btn>}
     </div>
     <Card pad={0} style={{borderRadius:14,overflow:"hidden"}}>
-      <div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",minWidth:720}}>
-        <thead><tr style={{borderBottom:`2px solid ${C.line}`,textAlign:"left"}}>
+      <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:720}}>
+        <thead><tr className="border-b-2 border-line text-left">
           {["Number","Client","Amount","Issued","Due","Status","Actions"].map(h=>
-            <th key={h} style={{padding:"12px 14px",fontSize:11.5,fontWeight:700,color:C.text3,letterSpacing:".05em",textTransform:"uppercase"}}>{h}</th>)}
+            <th key={h} className={TH_CLS}>{h}</th>)}
         </tr></thead>
-        <tbody>{list.map(inv=><tr key={inv.id} style={{borderBottom:`1px solid ${C.lineSoft}`,cursor:"pointer"}} onClick={()=>setDetail(inv)}>
-          <td style={{padding:"11px 14px",fontSize:12.5,color:C.text2,fontFamily:"ui-monospace,monospace"}}>{inv.number}</td>
-          <td style={{padding:"11px 14px",fontSize:13,color:C.text,fontWeight:600}}>{inv.client}</td>
-          <td style={{padding:"11px 14px",fontSize:13.5,color:C.text,fontWeight:660}}>${inv.amount.toLocaleString()}</td>
-          <td style={{padding:"11px 14px",fontSize:12.5,color:C.text3}}>{inv.issued}</td>
-          <td style={{padding:"11px 14px",fontSize:12.5,color:C.text3}}>{inv.due}</td>
-          <td style={{padding:"11px 14px"}}><Tag tone={inv.status==="paid"?"ok":inv.status==="overdue"?"danger":"warn"} sm>{inv.status}</Tag></td>
-          <td style={{padding:"11px 14px"}} onClick={e=>e.stopPropagation()}><div style={{display:"flex",gap:4}}>
+        <tbody>{list.map(inv=><tr key={inv.id} className="border-b border-line-soft cursor-pointer" onClick={()=>setDetail(inv)}>
+          <td className={`${TD_CLS} text-xs text-text-2 font-mono`}>{inv.number}</td>
+          <td className={`${TD_CLS} text-sm text-text font-semibold`}>{inv.client}</td>
+          <td className={`${TD_CLS} text-sm text-text font-semibold`}>${inv.amount.toLocaleString()}</td>
+          <td className={`${TD_CLS} text-xs text-text-3`}>{inv.issued}</td>
+          <td className={`${TD_CLS} text-xs text-text-3`}>{inv.due}</td>
+          <td className={TD_CLS}><Tag tone={inv.status==="paid"?"ok":inv.status==="overdue"?"danger":"warn"} sm>{inv.status}</Tag></td>
+          <td className={TD_CLS} onClick={e=>e.stopPropagation()}><div className="flex gap-1">
             <Btn kind="ghost" size="xs" onClick={()=>setDetail(inv)}>View</Btn>
             {canManage&&inv.status==="pending"&&<Btn kind="primary" size="xs" onClick={()=>A.markInvoicePaid(inv.id)}>Mark paid</Btn>}
             {canManage&&inv.status==="draft"&&<Btn kind="primary" size="xs" onClick={()=>A.sendInvoice(inv.id)}>Send</Btn>}
@@ -1076,8 +1061,8 @@ export function HrInvoices(){
     </Card>
 
     {showAdd&&<Modal onClose={()=>setShowAdd(false)} title="New invoice" wide>
-      <div style={{display:"flex",flexDirection:"column",gap:14}}>
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"2fr 1fr 1fr",gap:12}}>
+      <div className="flex flex-col gap-3.5">
+        <div className="grid gap-3" style={{gridTemplateColumns:mob?"1fr":"2fr 1fr 1fr"}}>
           <Field label="Client" required><Input value={nInv.client} onChange={e=>setNInv({...nInv,client:e.target.value})} placeholder="Client company name"/></Field>
           <Field label="Due date" required><Input type="date" value={nInv.due} onChange={e=>setNInv({...nInv,due:e.target.value})} min={_fmtDate(new Date())}/></Field>
           <Field label="PO number"><Input value={nInv.po} onChange={e=>setNInv({...nInv,po:e.target.value})} placeholder="Optional"/></Field>
@@ -1085,34 +1070,34 @@ export function HrInvoices(){
 
         <div>
           <Lbl style={{marginTop:6}}>Line items</Lbl>
-          <div style={{border:`1px solid ${C.line}`,borderRadius:10,overflow:"hidden"}}>
-            <div style={{display:"grid",gridTemplateColumns:"3fr 60px 100px 90px 32px",gap:8,padding:"10px 12px",background:C.bg,fontSize:11,fontWeight:700,color:C.text3,letterSpacing:".05em",textTransform:"uppercase"}}>
-              <div>Description</div><div>Qty</div><div>Unit price</div><div style={{textAlign:"right"}}>Line total</div><div/>
+          <div className="border border-line rounded-lg overflow-hidden">
+            <div className="grid gap-2 py-2.5 px-3 bg-bg text-xs font-bold text-text-3 tracking-wide uppercase" style={{gridTemplateColumns:"3fr 60px 100px 90px 32px"}}>
+              <div>Description</div><div>Qty</div><div>Unit price</div><div className="text-right">Line total</div><div/>
             </div>
-            {nInv.items.map((it,i)=><div key={i} style={{display:"grid",gridTemplateColumns:"3fr 60px 100px 90px 32px",gap:8,padding:"8px 12px",borderTop:`1px solid ${C.lineSoft}`,alignItems:"center"}}>
+            {nInv.items.map((it,i)=><div key={i} className="grid gap-2 py-2 px-3 border-t border-line-soft items-center" style={{gridTemplateColumns:"3fr 60px 100px 90px 32px"}}>
               <Input value={it.desc} onChange={e=>updateItem(i,{desc:e.target.value})} placeholder="Consulting services · June 2026"/>
               <Input type="number" min="0" value={it.qty} onChange={e=>updateItem(i,{qty:Number(e.target.value)||0})}/>
               <Input type="number" min="0" step="0.01" value={it.unitPrice} onChange={e=>updateItem(i,{unitPrice:Number(e.target.value)||0})}/>
-              <div style={{fontSize:13.5,fontWeight:660,color:C.text,textAlign:"right"}}>${(it.qty*it.unitPrice||0).toLocaleString()}</div>
-              <button onClick={()=>removeItem(i)} disabled={nInv.items.length===1} style={{background:"none",border:"none",padding:4,cursor:nInv.items.length===1?"default":"pointer",color:nInv.items.length===1?C.text3:C.danger,opacity:nInv.items.length===1?0.3:1}}><I n="x" s={16}/></button>
+              <div className="text-sm font-semibold text-text text-right">${(it.qty*it.unitPrice||0).toLocaleString()}</div>
+              <button onClick={()=>removeItem(i)} disabled={nInv.items.length===1} className="bg-transparent border-0 p-1" style={{cursor:nInv.items.length===1?"default":"pointer",color:nInv.items.length===1?C.text3:C.danger,opacity:nInv.items.length===1?0.3:1}}><I n="x" s={16}/></button>
             </div>)}
           </div>
           <Btn kind="ghost" size="sm" icon="plus" style={{marginTop:8}} onClick={addItem}>Add line</Btn>
         </div>
 
-        <div style={{padding:14,background:C.bg,borderRadius:10}}>
-          <div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:C.text2,marginBottom:6}}>
+        <div className="p-3.5 bg-bg rounded-lg">
+          <div className="flex justify-between text-sm text-text-2 mb-1.5">
             <span>Subtotal</span><span>${itemsTotal.toLocaleString()}</span>
           </div>
-          <div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:C.text2,marginBottom:6}}>
+          <div className="flex justify-between text-sm text-text-2 mb-1.5">
             <span>HST (13%)</span><span>${hst.toLocaleString()}</span>
           </div>
-          <div style={{display:"flex",justifyContent:"space-between",fontSize:15,color:C.text,fontWeight:700,paddingTop:8,borderTop:`1px solid ${C.line}`}}>
-            <span>Total</span><span style={{color:C.brand}}>${invTotal.toLocaleString()}</span>
+          <div className="flex justify-between text-base text-text font-bold pt-2 border-t border-line">
+            <span>Total</span><span className="text-brand">${invTotal.toLocaleString()}</span>
           </div>
         </div>
 
-        <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+        <div className="flex gap-2.5 justify-end">
           <Btn kind="ghost" onClick={()=>setShowAdd(false)}>Cancel</Btn>
           <Btn kind="primary" icon="check" onClick={submit} disabled={!nInv.client||!nInv.due||itemsTotal<=0}>Create invoice</Btn>
         </div>
@@ -1129,59 +1114,59 @@ function InvoiceDetailModal({invoice:inv,company,onClose,canManage,onMarkPaid,on
   const subtotal=inv.subtotal||inv.amount;
   const hst=inv.hst||0;
   return <Modal onClose={onClose} title={`Invoice ${inv.number}`} wide>
-    <div style={{display:"flex",flexDirection:"column",gap:16}}>
+    <div className="flex flex-col gap-4">
       {/* Header: From / To */}
-      <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:14,padding:mob?16:20,background:C.bg,borderRadius:12}}>
+      <div className={`grid gap-3.5 bg-bg rounded-xl ${mob?"grid-cols-1 p-4":"grid-cols-2 p-5"}`}>
         <div>
-          <div style={{fontSize:11,color:C.text3,fontWeight:700,letterSpacing:".05em",textTransform:"uppercase",marginBottom:6}}>From</div>
-          <div style={{fontSize:15,fontWeight:660,color:C.text}}>{company?.name||"Your company"}</div>
-          <div style={{fontSize:12,color:C.text3,marginTop:3,lineHeight:1.5}}>{company?.city||""}{company?.prov?", "+company.prov:""}<br/>{company?.email||""}</div>
+          <div className="text-xs text-text-3 font-bold tracking-wide uppercase mb-1.5">From</div>
+          <div className="text-base font-semibold text-text">{company?.name||"Your company"}</div>
+          <div className="text-xs text-text-3 mt-1 leading-snug">{company?.city||""}{company?.prov?", "+company.prov:""}<br/>{company?.email||""}</div>
         </div>
         <div>
-          <div style={{fontSize:11,color:C.text3,fontWeight:700,letterSpacing:".05em",textTransform:"uppercase",marginBottom:6}}>Bill to</div>
-          <div style={{fontSize:15,fontWeight:660,color:C.text}}>{inv.client}</div>
-          {inv.po&&<div style={{fontSize:12,color:C.text3,marginTop:3}}>PO: {inv.po}</div>}
+          <div className="text-xs text-text-3 font-bold tracking-wide uppercase mb-1.5">Bill to</div>
+          <div className="text-base font-semibold text-text">{inv.client}</div>
+          {inv.po&&<div className="text-xs text-text-3 mt-1">PO: {inv.po}</div>}
         </div>
       </div>
 
       {/* Meta */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,fontSize:12.5}}>
+      <div className="grid grid-cols-4 gap-2 text-xs">
         {[["Invoice #",inv.number],["Issued",inv.issued],["Due",inv.due],["Status",inv.status.toUpperCase()]].map(([l,v])=>
-          <div key={l} style={{padding:10,background:C.bg,borderRadius:8,textAlign:"center"}}>
-            <div style={{fontSize:10.5,color:C.text3,fontWeight:600,textTransform:"uppercase",letterSpacing:".04em",marginBottom:3}}>{l}</div>
-            <div style={{color:C.text,fontWeight:640,fontFamily:l==="Invoice #"||l==="Issued"||l==="Due"?"ui-monospace,monospace":"inherit"}}>{v}</div>
+          <div key={l} className="p-2.5 bg-bg rounded-lg text-center">
+            <div className="text-text-3 font-semibold uppercase tracking-wide mb-1" style={{fontSize:10.5}}>{l}</div>
+            <div className="text-text font-semibold" style={{fontFamily:l==="Invoice #"||l==="Issued"||l==="Due"?"ui-monospace,monospace":"inherit"}}>{v}</div>
           </div>)}
       </div>
 
       {/* Line items */}
-      <div style={{border:`1px solid ${C.line}`,borderRadius:10,overflow:"hidden"}}>
-        <div style={{padding:"10px 14px",background:C.bg,fontSize:11,fontWeight:700,color:C.text3,letterSpacing:".05em",textTransform:"uppercase",display:"grid",gridTemplateColumns:"3fr 60px 100px 100px",gap:8}}>
-          <div>Description</div><div style={{textAlign:"center"}}>Qty</div><div style={{textAlign:"right"}}>Unit price</div><div style={{textAlign:"right"}}>Line total</div>
+      <div className="border border-line rounded-lg overflow-hidden">
+        <div className="py-2.5 px-3.5 bg-bg text-xs font-bold text-text-3 tracking-wide uppercase grid gap-2" style={{gridTemplateColumns:"3fr 60px 100px 100px"}}>
+          <div>Description</div><div className="text-center">Qty</div><div className="text-right">Unit price</div><div className="text-right">Line total</div>
         </div>
-        {items.map((it,i)=><div key={i} style={{padding:"11px 14px",borderTop:`1px solid ${C.lineSoft}`,display:"grid",gridTemplateColumns:"3fr 60px 100px 100px",gap:8,fontSize:13,alignItems:"center"}}>
-          <div style={{color:C.text}}>{it.desc||"—"}</div>
-          <div style={{textAlign:"center",color:C.text2}}>{it.qty||1}</div>
-          <div style={{textAlign:"right",color:C.text2}}>${(it.unitPrice||0).toLocaleString()}</div>
-          <div style={{textAlign:"right",color:C.text,fontWeight:660}}>${((it.qty||1)*(it.unitPrice||0)).toLocaleString()}</div>
+        {items.map((it,i)=><div key={i} className="py-3 px-3.5 border-t border-line-soft grid gap-2 text-sm items-center" style={{gridTemplateColumns:"3fr 60px 100px 100px"}}>
+          <div className="text-text">{it.desc||"—"}</div>
+          <div className="text-center text-text-2">{it.qty||1}</div>
+          <div className="text-right text-text-2">${(it.unitPrice||0).toLocaleString()}</div>
+          <div className="text-right text-text font-semibold">${((it.qty||1)*(it.unitPrice||0)).toLocaleString()}</div>
         </div>)}
       </div>
 
       {/* Totals */}
-      <div style={{padding:16,background:C.bg,borderRadius:12,maxWidth:mob?"none":320,marginLeft:"auto",width:mob?"auto":320}}>
+      <div className="p-4 bg-bg rounded-xl ml-auto" style={{maxWidth:mob?"none":320,width:mob?"auto":320}}>
         {hst>0&&<>
-          <div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:C.text2,marginBottom:6}}>
+          <div className="flex justify-between text-sm text-text-2 mb-1.5">
             <span>Subtotal</span><span>${subtotal.toLocaleString()}</span>
           </div>
-          <div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:C.text2,marginBottom:8}}>
+          <div className="flex justify-between text-sm text-text-2 mb-2">
             <span>HST (13%)</span><span>${hst.toLocaleString()}</span>
           </div>
         </>}
-        <div style={{display:"flex",justifyContent:"space-between",fontSize:16,color:C.text,fontWeight:730,paddingTop:hst>0?10:0,borderTop:hst>0?`1px solid ${C.line}`:"none"}}>
-          <span>Total</span><span style={{color:C.brand}}>${inv.amount.toLocaleString()} CAD</span>
+        <div className={`flex justify-between text-base text-text font-bold ${hst>0?"pt-2.5 border-t border-line":""}`}>
+          <span>Total</span><span className="text-brand">${inv.amount.toLocaleString()} CAD</span>
         </div>
       </div>
 
-      <div style={{display:"flex",gap:10,justifyContent:"flex-end",paddingTop:8,borderTop:`1px solid ${C.line}`}}>
+      <div className="flex gap-2.5 justify-end pt-2 border-t border-line">
         <Btn kind="ghost" onClick={onClose}>Close</Btn>
         <Btn kind="ghost" icon="download" onClick={()=>alert("PDF generation would happen server-side. This is a prototype.")}>Download PDF</Btn>
         {canManage&&inv.status==="draft"&&<Btn kind="primary" onClick={onSend}>Send to client</Btn>}
@@ -1213,50 +1198,50 @@ export function HrPayroll(){
 
   return <div>
     {!isEmployee&&<>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:10}}>
+      <div className="flex justify-between items-center mb-4 flex-wrap gap-2.5">
         <div>
-          <div style={{fontSize:20,fontWeight:730,color:C.text,letterSpacing:"-.02em"}}>Payroll</div>
-          <div style={{fontSize:13,color:C.text3,marginTop:2}}>Biweekly runs. CPP/EI/tax calculated per CRA rates. Approved expenses flow through automatically.</div>
+          <div className="text-xl font-bold text-text tracking-tight">Payroll</div>
+          <div className="text-sm text-text-3 mt-0.5">Biweekly runs. CPP/EI/tax calculated per CRA rates. Approved expenses flow through automatically.</div>
         </div>
         {isPayrollMgr&&<Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowNew(true)}>Create payroll run</Btn>}
       </div>
 
-      <div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"repeat(4,1fr)",gap:12,marginBottom:16}}>
+      <div className={`grid gap-3 mb-4 ${mob?"grid-cols-2":"grid-cols-4"}`}>
         {[
           ["YTD gross",`$${(runs.reduce((s,p)=>s+p.totalGross,0)/1000).toFixed(0)}k`,C.brand],
           ["YTD net",`$${(runs.reduce((s,p)=>s+p.totalNet,0)/1000).toFixed(0)}k`,C.ok],
           ["Employees on payroll",all.length,C.warn],
           ["Runs this year",runs.length,C.text2],
         ].map(([l,v,t])=><Card key={l} pad={mob?16:20} style={{borderRadius:14}}>
-          <div style={{fontSize:mob?20:24,fontWeight:720,color:t,letterSpacing:"-.025em"}}>{v}</div>
-          <div style={{fontSize:12,color:C.text3,marginTop:6}}>{l}</div>
+          <div className={`font-bold tracking-tight ${mob?"text-xl":"text-2xl"}`} style={{color:t}}>{v}</div>
+          <div className="text-xs text-text-3 mt-1.5">{l}</div>
         </Card>)}
       </div>
 
       <Card pad={0} style={{borderRadius:14,marginBottom:16,overflow:"hidden"}}>
-        <div style={{padding:mob?"14px 16px":"16px 20px",borderBottom:`1px solid ${C.line}`}}><Lbl style={{margin:0}}>Payroll runs</Lbl></div>
-        <div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",minWidth:700}}>
-          <thead><tr style={{borderBottom:`1px solid ${C.line}`,textAlign:"left",background:C.bg}}>
+        <div className={`border-b border-line ${mob?"py-3.5 px-4":"py-4 px-5"}`}><Lbl style={{margin:0}}>Payroll runs</Lbl></div>
+        <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:700}}>
+          <thead><tr className="border-b border-line text-left bg-bg">
             {["Period","Run date","Gross","Net","Reimb.","Employees","Status","Actions"].map(h=>
-              <th key={h} style={{padding:"10px 14px",fontSize:11.5,fontWeight:700,color:C.text3,letterSpacing:".05em",textTransform:"uppercase"}}>{h}</th>)}
+              <th key={h} className={TH_CLS}>{h}</th>)}
           </tr></thead>
-          <tbody>{runs.map(p=><tr key={p.id} style={{borderBottom:`1px solid ${C.lineSoft}`,cursor:"pointer"}} onClick={()=>setDetail(p)}>
-            <td style={{padding:"11px 14px",fontSize:12.5,color:C.text,fontWeight:600}}>{p.period}</td>
-            <td style={{padding:"11px 14px",fontSize:12,color:C.text3}}>{p.runDate}</td>
-            <td style={{padding:"11px 14px",fontSize:13,color:C.text}}>${p.totalGross.toLocaleString()}</td>
-            <td style={{padding:"11px 14px",fontSize:13,color:C.brand,fontWeight:660}}>${p.totalNet.toLocaleString()}</td>
-            <td style={{padding:"11px 14px",fontSize:12.5,color:C.text2}}>${(p.totalReimb||0).toLocaleString()}</td>
-            <td style={{padding:"11px 14px",fontSize:12.5,color:C.text2}}>{p.employees}</td>
-            <td style={{padding:"11px 14px"}}><Tag tone={p.status==="paid"?"ok":p.status==="approved"?"brand":"warn"} sm>{p.status}</Tag></td>
-            <td style={{padding:"11px 14px"}} onClick={e=>e.stopPropagation()}>
-              <div style={{display:"flex",gap:4}}>
+          <tbody>{runs.map(p=><tr key={p.id} className="border-b border-line-soft cursor-pointer" onClick={()=>setDetail(p)}>
+            <td className={`${TD_CLS} text-xs text-text font-semibold`}>{p.period}</td>
+            <td className={`${TD_CLS} text-xs text-text-3`}>{p.runDate}</td>
+            <td className={`${TD_CLS} text-sm text-text`}>${p.totalGross.toLocaleString()}</td>
+            <td className={`${TD_CLS} text-sm text-brand font-semibold`}>${p.totalNet.toLocaleString()}</td>
+            <td className={`${TD_CLS} text-xs text-text-2`}>${(p.totalReimb||0).toLocaleString()}</td>
+            <td className={`${TD_CLS} text-xs text-text-2`}>{p.employees}</td>
+            <td className={TD_CLS}><Tag tone={p.status==="paid"?"ok":p.status==="approved"?"brand":"warn"} sm>{p.status}</Tag></td>
+            <td className={TD_CLS} onClick={e=>e.stopPropagation()}>
+              <div className="flex gap-1">
                 <Btn kind="ghost" size="xs" onClick={()=>setDetail(p)}>View</Btn>
                 {isPayrollMgr&&p.status==="draft"&&<Btn kind="primary" size="xs" onClick={()=>A.approvePayroll(p.id)}>Approve</Btn>}
                 {isPayrollMgr&&p.status==="approved"&&<Btn kind="primary" size="xs" onClick={()=>{if(confirm(`Execute payroll for ${p.employees} employees? Total net $${p.totalNet.toLocaleString()}. This will trigger direct deposit and mark all approved expenses as paid.`))A.executePayroll(p.id);}}>Execute</Btn>}
               </div>
             </td>
           </tr>)}
-          {runs.length===0&&<tr><td colSpan={8} style={{padding:32,textAlign:"center",color:C.text3,fontSize:13}}>No payroll runs yet. Click "Create payroll run" to start.</td></tr>}
+          {runs.length===0&&<tr><td colSpan={8} className="p-8 text-center text-text-3 text-sm">No payroll runs yet. Click "Create payroll run" to start.</td></tr>}
           </tbody>
         </table></div>
       </Card>
@@ -1264,43 +1249,43 @@ export function HrPayroll(){
 
     <Card pad={mob?16:20} style={{borderRadius:14}}>
       <Lbl>{isEmployee?"My salary":"All employee salaries"}</Lbl>
-      <div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",minWidth:500}}>
-        <thead><tr style={{borderBottom:`2px solid ${C.line}`,textAlign:"left"}}>
+      <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:500}}>
+        <thead><tr className="border-b-2 border-line text-left">
           {(isEmployee?["Item","Amount"]:["Employee","Role","Annual","Monthly","Biweekly"]).map(h=>
-            <th key={h} style={{padding:"10px 12px",fontSize:11.5,fontWeight:700,color:C.text3,letterSpacing:".05em",textTransform:"uppercase"}}>{h}</th>)}
+            <th key={h} className={TH_CLS}>{h}</th>)}
         </tr></thead>
         <tbody>
           {isEmployee?<>
-            <tr><td style={{padding:"11px 12px",fontSize:13,color:C.text}}>Annual salary</td><td style={{padding:"11px 12px",fontSize:14,color:C.brand,fontWeight:660}}>${emp.salary?.toLocaleString()}</td></tr>
-            <tr><td style={{padding:"11px 12px",fontSize:13,color:C.text}}>Monthly gross</td><td style={{padding:"11px 12px",fontSize:13,color:C.text}}>${Math.round((emp.salary||0)/12).toLocaleString()}</td></tr>
-            <tr><td style={{padding:"11px 12px",fontSize:13,color:C.text}}>Bi-weekly gross</td><td style={{padding:"11px 12px",fontSize:13,color:C.text}}>${Math.round((emp.salary||0)/26).toLocaleString()}</td></tr>
-          </>:all.map(e=><tr key={e.id} style={{borderBottom:`1px solid ${C.lineSoft}`}}>
-            <td style={{padding:"11px 12px"}}><div style={{display:"flex",gap:10,alignItems:"center"}}>
+            <tr><td className="py-3 px-3 text-sm text-text">Annual salary</td><td className="py-3 px-3 text-sm text-brand font-semibold">${emp.salary?.toLocaleString()}</td></tr>
+            <tr><td className="py-3 px-3 text-sm text-text">Monthly gross</td><td className="py-3 px-3 text-sm text-text">${Math.round((emp.salary||0)/12).toLocaleString()}</td></tr>
+            <tr><td className="py-3 px-3 text-sm text-text">Bi-weekly gross</td><td className="py-3 px-3 text-sm text-text">${Math.round((emp.salary||0)/26).toLocaleString()}</td></tr>
+          </>:all.map(e=><tr key={e.id} className="border-b border-line-soft">
+            <td className="py-3 px-3"><div className="flex gap-2.5 items-center">
               <SmartPortrait seed={e.seed} size={28} radius={7}/>
-              <span style={{fontSize:13,color:C.text,fontWeight:600}}>{e.name}</span></div></td>
-            <td style={{padding:"11px 12px",fontSize:12.5,color:C.text3}}>{e.role}</td>
-            <td style={{padding:"11px 12px",fontSize:13,color:C.text}}>${e.salary?.toLocaleString()}</td>
-            <td style={{padding:"11px 12px",fontSize:13,color:C.text2}}>${Math.round((e.salary||0)/12).toLocaleString()}</td>
-            <td style={{padding:"11px 12px",fontSize:13,color:C.text2}}>${Math.round((e.salary||0)/26).toLocaleString()}</td>
+              <span className="text-sm text-text font-semibold">{e.name}</span></div></td>
+            <td className="py-3 px-3 text-xs text-text-3">{e.role}</td>
+            <td className="py-3 px-3 text-sm text-text">${e.salary?.toLocaleString()}</td>
+            <td className="py-3 px-3 text-sm text-text-2">${Math.round((e.salary||0)/12).toLocaleString()}</td>
+            <td className="py-3 px-3 text-sm text-text-2">${Math.round((e.salary||0)/26).toLocaleString()}</td>
           </tr>)}
         </tbody>
       </table></div>
     </Card>
 
     {showNew&&<Modal onClose={()=>setShowNew(false)} title="Create payroll run">
-      <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      <div className="flex flex-col gap-3.5">
         <Banner tone="brand" icon="info">Runs pay for {all.length} active employees. CPP, EI, and tax are calculated at 2026 CRA rates. Approved expenses awaiting reimbursement will be included.</Banner>
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:12}}>
+        <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
           <Field label="Period start" required><Input type="date" value={np.periodStart} onChange={e=>setNp({...np,periodStart:e.target.value})}/></Field>
           <Field label="Period end" required><Input type="date" value={np.periodEnd} onChange={e=>setNp({...np,periodEnd:e.target.value})}/></Field>
         </div>
-        <div style={{padding:14,background:C.bg,borderRadius:10,fontSize:13,color:C.text2,lineHeight:1.6}}>
-          <div style={{fontWeight:640,marginBottom:6,color:C.text}}>Estimated totals</div>
-          Gross: <strong style={{color:C.text}}>${all.reduce((s,e)=>s+Math.round((e.salary||0)/26),0).toLocaleString()}</strong><br/>
-          Employees: <strong style={{color:C.text}}>{all.length}</strong><br/>
-          Pending reimbursable expenses: <strong style={{color:C.text}}>${A.companyExpenses(company.id).filter(x=>x.status==="approved"&&x.reimburseVia==="next-payroll").reduce((s,x)=>s+x.amount,0).toLocaleString()}</strong>
+        <div className="p-3.5 bg-bg rounded-lg text-sm text-text-2 leading-relaxed">
+          <div className="font-semibold mb-1.5 text-text">Estimated totals</div>
+          Gross: <strong className="text-text">${all.reduce((s,e)=>s+Math.round((e.salary||0)/26),0).toLocaleString()}</strong><br/>
+          Employees: <strong className="text-text">{all.length}</strong><br/>
+          Pending reimbursable expenses: <strong className="text-text">${A.companyExpenses(company.id).filter(x=>x.status==="approved"&&x.reimburseVia==="next-payroll").reduce((s,x)=>s+x.amount,0).toLocaleString()}</strong>
         </div>
-        <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+        <div className="flex gap-2.5 justify-end">
           <Btn kind="ghost" onClick={()=>setShowNew(false)}>Cancel</Btn>
           <Btn kind="primary" icon="check" onClick={createRun}>Create run (draft)</Btn>
         </div>
@@ -1314,39 +1299,39 @@ export function HrPayroll(){
 function PayrollDetailModal({run,onClose,canApprove,onApprove,onExecute}){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   return <Modal onClose={onClose} title={`Payroll · ${run.period}`} wide>
-    <div style={{display:"flex",flexDirection:"column",gap:14}}>
-      <div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"repeat(4,1fr)",gap:10}}>
+    <div className="flex flex-col gap-3.5">
+      <div className={`grid gap-2.5 ${mob?"grid-cols-2":"grid-cols-4"}`}>
         {[["Gross",`$${run.totalGross.toLocaleString()}`],["Net",`$${run.totalNet.toLocaleString()}`],["Reimbursements",`$${(run.totalReimb||0).toLocaleString()}`],["Employees",run.employees]].map(([l,v])=>
-          <div key={l} style={{padding:12,background:C.bg,borderRadius:9,textAlign:"center"}}>
-            <div style={{fontSize:mob?15:18,fontWeight:730,color:C.text}}>{v}</div>
-            <div style={{fontSize:10.5,color:C.text3,marginTop:3,textTransform:"uppercase",letterSpacing:".05em",fontWeight:600}}>{l}</div>
+          <div key={l} className="p-3 bg-bg rounded-lg text-center">
+            <div className={`font-bold text-text ${mob?"text-base":"text-lg"}`}>{v}</div>
+            <div className="text-xs text-text-3 mt-1 uppercase tracking-wide font-semibold" style={{fontSize:10.5}}>{l}</div>
           </div>)}
       </div>
 
-      <div style={{maxHeight:400,overflowY:"auto",border:`1px solid ${C.line}`,borderRadius:10}}>
-        <table style={{width:"100%",borderCollapse:"collapse",fontSize:12.5}}>
+      <div className="overflow-y-auto border border-line rounded-lg" style={{maxHeight:400}}>
+        <table className="w-full border-collapse text-xs">
           <thead style={{position:"sticky",top:0,background:C.bg,zIndex:1}}><tr>
             {["Employee","Gross","CPP","EI","Fed","Prov","Reimb.","Net"].map(h=>
-              <th key={h} style={{padding:"9px 10px",fontSize:10.5,fontWeight:700,color:C.text3,letterSpacing:".04em",textTransform:"uppercase",textAlign:"left",borderBottom:`1px solid ${C.line}`}}>{h}</th>)}
+              <th key={h} className="py-2.5 px-2.5 text-left font-bold text-text-3 tracking-wide uppercase border-b border-line" style={{fontSize:10.5}}>{h}</th>)}
           </tr></thead>
-          <tbody>{run.lines.map(l=><tr key={l.employee} style={{borderBottom:`1px solid ${C.lineSoft}`}}>
-            <td style={{padding:"9px 10px",fontWeight:600,color:C.text}}>{l.name}</td>
-            <td style={{padding:"9px 10px",color:C.text}}>${l.gross.toLocaleString()}</td>
-            <td style={{padding:"9px 10px",color:C.text3}}>-${l.cpp.toLocaleString()}</td>
-            <td style={{padding:"9px 10px",color:C.text3}}>-${l.ei.toLocaleString()}</td>
-            <td style={{padding:"9px 10px",color:C.text3}}>-${l.fedTax.toLocaleString()}</td>
-            <td style={{padding:"9px 10px",color:C.text3}}>-${l.provTax.toLocaleString()}</td>
-            <td style={{padding:"9px 10px",color:l.reimb>0?C.ok:C.text3}}>{l.reimb>0?`+$${l.reimb.toLocaleString()}`:"—"}</td>
-            <td style={{padding:"9px 10px",color:C.brand,fontWeight:700}}>${l.net.toLocaleString()}</td>
+          <tbody>{run.lines.map(l=><tr key={l.employee} className="border-b border-line-soft">
+            <td className="py-2.5 px-2.5 font-semibold text-text">{l.name}</td>
+            <td className="py-2.5 px-2.5 text-text">${l.gross.toLocaleString()}</td>
+            <td className="py-2.5 px-2.5 text-text-3">-${l.cpp.toLocaleString()}</td>
+            <td className="py-2.5 px-2.5 text-text-3">-${l.ei.toLocaleString()}</td>
+            <td className="py-2.5 px-2.5 text-text-3">-${l.fedTax.toLocaleString()}</td>
+            <td className="py-2.5 px-2.5 text-text-3">-${l.provTax.toLocaleString()}</td>
+            <td className="py-2.5 px-2.5" style={{color:l.reimb>0?C.ok:C.text3}}>{l.reimb>0?`+$${l.reimb.toLocaleString()}`:"—"}</td>
+            <td className="py-2.5 px-2.5 text-brand font-bold">${l.net.toLocaleString()}</td>
           </tr>)}</tbody>
         </table>
       </div>
 
-      <div style={{fontSize:12,color:C.text3,padding:12,background:C.bg,borderRadius:9,lineHeight:1.6}}>
-        <strong style={{color:C.text2}}>Status: {run.status}</strong> · Runs are draft when first created. Once approved, they can be executed (direct deposit initiated + expenses reconciled).
+      <div className="text-xs text-text-3 p-3 bg-bg rounded-lg leading-relaxed">
+        <strong className="text-text-2">Status: {run.status}</strong> · Runs are draft when first created. Once approved, they can be executed (direct deposit initiated + expenses reconciled).
       </div>
 
-      <div style={{display:"flex",gap:10,justifyContent:"flex-end",paddingTop:8,borderTop:`1px solid ${C.line}`}}>
+      <div className="flex gap-2.5 justify-end pt-2 border-t border-line">
         <Btn kind="ghost" onClick={onClose}>Close</Btn>
         {canApprove&&run.status==="draft"&&<Btn kind="primary" onClick={onApprove}>Approve run</Btn>}
         {canApprove&&run.status==="approved"&&<Btn kind="primary" icon="check" onClick={onExecute}>Execute payroll</Btn>}
@@ -1362,15 +1347,15 @@ export function HrTrainings(){
   const list=A.trainings.filter(t=>t.status==="published");
   return <div>
     <Card pad={mob?20:24} style={{borderRadius:14,marginBottom:16,background:`linear-gradient(135deg,${C.tint} 0%,#F0F7FF 100%)`,border:`1px solid ${C.line2}`}}>
-      <div style={{display:"flex",gap:14,alignItems:"center",flexWrap:"wrap"}}>
-        <div style={{width:48,height:48,borderRadius:12,background:C.brand,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><I n="cap" s={22}/></div>
-        <div style={{flex:1,minWidth:0}}>
-          <div style={{fontSize:15,fontWeight:660,color:C.text}}>Assign trainings to your team</div>
-          <div style={{fontSize:12.5,color:C.text2,marginTop:3}}>Track completion, issue certificates, and view team progress.</div>
+      <div className="flex gap-3.5 items-center flex-wrap">
+        <div className="w-12 h-12 rounded-xl bg-brand text-white flex items-center justify-center shrink-0"><I n="cap" s={22}/></div>
+        <div className="flex-1 min-w-0">
+          <div className="text-base font-semibold text-text">Assign trainings to your team</div>
+          <div className="text-xs text-text-2 mt-1">Track completion, issue certificates, and view team progress.</div>
         </div>
       </div>
     </Card>
-    <div style={{display:"grid",gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:300}px,1fr))`,gap:14}}>
+    <div className="grid gap-3.5" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:300}px,1fr))`}}>
       {list.map(t=><TrainingCard key={t.id} t={t}/>)}
     </div>
   </div>;
@@ -1394,31 +1379,31 @@ export function HrBadges(){
 
   return <div>
     <Card pad={mob?20:26} style={{borderRadius:16,marginBottom:16,background:`linear-gradient(135deg,#FFF5EB 0%,#FFEDD9 100%)`,border:`1px solid ${C.warnLn}`}}>
-      <div style={{display:"flex",gap:14,alignItems:"center",flexWrap:"wrap",justifyContent:"space-between"}}>
-        <div style={{display:"flex",gap:14,alignItems:"center",flex:"1 1 240px"}}>
-          <div style={{width:52,height:52,borderRadius:14,background:C.warn,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><I n="award" s={26}/></div>
+      <div className="flex gap-3.5 items-center flex-wrap justify-between">
+        <div className="flex gap-3.5 items-center" style={{flex:"1 1 240px"}}>
+          <div className="w-13 h-13 rounded-2xl bg-warn text-white flex items-center justify-center shrink-0"><I n="award" s={26}/></div>
           <div>
-            <div style={{fontSize:16,fontWeight:700,color:C.text}}>Team recognition wall</div>
-            <div style={{fontSize:13,color:C.text2,marginTop:3}}>Every badge earned across the company · {withBadges.reduce((s,e)=>s+e.badges.length,0)} total</div>
+            <div className="text-base font-bold text-text">Team recognition wall</div>
+            <div className="text-sm text-text-2 mt-1">Every badge earned across the company · {withBadges.reduce((s,e)=>s+e.badges.length,0)} total</div>
           </div>
         </div>
         {canAward&&<Btn kind="primary" icon="plus" onClick={()=>setShowAward(true)} style={{background:C.warn,borderColor:C.warn}}>Award a badge</Btn>}
       </div>
     </Card>
-    <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(2,1fr)",gap:12}}>
+    <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
       {withBadges.map(e=><Card key={e.id} pad={16} style={{borderRadius:14}}>
-        <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:12}}>
+        <div className="flex gap-3 items-center mb-3">
           <SmartPortrait seed={e.seed} size={44} radius={11}/>
-          <div style={{flex:1,minWidth:0}}>
-            <div style={{fontSize:14,fontWeight:660,color:C.text}}>{e.name}</div>
-            <div style={{fontSize:12,color:C.text3,marginTop:2}}>{e.title}</div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold text-text">{e.name}</div>
+            <div className="text-xs text-text-3 mt-0.5">{e.title}</div>
           </div>
-          <span style={{fontSize:11,fontWeight:640,color:C.text3,padding:"3px 9px",background:C.bg,borderRadius:99}}>{e.badges.length}</span>
+          <span className="text-xs font-semibold text-text-3 py-1 px-2 bg-bg rounded-full">{e.badges.length}</span>
         </div>
-        <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-          {e.badges.map(b=><div key={b} style={{display:"inline-flex",gap:4,alignItems:"center",padding:"4px 8px 4px 10px",background:C.warnBg,color:C.warn,border:`1px solid ${C.warnLn}`,borderRadius:99,fontSize:11.5,fontWeight:640}}>
+        <div className="flex flex-wrap gap-1.5">
+          {e.badges.map(b=><div key={b} className="inline-flex gap-1 items-center py-1 pr-2 pl-2.5 bg-warn-bg text-warn border border-warn-ln rounded-full text-xs font-semibold">
             <I n="award" s={11}/>{b}
-            {canAward&&<button onClick={()=>{if(confirm(`Remove "${b}" from ${e.name}?`))A.removeBadge(e.id,b);}} style={{background:"none",border:"none",padding:0,marginLeft:3,cursor:"pointer",color:C.warn,opacity:0.6,display:"flex"}}><I n="x" s={11}/></button>}
+            {canAward&&<button onClick={()=>{if(confirm(`Remove "${b}" from ${e.name}?`))A.removeBadge(e.id,b);}} className="bg-transparent border-0 p-0 ml-1 cursor-pointer text-warn opacity-60 flex"><I n="x" s={11}/></button>}
           </div>)}
         </div>
       </Card>)}
@@ -1426,7 +1411,7 @@ export function HrBadges(){
     </div>
 
     {showAward&&<Modal onClose={()=>setShowAward(false)} title="Award a badge" wide>
-      <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      <div className="flex flex-col gap-3.5">
         <Field label="Give this badge to" required><Sel value={selEmp} onChange={e=>setSelEmp(e.target.value)}>
           <option value="">— Select an employee —</option>
           {all.map(e=><option key={e.id} value={e.id}>{e.name} — {e.title}</option>)}
@@ -1435,15 +1420,17 @@ export function HrBadges(){
           <Input value={badgeName} onChange={e=>setBadgeName(e.target.value)} placeholder="e.g. Perfect Attendance"/>
         </Field>
         <div>
-          <div style={{fontSize:11.5,fontWeight:700,color:C.text3,letterSpacing:".05em",textTransform:"uppercase",marginBottom:8}}>Quick pick</div>
-          <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-            {presets.map(p=><button key={p} onClick={()=>setBadgeName(p)} type="button" style={{background:badgeName===p?C.warn:"#fff",color:badgeName===p?"#fff":C.text2,border:`1px solid ${badgeName===p?C.warn:C.line}`,padding:"6px 12px",borderRadius:99,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:600}}>{p}</button>)}
+          <div className="text-xs font-bold text-text-3 tracking-wide uppercase mb-2">Quick pick</div>
+          <div className="flex flex-wrap gap-1.5">
+            {presets.map(p=><button key={p} onClick={()=>setBadgeName(p)} type="button"
+              className={`py-1.5 px-3 rounded-full cursor-pointer text-xs font-semibold border ${badgeName===p?"text-white border-warn":"bg-white text-text-2 border-line"}`}
+              style={badgeName===p?{background:C.warn}:undefined}>{p}</button>)}
           </div>
         </div>
         <Banner tone="brand" icon="info">
           {A.hrCompanySettings[company.id]?.privacy?.syncBadgesToNorthHire?"Badges appear on the employer's public NorthHire profile.":"Badges are internal-only. Enable public sync in HR Settings if you want them on NorthHire."}
         </Banner>
-        <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+        <div className="flex gap-2.5 justify-end">
           <Btn kind="ghost" onClick={()=>setShowAward(false)}>Cancel</Btn>
           <Btn kind="primary" icon="award" onClick={doAward} disabled={!selEmp||!badgeName.trim()} style={{background:C.warn,borderColor:C.warn}}>Award badge</Btn>
         </div>
@@ -1459,21 +1446,21 @@ export function HrHiring(){
   const jobs=A.jobs.filter(j=>j.e===company.id);
   const apps=A.applications.filter(a=>jobs.some(j=>j.id===a.job));
   return <div>
-    <div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"repeat(4,1fr)",gap:12,marginBottom:16}}>
+    <div className={`grid gap-3 mb-4 ${mob?"grid-cols-2":"grid-cols-4"}`}>
       {[["Live listings",jobs.filter(j=>j.status==="live").length,C.brand],
         ["Applicants",apps.length,C.ok],
         ["Interviewing",apps.filter(a=>a.stage==="Interview").length,C.warn],
         ["Offers out",apps.filter(a=>a.stage==="Offer").length,C.violet]].map(([l,v,t])=>
         <Card key={l} pad={mob?14:18} style={{borderRadius:12}}>
-          <div style={{fontSize:mob?20:24,fontWeight:720,color:t,letterSpacing:"-.025em"}}>{v}</div>
-          <div style={{fontSize:12,color:C.text3,marginTop:5}}>{l}</div>
+          <div className={`font-bold tracking-tight ${mob?"text-xl":"text-2xl"}`} style={{color:t}}>{v}</div>
+          <div className="text-xs text-text-3 mt-1">{l}</div>
         </Card>)}
     </div>
     <Card pad={mob?20:24} style={{borderRadius:16,textAlign:"center",background:`linear-gradient(135deg,${C.tint} 0%,#F0F7FF 100%)`,border:`1px solid ${C.line2}`}}>
-      <div style={{width:52,height:52,borderRadius:14,background:C.brand,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px"}}><I n="briefcase" s={26}/></div>
-      <div style={{fontSize:17,fontWeight:660,color:C.text,marginBottom:6}}>Integrated with NorthHire recruiting</div>
-      <div style={{fontSize:13.5,color:C.text2,lineHeight:1.65,maxWidth:520,margin:"0 auto 18px"}}>Post jobs, review candidates, and hire directly from your existing employer console. Hired candidates are automatically added to your HR Suite.</div>
-      <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
+      <div className="w-13 h-13 rounded-2xl bg-brand text-white flex items-center justify-center mx-auto mb-3.5"><I n="briefcase" s={26}/></div>
+      <div className="text-lg font-semibold text-text mb-1.5">Integrated with NorthHire recruiting</div>
+      <div className="text-sm text-text-2 leading-relaxed mx-auto mb-5 max-w-130">Post jobs, review candidates, and hire directly from your existing employer console. Hired candidates are automatically added to your HR Suite.</div>
+      <div className="flex gap-2.5 justify-center flex-wrap">
         <Btn kind="primary" icon="plus" onClick={()=>A.go("empPost")}>Post a job</Btn>
         <Btn kind="outline" onClick={()=>A.go("empPipeline")}>Review candidates</Btn>
       </div>
@@ -1492,40 +1479,40 @@ export function HrReports(){
   const totalSalary=all.reduce((s,e)=>s+(e.salary||0),0);
   const avgSalary=totalSalary/(all.length||1);
   return <div>
-    <div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"repeat(4,1fr)",gap:12,marginBottom:16}}>
+    <div className={`grid gap-3 mb-4 ${mob?"grid-cols-2":"grid-cols-4"}`}>
       {[["Headcount",all.length,C.brand],
         ["Avg tenure",avgTenure.toFixed(1)+"y",C.ok],
         ["Total payroll",`$${(totalSalary/1000).toFixed(0)}k`,C.violet],
         ["Avg salary",`$${(avgSalary/1000).toFixed(0)}k`,C.warn]].map(([l,v,t])=>
         <Card key={l} pad={mob?16:20} style={{borderRadius:14}}>
-          <div style={{fontSize:mob?20:24,fontWeight:720,color:t,letterSpacing:"-.025em"}}>{v}</div>
-          <div style={{fontSize:12,color:C.text3,marginTop:6}}>{l}</div>
+          <div className={`font-bold tracking-tight ${mob?"text-xl":"text-2xl"}`} style={{color:t}}>{v}</div>
+          <div className="text-xs text-text-3 mt-1.5">{l}</div>
         </Card>)}
     </div>
-    <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:14}}>
+    <div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
       <Card pad={mob?20:24} style={{borderRadius:14}}>
         <Lbl>Headcount by department</Lbl>
         {A.HR_DEPARTMENTS.map(d=>{const n=byDept[d.id]||0; const pct=all.length?(n/all.length)*100:0;
-          return <div key={d.id} style={{marginBottom:14}}>
-            <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:5}}>
-              <span style={{color:C.text2,fontWeight:560}}>{d.name}</span>
-              <span style={{color:C.brand,fontWeight:700}}>{n}</span>
+          return <div key={d.id} className="mb-3.5">
+            <div className="flex justify-between text-sm mb-1">
+              <span className="text-text-2 font-medium">{d.name}</span>
+              <span className="text-brand font-bold">{n}</span>
             </div>
-            <div style={{height:8,background:C.bg,borderRadius:99,overflow:"hidden"}}>
-              <div style={{width:`${pct}%`,height:"100%",background:d.color||C.brand,borderRadius:99,transition:"width .4s"}}/>
+            <div className="h-2 bg-bg rounded-full overflow-hidden">
+              <div className="h-full rounded-full transition-[width] duration-300" style={{width:`${pct}%`,background:d.color||C.brand}}/>
             </div>
           </div>;})}
       </Card>
       <Card pad={mob?20:24} style={{borderRadius:14}}>
         <Lbl>Salary bands</Lbl>
         {[[">$150k",all.filter(e=>e.salary>150000).length],["$100–150k",all.filter(e=>e.salary>=100000&&e.salary<=150000).length],["$75–100k",all.filter(e=>e.salary>=75000&&e.salary<100000).length],["$50–75k",all.filter(e=>e.salary>=50000&&e.salary<75000).length],["<$50k",all.filter(e=>e.salary<50000).length]].map(([l,n])=>{const pct=all.length?(n/all.length)*100:0;
-          return <div key={l} style={{marginBottom:14}}>
-            <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:5}}>
-              <span style={{color:C.text2,fontWeight:560}}>{l}</span>
-              <span style={{color:C.brand,fontWeight:700}}>{n}</span>
+          return <div key={l} className="mb-3.5">
+            <div className="flex justify-between text-sm mb-1">
+              <span className="text-text-2 font-medium">{l}</span>
+              <span className="text-brand font-bold">{n}</span>
             </div>
-            <div style={{height:8,background:C.bg,borderRadius:99,overflow:"hidden"}}>
-              <div style={{width:`${pct}%`,height:"100%",background:C.brand,borderRadius:99,transition:"width .4s"}}/>
+            <div className="h-2 bg-bg rounded-full overflow-hidden">
+              <div className="h-full bg-brand rounded-full transition-[width] duration-300" style={{width:`${pct}%`}}/>
             </div>
           </div>;})}
       </Card>
@@ -1548,13 +1535,11 @@ export function HrSettings(){
   return <div style={{maxWidth:900}}>
     <Card pad={mob?20:26} style={{borderRadius:16,marginBottom:16}}>
       <Lbl>Module visibility</Lbl>
-      <div style={{fontSize:13,color:C.text3,marginBottom:14}}>Turn off any module to hide it from every employee's sidebar.</div>
-      <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:2}}>
+      <div className="text-sm text-text-3 mb-3.5">Turn off any module to hide it from every employee's sidebar.</div>
+      <div className={`grid gap-0.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
         {Object.entries(d.modules).map(([k,v])=>
-          <div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"11px 12px",borderRadius:9,transition:"background .16s"}}
-            onMouseEnter={e=>e.currentTarget.style.background=C.bg}
-            onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-            <div style={{fontSize:13.5,color:C.text,textTransform:"capitalize",fontWeight:550}}>{k}</div>
+          <div key={k} className="flex justify-between items-center py-3 px-3 rounded-lg transition-colors duration-150 hover:bg-bg">
+            <div className="text-sm text-text font-medium capitalize">{k}</div>
             <Switch on={v} onChange={val=>setMod(k,val)}/>
           </div>)}
       </div>
@@ -1562,21 +1547,21 @@ export function HrSettings(){
 
     <Card pad={mob?20:26} style={{borderRadius:16,marginBottom:16}}>
       <Lbl>Working hours & attendance</Lbl>
-      <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr 1fr",gap:12,marginBottom:14}}>
+      <div className={`grid gap-3 mb-3.5 ${mob?"grid-cols-1":"grid-cols-3"}`}>
         <Field label="Day starts"><Input type="time" value={d.attendance.workingHoursStart} onChange={e=>setSection("attendance","workingHoursStart",e.target.value)}/></Field>
         <Field label="Day ends"><Input type="time" value={d.attendance.workingHoursEnd} onChange={e=>setSection("attendance","workingHoursEnd",e.target.value)}/></Field>
         <Field label="Late threshold (min)"><Input type="number" value={d.attendance.lateThresholdMin} onChange={e=>setSection("attendance","lateThresholdMin",Number(e.target.value)||15)}/></Field>
       </div>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"11px 0",borderTop:`1px solid ${C.lineSoft}`}}>
-        <div><div style={{fontSize:13.5,color:C.text,fontWeight:600}}>Allow remote punch-in</div>
-          <div style={{fontSize:12,color:C.text3,marginTop:2}}>Employees can punch from the web, not just the office machine.</div></div>
+      <div className="flex justify-between items-center py-3 border-t border-line-soft">
+        <div><div className="text-sm text-text font-semibold">Allow remote punch-in</div>
+          <div className="text-xs text-text-3 mt-0.5">Employees can punch from the web, not just the office machine.</div></div>
         <Switch on={d.attendance.allowRemotePunch} onChange={v=>setSection("attendance","allowRemotePunch",v)}/>
       </div>
     </Card>
 
     <Card pad={mob?20:26} style={{borderRadius:16,marginBottom:16}}>
       <Lbl>Leave policy</Lbl>
-      <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr 1fr",gap:12,marginBottom:14}}>
+      <div className={`grid gap-3 mb-3.5 ${mob?"grid-cols-1":"grid-cols-3"}`}>
         <Field label="Annual vacation (days)"><Input type="number" value={d.leave.annualVacationDays} onChange={e=>setSection("leave","annualVacationDays",Number(e.target.value)||15)}/></Field>
         <Field label="Sick days"><Input type="number" value={d.leave.sickDays} onChange={e=>setSection("leave","sickDays",Number(e.target.value)||10)}/></Field>
         <Field label="Personal days"><Input type="number" value={d.leave.personalDays} onChange={e=>setSection("leave","personalDays",Number(e.target.value)||3)}/></Field>
@@ -1590,30 +1575,30 @@ export function HrSettings(){
         ["allowGroupCreation","Allow group creation","Employees can create new group chats."],
         ["allowFileShare","Allow file sharing","Attach files in messages."],
         ["allowCalls","Allow voice & video calls","Show call buttons in chat."]].map(([k,l,s])=>
-        <div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"11px 0",borderBottom:`1px solid ${C.lineSoft}`}}>
-          <div><div style={{fontSize:13.5,color:C.text,fontWeight:600}}>{l}</div>
-            <div style={{fontSize:12,color:C.text3,marginTop:2}}>{s}</div></div>
+        <div key={k} className="flex justify-between items-center py-3 border-b border-line-soft">
+          <div><div className="text-sm text-text font-semibold">{l}</div>
+            <div className="text-xs text-text-3 mt-0.5">{s}</div></div>
           <Switch on={d.chat[k]} onChange={v=>setSection("chat",k,v)}/>
         </div>)}
     </Card>
 
     <Card pad={mob?20:26} style={{borderRadius:16,marginBottom:16,borderLeft:`4px solid ${C.brand}`}}>
       <Lbl>Data link between HR Suite & NorthHire</Lbl>
-      <div style={{fontSize:13,color:C.text2,marginBottom:14,lineHeight:1.6}}>
+      <div className="text-sm text-text-2 mb-3.5 leading-relaxed">
         HR Suite runs your internal team. NorthHire is your public hiring surface. These toggles control what data flows between them. When linked, hiring on NorthHire auto-creates HR records; when unlinked, they're two separate systems.
       </div>
       {/* Master switch */}
-      <div style={{padding:14,background:d.privacy?.linkHrToNorthHire?C.okBg:C.bg,borderRadius:11,marginBottom:12,border:`1px solid ${d.privacy?.linkHrToNorthHire?C.okLn:C.line}`,transition:"all .2s"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10}}>
-          <div style={{flex:1}}>
-            <div style={{fontSize:14,fontWeight:660,color:C.text}}>Link HR Suite ↔ NorthHire</div>
-            <div style={{fontSize:12.5,color:C.text2,marginTop:3,lineHeight:1.5}}>Master switch. When off, HR Suite runs as a completely separate system with no connection to your NorthHire hiring pipeline.</div>
+      <div className="p-3.5 rounded-xl mb-3 transition-all duration-200" style={{background:d.privacy?.linkHrToNorthHire?C.okBg:C.bg,border:`1px solid ${d.privacy?.linkHrToNorthHire?C.okLn:C.line}`}}>
+        <div className="flex justify-between items-center gap-2.5">
+          <div className="flex-1">
+            <div className="text-sm font-semibold text-text">Link HR Suite ↔ NorthHire</div>
+            <div className="text-xs text-text-2 mt-1 leading-snug">Master switch. When off, HR Suite runs as a completely separate system with no connection to your NorthHire hiring pipeline.</div>
           </div>
           <Switch on={d.privacy?.linkHrToNorthHire??true} onChange={v=>setSection("privacy","linkHrToNorthHire",v)}/>
         </div>
       </div>
       {d.privacy?.linkHrToNorthHire!==false&&<>
-        <div style={{fontSize:11.5,fontWeight:700,color:C.text3,letterSpacing:".05em",textTransform:"uppercase",margin:"14px 0 8px"}}>Public NorthHire profile shows</div>
+        <div className="text-xs font-bold text-text-3 tracking-wide uppercase mt-3.5 mb-2">Public NorthHire profile shows</div>
         {[
           ["shareTitleToNorthHire","Current job title","Their HR-tracked title appears on their public NorthHire profile"],
           ["shareTenureToNorthHire","Years at company","'4 years at PCL' visible publicly"],
@@ -1621,38 +1606,32 @@ export function HrSettings(){
           ["syncSkillsToNorthHire","Skills","Skills tracked in HR sync to their public profile"],
           ["syncCertificationsToNorthHire","Certifications","Red Seal, WHMIS, CPR expiry all show publicly"],
           ["syncBadgesToNorthHire","Internal badges","Badges you award internally show on the employer's public NorthHire profile"],
-        ].map(([k,label,desc])=><div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"11px 12px",borderRadius:9,transition:"background .16s"}}
-          onMouseEnter={e=>e.currentTarget.style.background=C.bg}
-          onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-          <div style={{flex:1,minWidth:0}}>
-            <div style={{fontSize:13.5,color:C.text,fontWeight:550}}>{label}</div>
-            <div style={{fontSize:12,color:C.text3,marginTop:2,lineHeight:1.5}}>{desc}</div>
+        ].map(([k,label,desc])=><div key={k} className="flex justify-between items-center py-3 px-3 rounded-lg transition-colors duration-150 hover:bg-bg">
+          <div className="flex-1 min-w-0">
+            <div className="text-sm text-text font-medium">{label}</div>
+            <div className="text-xs text-text-3 mt-0.5 leading-snug">{desc}</div>
           </div>
           <Switch on={d.privacy?.[k]??false} onChange={v=>setSection("privacy",k,v)}/>
         </div>)}
-        <div style={{fontSize:11.5,fontWeight:700,color:C.text3,letterSpacing:".05em",textTransform:"uppercase",margin:"14px 0 8px"}}>Hiring flow</div>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"11px 12px",borderRadius:9,transition:"background .16s"}}
-          onMouseEnter={e=>e.currentTarget.style.background=C.bg}
-          onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-          <div style={{flex:1,minWidth:0}}>
-            <div style={{fontSize:13.5,color:C.text,fontWeight:550}}>Auto-prompt HR record on hire</div>
-            <div style={{fontSize:12,color:C.text3,marginTop:2,lineHeight:1.5}}>When Marketing your Job Platform hires someone, prompt for their HR Suite record (department, manager, salary)</div>
+        <div className="text-xs font-bold text-text-3 tracking-wide uppercase mt-3.5 mb-2">Hiring flow</div>
+        <div className="flex justify-between items-center py-3 px-3 rounded-lg transition-colors duration-150 hover:bg-bg">
+          <div className="flex-1 min-w-0">
+            <div className="text-sm text-text font-medium">Auto-prompt HR record on hire</div>
+            <div className="text-xs text-text-3 mt-0.5 leading-snug">When Marketing your Job Platform hires someone, prompt for their HR Suite record (department, manager, salary)</div>
           </div>
           <Switch on={d.privacy?.allowNorthHireProfileImport??true} onChange={v=>setSection("privacy","allowNorthHireProfileImport",v)}/>
         </div>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"11px 12px",borderRadius:9,transition:"background .16s"}}
-          onMouseEnter={e=>e.currentTarget.style.background=C.bg}
-          onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-          <div style={{flex:1,minWidth:0}}>
-            <div style={{fontSize:13.5,color:C.text,fontWeight:550}}>Let employees opt out</div>
-            <div style={{fontSize:12,color:C.text3,marginTop:2,lineHeight:1.5}}>Employees can override company defaults for their own public profile</div>
+        <div className="flex justify-between items-center py-3 px-3 rounded-lg transition-colors duration-150 hover:bg-bg">
+          <div className="flex-1 min-w-0">
+            <div className="text-sm text-text font-medium">Let employees opt out</div>
+            <div className="text-xs text-text-3 mt-0.5 leading-snug">Employees can override company defaults for their own public profile</div>
           </div>
           <Switch on={d.privacy?.allowEmployeesToOptOut??true} onChange={v=>setSection("privacy","allowEmployeesToOptOut",v)}/>
         </div>
       </>}
     </Card>
 
-    <div style={{display:"flex",gap:10,justifyContent:"flex-end",position:"sticky",bottom:14,background:C.bg,padding:"14px 0"}}>
+    <div className="flex gap-2.5 justify-end sticky bottom-3.5 bg-bg py-3.5">
       {dirty&&<Btn kind="ghost" onClick={()=>setD({...settings})}>Discard</Btn>}
       <Btn kind="primary" icon="check" disabled={!dirty} onClick={save}>{dirty?"Save changes":"All saved"}</Btn>
     </div>
@@ -1668,22 +1647,22 @@ export function HrIntegrations(){
   const [showImport,setShowImport]=useState(false);
 
   return <div>
-    <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:14}}>
+    <div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
 
       <Card pad={mob?20:26} style={{borderRadius:16}}>
-        <div style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:16}}>
-          <div style={{width:44,height:44,borderRadius:11,background:C.wash,color:C.brand,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><I n="clock" s={22}/></div>
-          <div style={{flex:1,minWidth:0}}>
-            <div style={{fontSize:16,fontWeight:660,color:C.text}}>Punch machine</div>
-            <div style={{fontSize:12.5,color:C.text3,marginTop:3}}>Sync with on-site clocks or biometric readers.</div>
+        <div className="flex gap-3 items-start mb-4">
+          <div className="w-11 h-11 rounded-xl bg-wash text-brand flex items-center justify-center shrink-0"><I n="clock" s={22}/></div>
+          <div className="flex-1 min-w-0">
+            <div className="text-base font-semibold text-text">Punch machine</div>
+            <div className="text-xs text-text-3 mt-1">Sync with on-site clocks or biometric readers.</div>
           </div>
           <Tag tone={settings.integrations.punchMachine.connected?"ok":"neutral"} sm>{settings.integrations.punchMachine.connected?"Connected":"Not connected"}</Tag>
         </div>
         {settings.integrations.punchMachine.connected
           ? <div>
-              <div style={{padding:12,background:C.okBg,borderRadius:10,border:`1px solid ${C.okLn}`,marginBottom:12}}>
-                <div style={{fontSize:13,fontWeight:600,color:C.text}}>{settings.integrations.punchMachine.vendor}</div>
-                <div style={{fontSize:12,color:C.text2,marginTop:4}}>Last sync: {new Date(settings.integrations.punchMachine.lastSync).toLocaleString("en-CA")}</div>
+              <div className="p-3 bg-ok-bg rounded-lg border border-ok-ln mb-3">
+                <div className="text-sm font-semibold text-text">{settings.integrations.punchMachine.vendor}</div>
+                <div className="text-xs text-text-2 mt-1">Last sync: {new Date(settings.integrations.punchMachine.lastSync).toLocaleString("en-CA")}</div>
               </div>
               <Btn kind="outline" size="sm" full onClick={()=>setShowPunch(true)}>Reconfigure</Btn>
             </div>
@@ -1691,19 +1670,19 @@ export function HrIntegrations(){
       </Card>
 
       <Card pad={mob?20:26} style={{borderRadius:16}}>
-        <div style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:16}}>
-          <div style={{width:44,height:44,borderRadius:11,background:C.violetBg,color:C.violet,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><I n="refresh" s={22}/></div>
-          <div style={{flex:1,minWidth:0}}>
-            <div style={{fontSize:16,fontWeight:660,color:C.text}}>Import from existing HR system</div>
-            <div style={{fontSize:12.5,color:C.text3,marginTop:3}}>Bring in employees, history and payroll from your current HRIS.</div>
+        <div className="flex gap-3 items-start mb-4">
+          <div className="w-11 h-11 rounded-xl bg-violet-bg text-violet flex items-center justify-center shrink-0"><I n="refresh" s={22}/></div>
+          <div className="flex-1 min-w-0">
+            <div className="text-base font-semibold text-text">Import from existing HR system</div>
+            <div className="text-xs text-text-3 mt-1">Bring in employees, history and payroll from your current HRIS.</div>
           </div>
           <Tag tone={settings.integrations.priorHRSystem.connected?"ok":"neutral"} sm>{settings.integrations.priorHRSystem.connected?"Imported":"Not connected"}</Tag>
         </div>
         {settings.integrations.priorHRSystem.connected
           ? <div>
-              <div style={{padding:12,background:C.okBg,borderRadius:10,border:`1px solid ${C.okLn}`,marginBottom:12}}>
-                <div style={{fontSize:13,fontWeight:600,color:C.text}}>{settings.integrations.priorHRSystem.vendor}</div>
-                <div style={{fontSize:12,color:C.text2,marginTop:4}}>Last import: {new Date(settings.integrations.priorHRSystem.lastImport).toLocaleString("en-CA")}</div>
+              <div className="p-3 bg-ok-bg rounded-lg border border-ok-ln mb-3">
+                <div className="text-sm font-semibold text-text">{settings.integrations.priorHRSystem.vendor}</div>
+                <div className="text-xs text-text-2 mt-1">Last import: {new Date(settings.integrations.priorHRSystem.lastImport).toLocaleString("en-CA")}</div>
               </div>
               <Btn kind="outline" size="sm" full onClick={()=>setShowImport(true)}>Import again</Btn>
             </div>
@@ -1712,16 +1691,15 @@ export function HrIntegrations(){
     </div>
 
     {showPunch&&<Modal onClose={()=>setShowPunch(false)} title="Connect a punch machine">
-      <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      <div className="flex flex-col gap-3.5">
         <Banner tone="brand" icon="info" title="Choose your device">Select your device vendor. We'll walk you through the connection steps.</Banner>
-        <div style={{display:"flex",flexDirection:"column",gap:8}}>
-          {A.PUNCH_VENDORS.map(v=><button key={v.id} onClick={()=>{A.connectPunchMachine(company.id,v.name); setShowPunch(false);}} style={{display:"flex",gap:12,alignItems:"center",padding:"14px 16px",background:"#fff",border:`1px solid ${C.line}`,borderRadius:11,cursor:"pointer",fontFamily:"inherit",textAlign:"left",transition:"all .16s"}}
-            onMouseEnter={e=>{e.currentTarget.style.borderColor=C.brand;e.currentTarget.style.background=C.tint;}}
-            onMouseLeave={e=>{e.currentTarget.style.borderColor=C.line;e.currentTarget.style.background="#fff";}}>
-            <div style={{width:36,height:36,borderRadius:9,background:C.wash,color:C.brand,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><I n={v.kind==="cloud"?"globe":"clock"} s={18}/></div>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:13.5,fontWeight:640,color:C.text}}>{v.name}</div>
-              <div style={{fontSize:12,color:C.text3,marginTop:2}}>{v.kind==="cloud"?"Cloud sync via API":"On-site device"}</div>
+        <div className="flex flex-col gap-2">
+          {A.PUNCH_VENDORS.map(v=><button key={v.id} onClick={()=>{A.connectPunchMachine(company.id,v.name); setShowPunch(false);}}
+            className="flex gap-3 items-center py-3.5 px-4 bg-white border border-line rounded-xl cursor-pointer text-left transition-all duration-150 hover:border-brand hover:bg-tint">
+            <div className="w-9 h-9 rounded-lg bg-wash text-brand flex items-center justify-center shrink-0"><I n={v.kind==="cloud"?"globe":"clock"} s={18}/></div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-semibold text-text">{v.name}</div>
+              <div className="text-xs text-text-3 mt-0.5">{v.kind==="cloud"?"Cloud sync via API":"On-site device"}</div>
             </div>
             <I n="chevR" s={16} c={C.text3}/>
           </button>)}
@@ -1730,14 +1708,13 @@ export function HrIntegrations(){
     </Modal>}
 
     {showImport&&<Modal onClose={()=>setShowImport(false)} title="Import from your HR system">
-      <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      <div className="flex flex-col gap-3.5">
         <Banner tone="brand" icon="upload" title="Migration wizard">We'll import employees, roles, salaries and (where available) attendance history. Your existing NorthHire data won't be overwritten.</Banner>
-        <div style={{display:"flex",flexDirection:"column",gap:8}}>
-          {A.PRIOR_HR_VENDORS.map(v=><button key={v.id} onClick={()=>{A.connectPriorSystem(company.id,v.name); setShowImport(false); setTimeout(()=>alert("Import started — you'll get a summary email when it's done."),200);}} style={{display:"flex",gap:12,alignItems:"center",padding:"14px 16px",background:"#fff",border:`1px solid ${C.line}`,borderRadius:11,cursor:"pointer",fontFamily:"inherit",textAlign:"left",transition:"all .16s"}}
-            onMouseEnter={e=>{e.currentTarget.style.borderColor=C.brand;e.currentTarget.style.background=C.tint;}}
-            onMouseLeave={e=>{e.currentTarget.style.borderColor=C.line;e.currentTarget.style.background="#fff";}}>
-            <div style={{width:36,height:36,borderRadius:9,background:C.violetBg,color:C.violet,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><I n="refresh" s={18}/></div>
-            <div style={{fontSize:13.5,fontWeight:640,color:C.text,flex:1}}>{v.name}</div>
+        <div className="flex flex-col gap-2">
+          {A.PRIOR_HR_VENDORS.map(v=><button key={v.id} onClick={()=>{A.connectPriorSystem(company.id,v.name); setShowImport(false); setTimeout(()=>alert("Import started — you'll get a summary email when it's done."),200);}}
+            className="flex gap-3 items-center py-3.5 px-4 bg-white border border-line rounded-xl cursor-pointer text-left transition-all duration-150 hover:border-brand hover:bg-tint">
+            <div className="w-9 h-9 rounded-lg bg-violet-bg text-violet flex items-center justify-center shrink-0"><I n="refresh" s={18}/></div>
+            <div className="text-sm font-semibold text-text flex-1">{v.name}</div>
             <I n="chevR" s={16} c={C.text3}/>
           </button>)}
         </div>
