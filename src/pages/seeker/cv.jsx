@@ -30,14 +30,14 @@ export function CvPreview({cv,u,scale=1,mob=false}){
     paddingBottom:T==="classic"?4*scale:0,marginBottom:8*scale,marginTop:16*scale}}>{children}</div>;
   const Body=()=><>
     {cv.summary&&<><SecT>Professional summary</SecT>
-      <div style={{fontSize:12*scale,color:"#333",lineHeight:1.65}}>{cv.summary}</div></>}
+      <div className="rich-content" style={{fontSize:12*scale,color:"#333",lineHeight:1.65}} dangerouslySetInnerHTML={{__html:cv.summary}}/></>}
     {cv.exp?.length>0&&<><SecT>Work experience</SecT>
       {cv.exp.map(x=><div key={x.id} style={{marginBottom:10*scale}}>
         <div style={{display:"flex",justifyContent:"space-between",gap:10}}>
           <span style={{fontSize:12.5*scale,fontWeight:700,color:"#0E1727"}}>{x.role}</span>
           <span style={{fontSize:11*scale,color:"#4A5A73",flexShrink:0}}>{x.from} – {x.to}</span></div>
         <div style={{fontSize:11.5*scale,color:C.brand,fontWeight:600,marginTop:1*scale}}>{x.org}{x.place?` · ${x.place}`:""}</div>
-        {x.detail&&<div style={{fontSize:11.5*scale,color:"#444",marginTop:3*scale,lineHeight:1.6}}>{x.detail}</div>}</div>)}</>}
+        {x.detail&&<div className="rich-content" style={{fontSize:11.5*scale,color:"#444",marginTop:3*scale,lineHeight:1.6}} dangerouslySetInnerHTML={{__html:x.detail}}/>}</div>)}</>}
     {cv.edu?.length>0&&<><SecT>Education</SecT>
       {cv.edu.map(x=><div key={x.id} style={{marginBottom:8*scale,display:"flex",justifyContent:"space-between",gap:10}}>
         <div><div style={{fontSize:12.5*scale,fontWeight:700,color:"#0E1727"}}>{x.qual}</div>

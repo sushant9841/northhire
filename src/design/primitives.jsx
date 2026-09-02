@@ -440,7 +440,10 @@ export const Page=({children,wide,narrow})=>{
 /* ═══════════════ RICH TEXT EDITOR — used across CV builder, job posting, articles ═══════════════ */
 export function RichText({value,onChange,placeholder,rows=6,minHeight}){
   const ref=useRef(null);
+  const savedRange=useRef(null);
   const [showing,setShowing]=useState(value||"");
+  const [linkOpen,setLinkOpen]=useState(false);
+  const [linkUrl,setLinkUrl]=useState("");
   useEffect(()=>{
     if(ref.current&&ref.current.innerHTML!==(value||"")){
       ref.current.innerHTML=value||"";
@@ -449,7 +452,22 @@ export function RichText({value,onChange,placeholder,rows=6,minHeight}){
   },[value]);
   const cmd=(c,arg)=>{document.execCommand(c,false,arg); ref.current?.focus(); update();};
   const update=()=>{if(ref.current){const html=ref.current.innerHTML; setShowing(html); onChange(html);}};
-  const addLink=()=>{const u=prompt("Enter URL:","https://"); if(u&&u!=="https://")cmd("createLink",u);};
+  /* Opening the URL modal moves focus off the editable div, which would normally collapse the
+     text selection — so the selection is snapshotted here and restored right before createLink runs. */
+  const addLink=()=>{
+    const sel=window.getSelection();
+    if(sel&&sel.rangeCount>0)savedRange.current=sel.getRangeAt(0).cloneRange();
+    setLinkUrl("https://"); setLinkOpen(true);
+  };
+  const confirmLink=()=>{
+    if(linkUrl.trim()&&linkUrl.trim()!=="https://"){
+      ref.current?.focus();
+      const sel=window.getSelection();
+      if(savedRange.current){sel.removeAllRanges(); sel.addRange(savedRange.current);}
+      cmd("createLink",linkUrl.trim());
+    }
+    setLinkOpen(false);
+  };
   const tools=[
     {ic:"B",act:()=>cmd("bold"),style:{fontWeight:800}},
     {ic:"I",act:()=>cmd("italic"),style:{fontStyle:"italic"}},
@@ -473,9 +491,21 @@ export function RichText({value,onChange,placeholder,rows=6,minHeight}){
     <div className="relative">
       <div ref={ref} contentEditable suppressContentEditableWarning
         onInput={update}
-        className="peer py-3 px-3.5 text-sm text-text leading-relaxed outline-none whitespace-pre-wrap"
+        className="rich-content peer py-3 px-3.5 text-sm text-text leading-relaxed outline-none whitespace-pre-wrap"
         style={{minHeight:minHeight||`${rows*22}px`}}/>
       {isEmpty&&<div className="absolute top-3 left-3.5 text-text-3 text-sm pointer-events-none peer-focus:hidden">{placeholder}</div>}
     </div>
+    {linkOpen&&<Modal onClose={()=>setLinkOpen(false)} title="Add a link" width={420}>
+      <div className="flex flex-col gap-3">
+        <Field label="URL" hint="Applies to the currently selected text.">
+          <Input autoFocus icon="link" value={linkUrl} onChange={e=>setLinkUrl(e.target.value)}
+            placeholder="https://example.com" onKeyDown={e=>{if(e.key==="Enter")confirmLink();}}/>
+        </Field>
+        <div className="flex gap-2.5 justify-end">
+          <Btn kind="ghost" onClick={()=>setLinkOpen(false)}>Cancel</Btn>
+          <Btn kind="primary" onClick={confirmLink}>Insert link</Btn>
+        </div>
+      </div>
+    </Modal>}
   </div>;
 }

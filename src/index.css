@@ -49,3 +49,12 @@
   --container-narrow: 820px;
   --container-wide: 1360px;
 }
+
+/* Tailwind's Preflight resets ul/ol to list-style:none and a/anchor to color:inherit — fine for
+   nav/UI chrome, but it silently defeats the bullets/numbers/link styling that document.execCommand
+   actually writes into RichText's editable HTML (and its dangerouslySetInnerHTML preview renders
+   elsewhere: CV summaries, job descriptions...). Apply this class wherever that HTML is rendered. */
+.rich-content ul { list-style: disc; padding-left: 1.25em; }
+.rich-content ol { list-style: decimal; padding-left: 1.25em; }
+.rich-content li { margin: 0.25em 0; }
+.rich-content a { color: var(--color-brand); text-decoration: underline; }

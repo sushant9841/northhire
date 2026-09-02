@@ -368,7 +368,7 @@ export function BlogPage(){
           return <section key={i} style={{marginBottom:i===b.body.length-1?0:36}}>
             {h&&<h2 style={{fontSize:mob?22:28,fontWeight:730,letterSpacing:"-.03em",color:C.text,margin:"0 0 16px",lineHeight:1.25}}>{h}</h2>}
             {isHtml
-              ? <div className="blog-body" style={{fontSize:mob?16.5:18,color:C.text2,lineHeight:1.8}} dangerouslySetInnerHTML={{__html:p}}/>
+              ? <div className="blog-body rich-content" style={{fontSize:mob?16.5:18,color:C.text2,lineHeight:1.8}} dangerouslySetInnerHTML={{__html:p}}/>
               : <p style={{fontSize:mob?16.5:18,color:C.text2,lineHeight:1.8,margin:0}}>{p}</p>}
           </section>;})}
         <div style={{marginTop:56,paddingTop:36,borderTop:`1px solid ${C.lineSoft}`,display:"flex",gap:16,alignItems:"center",flexWrap:"wrap"}}>

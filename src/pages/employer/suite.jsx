@@ -319,7 +319,7 @@ export function EmpPost(){
             {f.urgent&&<Tag tone="warn" sm>Urgent</Tag>}
             <Tag sm>{f.vac} {f.vac==1?"opening":"openings"}</Tag>
             <Tag sm>Closes {f.dlDate||"—"}</Tag></div>
-          {f.desc&&<div style={{fontSize:14.5,color:C.text2,lineHeight:1.7,margin:0}} dangerouslySetInnerHTML={{__html:f.desc}}/>}
+          {f.desc&&<div className="rich-content" style={{fontSize:14.5,color:C.text2,lineHeight:1.7,margin:0}} dangerouslySetInnerHTML={{__html:f.desc}}/>}
           {f.mustHave.length>0&&<div style={{marginTop:14}}>
             <div style={{fontSize:11,fontWeight:700,color:C.brand,letterSpacing:".06em",textTransform:"uppercase",marginBottom:6}}>Must-have</div>
             <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
