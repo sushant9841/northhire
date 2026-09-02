@@ -20,44 +20,41 @@ export function EmpHome(){
   const canContent=A.settings.employerContent;
   return <Page wide>
     <H1 sub={`${e.verified?"Verified employer":"Awaiting verification"} • ${A.planName?A.planName():e.plan||"Free"} plan`}
-      action={<div style={{display:"flex",gap:9,flexWrap:"wrap"}}>
+      action={<div className="flex gap-2.5 flex-wrap">
         <Btn kind="outline" onClick={()=>A.go("empPipeline")}>Candidates</Btn>
         <Btn kind="primary" icon="plus" onClick={()=>A.go("empPost")}>Post a job</Btn></div>}>{e.name}</H1>
     {!e.verified&&<Banner tone="warn" icon="clock" title="Verification in review" style={{marginBottom:18}}>
       An administrator is reviewing your company. Verified employers get a badge on every listing and around 40% more applicants.</Banner>}
     {!canContent&&<Banner tone="neutral" icon="lock" title="Content publishing is currently off" style={{marginBottom:18}}>
       Publishing articles and trainings has been disabled platform-wide by an administrator. Your existing content stays visible.</Banner>}
-    <div style={{display:"grid",gridTemplateColumns:`repeat(auto-fit,minmax(${mob?140:170}px,1fr))`,gap:12,marginBottom:20}}>
+    <div className="grid gap-3 mb-5" style={{gridTemplateColumns:`repeat(auto-fit,minmax(${mob?140:170}px,1fr))`}}>
       <Stat icon="briefcase" label="Live listings" value={jobs.filter(j=>j.status==="live").length} tone={C.brand} onClick={()=>A.go("empJobs")}/>
       <Stat icon="users" label="Total applicants" value={apps.length} onClick={()=>A.go("empPipeline")}/>
       <Stat icon="calendar" label="In interview" value={byStage.Interview||0} tone={C.warn}/>
       <Stat icon="award" label="Offers out" value={byStage.Offer||0} tone={C.ok}/></div>
-    <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1.4fr 1fr",gap:16}}>
+    <div className="grid gap-4" style={{gridTemplateColumns:mob?"1fr":"1.4fr 1fr"}}>
       <Card>
         <H2 action={<Btn kind="ghost" size="sm" onClick={()=>A.go("empJobs")}>Manage all</Btn>}>Your listings</H2>
         {jobs.length===0?<Empty icon="briefcase" title="No listings yet" body="Post your first role and scored applicants arrive within hours."
           action={<Btn kind="primary" icon="plus" onClick={()=>A.go("empPost")}>Post a job</Btn>}/>
           :jobs.slice(0,6).map(j=>{const n=A.applications.filter(a=>a.job===j.id).length;
-            return <div key={j.id} onClick={()=>A.go("empPipeline")} style={{display:"flex",alignItems:"center",gap:13,
-              padding:"13px 0",borderBottom:`1px solid ${C.lineSoft}`,cursor:"pointer"}}>
-              <div style={{width:9,height:9,borderRadius:99,background:j.status==="live"?C.ok:j.status==="paused"?C.warn:C.text3,flexShrink:0}}/>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:14.5,fontWeight:640,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{j.t}</div>
-                <div style={{fontSize:12.5,color:C.text3,marginTop:3}}>{n} applicant{n===1?"":"s"} • {j.views.toLocaleString()} views • {j.posted}</div></div>
+            return <div key={j.id} onClick={()=>A.go("empPipeline")} className="flex items-center gap-3 py-3 border-b border-line-soft cursor-pointer">
+              <div className={`w-2 h-2 rounded-full shrink-0 ${j.status==="live"?"bg-ok":j.status==="paused"?"bg-warn":"bg-text-3"}`}/>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap">{j.t}</div>
+                <div className="text-xs text-text-3 mt-1">{n} applicant{n===1?"":"s"} • {j.views.toLocaleString()} views • {j.posted}</div></div>
               <Tag tone={j.status==="live"?"ok":j.status==="paused"?"warn":"neutral"} sm>{j.status==="live"?"Live":j.status==="paused"?"Paused":"Closed"}</Tag></div>;})}</Card>
-      <div style={{display:"flex",flexDirection:"column",gap:16}}>
+      <div className="flex flex-col gap-4">
         <Card><H2>Pipeline</H2>
           {STAGES.map(s=>{const n=byStage[s]||0;
-            return <div key={s} style={{marginBottom:13}}>
-              <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:6}}>
-                <span style={{color:C.text2,fontWeight:520}}>{s}</span><span style={{fontWeight:700,color:C.brand}}>{n}</span></div>
+            return <div key={s} className="mb-3.5">
+              <div className="flex justify-between text-sm mb-1.5">
+                <span className="text-text-2 font-medium">{s}</span><span className="font-bold text-brand">{n}</span></div>
               <Bar v={apps.length?(n/apps.length)*100:0} h={6}/></div>;})}</Card>
         <Card><H2>Quick actions</H2>
           {[["plus","Post a new job","empPost"],["users","Review candidates","empPipeline"],
             ["book","Publish an article","empContent"],["wallet","Billing and plan","empBilling"]].map(([ic,l,p])=>
-            <button key={l} onClick={()=>A.go(p)} style={{display:"flex",alignItems:"center",gap:11,width:"100%",padding:"11px 10px",
-              borderRadius:10,border:"none",background:"transparent",cursor:"pointer",fontFamily:"inherit",fontSize:14,color:C.text,textAlign:"left"}}
-              onMouseEnter={ev=>ev.currentTarget.style.background=C.bg} onMouseLeave={ev=>ev.currentTarget.style.background="transparent"}>
+            <button key={l} onClick={()=>A.go(p)} className="flex items-center gap-2.5 w-full py-2.5 px-2.5 rounded-lg border-0 bg-transparent cursor-pointer text-sm text-text text-left hover:bg-bg transition-colors duration-150">
               <I n={ic} s={17} c={C.brand}/>{l}</button>)}</Card></div></div>
   </Page>;
 }
@@ -70,38 +67,38 @@ export function EmpJobs(){
   const sampleCSV="title,city,province,type,pay_low,pay_high,pay_unit,category,mode,vacancies,experience,education,skills,perks,duties,requirements,description\nJourneyperson Electrician,Calgary,Alberta,Full Time,42,52,hr,trades,On-site,2,3+ years,Apprenticeship / trade certificate,Red Seal;WHMIS;Fall Protection,Health benefits;RRSP match,Site fit-out;Panel installation;Testing,Red Seal cert;5+ years commercial,Hiring a Red Seal electrician for commercial fit-outs in Calgary.";
   return <Page wide>
     <H1 sub={`${jobs.length} listing${jobs.length===1?"":"s"} • ${A.applications.filter(a=>jobs.some(j=>j.id===a.job)).length} applicants`}
-      action={<div style={{display:"flex",gap:9,flexWrap:"wrap"}}>
+      action={<div className="flex gap-2.5 flex-wrap">
         {A.can("csvImport")?<Btn kind="outline" icon="upload" onClick={()=>setShowImport(true)}>Import CSV</Btn>:<Btn kind="ghost" icon="lock" onClick={()=>A.go("pricing")} title="CSV import is a Growth+ feature">CSV import (Growth+)</Btn>}
         <Btn kind="primary" icon="plus" onClick={()=>A.go("empPost")}>Post a job</Btn></div>}>My job listings</H1>
     {showImport&&<Modal onClose={()=>{setShowImport(false);setImportResult(null);setCsv("");}} title="Import jobs from CSV">
-      <p style={{fontSize:14,color:C.text2,lineHeight:1.6,margin:"0 0 14px"}}>Paste CSV below. First row must be headers. Required columns: <strong style={{color:C.text}}>title, city, province, type, pay_low, pay_high, pay_unit, category</strong>. Multi-value fields (skills, perks, duties, requirements) use semicolons.</p>
-      <div style={{display:"flex",gap:8,marginBottom:14}}>
+      <p className="text-sm text-text-2 leading-snug mb-3.5">Paste CSV below. First row must be headers. Required columns: <strong className="text-text">title, city, province, type, pay_low, pay_high, pay_unit, category</strong>. Multi-value fields (skills, perks, duties, requirements) use semicolons.</p>
+      <div className="flex gap-2 mb-3.5">
         <Btn kind="outline" size="sm" onClick={()=>setCsv(sampleCSV)}>Load example</Btn>
         <Btn kind="ghost" size="sm" onClick={()=>setCsv("")}>Clear</Btn></div>
       <Area rows={10} value={csv} onChange={e=>setCsv(e.target.value)} placeholder="title,city,province,type,pay_low,pay_high,pay_unit,category..." style={{fontFamily:"ui-monospace,monospace",fontSize:12.5}}/>
       {importResult&&<Banner tone={importResult.ok?"ok":"danger"} icon={importResult.ok?"check":"alert"} title={importResult.ok?`Imported ${importResult.imported} job${importResult.imported===1?"":"s"}`:"Import failed"} style={{marginTop:14}}>
         {importResult.ok?<>Jobs are in review status until an admin approves them.{importResult.errors?.length?` Also skipped ${importResult.errors.length} rows.`:""}</>:importResult.msg}</Banner>}
-      <div style={{display:"flex",gap:9,justifyContent:"flex-end",marginTop:14}}>
+      <div className="flex gap-2.5 justify-end mt-3.5">
         <Btn kind="ghost" onClick={()=>{setShowImport(false);setImportResult(null);setCsv("");}}>Cancel</Btn>
         <Btn kind="primary" icon="upload" disabled={!csv.trim()} onClick={()=>{const r=A.importJobsCSV(csv);setImportResult(r);if(r.ok&&!r.errors?.length){setTimeout(()=>{setShowImport(false);setImportResult(null);setCsv("");},1500);}}}>Import</Btn></div>
     </Modal>}
     {jobs.length===0?<Empty icon="briefcase" title="No listings yet" body="Create your first posting to start receiving applications."
       action={<Btn kind="primary" icon="plus" onClick={()=>A.go("empPost")}>Post a job</Btn>}/>
-      :<div style={{display:"flex",flexDirection:"column",gap:12}}>
+      :<div className="flex flex-col gap-3">
         {jobs.map((j,i)=>{const apps=A.applications.filter(a=>a.job===j.id);
           return <Card key={j.id} delay={Math.min(i,6)*0.04}>
-            <div style={{display:"flex",gap:14,alignItems:"flex-start",flexWrap:"wrap"}}>
-              <div style={{flex:"1 1 240px",minWidth:0}}>
-                <div style={{display:"flex",alignItems:"center",gap:9,flexWrap:"wrap"}}>
-                  <span style={{fontSize:16.5,fontWeight:660,color:C.text,letterSpacing:"-.02em"}}>{j.t}</span>
+            <div className="flex gap-3.5 items-start flex-wrap">
+              <div className="grow shrink basis-60 min-w-0">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <span className="font-bold text-text tracking-tight" style={{fontSize:16.5}}>{j.t}</span>
                   <Tag tone={j.status==="live"?"ok":j.status==="paused"?"warn":"neutral"} sm>{j.status==="live"?"Live":j.status==="paused"?"Paused":"Closed"}</Tag>
                   {j.flagged&&<Tag tone="danger" sm icon="alert">Flagged by admin</Tag>}</div>
-                <div style={{fontSize:13.5,color:C.text2,marginTop:5}}>{j.city}, {j.prov} • {j.mode} • {j.type} • {pay(j)}{payShort(j)}</div>
-                <div style={{display:"flex",gap:18,marginTop:12,flexWrap:"wrap"}}>
+                <div className="text-sm text-text-2 mt-1.5">{j.city}, {j.prov} • {j.mode} • {j.type} • {pay(j)}{payShort(j)}</div>
+                <div className="flex gap-5 mt-3 flex-wrap">
                   {[["Applicants",apps.length],["Views",j.views.toLocaleString()],["Posted",j.posted],["Closes",dlText(j.dl)]].map(([k,v])=>
-                    <div key={k}><div style={{fontSize:11.5,color:C.text3}}>{k}</div>
-                      <div style={{fontSize:15,fontWeight:700,color:C.text,marginTop:2}}>{v}</div></div>)}</div></div>
-              <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+                    <div key={k}><div className="text-xs text-text-3">{k}</div>
+                      <div className="text-base font-bold text-text mt-0.5">{v}</div></div>)}</div></div>
+              <div className="flex gap-2 flex-wrap items-center">
                 <Btn kind="outline" size="sm" onClick={()=>A.openJob(j.id)}>Preview</Btn>
                 <Btn kind="outline" size="sm" onClick={()=>A.toggleJobStatus(j.id)}>{j.status==="live"?"Pause":"Reopen"}</Btn>
                 <Btn kind="primary" size="sm" onClick={()=>{A.setPipelineJob(j.id);A.go("empPipeline");}}>Candidates ({apps.length})</Btn></div></div></Card>;})}</div>}
@@ -177,27 +174,26 @@ export function EmpPost(){
       action={<Btn kind="primary" size="sm" onClick={()=>A.go("pricing")}>See plans</Btn>}>{postErr}</Banner>}
 
     <Card pad={mob?16:20} style={{marginBottom:16}}>
-      <div style={{display:"flex",alignItems:"center"}}>
-        {steps.map((s,i)=><div key={s} style={{display:"flex",alignItems:"center",flex:i<2?1:"0 0 auto",minWidth:0}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,minWidth:0}}>
-            <div style={{width:28,height:28,borderRadius:99,display:"flex",alignItems:"center",justifyContent:"center",
-              fontSize:12.5,fontWeight:700,flexShrink:0,transition:"all .25s",
-              background:step>i+1?C.ok:step===i+1?C.brand:C.lineSoft,color:step>=i+1?"#fff":C.text3}}>
+      <div className="flex items-center">
+        {steps.map((s,i)=><div key={s} className="flex items-center min-w-0" style={{flex:i<2?1:"0 0 auto"}}>
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all duration-200"
+              style={{background:step>i+1?C.ok:step===i+1?C.brand:C.lineSoft,color:step>=i+1?"#fff":C.text3}}>
               {step>i+1?<I n="check" s={14} c="#fff" w={3}/>:i+1}</div>
-            {!mob&&<span style={{fontSize:13.5,fontWeight:step===i+1?650:500,color:step===i+1?C.text:C.text3,whiteSpace:"nowrap"}}>{s}</span>}</div>
-          {i<2&&<div style={{flex:1,height:2,background:step>i+1?C.ok:C.lineSoft,margin:"0 10px",borderRadius:99,minWidth:14,transition:"background .3s"}}/>}</div>)}</div></Card>
+            {!mob&&<span className="text-sm whitespace-nowrap" style={{fontWeight:step===i+1?650:500,color:step===i+1?C.text:C.text3}}>{s}</span>}</div>
+          {i<2&&<div className="flex-1 h-0.5 rounded-full mx-2.5 transition-colors duration-300" style={{background:step>i+1?C.ok:C.lineSoft,minWidth:14}}/>}</div>)}</div></Card>
 
     <Card pad={mob?20:26}>
       <div key={step} style={{animation:"slideIn .26s ease both"}}>
 
-      {step===1&&<div style={{display:"flex",flexDirection:"column",gap:18}}>
+      {step===1&&<div className="flex flex-col gap-5">
         <H2 sub="Clear titles and honest descriptions get far more qualified applicants">Role details</H2>
 
         <Field label="Job title" required error={err.t}>
           <Input value={f.t} onChange={e=>set("t",e.target.value)}
             placeholder="e.g. Red Seal Electrician, Registered Nurse, Line Cook" invalid={!!err.t}/></Field>
 
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr 1fr",gap:12}}>
+        <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-3"}`}>
           <Field label="Sector" required><Sel value={f.cat} onChange={e=>set("cat",e.target.value)}>
             {CATS.map(c=><option key={c.id} value={c.id}>{c.label}</option>)}</Sel></Field>
           <Field label="Employment type"><Sel value={f.type} onChange={e=>set("type",e.target.value)}>
@@ -206,11 +202,11 @@ export function EmpPost(){
             {["On-site","Hybrid","Remote"].map(o=><option key={o}>{o}</option>)}</Sel></Field>
         </div>
 
-        <div style={{background:`linear-gradient(135deg,${C.tint} 0%,#F0F7FF 100%)`,border:`1px solid ${C.line2}`,borderRadius:12,padding:14,display:"flex",gap:12,alignItems:"center"}}>
-          <div style={{width:38,height:38,borderRadius:10,background:C.brand,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><I n="sparkle" s={19}/></div>
-          <div style={{flex:1,minWidth:0}}>
-            <div style={{fontSize:13.5,fontWeight:650,color:C.text}}>Auto-fill with AI</div>
-            <div style={{fontSize:12.5,color:C.text2,marginTop:2}}>We'll draft the description, duties and requirements based on your title and sector. Edit anything you want.</div>
+        <div className="rounded-xl border border-line-2 p-3.5 flex gap-3 items-center" style={{background:`linear-gradient(135deg,${C.tint} 0%,#F0F7FF 100%)`}}>
+          <div className="w-10 h-10 rounded-xl bg-brand text-white flex items-center justify-center shrink-0"><I n="sparkle" s={19}/></div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold text-text">Auto-fill with AI</div>
+            <div className="text-xs text-text-2 mt-0.5">We'll draft the description, duties and requirements based on your title and sector. Edit anything you want.</div>
           </div>
           <Btn kind="primary" size="sm" onClick={applyAI} disabled={!f.t.trim()}>{f.t.trim()?"Suggest":"Enter title first"}</Btn>
         </div>
@@ -236,7 +232,7 @@ export function EmpPost(){
           <InlineList value={f.skills} onChange={v=>set("skills",v)} icon="sparkle"
             placeholder="Type a bonus skill and press Enter"/></Field>
 
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:12}}>
+        <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
           <Field label="Experience required"><Sel value={f.exp} onChange={e=>set("exp",e.target.value)}>
             {["No experience required","Entry level welcome","1+ years","2+ years","3+ years","4+ years","5+ years","10+ years"].map(o=><option key={o}>{o}</option>)}</Sel></Field>
           <Field label="Education required"><Sel value={f.edu} onChange={e=>set("edu",e.target.value)}>
@@ -244,7 +240,7 @@ export function EmpPost(){
         </div>
       </div>}
 
-      {step===2&&<div style={{display:"flex",flexDirection:"column",gap:18}}>
+      {step===2&&<div className="flex flex-col gap-5">
         <H2 sub="Listings that publish a salary get roughly three times more applications">Pay, location & application</H2>
 
         <Field label="Location" required error={err.location}
@@ -253,11 +249,12 @@ export function EmpPost(){
             placeholder="Start typing a city..."/></Field>
 
         <Field label="Pay structure">
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+          <div className="grid grid-cols-2 gap-2.5 mb-3">
             {[["range","Range (min – max)"],["fixed","Fixed amount"]].map(([k,l])=>
-              <button key={k} type="button" onClick={()=>set("payType",k)} style={{padding:"12px",borderRadius:10,cursor:"pointer",fontFamily:"inherit",fontSize:14,fontWeight:f.payType===k?650:520,border:`1.5px solid ${f.payType===k?C.brand:C.line}`,background:f.payType===k?C.tint:"#fff",color:f.payType===k?C.brand:C.text,transition:"all .16s"}}>{l}</button>)}
+              <button key={k} type="button" onClick={()=>set("payType",k)}
+                className={`p-3 rounded-xl cursor-pointer text-sm transition-all duration-150 border-2 ${f.payType===k?"border-brand bg-tint text-brand font-semibold":"border-line bg-white text-text font-medium"}`}>{l}</button>)}
           </div>
-          <div style={{display:"grid",gridTemplateColumns:mob?"1fr":f.payType==="range"?"1fr 1fr 1fr":"1fr 1fr",gap:12}}>
+          <div className="grid gap-3" style={{gridTemplateColumns:mob?"1fr":f.payType==="range"?"1fr 1fr 1fr":"1fr 1fr"}}>
             {f.payType==="range"?<>
               <Field label="Minimum" error={err.lo}><Input icon="wallet" type="number" inputMode="decimal" min="0" value={f.lo} onChange={e=>set("lo",e.target.value.replace(/[^\d.]/g,""))} placeholder={f.payPeriod==="yr"?"60000":"28"} invalid={!!err.lo}/></Field>
               <Field label="Maximum" error={err.hi}><Input icon="wallet" type="number" inputMode="decimal" min="0" value={f.hi} onChange={e=>set("hi",e.target.value.replace(/[^\d.]/g,""))} placeholder={f.payPeriod==="yr"?"80000":"36"} invalid={!!err.hi}/></Field>
@@ -270,7 +267,7 @@ export function EmpPost(){
           </div>
         </Field>
 
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:12}}>
+        <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
           <Field label="Number of vacancies"><Input type="number" min="1" value={f.vac} onChange={e=>set("vac",Math.max(1,Number(e.target.value)||1))}/></Field>
           <Field label="Application closes on" required error={err.dlDate}>
             <DatePicker value={f.dlDate} onChange={v=>set("dlDate",v)} min={today} max={maxDate}/></Field>
@@ -284,55 +281,54 @@ export function EmpPost(){
           <Area rows={3} value={f.how} onChange={e=>set("how",e.target.value)}
             placeholder="Apply through NorthHire with your resume. Shortlisted candidates are contacted within 3 business days."/></Field>
 
-        <div style={{background:C.bg,border:`1px solid ${C.line}`,borderRadius:12,padding:16,marginTop:6}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,flexWrap:"wrap",gap:8}}>
+        <div className="bg-bg border border-line rounded-xl p-4 mt-1.5">
+          <div className="flex justify-between items-center mb-3 flex-wrap gap-2">
             <div>
-              <div style={{fontSize:14,fontWeight:660,color:C.text}}>Additional application questions</div>
-              <div style={{fontSize:12.5,color:C.text2,marginTop:3}}>Ask about work permits, driver's licence, willingness to travel, etc.</div>
+              <div className="text-sm font-semibold text-text">Additional application questions</div>
+              <div className="text-xs text-text-2 mt-1">Ask about work permits, driver's licence, willingness to travel, etc.</div>
             </div>
             <Tag tone="brand" sm>{f.questions.length} added</Tag>
           </div>
           <QuestionBuilder value={f.questions} onChange={v=>set("questions",v)}/>
         </div>
 
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:14,padding:"14px 0",borderTop:`1px solid ${C.lineSoft}`,marginTop:8}}>
-          <div><div style={{fontSize:14,fontWeight:620,color:C.text}}>Mark as urgent hire</div>
-            <div style={{fontSize:12.5,color:C.text2,marginTop:2}}>Adds a badge. The system sorts featured listings automatically based on performance.</div></div>
+        <div className="flex items-center justify-between gap-3.5 py-3.5 border-t border-line-soft mt-2">
+          <div><div className="text-sm font-semibold text-text">Mark as urgent hire</div>
+            <div className="text-xs text-text-2 mt-0.5">Adds a badge. The system sorts featured listings automatically based on performance.</div></div>
           <Switch on={f.urgent} onChange={v=>set("urgent",v)}/></div>
       </div>}
 
       {step===3&&<div>
         <H2 sub="This is exactly how candidates will see it">Review and publish</H2>
-        <div style={{background:C.bg,border:`1px solid ${C.line}`,borderRadius:14,padding:20,marginBottom:16}}>
-          <div style={{fontSize:20,fontWeight:720,color:C.text,letterSpacing:"-.03em"}}>{f.t||"Untitled role"}</div>
-          <div style={{fontSize:14,color:C.text2,marginTop:5}}>{A.company.name} • {f.location||"Location"} • {f.mode}</div>
-          <div style={{display:"inline-flex",alignItems:"baseline",gap:7,background:C.tint,border:`1px solid ${C.line2}`,
-            borderRadius:10,padding:"9px 13px",margin:"14px 0"}}>
-            <span style={{fontSize:18,fontWeight:730,color:C.brand,letterSpacing:"-.025em"}}>
+        <div className="bg-bg border border-line rounded-2xl p-5 mb-4">
+          <div className="text-xl font-bold text-text tracking-tight">{f.t||"Untitled role"}</div>
+          <div className="text-sm text-text-2 mt-1.5">{A.company.name} • {f.location||"Location"} • {f.mode}</div>
+          <div className="inline-flex items-baseline gap-1.5 bg-tint border border-line-2 rounded-xl py-2.5 px-3.5 my-3.5">
+            <span className="text-lg font-bold text-brand tracking-tight">
               {f.payType==="range"
                 ? (f.payPeriod==="yr"?`$${Math.round(Number(f.lo)/1000)}k – $${Math.round(Number(f.hi)/1000)}k`:`$${f.lo} – $${f.hi}`)
                 : (f.payPeriod==="yr"?`$${Math.round(Number(f.fixed)/1000)}k`:`$${f.fixed}`)}</span>
-            <span style={{fontSize:12.5,color:C.brand,opacity:.75}}>{{"yr":"per year","mi":"per mile","contract":"total","hr":"per hour"}[f.payPeriod]}</span></div>
-          <div style={{display:"flex",gap:7,flexWrap:"wrap",marginBottom:14}}>
+            <span className="text-xs text-brand opacity-75">{{"yr":"per year","mi":"per mile","contract":"total","hr":"per hour"}[f.payPeriod]}</span></div>
+          <div className="flex gap-2 flex-wrap mb-3.5">
             <Tag sm>{f.type}</Tag><Tag sm>{CATM[f.cat].label}</Tag>
             {f.mode!=="On-site"&&<Tag tone="ok" sm>{f.mode}</Tag>}
             {f.urgent&&<Tag tone="warn" sm>Urgent</Tag>}
             <Tag sm>{f.vac} {f.vac==1?"opening":"openings"}</Tag>
             <Tag sm>Closes {f.dlDate||"—"}</Tag></div>
-          {f.desc&&<div className="rich-content" style={{fontSize:14.5,color:C.text2,lineHeight:1.7,margin:0}} dangerouslySetInnerHTML={{__html:f.desc}}/>}
-          {f.mustHave.length>0&&<div style={{marginTop:14}}>
-            <div style={{fontSize:11,fontWeight:700,color:C.brand,letterSpacing:".06em",textTransform:"uppercase",marginBottom:6}}>Must-have</div>
-            <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+          {f.desc&&<div className="rich-content text-sm text-text-2 leading-relaxed" dangerouslySetInnerHTML={{__html:f.desc}}/>}
+          {f.mustHave.length>0&&<div className="mt-3.5">
+            <div className="text-xs font-bold text-brand tracking-wide uppercase mb-1.5">Must-have</div>
+            <div className="flex flex-wrap gap-1.5">
               {f.mustHave.map(s=><Tag key={s} tone="brand" sm>{s}</Tag>)}</div>
           </div>}
-          {f.skills.length>0&&<div style={{marginTop:10}}>
-            <div style={{fontSize:11,fontWeight:700,color:C.text3,letterSpacing:".06em",textTransform:"uppercase",marginBottom:6}}>Nice to have</div>
-            <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+          {f.skills.length>0&&<div className="mt-2.5">
+            <div className="text-xs font-bold text-text-3 tracking-wide uppercase mb-1.5">Nice to have</div>
+            <div className="flex flex-wrap gap-1.5">
               {f.skills.map(s=><Tag key={s} tone="dark" sm>{s}</Tag>)}</div>
           </div>}
-          {f.questions.length>0&&<div style={{marginTop:14,padding:12,background:"#fff",border:`1px solid ${C.line}`,borderRadius:10}}>
-            <div style={{fontSize:12,fontWeight:660,color:C.text,marginBottom:6}}>Application questions ({f.questions.length})</div>
-            <div style={{fontSize:12.5,color:C.text2,lineHeight:1.6}}>{f.questions.map(q=>q.prompt||"(empty)").join(" • ")}</div>
+          {f.questions.length>0&&<div className="mt-3.5 p-3 bg-white border border-line rounded-lg">
+            <div className="text-xs font-semibold text-text mb-1.5">Application questions ({f.questions.length})</div>
+            <div className="text-xs text-text-2 leading-snug">{f.questions.map(q=>q.prompt||"(empty)").join(" • ")}</div>
           </div>}
         </div>
         <Banner tone="brand" icon="sparkle" title="Scoring is automatic">
@@ -340,7 +336,7 @@ export function EmpPost(){
       </div>}
 
       </div>
-      <div style={{display:"flex",justifyContent:"space-between",gap:10,marginTop:24,paddingTop:20,borderTop:`1px solid ${C.lineSoft}`}}>
+      <div className="flex justify-between gap-2.5 mt-6 pt-5 border-t border-line-soft">
         <Btn kind="ghost" icon="arrowL" onClick={()=>step===1?A.go("empJobs"):setStep(step-1)}>{step===1?"Cancel":"Back"}</Btn>
         <Btn kind={step===3?"ok":"primary"} size="lg" iconR={step===3?"check":"arrowR"} onClick={next}>
           {step===3?"Publish listing":"Continue"}</Btn></div>
@@ -382,23 +378,23 @@ export function EmpPipeline(){
 
   const reverseCandidates=A.reverseMatch(jobId);
 
-  return <div style={{display:"flex",flexDirection:"column",minHeight:"100%",background:C.bg}}>
-    <div style={{background:"#fff",borderBottom:`1px solid ${C.line}`,padding:mob?"14px 16px":"16px 28px"}}>
-      <div style={{maxWidth:1240,margin:"0 auto",display:"flex",gap:14,alignItems:"flex-end",flexWrap:"wrap"}}>
-        <div style={{flex:"1 1 240px",minWidth:0}}>
+  return <div className="flex flex-col min-h-full bg-bg">
+    <div className={`bg-white border-b border-line ${mob?"py-3.5 px-4":"py-4 px-7"}`}>
+      <div className="max-w-site mx-auto flex gap-3.5 items-end flex-wrap">
+        <div className="grow shrink basis-60 min-w-0">
           <Lbl style={{marginBottom:6}}>Pipeline for</Lbl>
           <Sel value={jobId} onChange={e=>{A.setPipelineJob(e.target.value);clear();}} style={{fontWeight:640}}>
             {myJobs.map(j=><option key={j.id} value={j.id}>{j.t} ({A.applications.filter(a=>a.job===j.id).length})</option>)}</Sel></div>
         <Btn kind="outline" size="sm" icon="download" onClick={()=>A.exportApplicants(jobId)}>Export CSV</Btn></div>
-      <div style={{maxWidth:1240,margin:"14px auto 0"}}>
+      <div className="max-w-site mx-auto mt-3.5">
         <Tabs items={[{k:"pipeline",label:`Pipeline (${apps.length})`},{k:"filters",label:"Filters"},
           {k:"talent",label:`Talent pool (${reverseCandidates.length})`}]} value={tab} onChange={setTab}/></div>
     </div>
 
-    {tab==="filters"&&<div style={{padding:mob?16:24,maxWidth:1240,margin:"0 auto",width:"100%"}}>
+    {tab==="filters"&&<div className={`${mob?"p-4":"p-6"} max-w-site mx-auto w-full`}>
       <Card style={{padding:mob?20:24,borderRadius:16}}>
         <Lbl>Filter this pipeline</Lbl>
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr 1fr",gap:14}}>
+        <div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-3"}`}>
           <Field label="Minimum match score">
             <Sel value={f.minScore} onChange={e=>setF({...f,minScore:Number(e.target.value)})}>
               {[0,50,60,70,75,80,85].map(v=><option key={v} value={v}>{v?`${v}+`:"Any"}</option>)}</Sel></Field>
@@ -406,35 +402,35 @@ export function EmpPipeline(){
             <option value="">All provinces</option>{PROVS.map(p=><option key={p}>{p}</option>)}</Sel></Field>
           <Field label="Has skill"><Input value={f.skill} onChange={e=>setF({...f,skill:e.target.value})} placeholder="e.g. Red Seal, Forklift"/></Field>
         </div>
-        <div style={{marginTop:16,display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
+        <div className="mt-4 flex gap-2.5 items-center flex-wrap">
           <Btn kind="primary" onClick={()=>setTab("pipeline")}>Show {apps.length} candidate{apps.length===1?"":"s"}</Btn>
           <Btn kind="ghost" onClick={()=>setF({minScore:0,prov:"",skill:""})}>Reset</Btn></div>
       </Card>
     </div>}
 
-    {tab==="talent"&&<div style={{padding:mob?16:24,maxWidth:1240,margin:"0 auto",width:"100%"}}>
+    {tab==="talent"&&<div className={`${mob?"p-4":"p-6"} max-w-site mx-auto w-full`}>
       {!A.can("talentPool")?<Card style={{padding:mob?26:36,borderRadius:20,textAlign:"center",background:"linear-gradient(135deg,#F5F9FF 0%,#EAF2FF 100%)",border:`1px solid ${C.line2}`}}>
-        <div style={{width:64,height:64,borderRadius:16,background:C.brand,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 18px"}}><I n="target" s={30}/></div>
-        <div style={{fontSize:mob?20:24,fontWeight:730,color:C.text,letterSpacing:"-.03em",marginBottom:10}}>Talent pool is a Growth feature</div>
-        <p style={{fontSize:14.5,color:C.text2,lineHeight:1.65,margin:"0 auto 22px",maxWidth:440}}>See top-matched candidates across NorthHire who haven't applied yet, and invite them directly. Available on the Growth and Enterprise plans.</p>
+        <div className="w-16 h-16 rounded-2xl bg-brand text-white flex items-center justify-center mx-auto mb-5"><I n="target" s={30}/></div>
+        <div className={`font-bold text-text tracking-tight mb-2.5 ${mob?"text-xl":"text-2xl"}`}>Talent pool is a Growth feature</div>
+        <p className="text-sm text-text-2 leading-relaxed mx-auto mb-6 max-w-110"><br/>See top-matched candidates across NorthHire who haven't applied yet, and invite them directly. Available on the Growth and Enterprise plans.</p>
         <Btn kind="primary" onClick={()=>A.go("pricing")}>Upgrade to Growth</Btn>
       </Card>:<><Card style={{padding:mob?20:26,borderRadius:16,marginBottom:16}}>
-        <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:12}}>
-          <div style={{width:44,height:44,borderRadius:12,background:C.wash,color:C.brand,display:"flex",alignItems:"center",justifyContent:"center"}}><I n="target" s={22}/></div>
-          <div><div style={{fontSize:16,fontWeight:680,color:C.text}}>Talent pool matches</div>
-            <div style={{fontSize:13,color:C.text2,marginTop:2}}>Candidates on NorthHire who match this posting but haven't applied yet.</div></div></div>
+        <div className="flex gap-3 items-center mb-3">
+          <div className="w-11 h-11 rounded-xl bg-wash text-brand flex items-center justify-center"><I n="target" s={22}/></div>
+          <div><div className="text-base font-semibold text-text">Talent pool matches</div>
+            <div className="text-sm text-text-2 mt-0.5">Candidates on NorthHire who match this posting but haven't applied yet.</div></div></div>
       </Card>
       {reverseCandidates.length===0
         ? <Empty icon="target" title="No talent pool matches yet" body="As more candidates sign up in this trade, we'll surface strong fits here."/>
-        : <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:14}}>
+        : <div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
             {reverseCandidates.map(({p,score})=><Card key={p.id} style={{padding:20,borderRadius:16}}>
-              <div style={{display:"flex",gap:14,alignItems:"center"}}>
+              <div className="flex gap-3.5 items-center">
                 <SmartPortrait seed={p.seed} size={52}/>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:15,fontWeight:670,color:C.text}}>{p.name}</div>
-                  <div style={{fontSize:13,color:C.text2,marginTop:3}}>{p.title} • {p.years}y • {p.city}</div></div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-base font-semibold text-text">{p.name}</div>
+                  <div className="text-sm text-text-2 mt-1">{p.title} • {p.years}y • {p.city}</div></div>
                 <Ring v={score} size={44}/></div>
-              <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:14}}>
+              <div className="flex flex-wrap gap-1.5 mt-3.5">
                 {(p.skills||[]).slice(0,4).map(s=><Tag key={s} sm>{s}</Tag>)}
                 {(p.skills||[]).length>4&&<Tag sm>+{p.skills.length-4}</Tag>}</div>
               <Btn kind="outline" size="sm" full icon="send" style={{marginTop:14}} onClick={()=>A.inviteToApply(p.id,jobId)}>Invite to apply</Btn>
@@ -443,53 +439,46 @@ export function EmpPipeline(){
     </div>}
 
     {tab==="pipeline"&&<>
-      {sel.size>0&&<div style={{background:C.brand,color:"#fff",padding:mob?"12px 16px":"12px 28px",display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}>
-        <span style={{fontSize:14,fontWeight:640}}>{sel.size} selected</span>
-        <div style={{flex:1}}/>
-        <div style={{position:"relative"}}>
+      {sel.size>0&&<div className={`bg-brand text-white flex gap-3 items-center flex-wrap ${mob?"py-3 px-4":"py-3 px-7"}`}>
+        <span className="text-sm font-semibold">{sel.size} selected</span>
+        <div className="flex-1"/>
+        <div className="relative">
           <Btn kind="onDark" size="sm" iconR="chevD" onClick={()=>setBulkMenu(!bulkMenu)}>Move to…</Btn>
-          {bulkMenu&&<div style={{position:"absolute",top:"100%",right:0,marginTop:6,background:"#fff",border:`1px solid ${C.line}`,
-            borderRadius:12,boxShadow:SH.lg,padding:6,zIndex:20,minWidth:180}}>
-            {STAGES.map(s=><button key={s} onClick={()=>runBulk("move",s)} style={{display:"block",width:"100%",textAlign:"left",
-              padding:"9px 12px",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:14,color:C.text,borderRadius:8}}
-              onMouseEnter={e=>e.currentTarget.style.background=C.bg}
-              onMouseLeave={e=>e.currentTarget.style.background="transparent"}>{s}</button>)}</div>}
+          {bulkMenu&&<div className="absolute top-full right-0 mt-1.5 bg-white border border-line rounded-xl shadow-lg p-1.5 z-20" style={{minWidth:180}}>
+            {STAGES.map(s=><button key={s} onClick={()=>runBulk("move",s)} className="block w-full text-left py-2.5 px-3 bg-transparent border-0 cursor-pointer text-sm text-text rounded-lg hover:bg-bg transition-colors duration-150">{s}</button>)}</div>}
         </div>
         <Btn kind="onDark" size="sm" icon="x" onClick={()=>runBulk("reject")}>Reject all</Btn>
         <Btn kind="onDark" size="sm" onClick={clear}>Clear</Btn></div>}
-      <div style={{flex:1,overflowX:"auto",padding:mob?14:20}}>
-        <div style={{display:"flex",gap:12,minWidth:"max-content",alignItems:"flex-start"}}>
+      <div className={`flex-1 overflow-x-auto ${mob?"p-3.5":"p-5"}`}>
+        <div className="flex gap-3 items-start" style={{minWidth:"max-content"}}>
           {STAGES.map(stage=>{const items=apps.filter(a=>a.stage===stage);
             const allSelected=items.length>0&&items.every(a=>sel.has(a.id));
-            return <div key={stage} style={{width:mob?236:250,display:"flex",flexDirection:"column",gap:9}}>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 3px"}}>
-                <span style={{fontSize:12,fontWeight:700,color:C.text2,textTransform:"uppercase",letterSpacing:".07em"}}>{stage}</span>
-                <div style={{display:"flex",gap:6,alignItems:"center"}}>
-                  {items.length>0&&<button onClick={()=>selectStage(stage)} style={{background:"none",border:"none",fontFamily:"inherit",
-                    fontSize:11,color:allSelected?C.brand:C.text3,cursor:"pointer",fontWeight:600}}>{allSelected?"clear":"all"}</button>}
-                  <span style={{background:C.wash,color:C.brand,border:`1px solid ${C.line2}`,fontSize:11.5,fontWeight:700,
-                    minWidth:22,height:22,borderRadius:99,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 7px"}}>{items.length}</span></div></div>
+            return <div key={stage} className={`${mob?"w-59":"w-63"} flex flex-col gap-2.5`}>
+              <div className="flex items-center justify-between px-1">
+                <span className="text-xs font-bold text-text-2 uppercase tracking-wide">{stage}</span>
+                <div className="flex gap-1.5 items-center">
+                  {items.length>0&&<button onClick={()=>selectStage(stage)} className="bg-transparent border-0 text-xs font-semibold cursor-pointer" style={{color:allSelected?C.brand:C.text3}}>{allSelected?"clear":"all"}</button>}
+                  <span className="bg-wash text-brand border border-line-2 text-xs font-bold rounded-full flex items-center justify-center px-1.5" style={{minWidth:22,height:22}}>{items.length}</span></div></div>
               {items.map((a,i)=>{const u=A.person(a.user); const s=A.scoreCandidate(u,job); const idx=STAGES.indexOf(stage);
                 const selected=sel.has(a.id);
-                return <div key={a.id} style={{background:"#fff",border:`${selected?2:1}px solid ${selected?C.brand:C.line}`,
-                  borderRadius:13,padding:selected?12:13,cursor:"pointer",boxShadow:SH.xs,transition:"all .16s"}}
+                return <div key={a.id} className="bg-white rounded-2xl cursor-pointer shadow-xs transition-all duration-150"
+                  style={{border:`${selected?2:1}px solid ${selected?C.brand:C.line}`,padding:selected?12:13}}
                   onClick={e=>{if(e.target.closest("[data-nc]"))return; A.openCandidate(a.id);}}
                   onMouseEnter={e=>{if(!selected){e.currentTarget.style.borderColor=C.line2;e.currentTarget.style.transform="translateY(-2px)";}}}
                   onMouseLeave={e=>{if(!selected){e.currentTarget.style.borderColor=C.line;e.currentTarget.style.transform="none";}}}>
-                  <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:10}}>
-                    <div data-nc onClick={()=>tog(a.id)} style={{width:20,height:20,borderRadius:6,cursor:"pointer",
-                      border:`1.5px solid ${selected?C.brand:C.line}`,background:selected?C.brand:"#fff",
-                      display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                  <div className="flex gap-2.5 items-center mb-2.5">
+                    <div data-nc onClick={()=>tog(a.id)} className="w-5 h-5 rounded-md cursor-pointer flex items-center justify-center shrink-0"
+                      style={{border:`1.5px solid ${selected?C.brand:C.line}`,background:selected?C.brand:"#fff"}}>
                       {selected&&<I n="check" s={12} c="#fff" w={3}/>}</div>
                     <SmartPortrait seed={u.seed} size={32}/>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:13.5,fontWeight:650,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{u.name}</div>
-                      <div style={{fontSize:11.5,color:C.text3,marginTop:1}}>{u.years} yrs • {u.city}</div></div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap">{u.name}</div>
+                      <div className="text-xs text-text-3 mt-px">{u.years} yrs • {u.city}</div></div>
                     <Ring v={s} size={32}/></div>
-                  <div data-nc style={{display:"flex",gap:6}} onClick={e=>e.stopPropagation()}>
+                  <div data-nc className="flex gap-1.5" onClick={e=>e.stopPropagation()}>
                     {idx>0&&<Btn kind="ghost" size="xs" icon="arrowL" title="Move back" onClick={()=>A.moveApp(a.id,STAGES[idx-1])} style={{flex:1}}/>}
                     {idx<STAGES.length-1&&<Btn kind="outline" size="xs" iconR="arrowR" onClick={()=>A.moveApp(a.id,STAGES[idx+1])} style={{flex:2}}>Advance</Btn>}</div></div>;})}
-              {items.length===0&&<div style={{border:`1.5px dashed ${C.line}`,borderRadius:13,padding:"22px 12px",textAlign:"center",fontSize:12.5,color:C.text3}}>Empty</div>}
+              {items.length===0&&<div className="rounded-2xl text-center text-xs text-text-3 py-6 px-3" style={{border:`1.5px dashed ${C.line}`}}>Empty</div>}
             </div>;})}</div></div>
     </>}
   </div>;
@@ -509,30 +498,30 @@ export function EmpCandidate(){
   const upcomingInterviews=A.interviews.filter(iv=>iv.app===a.id&&iv.status==="scheduled");
   return <Page narrow>
     <Card pad={mob?20:26} style={{marginBottom:16}}>
-      <div style={{display:"flex",gap:16,alignItems:"center",flexWrap:"wrap"}}>
+      <div className="flex gap-4 items-center flex-wrap">
         <SmartPortrait seed={u.seed} size={mob?62:74} radius={18}/>
-        <div style={{flex:"1 1 200px",minWidth:0}}>
-          <div style={{fontSize:mob?20:23,fontWeight:720,color:C.text,letterSpacing:"-.03em"}}>{u.name}</div>
-          <div style={{fontSize:14.5,color:C.text2,marginTop:4}}>{u.title} • {u.years} years • {u.city}, {u.prov}</div>
-          <div style={{fontSize:13.5,color:C.text3,marginTop:3}}>{u.email} • {u.phone}</div>
-          <div style={{marginTop:10}}><Tag tone={a.stage==="Offer"?"ok":a.stage==="Interview"?"warn":"brand"} sm>{a.stage}</Tag></div></div>
+        <div className="grow shrink basis-50 min-w-0">
+          <div className={`font-bold text-text tracking-tight ${mob?"text-xl":"text-2xl"}`}>{u.name}</div>
+          <div className="text-sm text-text-2 mt-1">{u.title} • {u.years} years • {u.city}, {u.prov}</div>
+          <div className="text-sm text-text-3 mt-0.5">{u.email} • {u.phone}</div>
+          <div className="mt-2.5"><Tag tone={a.stage==="Offer"?"ok":a.stage==="Interview"?"warn":"brand"} sm>{a.stage}</Tag></div></div>
         <Ring v={s} size={62} label="Fit"/></div></Card>
-    <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:16,marginBottom:16}}>
+    <div className={`grid gap-4 mb-4 ${mob?"grid-cols-1":"grid-cols-2"}`}>
       <Card><Lbl>Skills against this role</Lbl>
-        <div style={{display:"flex",flexWrap:"wrap",gap:7}}>
+        <div className="flex flex-wrap gap-1.5">
           {job.skills.map(k=>{const has=u.skills.some(x=>x.toLowerCase()===k.toLowerCase());
             return <Tag key={k} tone={has?"ok":"neutral"} icon={has?"check":"x"} sm>{k}</Tag>;})}</div>
-        <div style={{fontSize:13,color:C.text2,marginTop:12,lineHeight:1.6}}>
+        <div className="text-sm text-text-2 mt-3 leading-snug">
           Matches {job.skills.filter(k=>u.skills.some(x=>x.toLowerCase()===k.toLowerCase())).length} of {job.skills.length} required skills.</div></Card>
       <Card><Lbl>Application answers</Lbl>
         {[["Available from",a.avail||"Not stated"],["Expected pay",a.expect?a.expect+payShort(job):"Open to posted range"],
           ["Applied",a.at],["Education",u.edu]].map(([k,v])=>
-          <div key={k} style={{display:"flex",justifyContent:"space-between",gap:12,padding:"9px 0",borderBottom:`1px solid ${C.lineSoft}`,fontSize:13.5}}>
-            <span style={{color:C.text2}}>{k}</span><span style={{fontWeight:600,color:C.text,textAlign:"right"}}>{v}</span></div>)}</Card></div>
+          <div key={k} className="flex justify-between gap-3 py-2.5 border-b border-line-soft text-sm">
+            <span className="text-text-2">{k}</span><span className="font-semibold text-text text-right">{v}</span></div>)}</Card></div>
     {a.letter&&<Card style={{marginBottom:16}}><Lbl>Their note</Lbl>
-      <p style={{fontSize:14.5,color:C.text2,lineHeight:1.7,margin:0,whiteSpace:"pre-wrap"}}>{a.letter}</p></Card>}
+      <p className="text-sm text-text-2 leading-relaxed m-0 whitespace-pre-wrap">{a.letter}</p></Card>}
     <Card style={{marginBottom:16}}><Lbl>Move this candidate</Lbl>
-      <div style={{display:"flex",gap:9,flexWrap:"wrap"}}>
+      <div className="flex gap-2.5 flex-wrap">
         {idx>0&&<Btn kind="outline" icon="arrowL" onClick={()=>A.moveApp(a.id,STAGES[idx-1])}>Back to {STAGES[idx-1]}</Btn>}
         {idx<STAGES.length-1&&<Btn kind="primary" iconR="arrowR" onClick={()=>A.moveApp(a.id,STAGES[idx+1])}>Advance to {STAGES[idx+1]}</Btn>}
         {A.can("messages")?<Btn kind="outline" icon="mail" onClick={()=>setShowMsg(true)}>Message</Btn>:<Btn kind="ghost" icon="lock" onClick={()=>A.go("pricing")}>Message (Growth+)</Btn>}
@@ -541,44 +530,43 @@ export function EmpCandidate(){
         <Btn kind="ghost" onClick={()=>A.go("empPipeline")}>Back to pipeline</Btn></div></Card>
 
     {threadMessages.length>0&&<Card style={{marginBottom:16}}><Lbl>Message history</Lbl>
-      <div style={{display:"flex",flexDirection:"column",gap:10,maxHeight:280,overflowY:"auto"}}>
+      <div className="flex flex-col gap-2.5 overflow-y-auto" style={{maxHeight:280}}>
         {threadMessages.map(m=>{const mine=m.from===A.user?.id;
-          return <div key={m.id} style={{display:"flex",justifyContent:mine?"flex-end":"flex-start"}}>
-            <div style={{maxWidth:"75%",padding:"10px 14px",borderRadius:12,fontSize:14,lineHeight:1.5,
+          return <div key={m.id} className={`flex ${mine?"justify-end":"justify-start"}`}>
+            <div className="rounded-xl text-sm leading-snug py-2.5 px-3.5" style={{maxWidth:"75%",
               background:mine?C.brand:C.bg,color:mine?"#fff":C.text,border:mine?"none":`1px solid ${C.line}`}}>
               {m.text}
-              <div style={{fontSize:11,opacity:.7,marginTop:5}}>{new Date(m.at).toLocaleString("en-CA")}</div></div></div>;})}</div></Card>}
+              <div className="text-xs opacity-70 mt-1.5">{new Date(m.at).toLocaleString("en-CA")}</div></div></div>;})}</div></Card>}
 
     {upcomingInterviews.length>0&&<Card style={{marginBottom:16}}><Lbl>Scheduled interviews</Lbl>
-      <div style={{display:"flex",flexDirection:"column",gap:10}}>
-        {upcomingInterviews.map(iv=><div key={iv.id} style={{display:"flex",gap:12,alignItems:"center",padding:"12px 14px",background:C.bg,borderRadius:10,border:`1px solid ${C.line}`}}>
-          <div style={{width:40,height:40,borderRadius:10,background:C.wash,color:C.brand,display:"flex",alignItems:"center",justifyContent:"center"}}><I n="calendar" s={18}/></div>
-          <div style={{flex:1,minWidth:0}}>
-            <div style={{fontSize:14,fontWeight:640,color:C.text}}>{iv.mode==="video"?"Video call":"On-site interview"} on {iv.when}</div>
-            {iv.notes&&<div style={{fontSize:12.5,color:C.text2,marginTop:3}}>{iv.notes}</div>}</div>
+      <div className="flex flex-col gap-2.5">
+        {upcomingInterviews.map(iv=><div key={iv.id} className="flex gap-3 items-center py-3 px-3.5 bg-bg rounded-xl border border-line">
+          <div className="w-10 h-10 rounded-xl bg-wash text-brand flex items-center justify-center"><I n="calendar" s={18}/></div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold text-text">{iv.mode==="video"?"Video call":"On-site interview"} on {iv.when}</div>
+            {iv.notes&&<div className="text-xs text-text-2 mt-1">{iv.notes}</div>}</div>
           <Btn kind="ghost" size="xs" icon="x" onClick={()=>A.cancelInterview(iv.id)}/></div>)}</div></Card>}
 
     {showMsg&&<Modal onClose={()=>setShowMsg(false)} title={`Message ${u.name}`}>
       <Field label="Your message" hint={`Sent through NorthHire — ${u.name} sees it on their status page.`}>
         <Area rows={5} value={msgText} onChange={e=>setMsgText(e.target.value)} placeholder="Hi Jean, thanks for applying…"/></Field>
-      <div style={{display:"flex",gap:9,justifyContent:"flex-end",marginTop:14}}>
+      <div className="flex gap-2.5 justify-end mt-3.5">
         <Btn kind="ghost" onClick={()=>setShowMsg(false)}>Cancel</Btn>
         <Btn kind="primary" icon="send" disabled={!msgText.trim()} onClick={()=>{A.sendMessage(u.id,job.id,msgText.trim());setMsgText("");setShowMsg(false);}}>Send message</Btn></div></Modal>}
 
     {showSched&&<Modal onClose={()=>setShowSched(false)} title={`Schedule interview with ${u.name}`}>
-      <div style={{display:"flex",flexDirection:"column",gap:14}}>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+      <div className="flex flex-col gap-3.5">
+        <div className="grid grid-cols-2 gap-3">
           <Field label="Date"><Input type="date" value={ivDate} onChange={e=>setIvDate(e.target.value)}/></Field>
           <Field label="Time"><Input type="time" value={ivTime} onChange={e=>setIvTime(e.target.value)}/></Field></div>
         <Field label="Format">
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}}>
+          <div className="grid grid-cols-2 gap-2.5">
             {[["video","Video call"],["onsite","On-site interview"]].map(([v,l])=>{const on=ivMode===v;
-              return <button key={v} onClick={()=>setIvMode(v)} style={{padding:"12px 14px",borderRadius:11,cursor:"pointer",
-                fontFamily:"inherit",fontSize:14,fontWeight:on?640:520,border:`1.5px solid ${on?C.brand:C.line}`,
-                background:on?C.tint:"#fff",color:on?C.brand:C.text}}>{l}</button>;})}</div></Field>
+              return <button key={v} onClick={()=>setIvMode(v)} className="py-3 px-3.5 rounded-xl cursor-pointer text-sm border-2"
+                style={{fontWeight:on?640:520,borderColor:on?C.brand:C.line,background:on?C.tint:"#fff",color:on?C.brand:C.text}}>{l}</button>;})}</div></Field>
         <Field label="Notes (optional)" hint="Address, video link, what to bring, who they'll meet.">
           <Area rows={3} value={ivNotes} onChange={e=>setIvNotes(e.target.value)} placeholder="Meet at reception, ask for the site foreman."/></Field>
-        <div style={{display:"flex",gap:9,justifyContent:"flex-end"}}>
+        <div className="flex gap-2.5 justify-end">
           <Btn kind="ghost" onClick={()=>setShowSched(false)}>Cancel</Btn>
           <Btn kind="primary" icon="calendar" disabled={!ivDate||!ivTime} onClick={()=>{
             const when=`${ivDate} at ${ivTime}`;
@@ -600,18 +588,18 @@ export function ContentManager({scope,only}){
   const [tab,setTab]=useState(only==="trainings"?"trainings":"blogs");
   const Row=({item,type})=>{
     const editable=isAdmin||item.owner===owner;
-    return <div style={{display:"flex",gap:14,alignItems:"center",padding:"14px 0",borderBottom:`1px solid ${C.lineSoft}`,flexWrap:"wrap"}}>
-      <div style={{width:74,height:52,borderRadius:9,overflow:"hidden",flexShrink:0}}>
+    return <div className="flex gap-3.5 items-center py-3.5 border-b border-line-soft flex-wrap">
+      <div className="w-19 h-13 rounded-lg overflow-hidden shrink-0">
         <SmartScene kind={item.scene} tone={item.tone} h={52} seed={item.id.charCodeAt(1)||0}/></div>
-      <div style={{flex:"1 1 200px",minWidth:0}}>
-        <div style={{fontSize:14.5,fontWeight:640,color:C.text,lineHeight:1.4}}>{item.title}</div>
-        <div style={{fontSize:12.5,color:C.text3,marginTop:4,display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+      <div className="grow shrink basis-50 min-w-0">
+        <div className="text-sm font-semibold text-text leading-snug" style={{fontSize:14.5}}>{item.title}</div>
+        <div className="text-xs text-text-3 mt-1 flex gap-2 flex-wrap items-center">
           <span>{item.cat}</span><span>•</span>
           <span>{type==="blog"?`${item.mins} min read`:`${item.hours} h · ${item.price===0?"Free":money(item.price)}`}</span>
           {isAdmin&&<><span>•</span><span>{item.owner==="admin"?"NorthHire":A.emp(item.owner)?.name||item.owner}</span></>}</div></div>
       <Tag tone={item.status==="published"?"ok":item.status==="draft"?"warn":"neutral"} sm>
         {item.status==="published"?"Published":item.status==="draft"?"Draft":"Hidden"}</Tag>
-      <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
+      <div className="flex gap-2 flex-wrap">
         <Btn kind="ghost" size="xs" icon="eye" title="Preview"
           onClick={()=>type==="blog"?A.openBlog(item.id):A.openTraining(item.id)}/>
         {editable&&<>
@@ -672,12 +660,12 @@ export function BlogEditor(){
     <H1 sub={isNew?"Published articles appear on the home page and in Career resources":"Editing a published article"}
       action={<Btn kind="ghost" onClick={()=>A.go(A.user.role==="admin"?"admBlogs":"empContent")}>Cancel</Btn>}>
       {isNew?"New article":"Edit article"}</H1>
-    <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 300px",gap:18,alignItems:"start"}}>
+    <div className="grid gap-5 items-start" style={{gridTemplateColumns:mob?"1fr":"1fr 300px"}}>
       <Card pad={mob?20:26}>
-        <div style={{display:"flex",flexDirection:"column",gap:16}}>
+        <div className="flex flex-col gap-4">
           <Field label="Title" required error={err.title}><Input value={d.title} onChange={e=>set("title",e.target.value)}
             placeholder="How to write a Canadian resume" invalid={!!err.title}/></Field>
-          <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:12}}>
+          <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
             <Field label="Category" required><Sel value={d.cat} onChange={e=>set("cat",e.target.value)}>
               {["Career Advice","Trades","Healthcare","Transport","Resume","Salary","Industry News","Safety"].map(o=><option key={o}>{o}</option>)}</Sel></Field>
             <Field label="Reading time (minutes)"><Input type="number" value={d.mins} onChange={e=>set("mins",Math.max(1,Number(e.target.value)||1))}/></Field></div>
@@ -687,28 +675,28 @@ export function BlogEditor(){
             hint="Each section: heading on the first line, the paragraph underneath, then a blank line before the next section.">
             <RichText value={d.bodyText} onChange={v=>set("bodyText",v)} rows={14} placeholder="Start writing. Use the toolbar for bold, italics, bullet lists, links..."/></Field>
           <Field label="Author name"><Input value={d.author} onChange={e=>set("author",e.target.value)}/></Field></div>
-        <div style={{display:"flex",gap:10,justifyContent:"flex-end",marginTop:22,paddingTop:18,borderTop:`1px solid ${C.lineSoft}`,flexWrap:"wrap"}}>
+        <div className="flex gap-2.5 justify-end mt-6 pt-5 border-t border-line-soft flex-wrap">
           <Btn kind="outline" onClick={()=>save("draft")}>Save as draft</Btn>
           <Btn kind="primary" icon="check" onClick={()=>save("published")}>Publish</Btn></div></Card>
-      <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      <div className="flex flex-col gap-3.5">
         <Card pad={0} style={{overflow:"hidden"}}>
-          <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.lineSoft}`,fontSize:13,fontWeight:650,color:C.text}}>Card preview</div>
+          <div className="py-3 px-4 border-b border-line-soft text-sm font-semibold text-text">Card preview</div>
           <SmartScene kind={d.scene} tone={d.tone} h={130} seed={d.id.charCodeAt(1)||0}/>
-          <div style={{padding:16}}>
+          <div className="p-4">
             <Tag tone="brand" sm>{d.cat}</Tag>
-            <div style={{fontSize:15,fontWeight:660,color:C.text,lineHeight:1.4,margin:"11px 0 8px"}}>{d.title||"Untitled article"}</div>
-            <p style={{fontSize:13,color:C.text2,lineHeight:1.6,margin:0}}>{d.excerpt||"Your summary appears here."}</p></div></Card>
+            <div className="text-base font-semibold text-text leading-snug mt-2.5 mb-2">{d.title||"Untitled article"}</div>
+            <p className="text-xs text-text-2 leading-snug m-0">{d.excerpt||"Your summary appears here."}</p></div></Card>
         <Card pad={18}><Lbl>Thumbnail artwork</Lbl>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:14}}>
+          <div className="grid grid-cols-3 gap-2 mb-3.5">
             {["office","trades","care","road","learn","money","resume","kitchen","warehouse","safety"].map(s=>
-              <button key={s} onClick={()=>set("scene",s)} style={{padding:0,border:`2px solid ${d.scene===s?C.brand:C.line}`,
-                borderRadius:8,overflow:"hidden",cursor:"pointer",background:"none",lineHeight:0}}>
+              <button key={s} onClick={()=>set("scene",s)} className="p-0 rounded-lg overflow-hidden cursor-pointer bg-transparent"
+                style={{border:`2px solid ${d.scene===s?C.brand:C.line}`,lineHeight:0}}>
                 <SmartScene kind={s} tone={d.tone} h={40} usePhoto={false}/></button>)}</div>
           <Lbl>Accent colour</Lbl>
-          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          <div className="flex gap-2 flex-wrap">
             {[C.brand,"#B45309","#0F5C8C","#B02A26","#5B3BC4","#07724F","#8F5B05","#2A3852"].map(t=>
-              <button key={t} onClick={()=>set("tone",t)} style={{width:30,height:30,borderRadius:8,background:t,
-                border:d.tone===t?`3px solid ${C.text}`:`1px solid ${C.line}`,cursor:"pointer"}}/>)}</div></Card></div></div>
+              <button key={t} onClick={()=>set("tone",t)} className="w-8 h-8 rounded-lg cursor-pointer" style={{background:t,
+                border:d.tone===t?`3px solid ${C.text}`:`1px solid ${C.line}`}}/>)}</div></Card></div></div>
   </Page>;
 }
 
@@ -746,12 +734,12 @@ export function TrainingEditor(){
     <H1 sub={isNew?"Published trainings appear on the home page and in the Trainings library":"Editing a training course"}
       action={<Btn kind="ghost" onClick={()=>A.go(A.user.role==="admin"?"admTrainings":"empContent")}>Cancel</Btn>}>
       {isNew?"New training":"Edit training"}</H1>
-    <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 300px",gap:18,alignItems:"start"}}>
+    <div className="grid gap-5 items-start" style={{gridTemplateColumns:mob?"1fr":"1fr 300px"}}>
       <Card pad={mob?20:26}>
-        <div style={{display:"flex",flexDirection:"column",gap:16}}>
+        <div className="flex flex-col gap-4">
           <Field label="Course title" required error={err.title}><Input value={d.title} onChange={e=>set("title",e.target.value)}
             placeholder="WHMIS 2015 and Workplace Safety" invalid={!!err.title}/></Field>
-          <div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"repeat(4,1fr)",gap:12}}>
+          <div className={`grid gap-3 ${mob?"grid-cols-2":"grid-cols-4"}`}>
             <Field label="Category"><Sel value={d.cat} onChange={e=>set("cat",e.target.value)}>
               {["Safety","Trades","Healthcare","Transport","Hospitality","Warehouse","Office","Career","Language","Finance"].map(o=><option key={o}>{o}</option>)}</Sel></Field>
             <Field label="Level"><Sel value={d.level} onChange={e=>set("level",e.target.value)}>
@@ -762,7 +750,7 @@ export function TrainingEditor(){
             <RichText value={d.aboutRich||d.about} onChange={v=>set("aboutRich",v)}
               placeholder="Who the course is for and what certificate it leads to." rows={5}/></Field>
 
-          <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:12}}>
+          <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
             <Field label="Provider name"><Input value={d.provider} onChange={e=>set("provider",e.target.value)}
               placeholder="e.g. NorthHire Learning"/></Field>
             <Field label="Trainer / guest speaker" hint="Name of the person delivering the course.">
@@ -774,20 +762,20 @@ export function TrainingEditor(){
               placeholder="e.g. 15 years in industrial safety with the Alberta Construction Safety Association..."/></Field>
 
           <div>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-              <div><div style={{fontSize:13,fontWeight:640,color:C.text}}>Course modules</div>
-                <div style={{fontSize:12,color:C.text3,marginTop:2}}>Add each lesson or section, in order.</div></div>
+            <div className="flex justify-between items-center mb-2.5">
+              <div><div className="text-sm font-semibold text-text">Course modules</div>
+                <div className="text-xs text-text-3 mt-0.5">Add each lesson or section, in order.</div></div>
               <Btn kind="outline" size="sm" icon="plus" onClick={addMod}>Add module</Btn>
             </div>
-            {err.mods&&<div style={{fontSize:12.5,color:C.red,marginBottom:8}}>{err.mods}</div>}
+            {err.mods&&<div className="text-xs text-red mb-2">{err.mods}</div>}
             {(d.mods||[]).length===0
-              ? <div style={{padding:20,background:C.bg,border:`1px dashed ${C.line}`,borderRadius:10,textAlign:"center",fontSize:13,color:C.text3}}>No modules yet — add your first.</div>
-              : <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                  {(d.mods||[]).map((m,i)=><div key={m.id} style={{border:`1px solid ${C.line}`,borderRadius:11,padding:12,background:"#fff"}}>
-                    <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
-                      <div style={{width:24,height:24,borderRadius:99,background:C.wash,color:C.brand,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>{i+1}</div>
+              ? <div className="p-5 bg-bg border border-dashed border-line rounded-xl text-center text-sm text-text-3">No modules yet — add your first.</div>
+              : <div className="flex flex-col gap-2.5">
+                  {(d.mods||[]).map((m,i)=><div key={m.id} className="border border-line rounded-xl p-3 bg-white">
+                    <div className="flex gap-2 items-center mb-2">
+                      <div className="w-6 h-6 rounded-full bg-wash text-brand flex items-center justify-center text-xs font-bold shrink-0">{i+1}</div>
                       <Input value={m.title} onChange={e=>updMod(m.id,{title:e.target.value})} placeholder="Module title"/>
-                      <div style={{display:"flex",gap:2}}>
+                      <div className="flex gap-0.5">
                         <Btn kind="ghost" size="xs" onClick={()=>moveMod(m.id,-1)} disabled={i===0}>↑</Btn>
                         <Btn kind="ghost" size="xs" onClick={()=>moveMod(m.id,1)} disabled={i===d.mods.length-1}>↓</Btn>
                         <Btn kind="ghost" size="xs" icon="trash" onClick={()=>delMod(m.id)}/>
@@ -795,7 +783,7 @@ export function TrainingEditor(){
                     </div>
                     <Input value={m.videoUrl||""} onChange={e=>updMod(m.id,{videoUrl:e.target.value})}
                       placeholder="Optional video URL (YouTube, Vimeo, etc.)" icon="play"/>
-                    <div style={{marginTop:8}}>
+                    <div className="mt-2">
                       <Area rows={3} value={m.body||""} onChange={e=>updMod(m.id,{body:e.target.value})}
                         placeholder="Module content, notes, or references..."/>
                     </div>
@@ -808,32 +796,32 @@ export function TrainingEditor(){
               placeholder="Add an outcome and press Enter"/></Field>
 
           <div>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-              <div><div style={{fontSize:13,fontWeight:640,color:C.text}}>In-training assessment</div>
-                <div style={{fontSize:12,color:C.text3,marginTop:2}}>Optional multiple-choice test to certify learners.</div></div>
+            <div className="flex justify-between items-center mb-2.5">
+              <div><div className="text-sm font-semibold text-text">In-training assessment</div>
+                <div className="text-xs text-text-3 mt-0.5">Optional multiple-choice test to certify learners.</div></div>
               <Btn kind="outline" size="sm" icon="plus" onClick={addTest}>Add question</Btn>
             </div>
             {(d.tests||[]).length===0
-              ? <div style={{padding:20,background:C.bg,border:`1px dashed ${C.line}`,borderRadius:10,textAlign:"center",fontSize:13,color:C.text3}}>No test questions yet. Add some to require certification.</div>
+              ? <div className="p-5 bg-bg border border-dashed border-line rounded-xl text-center text-sm text-text-3">No test questions yet. Add some to require certification.</div>
               : <>
-                <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:12,marginBottom:10}}>
+                <div className={`grid gap-3 mb-2.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
                   <Field label="Passing score (%)"><Input type="number" min="1" max="100" value={d.passingScore}
                     onChange={e=>set("passingScore",Math.min(100,Math.max(1,Number(e.target.value)||70)))}/></Field>
                   <Field label="Randomize question order">
-                    <div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 0"}}>
+                    <div className="flex items-center gap-2.5 py-3">
                       <Switch on={d.randomize} onChange={v=>set("randomize",v)}/>
-                      <span style={{fontSize:13,color:C.text2}}>{d.randomize?"On":"Off"}</span>
+                      <span className="text-sm text-text-2">{d.randomize?"On":"Off"}</span>
                     </div></Field>
                 </div>
-                <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                  {(d.tests||[]).map((t,i)=><div key={t.id} style={{border:`1px solid ${C.line}`,borderRadius:11,padding:12,background:"#fff"}}>
-                    <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:10}}>
-                      <div style={{width:24,height:24,borderRadius:99,background:C.warnBg,color:C.warn,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>Q{i+1}</div>
+                <div className="flex flex-col gap-2.5">
+                  {(d.tests||[]).map((t,i)=><div key={t.id} className="border border-line rounded-xl p-3 bg-white">
+                    <div className="flex gap-2 items-center mb-2.5">
+                      <div className="w-6 h-6 rounded-full bg-warn-bg text-warn flex items-center justify-center text-xs font-bold shrink-0">Q{i+1}</div>
                       <Input value={t.question} onChange={e=>updTest(t.id,{question:e.target.value})} placeholder="Question text"/>
                       <Btn kind="ghost" size="xs" icon="trash" onClick={()=>delTest(t.id)}/>
                     </div>
-                    <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                      {t.options.map((o,j)=><label key={j} style={{display:"flex",gap:8,alignItems:"center",cursor:"pointer"}}>
+                    <div className="flex flex-col gap-1.5">
+                      {t.options.map((o,j)=><label key={j} className="flex gap-2 items-center cursor-pointer">
                         <input type="radio" name={`ans_${t.id}`} checked={t.answerIdx===j} onChange={()=>updTest(t.id,{answerIdx:j})}/>
                         <Input value={o} onChange={e=>updTest(t.id,{options:t.options.map((x,k)=>k===j?e.target.value:x)})} placeholder={`Option ${j+1}`}/>
                       </label>)}
@@ -843,28 +831,28 @@ export function TrainingEditor(){
               </>}
           </div>
           </div>
-        <div style={{display:"flex",gap:10,justifyContent:"flex-end",marginTop:22,paddingTop:18,borderTop:`1px solid ${C.lineSoft}`,flexWrap:"wrap"}}>
+        <div className="flex gap-2.5 justify-end mt-6 pt-5 border-t border-line-soft flex-wrap">
           <Btn kind="outline" onClick={()=>save("draft")}>Save as draft</Btn>
           <Btn kind="primary" icon="check" onClick={()=>save("published")}>Publish</Btn></div></Card>
-      <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      <div className="flex flex-col gap-3.5">
         <Card pad={0} style={{overflow:"hidden"}}>
-          <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.lineSoft}`,fontSize:13,fontWeight:650,color:C.text}}>Card preview</div>
-          <div style={{position:"relative"}}><SmartScene kind={d.scene} tone={d.tone} h={120} seed={d.id.charCodeAt(1)||0}/>
-            <div style={{position:"absolute",top:10,left:10}}><Tag tone={d.price===0?"ok":"dark"} sm>{d.price===0?"Free":money(d.price)}</Tag></div></div>
-          <div style={{padding:16}}>
-            <div style={{display:"flex",gap:7,marginBottom:9}}><Tag sm>{d.level}</Tag><Tag sm icon="clock">{d.hours} h</Tag></div>
-            <div style={{fontSize:15,fontWeight:660,color:C.text,lineHeight:1.4}}>{d.title||"Untitled training"}</div></div></Card>
+          <div className="py-3 px-4 border-b border-line-soft text-sm font-semibold text-text">Card preview</div>
+          <div className="relative"><SmartScene kind={d.scene} tone={d.tone} h={120} seed={d.id.charCodeAt(1)||0}/>
+            <div className="absolute top-2.5 left-2.5"><Tag tone={d.price===0?"ok":"dark"} sm>{d.price===0?"Free":money(d.price)}</Tag></div></div>
+          <div className="p-4">
+            <div className="flex gap-2 mb-2"><Tag sm>{d.level}</Tag><Tag sm icon="clock">{d.hours} h</Tag></div>
+            <div className="text-base font-semibold text-text leading-snug">{d.title||"Untitled training"}</div></div></Card>
         <Card pad={18}><Lbl>Thumbnail artwork</Lbl>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:14}}>
+          <div className="grid grid-cols-3 gap-2 mb-3.5">
             {["learn","safety","trades","care","road","kitchen","warehouse","office","money","resume"].map(s=>
-              <button key={s} onClick={()=>set("scene",s)} style={{padding:0,border:`2px solid ${d.scene===s?C.brand:C.line}`,
-                borderRadius:8,overflow:"hidden",cursor:"pointer",background:"none",lineHeight:0}}>
+              <button key={s} onClick={()=>set("scene",s)} className="p-0 rounded-lg overflow-hidden cursor-pointer bg-transparent"
+                style={{border:`2px solid ${d.scene===s?C.brand:C.line}`,lineHeight:0}}>
                 <SmartScene kind={s} tone={d.tone} h={40} usePhoto={false}/></button>)}</div>
           <Lbl>Accent colour</Lbl>
-          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          <div className="flex gap-2 flex-wrap">
             {[C.brand,"#B45309","#0F5C8C","#B02A26","#5B3BC4","#07724F","#8F5B05","#2A3852"].map(t=>
-              <button key={t} onClick={()=>set("tone",t)} style={{width:30,height:30,borderRadius:8,background:t,
-                border:d.tone===t?`3px solid ${C.text}`:`1px solid ${C.line}`,cursor:"pointer"}}/>)}</div></Card></div></div>
+              <button key={t} onClick={()=>set("tone",t)} className="w-8 h-8 rounded-lg cursor-pointer" style={{background:t,
+                border:d.tone===t?`3px solid ${C.text}`:`1px solid ${C.line}`}}/>)}</div></Card></div></div>
   </Page>;
 }
 
@@ -877,20 +865,20 @@ export function EmpCompany(){
   return <Page narrow>
     <H1 sub="What candidates see on your company page">Company profile</H1>
     <Card pad={mob?20:26}>
-      <div style={{display:"flex",gap:16,alignItems:"center",marginBottom:22,flexWrap:"wrap"}}>
+      <div className="flex gap-4 items-center mb-6 flex-wrap">
         <SmartLogo e={d} size={72} radius={18}/>
-        <div style={{flex:1,minWidth:180}}>
+        <div className="flex-1" style={{minWidth:180}}>
           <Lbl>Logo mark</Lbl>
-          <div style={{display:"flex",gap:7,flexWrap:"wrap",marginBottom:12}}>
-            {Object.keys(MARKS).map(k=><button key={k} onClick={()=>set("mark",k)} style={{padding:0,border:`2px solid ${d.mark===k?C.brand:C.line}`,
-              borderRadius:10,overflow:"hidden",cursor:"pointer",background:"none",lineHeight:0}}>
+          <div className="flex gap-2 flex-wrap mb-3">
+            {Object.keys(MARKS).map(k=><button key={k} onClick={()=>set("mark",k)} className="p-0 rounded-xl overflow-hidden cursor-pointer bg-transparent"
+              style={{border:`2px solid ${d.mark===k?C.brand:C.line}`,lineHeight:0}}>
               <Mark kind={k} a={d.a} b={d.b} size={38}/></button>)}</div>
           <Lbl>Brand colour</Lbl>
-          <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
+          <div className="flex gap-2 flex-wrap">
             {["#005CCC","#B45309","#0F5C8C","#B02A26","#0B6B3A","#5B2E8C","#28404F","#A14A18"].map(c=>
-              <button key={c} onClick={()=>set("a",c)} style={{width:28,height:28,borderRadius:8,background:c,
-                border:d.a===c?`3px solid ${C.text}`:`1px solid ${C.line}`,cursor:"pointer"}}/>)}</div></div></div>
-      <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:14}}>
+              <button key={c} onClick={()=>set("a",c)} className="w-7 h-7 rounded-lg cursor-pointer" style={{background:c,
+                border:d.a===c?`3px solid ${C.text}`:`1px solid ${C.line}`}}/>)}</div></div></div>
+      <div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
         <Field label="Company name" required><Input value={d.name} onChange={e=>set("name",e.target.value)}/></Field>
         <Field label="Industry"><Input value={d.industry} onChange={e=>set("industry",e.target.value)}/></Field>
         <Field label="City"><Input icon="pin" value={d.city} onChange={e=>set("city",e.target.value)}/></Field>
@@ -902,7 +890,7 @@ export function EmpCompany(){
         <Field label="Website" style={{gridColumn:mob?"auto":"span 2"}}><Input icon="globe" value={d.site} onChange={e=>set("site",e.target.value)}/></Field>
         <Field label="About the company" style={{gridColumn:mob?"auto":"span 2"}} hint="Two or three sentences shown on your public page and on every listing.">
           <Area rows={5} value={d.about} onChange={e=>set("about",e.target.value)}/></Field></div>
-      <div style={{display:"flex",gap:10,justifyContent:"flex-end",marginTop:22,paddingTop:18,borderTop:`1px solid ${C.lineSoft}`}}>
+      <div className="flex gap-2.5 justify-end mt-6 pt-5 border-t border-line-soft">
         {dirty&&<Btn kind="ghost" onClick={()=>setD({...A.company})}>Discard</Btn>}
         <Btn kind="primary" icon="check" disabled={!dirty} onClick={()=>A.saveCompany(d)}>{dirty?"Save changes":"Saved"}</Btn></div></Card>
   </Page>;
@@ -934,52 +922,53 @@ export function EmpBilling(){
   return <Page narrow>
     <H1 sub="Your subscription, usage and invoices">Billing</H1>
     <Card pad={mob?20:26} style={{marginBottom:16,background:C.ink,borderColor:C.ink}}>
-      <div style={{display:"flex",justifyContent:"space-between",gap:16,flexWrap:"wrap",color:"#fff"}}>
-        <div style={{flex:"1 1 240px"}}>
+      <div className="flex justify-between gap-4 flex-wrap text-white">
+        <div className="grow shrink basis-60">
           <Tag tone="onDark">Current plan</Tag>
-          <div style={{fontSize:26,fontWeight:730,letterSpacing:"-.035em",margin:"12px 0 6px"}}>{plan} — {A.PLANS[plan]?.price===0?"Free forever":`$${A.PLANS[plan]?.price}/month`}</div>
-          <div style={{fontSize:14,color:"rgba(255,255,255,.55)"}}>Renews 1 September 2026 • {live} of {limit===Infinity?"unlimited":limit} job slots in use</div>
-          <div style={{marginTop:16,maxWidth:300}}><Bar v={limit===Infinity?100:(live/limit)*100} tone="#4ADE80"/></div></div>
-        <div style={{display:"flex",gap:9,flexWrap:"wrap",alignItems:"flex-start"}}>
+          <div className="text-2xl font-bold tracking-tight my-3">{plan} — {A.PLANS[plan]?.price===0?"Free forever":`$${A.PLANS[plan]?.price}/month`}</div>
+          <div className="text-sm text-white/55">Renews 1 September 2026 • {live} of {limit===Infinity?"unlimited":limit} job slots in use</div>
+          <div className="mt-4 max-w-75"><Bar v={limit===Infinity?100:(live/limit)*100} tone="#4ADE80"/></div></div>
+        <div className="flex gap-2.5 flex-wrap items-start">
           <Btn kind="onDark" onClick={()=>A.go("pricing")}>Change plan</Btn></div></div></Card>
 
     <Card style={{marginBottom:16,borderRadius:20}}><H2 action={<Btn kind="outline" size="sm" icon="plus" onClick={()=>setShowCard(true)}>Add card</Btn>}>Payment methods</H2>
       {A.paymentMethods.length===0
-        ? <div style={{padding:"18px 0",textAlign:"center"}}>
-            <div style={{fontSize:14,color:C.text3,marginBottom:12}}>No payment method saved yet.</div>
+        ? <div className="py-5 text-center">
+            <div className="text-sm text-text-3 mb-3">No payment method saved yet.</div>
             <Btn kind="primary" icon="plus" onClick={()=>setShowCard(true)}>Add a card</Btn></div>
-        : <div style={{display:"flex",flexDirection:"column",gap:8}}>
-            {A.paymentMethods.map(pm=><div key={pm.id} style={{display:"flex",gap:14,alignItems:"center",padding:"14px 16px",background:C.bg,borderRadius:12,border:`1px solid ${C.line}`}}>
-              <div style={{width:44,height:32,borderRadius:6,background:pm.brand==="Visa"?"#1A1F71":pm.brand==="Mastercard"?"#EB001B":pm.brand==="Amex"?"#006FCF":C.ink,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,letterSpacing:".05em",flexShrink:0}}>{pm.brand.toUpperCase().slice(0,4)}</div>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:14,fontWeight:650,color:C.text}}>{pm.brand} {pm.masked}</div>
-                <div style={{fontSize:12.5,color:C.text3,marginTop:2}}>{pm.name} • Exp {pm.exp}</div></div>
+        : <div className="flex flex-col gap-2">
+            {A.paymentMethods.map(pm=><div key={pm.id} className="flex gap-3.5 items-center py-3.5 px-4 bg-bg rounded-xl border border-line">
+              <div className="w-11 h-8 rounded-md text-white flex items-center justify-center text-xs font-bold tracking-wide shrink-0"
+                style={{background:pm.brand==="Visa"?"#1A1F71":pm.brand==="Mastercard"?"#EB001B":pm.brand==="Amex"?"#006FCF":C.ink}}>{pm.brand.toUpperCase().slice(0,4)}</div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-semibold text-text">{pm.brand} {pm.masked}</div>
+                <div className="text-xs text-text-3 mt-0.5">{pm.name} • Exp {pm.exp}</div></div>
               {pm.default&&<Tag tone="brand" sm>Default</Tag>}
               {!pm.default&&<Btn kind="ghost" size="xs" onClick={()=>A.setDefaultPayment(pm.id)}>Set default</Btn>}
               <Btn kind="ghost" size="xs" icon="trash" onClick={()=>A.removePaymentMethod(pm.id)}/></div>)}</div>}
     </Card>
 
     {showCard&&<Modal onClose={()=>{setShowCard(false);setCardErr({});}} title="Add a payment method">
-      <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      <div className="flex flex-col gap-3.5">
         <Banner tone="brand" icon="shield" title="Test-mode form">Card details are validated (Luhn check) and stored locally. Real charges would flow through Stripe.</Banner>
         <Field label="Cardholder name" required error={cardErr.name}><Input value={card.name} onChange={e=>{setCard({...card,name:e.target.value});setCardErr(x=>({...x,name:undefined}));}} placeholder="Jean Tremblay"/></Field>
         <Field label="Card number" required error={cardErr.number} hint="Try 4242 4242 4242 4242 for testing.">
           <Input value={card.number} onChange={e=>{setCard({...card,number:fmtNumber(e.target.value)});setCardErr(x=>({...x,number:undefined}));}} placeholder="1234 5678 9012 3456" style={{fontFamily:"ui-monospace,monospace",letterSpacing:".08em"}}/></Field>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        <div className="grid grid-cols-2 gap-3">
           <Field label="Expiry" required error={cardErr.exp}><Input value={card.exp} onChange={e=>{setCard({...card,exp:fmtExp(e.target.value)});setCardErr(x=>({...x,exp:undefined}));}} placeholder="MM/YY"/></Field>
           <Field label="CVC" required error={cardErr.cvc}><Input type="password" value={card.cvc} onChange={e=>{setCard({...card,cvc:e.target.value.replace(/\D/g,"").slice(0,4)});setCardErr(x=>({...x,cvc:undefined}));}} placeholder="123"/></Field>
         </div>
-        <div style={{display:"flex",gap:9,justifyContent:"flex-end",marginTop:6}}>
+        <div className="flex gap-2.5 justify-end mt-1.5">
           <Btn kind="ghost" onClick={()=>{setShowCard(false);setCardErr({});}}>Cancel</Btn>
           <Btn kind="primary" icon="check" onClick={submitCard}>Add card</Btn></div></div></Modal>}
 
     <Card style={{borderRadius:20}}><H2>Invoices</H2>
       {[["INV-2026-08","1 Aug 2026",149],["INV-2026-07","1 Jul 2026",149],["INV-2026-06","1 Jun 2026",149],["INV-2026-05","1 May 2026",49]].map(([id,date,amt])=>
-        <div key={id} style={{display:"flex",alignItems:"center",gap:14,padding:"13px 0",borderBottom:`1px solid ${C.lineSoft}`,flexWrap:"wrap"}}>
-          <div style={{flex:"1 1 140px",minWidth:0}}>
-            <div style={{fontSize:14,fontWeight:640,color:C.text}}>{id}</div>
-            <div style={{fontSize:12.5,color:C.text3,marginTop:2}}>{date}</div></div>
-          <div style={{fontSize:14.5,fontWeight:650,color:C.text}}>${amt}.00</div>
+        <div key={id} className="flex items-center gap-3.5 py-3 border-b border-line-soft flex-wrap">
+          <div className="grow shrink basis-35 min-w-0">
+            <div className="text-sm font-semibold text-text">{id}</div>
+            <div className="text-xs text-text-3 mt-0.5">{date}</div></div>
+          <div className="text-sm font-semibold text-text">${amt}.00</div>
           <Tag tone="ok" sm icon="check">Paid</Tag>
           <Btn kind="ghost" size="xs" icon="download" onClick={()=>A.printInvoice(id,date,amt)}>PDF</Btn></div>)}</Card>
   </Page>;
@@ -988,43 +977,43 @@ export function EmpBilling(){
 export function EmpAnalyticsPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const stats=A.employerAnalytics(); if(!stats) return <Page><Empty icon="activity" title="No data" body="Post a job first."/></Page>;
-  const pad=mob?"44px 16px":"72px 32px";
-  return <div style={{background:"#fff",minHeight:"100%"}}>
-    <section style={{padding:pad,background:"#fff",borderBottom:`1px solid ${C.lineSoft}`}}>
-      <div style={{maxWidth:1120,margin:"0 auto"}}>
+  const pad=mob?"py-11 px-4":"py-18 px-8";
+  return <div className="bg-white min-h-full">
+    <section className={`bg-white border-b border-line-soft ${pad}`}>
+      <div className="max-w-280 mx-auto">
         <Tag tone="brand" icon="activity">Analytics</Tag>
-        <h1 style={{fontSize:mob?32:52,fontWeight:770,letterSpacing:"-.045em",color:C.text,margin:"18px 0 12px",lineHeight:1.08}}>How your hiring is doing.</h1>
-        <p style={{fontSize:mob?16:19,color:C.text2,lineHeight:1.55,margin:0,maxWidth:560}}>Live numbers from your postings.</p></div>
+        <h1 className={`font-extrabold tracking-tight text-text mt-5 mb-3 leading-tight ${mob?"text-4xl":"text-6xl"}`}>How your hiring is doing.</h1>
+        <p className={`text-text-2 leading-snug m-0 max-w-140 ${mob?"text-base":"text-xl"}`}>Live numbers from your postings.</p></div>
     </section>
-    <section style={{padding:mob?"32px 16px 56px":"48px 32px 96px",background:C.bg}}>
-      <div style={{maxWidth:1120,margin:"0 auto"}}>
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"repeat(4,1fr)",gap:14,marginBottom:24}}>
+    <section className={`bg-bg ${mob?"pt-8 px-4 pb-14":"pt-12 px-8 pb-24"}`}>
+      <div className="max-w-280 mx-auto">
+        <div className={`grid gap-3.5 mb-6 ${mob?"grid-cols-2":"grid-cols-4"}`}>
           <Stat label="Live jobs" value={stats.liveJobs} icon="briefcase"/>
           <Stat label="Total views" value={stats.totalViews.toLocaleString()} icon="eye"/>
           <Stat label="Applications" value={stats.totalApps} icon="send"/>
           <Stat label="View → apply" value={`${stats.conversion}%`} icon="target" tone={C.brand}/>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1.2fr 1fr",gap:16}}>
+        <div className="grid gap-4" style={{gridTemplateColumns:mob?"1fr":"1.2fr 1fr"}}>
           <Card pad={mob?24:32} style={{borderRadius:20}}>
             <Lbl>Pipeline breakdown</Lbl>
             {stats.byStage.map(({stage,count})=>{const max=Math.max(...stats.byStage.map(s=>s.count),1);
               const pct=Math.round((count/max)*100);
-              return <div key={stage} style={{marginBottom:14}}>
-                <div style={{display:"flex",justifyContent:"space-between",fontSize:13.5,marginBottom:6}}>
-                  <span style={{color:C.text}}>{stage}</span><span style={{fontWeight:640,color:C.text2}}>{count}</span></div>
-                <div style={{height:8,background:C.bg,borderRadius:99,overflow:"hidden"}}>
-                  <div style={{width:`${pct}%`,height:"100%",background:stage==="Offer"?C.ok:stage==="Interview"?C.warn:C.brand,transition:"width .3s"}}/></div></div>;})}</Card>
-          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+              return <div key={stage} className="mb-3.5">
+                <div className="flex justify-between text-sm mb-1.5">
+                  <span className="text-text">{stage}</span><span className="font-semibold text-text-2">{count}</span></div>
+                <div className="h-2 bg-bg rounded-full overflow-hidden">
+                  <div className="h-full transition-[width] duration-300" style={{width:`${pct}%`,background:stage==="Offer"?C.ok:stage==="Interview"?C.warn:C.brand}}/></div></div>;})}</Card>
+          <div className="flex flex-col gap-3.5">
             <Card pad={mob?24:32} style={{borderRadius:20}}>
               <Lbl>Average candidate match</Lbl>
-              <div style={{display:"flex",alignItems:"center",gap:20,marginTop:4}}>
+              <div className="flex items-center gap-5 mt-1">
                 <Ring v={stats.avgScore} size={90}/>
-                <div><div style={{fontSize:14,color:C.text2,lineHeight:1.55}}>Across all applicants who applied to your jobs.</div>
-                  <div style={{fontSize:12.5,color:C.text3,marginTop:8}}>Above 75 is strong; publish honest requirements to raise this.</div></div></div></Card>
+                <div><div className="text-sm text-text-2 leading-snug">Across all applicants who applied to your jobs.</div>
+                  <div className="text-xs text-text-3 mt-2">Above 75 is strong; publish honest requirements to raise this.</div></div></div></Card>
             {stats.topJob&&<Card pad={mob?24:32} style={{borderRadius:20}}>
               <Lbl>Top performing role</Lbl>
-              <div style={{fontSize:15.5,fontWeight:670,color:C.text,letterSpacing:"-.02em",marginBottom:6}}>{stats.topJob.j.t}</div>
-              <div style={{fontSize:13,color:C.text2,marginBottom:14}}>{stats.topJob.apps} applicants • {stats.topJob.j.views.toLocaleString()} views</div>
+              <div className="font-semibold text-text tracking-tight mb-1.5" style={{fontSize:15.5}}>{stats.topJob.j.t}</div>
+              <div className="text-sm text-text-2 mb-3.5">{stats.topJob.apps} applicants • {stats.topJob.j.views.toLocaleString()} views</div>
               <Btn kind="outline" size="sm" onClick={()=>{A.setPipelineJob(stats.topJob.j.id);A.go("empPipeline");}}>Open pipeline</Btn></Card>}
           </div>
         </div>
