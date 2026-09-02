@@ -38,94 +38,94 @@ export function HomePage(){
     .map(([id,n])=>({...CATS.find(c=>c.id===id),n}));
 
   const go=()=>{A.setSearch({q,where,cats:[]});A.go("search");};
-  const pad=mob?"52px 16px":"80px 32px";
-  const wrapW=1240;
+  const pad=mob?"py-13 px-4":"py-20 px-8";
+  const wrapCls="max-w-site mx-auto";
 
-  const H=(title,sub,tag,action)=><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",gap:20,marginBottom:mob?24:32,flexWrap:"wrap"}}>
-    <div style={{maxWidth:640}}>{tag&&<Tag tone="brand">{tag}</Tag>}
-      <h2 style={{fontSize:mob?24:32,fontWeight:740,letterSpacing:"-.035em",color:C.text,margin:tag?"10px 0 8px":"0 0 8px",lineHeight:1.15}}>{title}</h2>
-      {sub&&<p style={{fontSize:mob?14.5:16,color:C.text2,lineHeight:1.6,margin:0}}>{sub}</p>}</div>
+  const H=(title,sub,tag,action)=><div className={`flex justify-between items-end gap-5 flex-wrap ${mob?"mb-6":"mb-8"}`}>
+    <div className="max-w-160">{tag&&<Tag tone="brand">{tag}</Tag>}
+      <h2 className={`font-bold tracking-tight text-text leading-tight ${tag?"mt-2.5 mb-2":"mt-0 mb-2"} ${mob?"text-2xl":"text-3xl"}`}>{title}</h2>
+      {sub&&<p className={`text-text-2 leading-snug m-0 ${mob?"text-sm":"text-base"}`}>{sub}</p>}</div>
     {action}</div>;
 
   /* ─────────── Signed-in seeker: personalized view ─────────── */
   if(seekerLoggedIn){
     const first=A.user.name?.split(" ")[0]||"there";
-    return <div style={{background:"#fff"}}>
-      <section style={{padding:mob?"32px 16px 24px":"48px 32px 24px"}}>
-        <div style={{maxWidth:wrapW,margin:"0 auto"}}>
-          <div style={{fontSize:mob?26:36,fontWeight:750,letterSpacing:"-.035em",color:C.text,lineHeight:1.15,marginBottom:10}}>
+    return <div className="bg-white">
+      <section className={mob?"pt-8 px-4 pb-6":"pt-12 px-8 pb-6"}>
+        <div className={wrapCls}>
+          <div className={`font-bold tracking-tight text-text leading-tight mb-2.5 ${mob?"text-3xl":"text-4xl"}`}>
             Welcome back, {first}.</div>
-          <div style={{fontSize:mob?15:17,color:C.text2,lineHeight:1.55,marginBottom:22,maxWidth:640}}>
+          <div className={`text-text-2 leading-snug mb-6 max-w-160 ${mob?"text-base":"text-lg"}`}>
             {mySkills.length
               ? `We've lined up ${matchedForMe.length} new opportunities matched to your skills. Here's what's happening on NorthHire today.`
               : "Add a few skills to your profile and we'll start matching you to jobs across Canada."}</div>
-          <div style={{background:"#fff",borderRadius:14,padding:6,display:"flex",gap:6,flexWrap:mob?"wrap":"nowrap",boxShadow:SH.md,border:`1px solid ${C.line}`,maxWidth:640}}>
-            <div style={{flex:"1 1 200px",minWidth:0}}>
+          <div className={`bg-white rounded-2xl p-1.5 flex gap-1.5 shadow-md border border-line max-w-160 ${mob?"flex-wrap":"flex-nowrap"}`}>
+            <div className="grow shrink basis-50 min-w-0">
               <Input icon="search" placeholder="Job title, trade or skill" value={q} onChange={e=>setQ(e.target.value)}
                 onKeyDown={e=>e.key==="Enter"&&go()} style={{border:"none",boxShadow:"none",fontSize:14.5}}/></div>
-            {!mob&&<div style={{width:1,background:C.line,margin:"6px 0"}}/>}
-            <div style={{flex:"1 1 140px",minWidth:0}}>
+            {!mob&&<div className="w-px bg-line my-1.5"/>}
+            <div className="grow shrink basis-35 min-w-0">
               <Input icon="pin" placeholder="City or province" value={where} onChange={e=>setWhere(e.target.value)}
                 onKeyDown={e=>e.key==="Enter"&&go()} style={{border:"none",boxShadow:"none",fontSize:14.5}}/></div>
             <Btn kind="primary" size="md" full={mob} icon="search" onClick={go}>Search</Btn></div>
         </div>
       </section>
 
-      <section style={{padding:mob?"24px 16px":"32px 32px",background:"#fff"}}>
-        <div style={{maxWidth:wrapW,margin:"0 auto"}}>
+      <section className={`bg-white ${mob?"py-6 px-4":"py-8 px-8"}`}>
+        <div className={wrapCls}>
           {H("Matched for you",`Based on ${mySkills.length||"your"} skills and your saved preferences.`,null,
             <Btn kind="outline" size="sm" iconR="arrowR" onClick={()=>A.go("matched")}>See all matches</Btn>)}
-          <div style={{display:"grid",gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:300}px,1fr))`,gap:14}}>
+          <div className="grid gap-3.5" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:300}px,1fr))`}}>
             {matchedForMe.map(j=><JobCard key={j.id} job={j}/>)}</div>
         </div>
       </section>
 
-      <section style={{padding:mob?"24px 16px":"32px 32px",background:C.bg}}>
-        <div style={{maxWidth:wrapW,margin:"0 auto"}}>
+      <section className={`bg-bg ${mob?"py-6 px-4":"py-8 px-8"}`}>
+        <div className={wrapCls}>
           {H("Top industries hiring right now","Where Canadian employers are actively posting.",null,
             <Btn kind="outline" size="sm" onClick={()=>A.go("search")}>Browse all</Btn>)}
-          <div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"repeat(3,1fr)",gap:12}}>
+          <div className={`grid gap-3 ${mob?"grid-cols-2":"grid-cols-3"}`}>
             {topIndustries.map(c=><button key={c.id} onClick={()=>{A.setSearch({q:"",where:"",cats:[c.id]});A.go("search");}}
-              data-card style={{display:"flex",gap:14,padding:mob?16:20,borderRadius:14,cursor:"pointer",border:`1px solid ${C.line}`,background:"#fff",fontFamily:"inherit",textAlign:"left",alignItems:"center"}}>
-              <span style={{width:44,height:44,borderRadius:11,background:C.wash,color:C.brand,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><I n={c.icon} s={22}/></span>
-              <div style={{flex:1,minWidth:0}}><div style={{fontSize:15,fontWeight:660,color:C.text,marginBottom:2}}>{c.label}</div>
-                <div style={{fontSize:12.5,color:C.text3}}>{c.n} open position{c.n===1?"":"s"}</div></div>
+              data-card className={`flex gap-3.5 rounded-2xl cursor-pointer border border-line bg-white text-left items-center ${mob?"p-4":"p-5"}`}>
+              <span className="w-11 h-11 rounded-xl bg-wash text-brand flex items-center justify-center shrink-0"><I n={c.icon} s={22}/></span>
+              <div className="flex-1 min-w-0"><div className="text-base font-bold text-text mb-0.5">{c.label}</div>
+                <div className="text-xs text-text-3">{c.n} open position{c.n===1?"":"s"}</div></div>
               <I n="chevR" s={18} c={C.text3}/></button>)}
           </div>
         </div>
       </section>
 
-      <section style={{padding:mob?"24px 16px":"32px 32px",background:"#fff"}}>
-        <div style={{maxWidth:wrapW,margin:"0 auto"}}>
+      <section className={`bg-white ${mob?"py-6 px-4":"py-8 px-8"}`}>
+        <div className={wrapCls}>
           {H("Closing soon","Application deadlines within the next two weeks.",null,
             <Btn kind="ghost" size="sm" onClick={()=>A.go("search")}>All jobs</Btn>)}
-          <div style={{display:"grid",gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:300}px,1fr))`,gap:14}}>
-            {closingSoon.length?closingSoon.map(j=><JobCard key={j.id} job={j}/>):<div style={{color:C.text3,fontSize:14}}>No deadlines coming up in the next two weeks.</div>}</div>
+          <div className="grid gap-3.5" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:300}px,1fr))`}}>
+            {closingSoon.length?closingSoon.map(j=><JobCard key={j.id} job={j}/>):<div className="text-text-3 text-sm">No deadlines coming up in the next two weeks.</div>}</div>
         </div>
       </section>
 
-      <section style={{padding:mob?"24px 16px":"32px 32px",background:C.bg}}>
-        <div style={{maxWidth:wrapW,margin:"0 auto"}}>
+      <section className={`bg-bg ${mob?"py-6 px-4":"py-8 px-8"}`}>
+        <div className={wrapCls}>
           {H("Trending across Canada","The most-viewed listings on NorthHire this week.",null,null)}
-          <div style={{display:"grid",gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:300}px,1fr))`,gap:14}}>
+          <div className="grid gap-3.5" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:300}px,1fr))`}}>
             {trending.map(j=><JobCard key={j.id} job={j}/>)}</div>
         </div>
       </section>
 
-      <section style={{padding:mob?"24px 16px":"32px 32px",background:"#fff"}}>
-        <div style={{maxWidth:wrapW,margin:"0 auto"}}>
+      <section className={`bg-white ${mob?"py-6 px-4":"py-8 px-8"}`}>
+        <div className={wrapCls}>
           {H("Grow your credentials","Certifications Canadian employers ask for.",null,
             <Btn kind="outline" size="sm" iconR="arrowR" onClick={()=>A.go("trainings")}>All trainings</Btn>)}
-          <div style={{display:"grid",gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:280}px,1fr))`,gap:14}}>
+          <div className="grid gap-3.5" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:280}px,1fr))`}}>
             {trainings.map(t=><TrainingCard key={t.id} t={t}/>)}</div>
         </div>
       </section>
 
-      <section style={{padding:mob?"24px 16px 40px":"32px 32px 60px",background:"#fff"}}>
-        <div style={{maxWidth:wrapW,margin:"0 auto"}}>
+      <section className={`bg-white ${mob?"pt-6 px-4 pb-10":"pt-8 px-8 pb-15"}`}>
+        <div className={wrapCls}>
           {H("From the resource centre","Career guides written by people with Canadian workplace experience.",null,
             <Btn kind="outline" size="sm" iconR="arrowR" onClick={()=>A.go("blogs")}>All articles</Btn>)}
-          <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:mob?14:18}}>
+          <div className={`grid gap-4 ${mob?"grid-cols-1":"grid-cols-3"}`}>
             {blogs.map(b=><BlogCard key={b.id} b={b}/>)}</div>
         </div>
       </section>
@@ -133,147 +133,139 @@ export function HomePage(){
   }
 
   /* ─────────── Guest / non-seeker view ─────────── */
-  return <div style={{background:"#fff"}}>
+  return <div className="bg-white">
 
-    <section style={{padding:pad,background:"#fff"}}>
-      <div style={{maxWidth:wrapW,margin:"0 auto",display:"grid",gridTemplateColumns:mob?"1fr":"1.05fr .95fr",gap:mob?32:56,alignItems:"center"}}>
+    <section className={`bg-white ${pad}`}>
+      <div className={`${wrapCls} grid items-center ${mob?"grid-cols-1 gap-8":"gap-14"}`} style={{gridTemplateColumns:mob?undefined:"1.05fr .95fr"}}>
         <div>
           <Tag tone="brand" icon="pin">Hiring across every province and territory</Tag>
-          <h1 style={{fontSize:mob?38:66,fontWeight:770,letterSpacing:"-.045em",lineHeight:1.05,margin:"22px 0 22px",color:C.text}}>
-            Real Canadian jobs.<br/><span style={{color:C.brand}}>Wages published upfront.</span></h1>
-          <p style={{fontSize:mob?17:19,color:C.text2,lineHeight:1.55,margin:"0 0 32px",maxWidth:560}}>
+          <h1 className={`font-extrabold tracking-tight leading-none text-text my-6 ${mob?"text-4xl":"text-6xl"}`}>
+            Real Canadian jobs.<br/><span className="text-brand">Wages published upfront.</span></h1>
+          <p className={`text-text-2 leading-snug mb-8 max-w-140 ${mob?"text-lg":"text-lg"}`}>
             NorthHire is built for the trades, healthcare, transport, kitchens, warehouses and offices that keep Canada running. Every listing shows the wage, the shift schedule and the certification you need to apply.</p>
-          <div style={{background:"#fff",borderRadius:16,padding:8,display:"flex",gap:8,flexWrap:mob?"wrap":"nowrap",boxShadow:SH.lg,border:`1px solid ${C.line}`,maxWidth:640}}>
-            <div style={{flex:"1 1 200px",minWidth:0}}>
+          <div className={`bg-white rounded-2xl p-2 flex gap-2 shadow-lg border border-line max-w-160 ${mob?"flex-wrap":"flex-nowrap"}`}>
+            <div className="grow shrink basis-50 min-w-0">
               <Input icon="search" placeholder="Job title, trade or skill" value={q} onChange={e=>setQ(e.target.value)}
                 onKeyDown={e=>e.key==="Enter"&&go()} style={{border:"none",boxShadow:"none",fontSize:15}}/></div>
-            {!mob&&<div style={{width:1,background:C.line,margin:"8px 0"}}/>}
-            <div style={{flex:"1 1 160px",minWidth:0}}>
+            {!mob&&<div className="w-px bg-line my-2"/>}
+            <div className="grow shrink basis-40 min-w-0">
               <Input icon="pin" placeholder="City or province" value={where} onChange={e=>setWhere(e.target.value)}
                 onKeyDown={e=>e.key==="Enter"&&go()} style={{border:"none",boxShadow:"none",fontSize:15}}/></div>
             <Btn kind="primary" size="lg" full={mob} icon="search" onClick={go}>Search</Btn></div>
-          <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:20,alignItems:"center"}}>
-            <span style={{fontSize:13,color:C.text3}}>Popular searches:</span>
+          <div className="flex gap-2 flex-wrap mt-5 items-center">
+            <span className="text-sm text-text-3">Popular searches:</span>
             {["Red Seal Electrician","Registered Nurse","AZ Truck Driver","Line Cook","Warehouse Associate"].map(t=>
               <button key={t} onClick={()=>{A.setSearch({q:t,where:"",cats:[]});A.go("search");}}
-                style={{background:"#fff",border:`1px solid ${C.line}`,color:C.text2,fontSize:13,padding:"6px 13px",
-                  borderRadius:99,cursor:"pointer",fontFamily:"inherit",fontWeight:500}}
-                onMouseEnter={e=>{e.currentTarget.style.borderColor=C.brand;e.currentTarget.style.color=C.brand;}}
-                onMouseLeave={e=>{e.currentTarget.style.borderColor=C.line;e.currentTarget.style.color=C.text2;}}>{t}</button>)}</div>
+                className="bg-white border border-line text-text-2 text-sm py-1.5 px-3.5 rounded-full cursor-pointer font-medium hover:border-brand hover:text-brand transition-colors duration-150">{t}</button>)}</div>
         </div>
-        {!mob&&<div style={{position:"relative",borderRadius:24,overflow:"hidden",boxShadow:SH.xl,border:`1px solid ${C.line}`,aspectRatio:"4/5"}}>
-          <div style={{position:"absolute",inset:0,background:C.bg}}>
+        {!mob&&<div className="relative rounded-3xl overflow-hidden shadow-xl border border-line" style={{aspectRatio:"4/5"}}>
+          <div className="absolute inset-0 bg-bg">
             <SmartScene kind="trades" tone={C.brand} w="100%" h="100%" seed={1}/></div>
-          <div style={{position:"absolute",left:24,bottom:32,background:"#fff",borderRadius:14,padding:"14px 18px",
-            boxShadow:SH.lg,display:"flex",alignItems:"center",gap:12}}>
-            <div style={{width:42,height:42,borderRadius:11,background:C.okBg,color:C.ok,display:"flex",alignItems:"center",justifyContent:"center"}}><I n="wallet" s={20}/></div>
-            <div><div style={{fontSize:14,fontWeight:680,color:C.text}}>Wage on every job</div>
-              <div style={{fontSize:12.5,color:C.text2,marginTop:2}}>No "competitive salary"</div></div></div>
-          <div style={{position:"absolute",right:24,top:28,background:"#fff",borderRadius:14,padding:"14px 18px",
-            boxShadow:SH.lg,display:"flex",alignItems:"center",gap:12}}>
-            <div style={{display:"flex"}}>{[1,3,5].map((s,i)=><div key={s} style={{marginLeft:i?-11:0,border:"2px solid #fff",borderRadius:99,display:"flex"}}><SmartPortrait seed={s} size={32}/></div>)}</div>
-            <div><div style={{fontSize:14,fontWeight:680,color:C.text}}>2,400+ hired</div>
-              <div style={{fontSize:12.5,color:C.text2,marginTop:2}}>in the last 30 days</div></div></div>
+          <div className="absolute left-6 bottom-8 bg-white rounded-2xl py-3.5 px-5 shadow-lg flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl bg-ok-bg text-ok flex items-center justify-center"><I n="wallet" s={20}/></div>
+            <div><div className="text-sm font-bold text-text">Wage on every job</div>
+              <div className="text-xs text-text-2 mt-0.5">No "competitive salary"</div></div></div>
+          <div className="absolute right-6 top-7 bg-white rounded-2xl py-3.5 px-5 shadow-lg flex items-center gap-3">
+            <div className="flex">{[1,3,5].map((s,i)=><div key={s} className={`${i?"-ml-3":""} border-2 border-white rounded-full flex`}><SmartPortrait seed={s} size={32}/></div>)}</div>
+            <div><div className="text-sm font-bold text-text">2,400+ hired</div>
+              <div className="text-xs text-text-2 mt-0.5">in the last 30 days</div></div></div>
         </div>}
       </div>
     </section>
 
-    <section style={{padding:mob?"40px 16px":"56px 32px",background:"#fff",borderTop:`1px solid ${C.lineSoft}`,borderBottom:`1px solid ${C.lineSoft}`}}>
-      <div style={{maxWidth:wrapW,margin:"0 auto"}}>
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"repeat(4,1fr)",gap:mob?24:32,textAlign:"center"}}>
+    <section className={`bg-white border-y border-line-soft ${mob?"py-10 px-4":"py-14 px-8"}`}>
+      <div className={wrapCls}>
+        <div className={`grid text-center ${mob?"grid-cols-2 gap-6":"grid-cols-4 gap-8"}`}>
           {[[`${(live.length*712).toLocaleString()}+`,"Live openings across Canada"],["4,180","Employers actively hiring"],["100%","Wages published on every listing"],["11 days","Average time to hire"]].map(([v,l])=>
-            <div key={l}><div style={{fontSize:mob?30:44,fontWeight:770,color:C.brand,letterSpacing:"-.04em",lineHeight:1}}>{v}</div>
-              <div style={{fontSize:mob?12.5:13.5,color:C.text2,marginTop:mob?10:14,fontWeight:520,letterSpacing:"-.01em"}}>{l}</div></div>)}</div>
+            <div key={l}><div className={`font-extrabold text-brand tracking-tight leading-none ${mob?"text-3xl":"text-5xl"}`}>{v}</div>
+              <div className={`text-text-2 font-medium tracking-tight ${mob?"text-xs mt-2.5":"text-sm mt-3.5"}`}>{l}</div></div>)}</div>
       </div>
     </section>
 
-    <section style={{padding:pad,background:"#fff"}}>
-      <div style={{maxWidth:wrapW,margin:"0 auto"}}>
+    <section className={`bg-white ${pad}`}>
+      <div className={wrapCls}>
         {H("Browse by sector","Twelve industries, every trade and role across Canada.","Sectors",
           <Btn kind="outline" iconR="arrowR" onClick={()=>A.go("search")}>All jobs</Btn>)}
-        <div style={{display:"grid",gridTemplateColumns:`repeat(auto-fill,minmax(${mob?140:170}px,1fr))`,gap:10}}>
+        <div className="grid gap-2.5" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?140:170}px,1fr))`}}>
           {CATS.map(c=><button key={c.id} onClick={()=>{A.setSearch({q:"",where:"",cats:[c.id]});A.go("search");}}
-            data-card style={{display:"flex",flexDirection:"column",gap:10,padding:mob?"14px 14px":"16px 16px",borderRadius:13,cursor:"pointer",
-              border:`1px solid ${C.line}`,background:"#fff",fontFamily:"inherit",textAlign:"left"}}
-            onMouseEnter={e=>{e.currentTarget.style.borderColor=C.brand;e.currentTarget.style.background=C.tint;}}
-            onMouseLeave={e=>{e.currentTarget.style.borderColor=C.line;e.currentTarget.style.background="#fff";}}>
-            <span style={{width:36,height:36,borderRadius:10,background:C.wash,color:C.brand,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><I n={c.icon} s={18}/></span>
-            <div><div style={{fontSize:13.5,fontWeight:640,color:C.text,letterSpacing:"-.015em",marginBottom:2}}>{c.label}</div>
-              <div style={{fontSize:12,color:C.text3}}>{c.n.toLocaleString()} jobs</div></div></button>)}</div>
+            data-card className={`flex flex-col gap-2.5 rounded-xl cursor-pointer border border-line bg-white text-left hover:border-brand hover:bg-tint transition-colors duration-150 ${mob?"p-3.5":"p-4"}`}>
+            <span className="w-9 h-9 rounded-lg bg-wash text-brand flex items-center justify-center shrink-0"><I n={c.icon} s={18}/></span>
+            <div><div className="text-sm font-semibold text-text tracking-tight mb-0.5">{c.label}</div>
+              <div className="text-xs text-text-3">{c.n.toLocaleString()} jobs</div></div></button>)}</div>
       </div>
     </section>
 
-    <section style={{padding:pad,background:C.bg}}>
-      <div style={{maxWidth:wrapW,margin:"0 auto"}}>
+    <section className={`bg-bg ${pad}`}>
+      <div className={wrapCls}>
         {H("Featured openings","Roles that employers are highlighting this week.","Featured this week",
           <Btn kind="outline" iconR="arrowR" onClick={()=>A.go("search")}>See all jobs</Btn>)}
-        <div style={{display:"grid",gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:300}px,1fr))`,gap:14}}>
+        <div className="grid gap-3.5" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:300}px,1fr))`}}>
           {featured.map(j=><JobCard key={j.id} job={j}/>)}</div>
       </div>
     </section>
 
-    <section style={{padding:pad,background:"#fff"}}>
-      <div style={{maxWidth:wrapW,margin:"0 auto"}}>
+    <section className={`bg-white ${pad}`}>
+      <div className={wrapCls}>
         {H("Trending across Canada","The most-viewed listings on NorthHire this week.","Trending",null)}
-        <div style={{display:"grid",gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:300}px,1fr))`,gap:14}}>
+        <div className="grid gap-3.5" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:300}px,1fr))`}}>
           {trending.map(j=><JobCard key={j.id} job={j}/>)}</div>
       </div>
     </section>
 
-    <section style={{padding:pad,background:C.bg}}>
-      <div style={{maxWidth:wrapW,margin:"0 auto"}}>
+    <section className={`bg-bg ${pad}`}>
+      <div className={wrapCls}>
         {H("Closing soon","Application windows that end in the next two weeks.","Deadlines",null)}
-        <div style={{display:"grid",gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:300}px,1fr))`,gap:14}}>
-          {closingSoon.length?closingSoon.map(j=><JobCard key={j.id} job={j}/>):<div style={{color:C.text3,fontSize:14,gridColumn:"1/-1",textAlign:"center",padding:20}}>No deadlines coming up.</div>}</div>
+        <div className="grid gap-3.5" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:300}px,1fr))`}}>
+          {closingSoon.length?closingSoon.map(j=><JobCard key={j.id} job={j}/>):<div className="text-text-3 text-sm text-center p-5" style={{gridColumn:"1/-1"}}>No deadlines coming up.</div>}</div>
       </div>
     </section>
 
-    <section style={{padding:pad,background:"#fff"}}>
-      <div style={{maxWidth:wrapW,margin:"0 auto"}}>
+    <section className={`bg-white ${pad}`}>
+      <div className={wrapCls}>
         {H("Three steps, about ten minutes","From setting up your account to sending your first application.","How it works")}
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:mob?14:20}}>
+        <div className={`grid ${mob?"grid-cols-1 gap-3.5":"grid-cols-3 gap-5"}`}>
           {[["user","Build your profile","Add your trade, tickets and the wage you need. Takes about five minutes and works on any device."],
             ["target","Get matched, not spammed","We score every opening against your skills, certifications and location so you only see jobs you can realistically get."],
             ["send","Apply in one tap","Your profile and CV go straight to the employer. Track every application from submission to offer in one place."]].map(([ic,t,b],i)=>
-            <div key={t} data-card style={{background:C.bg,borderRadius:20,padding:mob?26:36,border:`1px solid ${C.line}`}}>
-              <div style={{fontSize:mob?36:48,fontWeight:780,color:C.brand,letterSpacing:"-.05em",lineHeight:1,marginBottom:20}}>0{i+1}</div>
-              <div style={{width:44,height:44,borderRadius:12,background:C.wash,color:C.brand,display:"flex",alignItems:"center",justifyContent:"center",marginBottom:18}}><I n={ic} s={22}/></div>
-              <div style={{fontSize:mob?19:22,fontWeight:700,color:C.text,letterSpacing:"-.025em",marginBottom:10,lineHeight:1.25}}>{t}</div>
-              <p style={{fontSize:mob?14.5:15.5,color:C.text2,lineHeight:1.65,margin:0}}>{b}</p></div>)}</div>
+            <div key={t} data-card className={`bg-bg rounded-3xl border border-line ${mob?"p-7":"p-9"}`}>
+              <div className={`font-extrabold text-brand tracking-tight leading-none mb-5 ${mob?"text-4xl":"text-5xl"}`}>0{i+1}</div>
+              <div className="w-11 h-11 rounded-xl bg-wash text-brand flex items-center justify-center mb-5"><I n={ic} s={22}/></div>
+              <div className={`font-bold text-text tracking-tight mb-2.5 leading-tight ${mob?"text-xl":"text-2xl"}`}>{t}</div>
+              <p className={`text-text-2 leading-relaxed m-0 ${mob?"text-sm":"text-base"}`}>{b}</p></div>)}</div>
       </div>
     </section>
 
-    <section style={{padding:pad,background:C.bg}}>
-      <div style={{maxWidth:wrapW,margin:"0 auto"}}>
+    <section className={`bg-bg ${pad}`}>
+      <div className={wrapCls}>
         {H("Certifications that get you hired","Free and paid trainings from providers Canadian employers recognize.","Trainings",
           <Btn kind="outline" iconR="arrowR" onClick={()=>A.go("trainings")}>All trainings</Btn>)}
-        <div style={{display:"grid",gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:280}px,1fr))`,gap:16}}>
+        <div className="grid gap-4" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:280}px,1fr))`}}>
           {trainings.map(t=><TrainingCard key={t.id} t={t}/>)}</div>
       </div>
     </section>
 
-    <section style={{padding:pad,background:"#fff"}}>
-      <div style={{maxWidth:wrapW,margin:"0 auto"}}>
+    <section className={`bg-white ${pad}`}>
+      <div className={wrapCls}>
         {H("From the resource centre","Career guides written by people with hands-on Canadian workplace experience.","Career resources",
           <Btn kind="outline" iconR="arrowR" onClick={()=>A.go("blogs")}>All articles</Btn>)}
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:mob?14:20}}>
+        <div className={`grid ${mob?"grid-cols-1 gap-3.5":"grid-cols-3 gap-5"}`}>
           {blogs.map(b=><BlogCard key={b.id} b={b}/>)}</div>
       </div>
     </section>
 
-    <section style={{padding:pad,background:C.bg}}>
-      <div style={{maxWidth:wrapW,margin:"0 auto",display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:16}}>
-        <div style={{background:C.brand,borderRadius:24,padding:mob?32:48,color:"#fff"}}>
+    <section className={`bg-bg ${pad}`}>
+      <div className={`${wrapCls} grid ${mob?"grid-cols-1":"grid-cols-2"} gap-4`}>
+        <div className={`bg-brand rounded-3xl text-white ${mob?"p-8":"p-12"}`}>
           <Tag tone="onDark">Job seekers — always free</Tag>
-          <h3 style={{fontSize:mob?24:32,fontWeight:730,letterSpacing:"-.03em",margin:"18px 0 14px",lineHeight:1.15}}>Set up your profile once, apply to anything.</h3>
-          <p style={{fontSize:mob?15:16,color:"rgba(255,255,255,.85)",lineHeight:1.65,margin:"0 0 28px"}}>
+          <h3 className={`font-bold tracking-tight leading-tight my-5 ${mob?"text-2xl":"text-3xl"}`}>Set up your profile once, apply to anything.</h3>
+          <p className={`text-white/85 leading-relaxed mb-7 ${mob?"text-sm":"text-base"}`}>
             Add your tickets, your trade and the wage you're looking for. Build up to five CVs for different job types and apply in a tap.</p>
           <Btn kind="onDark" size="lg" iconR="arrowR" onClick={()=>A.go(A.user?.role==="seeker"?"profile":"signup")}>
             {A.user?.role==="seeker"?"Go to my profile":"Create free account"}</Btn></div>
-        <div style={{background:C.ink,borderRadius:24,padding:mob?32:48,color:"#fff"}}>
+        <div className={`bg-ink rounded-3xl text-white ${mob?"p-8":"p-12"}`}>
           <Tag tone="onDark">For employers — from free</Tag>
-          <h3 style={{fontSize:mob?24:32,fontWeight:730,letterSpacing:"-.03em",margin:"18px 0 14px",lineHeight:1.15}}>Post a role and reach real candidates.</h3>
-          <p style={{fontSize:mob?15:16,color:"rgba(255,255,255,.68)",lineHeight:1.65,margin:"0 0 28px"}}>
+          <h3 className={`font-bold tracking-tight leading-tight my-5 ${mob?"text-2xl":"text-3xl"}`}>Post a role and reach real candidates.</h3>
+          <p className={`text-white/70 leading-relaxed mb-7 ${mob?"text-sm":"text-base"}`}>
             Every applicant is scored against your requirements before you open a single CV. Enterprise unlocks the full HR Suite for managing your workforce.</p>
           <Btn kind="primary" size="lg" iconR="arrowR" onClick={()=>A.go(A.user?.role==="employer"?"empPost":"forEmployers")}>Explore employer plans</Btn></div>
       </div>
@@ -290,42 +282,39 @@ export function BlogsPage(){
   const cats=["all",...Array.from(new Set(pub.map(b=>b.cat)))];
   const list=pub.filter(b=>(cat==="all"||b.cat===cat)&&(!q||b.title.toLowerCase().includes(q.toLowerCase())||b.excerpt.toLowerCase().includes(q.toLowerCase())));
   const lead=list[0];
-  const pad=mob?"56px 16px":"96px 32px";
-  return <div style={{background:"#fff",minHeight:"100%"}}>
+  const pad=mob?"py-14 px-4":"py-24 px-8";
+  return <div className="bg-white min-h-full">
 
-    <section style={{padding:pad,background:"#fff"}}>
-      <div style={{maxWidth:960,margin:"0 auto",textAlign:"center"}}>
+    <section className={`bg-white ${pad}`}>
+      <div className="max-w-240 mx-auto text-center">
         <Tag tone="brand" icon="book">Career resources</Tag>
-        <h1 style={{fontSize:mob?38:68,fontWeight:770,letterSpacing:"-.05em",lineHeight:1.02,margin:"22px auto 26px",color:C.text}}>
+        <h1 className={`font-extrabold tracking-tight leading-none my-6 text-text ${mob?"text-4xl":"text-7xl"}`}>
           Career resources for Canadian workers</h1>
-        <p style={{fontSize:mob?17:20,color:C.text2,lineHeight:1.55,margin:"0 auto",maxWidth:620}}>
+        <p className={`text-text-2 leading-snug mx-auto max-w-155 ${mob?"text-lg":"text-xl"}`}>
           Practical guides on Red Seal certification, provincial trades registration, résumé standards Canadian employers look for, wage data from Statistics Canada, and how to interview well. Every article is written by people with direct experience in Canadian workplaces.</p>
       </div>
     </section>
 
-    <section style={{padding:mob?"0 16px 56px":"0 32px 96px",background:"#fff"}}>
-      <div style={{maxWidth:1120,margin:"0 auto"}}>
-        <div style={{display:"flex",gap:14,marginBottom:36,flexWrap:"wrap",alignItems:"center"}}>
-          <div style={{flex:"1 1 260px",maxWidth:400}}><Input icon="search" placeholder="Search articles" value={q} onChange={e=>setQ(e.target.value)}/></div>
+    <section className={`bg-white ${mob?"px-4 pb-14":"px-8 pb-24"}`}>
+      <div className="max-w-280 mx-auto">
+        <div className="flex gap-3.5 mb-9 flex-wrap items-center">
+          <div className="grow shrink basis-65 max-w-100"><Input icon="search" placeholder="Search articles" value={q} onChange={e=>setQ(e.target.value)}/></div>
           <Tabs items={cats.map(c=>({k:c,label:c==="all"?"All topics":c}))} value={cat} onChange={setCat}/></div>
         {list.length===0?<Empty icon="book" title="No articles found" body="Try a different topic or search term."
           action={<Btn kind="primary" onClick={()=>{setQ("");setCat("all");}}>Reset</Btn>}/>:<>
-          {lead&&!q&&cat==="all"&&<div onClick={()=>A.openBlog(lead.id)} style={{background:"#fff",borderRadius:24,overflow:"hidden",
-            border:`1px solid ${C.line}`,cursor:"pointer",marginBottom:32,boxShadow:SH.md,transition:"transform .2s"}}
-            onMouseEnter={e=>e.currentTarget.style.transform="translateY(-4px)"}
-            onMouseLeave={e=>e.currentTarget.style.transform="none"}>
-            <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1.1fr 1fr"}}>
-              <div style={{aspectRatio:mob?"16/10":"auto",minHeight:mob?"auto":320,background:C.bg}}>
+          {lead&&!q&&cat==="all"&&<div onClick={()=>A.openBlog(lead.id)} className="bg-white rounded-3xl overflow-hidden border border-line cursor-pointer mb-8 shadow-md transition-transform duration-200 hover:-translate-y-1">
+            <div className={`grid ${mob?"grid-cols-1":""}`} style={{gridTemplateColumns:mob?undefined:"1.1fr 1fr"}}>
+              <div className={mob?"bg-bg":"bg-bg"} style={{aspectRatio:mob?"16/10":"auto",minHeight:mob?undefined:320}}>
                 <SmartScene kind={lead.scene} tone={lead.tone} w="100%" h={mob?"100%":"100%"} seed={lead.id.length}/></div>
-              <div style={{padding:mob?26:44,display:"flex",flexDirection:"column",justifyContent:"center"}}>
-                <div style={{display:"flex",gap:8,marginBottom:16}}><Tag tone="brand" sm>{lead.cat}</Tag><Tag tone="warn" sm>Featured</Tag></div>
-                <div style={{fontSize:mob?22:30,fontWeight:730,color:C.text,letterSpacing:"-.03em",lineHeight:1.2,marginBottom:16}}>{lead.title}</div>
-                <p style={{fontSize:mob?15:16.5,color:C.text2,lineHeight:1.65,margin:"0 0 24px"}}>{lead.excerpt}</p>
-                <div style={{display:"flex",alignItems:"center",gap:12}}>
+              <div className={`flex flex-col justify-center ${mob?"p-7":"p-11"}`}>
+                <div className="flex gap-2 mb-4"><Tag tone="brand" sm>{lead.cat}</Tag><Tag tone="warn" sm>Featured</Tag></div>
+                <div className={`font-bold text-text tracking-tight leading-tight mb-4 ${mob?"text-2xl":"text-3xl"}`}>{lead.title}</div>
+                <p className={`text-text-2 leading-relaxed mb-6 ${mob?"text-base":"text-lg"}`}>{lead.excerpt}</p>
+                <div className="flex items-center gap-3">
                   <SmartPortrait seed={lead.authorSeed} size={40}/>
-                  <div><div style={{fontSize:14,fontWeight:660,color:C.text}}>{lead.author}</div>
-                    <div style={{fontSize:13,color:C.text3,marginTop:2}}>{lead.date} • {lead.mins} min read</div></div></div></div></div></div>}
-          <div style={{display:"grid",gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:340}px,1fr))`,gap:mob?14:24}}>
+                  <div><div className="text-sm font-bold text-text">{lead.author}</div>
+                    <div className="text-xs text-text-3 mt-0.5">{lead.date} • {lead.mins} min read</div></div></div></div></div></div>}
+          <div className="grid gap-4" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:340}px,1fr))`}}>
             {(lead&&!q&&cat==="all"?list.slice(1):list).map(b=><BlogCard key={b.id} b={b}/>)}</div></>}
       </div>
     </section>
@@ -339,54 +328,53 @@ export function BlogPage(){
   if(!b) return <Page><Empty icon="book" title="Article not found" body="It may have been unpublished."
     action={<Btn kind="primary" onClick={()=>A.go("blogs")}>All articles</Btn>}/></Page>;
   const more=A.blogs.filter(x=>x.status==="published"&&x.id!==b.id).slice(0,3);
-  const pad=mob?"44px 16px":"72px 32px";
-  return <div style={{background:"#fff",minHeight:"100%"}}>
+  const pad=mob?"py-11 px-4":"py-18 px-8";
+  return <div className="bg-white min-h-full">
 
-    <section style={{padding:pad,background:"#fff"}}>
-      <div style={{maxWidth:760,margin:"0 auto",textAlign:"center"}}>
-        {!mob&&<button onClick={A.back} style={{display:"inline-flex",alignItems:"center",gap:7,background:"none",border:"none",padding:0,
-          cursor:"pointer",fontFamily:"inherit",fontSize:14,color:C.text2,marginBottom:28}}><I n="arrowL" s={17}/>All articles</button>}
+    <section className={`bg-white ${pad}`}>
+      <div className="max-w-190 mx-auto text-center">
+        {!mob&&<button onClick={A.back} className="inline-flex items-center gap-1.5 bg-transparent border-0 p-0 cursor-pointer text-sm text-text-2 mb-7"><I n="arrowL" s={17}/>All articles</button>}
         <Tag tone="brand" sm>{b.cat}</Tag>
-        <h1 style={{fontSize:mob?32:52,fontWeight:770,letterSpacing:"-.045em",color:C.text,margin:"18px 0 22px",lineHeight:1.08}}>{b.title}</h1>
-        <p style={{fontSize:mob?16:20,color:C.text2,lineHeight:1.55,margin:"0 auto 28px",maxWidth:640}}>{b.excerpt}</p>
-        <div style={{display:"inline-flex",alignItems:"center",gap:12,flexWrap:"wrap",justifyContent:"center"}}>
+        <h1 className={`font-extrabold tracking-tight text-text my-5 leading-tight ${mob?"text-3xl":"text-5xl"}`}>{b.title}</h1>
+        <p className={`text-text-2 leading-snug mx-auto mb-7 max-w-160 ${mob?"text-base":"text-xl"}`}>{b.excerpt}</p>
+        <div className="inline-flex items-center gap-3 flex-wrap justify-center">
           <SmartPortrait seed={b.authorSeed} size={44}/>
-          <div style={{textAlign:"left"}}><div style={{fontSize:14.5,fontWeight:660,color:C.text}}>{b.author}</div>
-            <div style={{fontSize:13,color:C.text3,marginTop:2}}>{b.date} • {b.mins} min read</div></div></div>
+          <div className="text-left"><div className="text-sm font-bold text-text">{b.author}</div>
+            <div className="text-xs text-text-3 mt-0.5">{b.date} • {b.mins} min read</div></div></div>
       </div>
     </section>
 
-    <section style={{padding:mob?"0 16px 44px":"0 32px 72px",background:"#fff"}}>
-      <div style={{maxWidth:960,margin:"0 auto",borderRadius:mob?16:24,overflow:"hidden",aspectRatio:"16/8",background:C.bg,boxShadow:SH.md,border:`1px solid ${C.line}`}}>
+    <section className={`bg-white ${mob?"px-4 pb-11":"px-8 pb-18"}`}>
+      <div className={`max-w-240 mx-auto ${mob?"rounded-2xl":"rounded-3xl"} overflow-hidden bg-bg shadow-md border border-line`} style={{aspectRatio:"16/8"}}>
         <SmartScene kind={b.scene} tone={b.tone} w="100%" h="100%" seed={b.id.length}/></div>
     </section>
 
-    <section style={{padding:mob?"0 16px 56px":"0 32px 96px",background:"#fff"}}>
-      <div style={{maxWidth:720,margin:"0 auto"}}>
+    <section className={`bg-white ${mob?"px-4 pb-14":"px-8 pb-24"}`}>
+      <div className="max-w-180 mx-auto">
         {b.body.map(([h,p],i)=>{
           const isHtml=/<[a-z][^>]*>/i.test(p);
-          return <section key={i} style={{marginBottom:i===b.body.length-1?0:36}}>
-            {h&&<h2 style={{fontSize:mob?22:28,fontWeight:730,letterSpacing:"-.03em",color:C.text,margin:"0 0 16px",lineHeight:1.25}}>{h}</h2>}
+          return <section key={i} className={i===b.body.length-1?"mb-0":"mb-9"}>
+            {h&&<h2 className={`font-bold text-text tracking-tight mb-4 leading-tight ${mob?"text-2xl":"text-3xl"}`}>{h}</h2>}
             {isHtml
-              ? <div className="blog-body rich-content" style={{fontSize:mob?16.5:18,color:C.text2,lineHeight:1.8}} dangerouslySetInnerHTML={{__html:p}}/>
-              : <p style={{fontSize:mob?16.5:18,color:C.text2,lineHeight:1.8,margin:0}}>{p}</p>}
+              ? <div className={`blog-body rich-content text-text-2 leading-loose ${mob?"text-base":"text-lg"}`} dangerouslySetInnerHTML={{__html:p}}/>
+              : <p className={`text-text-2 leading-loose m-0 ${mob?"text-base":"text-lg"}`}>{p}</p>}
           </section>;})}
-        <div style={{marginTop:56,paddingTop:36,borderTop:`1px solid ${C.lineSoft}`,display:"flex",gap:16,alignItems:"center",flexWrap:"wrap"}}>
+        <div className="mt-14 pt-9 border-t border-line-soft flex gap-4 items-center flex-wrap">
           <SmartPortrait seed={b.authorSeed} size={64}/>
-          <div style={{flex:"1 1 200px",minWidth:0}}>
-            <div style={{fontSize:12.5,fontWeight:700,color:C.text3,letterSpacing:".08em",textTransform:"uppercase",marginBottom:6}}>Written by</div>
-            <div style={{fontSize:17,fontWeight:670,color:C.text,letterSpacing:"-.02em"}}>{b.author}</div>
-            <div style={{fontSize:14,color:C.text2,marginTop:6,lineHeight:1.6}}>Contributor on the NorthHire careers desk, writing on {b.cat.toLowerCase()} in the Canadian labour market.</div></div>
+          <div className="grow shrink basis-50 min-w-0">
+            <div className="text-xs font-bold text-text-3 tracking-wide uppercase mb-1.5">Written by</div>
+            <div className="text-lg font-bold text-text tracking-tight">{b.author}</div>
+            <div className="text-sm text-text-2 mt-1.5 leading-snug">Contributor on the NorthHire careers desk, writing on {b.cat.toLowerCase()} in the Canadian labour market.</div></div>
           <Btn kind="outline" icon="share" onClick={()=>A.share(b)}>Share</Btn></div>
       </div>
     </section>
 
-    <section style={{padding:pad,background:C.bg,borderTop:`1px solid ${C.line}`}}>
-      <div style={{maxWidth:1120,margin:"0 auto"}}>
-        <div style={{marginBottom:36}}>
+    <section className={`bg-bg border-t border-line ${pad}`}>
+      <div className="max-w-280 mx-auto">
+        <div className="mb-9">
           <Tag tone="brand">Keep reading</Tag>
-          <h2 style={{fontSize:mob?26:36,fontWeight:750,letterSpacing:"-.04em",color:C.text,margin:"14px 0 0",lineHeight:1.12}}>More from the careers desk.</h2></div>
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:mob?14:20}}>
+          <h2 className={`font-bold text-text tracking-tight leading-tight mt-3.5 ${mob?"text-2xl":"text-4xl"}`}>More from the careers desk.</h2></div>
+        <div className={`grid ${mob?"grid-cols-1 gap-3.5":"grid-cols-3 gap-5"}`}>
           {more.map(x=><BlogCard key={x.id} b={x}/>)}</div>
       </div>
     </section>
@@ -401,33 +389,33 @@ export function TrainingsPage(){
   const cats=["all",...Array.from(new Set(pub.map(t=>t.cat)))];
   const list=pub.filter(t=>(cat==="all"||t.cat===cat)&&(price==="all"||(price==="free"?t.price===0:t.price>0))
     &&(!q||t.title.toLowerCase().includes(q.toLowerCase())));
-  const pad=mob?"56px 16px":"96px 32px";
-  return <div style={{background:"#fff",minHeight:"100%"}}>
+  const pad=mob?"py-14 px-4":"py-24 px-8";
+  return <div className="bg-white min-h-full">
 
-    <section style={{padding:pad,background:"#fff"}}>
-      <div style={{maxWidth:960,margin:"0 auto",textAlign:"center"}}>
+    <section className={`bg-white ${pad}`}>
+      <div className="max-w-240 mx-auto text-center">
         <Tag tone="brand" icon="cap">Trainings and certifications</Tag>
-        <h1 style={{fontSize:mob?38:68,fontWeight:770,letterSpacing:"-.05em",lineHeight:1.02,margin:"22px auto 26px",color:C.text}}>
+        <h1 className={`font-extrabold tracking-tight leading-none my-6 text-text ${mob?"text-4xl":"text-7xl"}`}>
           Get the ticket the job asks for.</h1>
-        <p style={{fontSize:mob?17:20,color:C.text2,lineHeight:1.55,margin:"0 auto 44px",maxWidth:620}}>
+        <p className={`text-text-2 leading-snug mx-auto mb-11 max-w-155 ${mob?"text-lg":"text-xl"}`}>
           WHMIS, food handling, forklift, working at heights and exam prep. Certificates attach straight to your NorthHire profile.</p>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:mob?20:44,maxWidth:640,margin:"0 auto"}}>
+        <div className={`grid grid-cols-3 mx-auto max-w-160 ${mob?"gap-5":"gap-11"}`}>
           {[[pub.filter(t=>t.price===0).length,"Free courses"],[pub.length,"Total courses"],
             [pub.reduce((s,t)=>s+t.enrolled,0).toLocaleString(),"Learners enrolled"]].map(([v,l])=>
-            <div key={l}><div style={{fontSize:mob?26:36,fontWeight:760,color:C.brand,letterSpacing:"-.045em",lineHeight:1}}>{v}</div>
-              <div style={{fontSize:mob?12:13.5,color:C.text2,marginTop:mob?8:12,fontWeight:550}}>{l}</div></div>)}</div>
+            <div key={l}><div className={`font-extrabold text-brand tracking-tight leading-none ${mob?"text-3xl":"text-4xl"}`}>{v}</div>
+              <div className={`text-text-2 font-semibold ${mob?"text-xs mt-2":"text-sm mt-3"}`}>{l}</div></div>)}</div>
       </div>
     </section>
 
-    <section style={{padding:mob?"0 16px 56px":"0 32px 96px",background:"#fff"}}>
-      <div style={{maxWidth:1120,margin:"0 auto"}}>
-        <div style={{display:"flex",gap:14,marginBottom:20,flexWrap:"wrap",alignItems:"center"}}>
-          <div style={{flex:"1 1 240px",maxWidth:360}}><Input icon="search" placeholder="Search trainings" value={q} onChange={e=>setQ(e.target.value)}/></div>
+    <section className={`bg-white ${mob?"px-4 pb-14":"px-8 pb-24"}`}>
+      <div className="max-w-280 mx-auto">
+        <div className="flex gap-3.5 mb-5 flex-wrap items-center">
+          <div className="grow shrink basis-60 max-w-90"><Input icon="search" placeholder="Search trainings" value={q} onChange={e=>setQ(e.target.value)}/></div>
           <Tabs items={[{k:"all",label:"All prices"},{k:"free",label:"Free"},{k:"paid",label:"Paid"}]} value={price} onChange={setPrice}/></div>
         <Tabs items={cats.map(c=>({k:c,label:c==="all"?"All categories":c}))} value={cat} onChange={setCat} style={{marginBottom:36}}/>
         {list.length===0?<Empty icon="cap" title="No trainings found" body="Try another category or clear the filters."
           action={<Btn kind="primary" onClick={()=>{setQ("");setCat("all");setPrice("all");}}>Reset</Btn>}/>
-          :<div style={{display:"grid",gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:280}px,1fr))`,gap:16}}>
+          :<div className="grid gap-4" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:280}px,1fr))`}}>
             {list.map(t=><TrainingCard key={t.id} t={t}/>)}</div>}
       </div>
     </section>
@@ -442,73 +430,69 @@ export function TrainingPage(){
     action={<Btn kind="primary" onClick={()=>A.go("trainings")}>All trainings</Btn>}/></Page>;
   const enrolled=A.enrolled.has(t.id);
   const prog=A.trainingProgress[t.id]||0;
-  const pad=mob?"44px 16px":"72px 32px";
-  return <div style={{background:"#fff",minHeight:"100%"}}>
+  const pad=mob?"py-11 px-4":"py-18 px-8";
+  return <div className="bg-white min-h-full">
 
-    <section style={{padding:pad,background:"#fff"}}>
-      <div style={{maxWidth:1120,margin:"0 auto"}}>
-        {!mob&&<button onClick={A.back} style={{display:"inline-flex",alignItems:"center",gap:7,background:"none",border:"none",padding:0,
-          cursor:"pointer",fontFamily:"inherit",fontSize:14,color:C.text2,marginBottom:32}}><I n="arrowL" s={17}/>All trainings</button>}
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 380px",gap:mob?28:44,alignItems:"start"}}>
+    <section className={`bg-white ${pad}`}>
+      <div className="max-w-280 mx-auto">
+        {!mob&&<button onClick={A.back} className="inline-flex items-center gap-1.5 bg-transparent border-0 p-0 cursor-pointer text-sm text-text-2 mb-8"><I n="arrowL" s={17}/>All trainings</button>}
+        <div className={`grid items-start ${mob?"grid-cols-1 gap-7":"gap-11"}`} style={{gridTemplateColumns:mob?undefined:"1fr 380px"}}>
           <div>
-            <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:20}}>
+            <div className="flex gap-2 flex-wrap mb-5">
               <Tag tone="brand">{t.cat}</Tag><Tag>{t.level}</Tag><Tag icon="clock">{t.hours} hours</Tag>
               {t.price===0&&<Tag tone="ok">Free</Tag>}</div>
-            <h1 style={{fontSize:mob?32:52,fontWeight:770,letterSpacing:"-.045em",color:C.text,margin:"0 0 20px",lineHeight:1.08}}>{t.title}</h1>
-            <p style={{fontSize:mob?16:19,color:C.text2,lineHeight:1.6,margin:"0 0 24px"}}>{t.about}</p>
-            <div style={{display:"flex",alignItems:"center",gap:16,flexWrap:"wrap",fontSize:14,color:C.text2,paddingTop:24,borderTop:`1px solid ${C.lineSoft}`}}>
-              <span style={{display:"flex",alignItems:"center",gap:9}}><SmartPortrait seed={t.providerSeed} size={34}/><strong style={{color:C.text,fontWeight:650}}>{t.provider}</strong></span>
-              <span style={{color:C.warn,display:"flex",alignItems:"center",gap:5,fontWeight:660}}><I n="star" s={14} fill={C.warn} w={0}/>{t.rating}</span>
-              <span style={{color:C.text3}}>{t.enrolled.toLocaleString()} enrolled</span></div></div>
-          <div style={{background:"#fff",borderRadius:20,overflow:"hidden",border:`1px solid ${C.line}`,boxShadow:SH.md}}>
-            <div style={{aspectRatio:"16/10",background:C.bg}}><SmartScene kind={t.scene} tone={t.tone} w="100%" h="100%" seed={t.id.length}/></div>
-            <div style={{padding:mob?24:28}}>
-              <div style={{fontSize:mob?32:40,fontWeight:770,color:C.text,letterSpacing:"-.045em",marginBottom:6,lineHeight:1}}>{t.price===0?"Free":money(t.price)}</div>
-              <div style={{fontSize:13,color:C.text2,marginBottom:22}}>{t.price===0?"No cost, certificate included":"One-time payment, lifetime access"}</div>
+            <h1 className={`font-extrabold tracking-tight text-text mb-5 leading-tight ${mob?"text-3xl":"text-5xl"}`}>{t.title}</h1>
+            <p className={`text-text-2 leading-snug mb-6 ${mob?"text-base":"text-lg"}`}>{t.about}</p>
+            <div className="flex items-center gap-4 flex-wrap text-sm text-text-2 pt-6 border-t border-line-soft">
+              <span className="flex items-center gap-2"><SmartPortrait seed={t.providerSeed} size={34}/><strong className="text-text font-semibold">{t.provider}</strong></span>
+              <span className="text-warn flex items-center gap-1 font-semibold"><I n="star" s={14} fill={C.warn} w={0}/>{t.rating}</span>
+              <span className="text-text-3">{t.enrolled.toLocaleString()} enrolled</span></div></div>
+          <div className="bg-white rounded-2xl overflow-hidden border border-line shadow-md">
+            <div className="bg-bg" style={{aspectRatio:"16/10"}}><SmartScene kind={t.scene} tone={t.tone} w="100%" h="100%" seed={t.id.length}/></div>
+            <div className={mob?"p-6":"p-7"}>
+              <div className={`font-extrabold text-text tracking-tight mb-1.5 leading-none ${mob?"text-4xl":"text-5xl"}`}>{t.price===0?"Free":money(t.price)}</div>
+              <div className="text-sm text-text-2 mb-6">{t.price===0?"No cost, certificate included":"One-time payment, lifetime access"}</div>
               {enrolled?<>
-                <div style={{marginBottom:16}}>
-                  <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:8}}>
-                    <span style={{color:C.text2}}>Your progress</span><span style={{fontWeight:680,color:C.brand}}>{prog}%</span></div>
+                <div className="mb-4">
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-text-2">Your progress</span><span className="font-bold text-brand">{prog}%</span></div>
                   <Bar v={prog}/></div>
                 <Btn kind="primary" size="lg" full icon="play" onClick={()=>A.advanceTraining(t.id)}>
                   {prog>=100?"Review course":"Continue learning"}</Btn>
                 {prog>=100&&<Btn kind="outline" full icon="download" style={{marginTop:10}} onClick={()=>A.printCert(t)}>Download certificate</Btn>}
               </>:<Btn kind="primary" size="lg" full icon="cap" onClick={()=>A.enrol(t.id)}>Enrol now</Btn>}
-              <div style={{marginTop:20,paddingTop:18,borderTop:`1px solid ${C.lineSoft}`,display:"flex",flexDirection:"column",gap:11}}>
+              <div className="mt-5 pt-5 border-t border-line-soft flex flex-col gap-2.5">
                 {[["clock",`${t.hours} hours of content`],["file","Certificate on completion"],["globe","Fully online, self-paced"],["refresh","Lifetime access to updates"]].map(([ic,l])=>
-                  <div key={l} style={{display:"flex",alignItems:"center",gap:11,fontSize:13.5,color:C.text2}}><I n={ic} s={16} c={C.brand}/>{l}</div>)}</div></div></div>
+                  <div key={l} className="flex items-center gap-2.5 text-sm text-text-2"><I n={ic} s={16} c={C.brand}/>{l}</div>)}</div></div></div>
         </div>
       </div>
     </section>
 
-    <section style={{padding:pad,background:C.bg,borderTop:`1px solid ${C.line}`}}>
-      <div style={{maxWidth:1120,margin:"0 auto",display:"grid",gridTemplateColumns:mob?"1fr":"1fr 340px",gap:mob?24:32,alignItems:"start"}}>
+    <section className={`bg-bg border-t border-line ${pad}`}>
+      <div className={`max-w-280 mx-auto grid items-start ${mob?"grid-cols-1 gap-6":"gap-8"}`} style={{gridTemplateColumns:mob?undefined:"1fr 340px"}}>
         <div>
-          <div style={{background:"#fff",borderRadius:20,padding:mob?26:36,border:`1px solid ${C.line}`,marginBottom:20}}>
-            <div style={{fontSize:mob?22:28,fontWeight:730,letterSpacing:"-.03em",color:C.text,marginBottom:20,lineHeight:1.2}}>What you will learn</div>
-            <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:14}}>
-              {t.outcomes.map(o=><div key={o} style={{display:"flex",gap:12,alignItems:"flex-start",fontSize:14.5,color:C.text2,lineHeight:1.6}}>
-                <span style={{color:C.ok,marginTop:2,flexShrink:0,display:"flex"}}><I n="check" s={17} w={2.4}/></span>{o}</div>)}</div></div>
-          <div style={{background:"#fff",borderRadius:20,padding:mob?26:36,border:`1px solid ${C.line}`}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:20,flexWrap:"wrap",gap:12}}>
-              <div style={{fontSize:mob?22:28,fontWeight:730,letterSpacing:"-.03em",color:C.text,lineHeight:1.2}}>Course content</div>
-              <div style={{fontSize:13,color:C.text3}}>{t.mods.length} modules • {t.hours} hours</div></div>
+          <div className={`bg-white rounded-2xl border border-line mb-5 ${mob?"p-7":"p-9"}`}>
+            <div className={`font-bold text-text tracking-tight mb-5 leading-tight ${mob?"text-2xl":"text-3xl"}`}>What you will learn</div>
+            <div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
+              {t.outcomes.map(o=><div key={o} className="flex gap-3 items-start text-sm text-text-2 leading-snug">
+                <span className="text-ok mt-0.5 shrink-0 flex"><I n="check" s={17} w={2.4}/></span>{o}</div>)}</div></div>
+          <div className={`bg-white rounded-2xl border border-line ${mob?"p-7":"p-9"}`}>
+            <div className="flex justify-between items-end mb-5 flex-wrap gap-3">
+              <div className={`font-bold text-text tracking-tight leading-tight ${mob?"text-2xl":"text-3xl"}`}>Course content</div>
+              <div className="text-sm text-text-3">{t.mods.length} modules • {t.hours} hours</div></div>
             {t.mods.map((m,i)=>{const done=enrolled&&prog>=Math.round(((i+1)/t.mods.length)*100);
-              return <div key={m} style={{display:"flex",alignItems:"center",gap:14,padding:"16px 0",
-                borderBottom:i<t.mods.length-1?`1px solid ${C.lineSoft}`:"none"}}>
-                <div style={{width:36,height:36,borderRadius:10,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",
-                  background:done?C.okBg:C.bg,color:done?C.ok:C.text3,fontSize:13.5,fontWeight:700}}>
+              return <div key={m} className={`flex items-center gap-3.5 py-4 ${i<t.mods.length-1?"border-b border-line-soft":""}`}>
+                <div className={`w-9 h-9 rounded-lg shrink-0 flex items-center justify-center text-sm font-bold ${done?"bg-ok-bg text-ok":"bg-bg text-text-3"}`}>
                   {done?<I n="check" s={17} w={2.6}/>:i+1}</div>
-                <div style={{flex:1,minWidth:0,fontSize:15,color:C.text,fontWeight:540}}>{m}</div>
-                <span style={{fontSize:13,color:C.text3,flexShrink:0}}>{Math.round(t.hours/t.mods.length*10)/10} h</span></div>;})}</div></div>
-        <div style={{background:"#fff",borderRadius:20,padding:mob?24:28,border:`1px solid ${C.line}`}}>
+                <div className="flex-1 min-w-0 text-base text-text font-medium">{m}</div>
+                <span className="text-sm text-text-3 shrink-0">{Math.round(t.hours/t.mods.length*10)/10} h</span></div>;})}</div></div>
+        <div className={`bg-white rounded-2xl border border-line ${mob?"p-6":"p-7"}`}>
           <Lbl>Related jobs</Lbl>
           {A.jobs.filter(j=>j.status==="live").slice(0,4).map((j,i,arr)=>{const e=A.emp(j.e);
-            return <button key={j.id} onClick={()=>A.openJob(j.id)} style={{display:"flex",gap:12,alignItems:"center",width:"100%",
-              padding:"14px 0",background:"none",border:"none",borderBottom:i<arr.length-1?`1px solid ${C.lineSoft}`:"none",cursor:"pointer",fontFamily:"inherit",textAlign:"left"}}>
+            return <button key={j.id} onClick={()=>A.openJob(j.id)} className={`flex gap-3 items-center w-full py-3.5 bg-transparent border-0 cursor-pointer text-left ${i<arr.length-1?"border-b border-line-soft":""}`}>
               <EmpMark e={e} size={40} radius={10}/>
-              <div style={{flex:1,minWidth:0}}><div style={{fontSize:14,fontWeight:640,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{j.t}</div>
-                <div style={{fontSize:12.5,color:C.text3,marginTop:3}}>{pay(j)}{payShort(j)}</div></div>
+              <div className="flex-1 min-w-0"><div className="text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap">{j.t}</div>
+                <div className="text-xs text-text-3 mt-1">{pay(j)}{payShort(j)}</div></div>
               <I n="chevR" s={15} c={C.text3}/></button>;})}</div>
       </div>
     </section>
@@ -566,214 +550,208 @@ export function AboutPage(){
     ["Can I delete my account?","Yes, any time, from your settings page. Full deletion under PIPEDA within thirty days."],
   ];
   const [faqOpen,setFaqOpen]=useState(-1);
-  const pad = mob ? "56px 16px" : "96px 32px";
-  const padTight = mob ? "44px 16px" : "72px 32px";
-  const H = (title,sub,tag)=><div style={{textAlign:"center",maxWidth:720,margin:"0 auto 48px"}}>
+  const pad = mob ? "py-14 px-4" : "py-24 px-8";
+  const padTight = mob ? "py-11 px-4" : "py-18 px-8";
+  const H = (title,sub,tag)=><div className="text-center max-w-180 mx-auto mb-12">
     {tag&&<Tag tone="brand">{tag}</Tag>}
-    <h2 style={{fontSize:mob?30:44,fontWeight:750,letterSpacing:"-.04em",color:C.text,margin:"14px 0 14px",lineHeight:1.1}}>{title}</h2>
-    {sub&&<p style={{fontSize:mob?15.5:17,color:C.text2,lineHeight:1.6,margin:0}}>{sub}</p>}</div>;
+    <h2 className={`font-bold text-text tracking-tight my-3.5 leading-snug ${mob?"text-3xl":"text-4xl"}`}>{title}</h2>
+    {sub&&<p className={`text-text-2 leading-snug m-0 ${mob?"text-base":"text-lg"}`}>{sub}</p>}</div>;
 
-  return <div style={{background:"#fff",minHeight:"100%"}}>
+  return <div className="bg-white min-h-full">
 
-    <section style={{padding:pad,background:"#fff"}}>
-      <div style={{maxWidth:1120,margin:"0 auto",textAlign:"center"}}>
+    <section className={`bg-white ${pad}`}>
+      <div className="max-w-280 mx-auto text-center">
         <Tag tone="brand">About NorthHire</Tag>
-        <h1 style={{fontSize:mob?38:76,fontWeight:770,letterSpacing:"-.05em",lineHeight:1.02,margin:"22px auto 26px",maxWidth:900,color:C.text}}>
+        <h1 className={`font-extrabold tracking-tight leading-none my-6 mx-auto max-w-225 text-text ${mob?"text-4xl":"text-8xl"}`}>
           The job platform Canada has been waiting for</h1>
-        <p style={{fontSize:mob?17:21,color:C.text2,lineHeight:1.55,margin:"0 auto 40px",maxWidth:640}}>
+        <p className={`text-text-2 leading-snug mx-auto mb-10 max-w-160 ${mob?"text-lg":"text-2xl"}`}>
           NorthHire was founded by a registered nurse, a Red Seal electrician and a long-haul driver who were tired of watching Canadian workers navigate job platforms built somewhere else, for someone else. We built NorthHire for the trades, the care workers, the drivers, the cooks and the warehouse crews who make this country run.</p>
-        <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
+        <div className="flex gap-3 justify-center flex-wrap">
           <Btn kind="primary" size="lg" iconR="arrowR" onClick={()=>A.go("forEmployers")}>See how it works</Btn>
           <Btn kind="outline" size="lg" onClick={()=>A.go(A.user?.role==="seeker"?"profile":"signup")}>Create a free account</Btn></div>
-        <div style={{marginTop:mob?48:64,borderRadius:mob?16:24,overflow:"hidden",boxShadow:SH.xl,border:`1px solid ${C.line}`}}>
-          <div style={{aspectRatio:mob?"16/11":"16/8",width:"100%",background:C.bg,position:"relative"}}>
+        <div className={`mt-15 overflow-hidden shadow-xl border border-line ${mob?"rounded-2xl":"rounded-3xl"}`}>
+          <div className="w-full bg-bg relative" style={{aspectRatio:mob?"16/11":"16/8"}}>
             <SmartScene kind="office" seed={7} w="100%" h="100%" style={{position:"absolute",inset:0}}/></div></div>
       </div>
     </section>
 
-    <section style={{padding:padTight,background:"#fff",borderTop:`1px solid ${C.lineSoft}`,borderBottom:`1px solid ${C.lineSoft}`}}>
-      <div style={{maxWidth:1120,margin:"0 auto",textAlign:"center"}}>
-        <div style={{fontSize:12.5,fontWeight:600,color:C.text3,letterSpacing:".14em",textTransform:"uppercase",marginBottom:mob?24:28}}>
+    <section className={`bg-white border-y border-line-soft ${padTight}`}>
+      <div className="max-w-280 mx-auto text-center">
+        <div className={`text-xs font-semibold text-text-3 tracking-widest uppercase ${mob?"mb-6":"mb-7"}`}>
           Featured in</div>
-        <div style={{display:"grid",gridTemplateColumns:`repeat(${mob?2:4},1fr)`,gap:mob?"20px 16px":"32px",alignItems:"center",justifyItems:"center"}}>
-          {press.map(p=><div key={p} style={{fontSize:mob?15:18,fontWeight:600,color:C.text3,letterSpacing:"-.02em",opacity:.75}}>{p}</div>)}</div>
+        <div className={`grid ${mob?"grid-cols-2 gap-5":"grid-cols-4 gap-8"} items-center justify-items-center`}>
+          {press.map(p=><div key={p} className={`font-semibold text-text-3 tracking-tight opacity-75 ${mob?"text-base":"text-lg"}`}>{p}</div>)}</div>
       </div>
     </section>
 
-    <section style={{padding:pad,background:C.bg}}>
-      <div style={{maxWidth:1120,margin:"0 auto"}}>
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1.15fr",gap:mob?36:64,alignItems:"center"}}>
+    <section className={`bg-bg ${pad}`}>
+      <div className="max-w-280 mx-auto">
+        <div className={`grid items-center ${mob?"grid-cols-1 gap-9":"gap-16"}`} style={{gridTemplateColumns:mob?undefined:"1fr 1.15fr"}}>
           <div>
             <Tag tone="brand">Our mission</Tag>
-            <h2 style={{fontSize:mob?30:44,fontWeight:740,letterSpacing:"-.04em",color:C.text,margin:"14px 0 22px",lineHeight:1.1}}>
+            <h2 className={`font-bold text-text tracking-tight my-3.5 leading-snug ${mob?"text-3xl":"text-4xl"}`}>
               Every job posting should tell you what it pays.</h2>
-            <p style={{fontSize:mob?15.5:17,color:C.text2,lineHeight:1.7,margin:"0 0 16px"}}>
+            <p className={`text-text-2 leading-loose mb-4 ${mob?"text-base":"text-lg"}`}>
               For decades, Canadians have applied to jobs blind. No wage. No requirements clearly stated. No idea whether they even qualified.</p>
-            <p style={{fontSize:mob?15.5:17,color:C.text2,lineHeight:1.7,margin:"0 0 24px"}}>
+            <p className={`text-text-2 leading-loose mb-6 ${mob?"text-base":"text-lg"}`}>
               We're building a platform where every listing is honest, every applicant is scored, and every hire is made on facts — not luck.</p>
             <Btn kind="outline" iconR="arrowR" onClick={()=>A.go("blogs")}>Read our manifesto</Btn></div>
-          <div style={{borderRadius:20,overflow:"hidden",aspectRatio:"4/3",boxShadow:SH.lg,border:`1px solid ${C.line}`}}>
+          <div className="rounded-2xl overflow-hidden shadow-lg border border-line" style={{aspectRatio:"4/3"}}>
             <SmartScene kind="trades" seed={3} w="100%" h="100%"/></div>
         </div>
       </div>
     </section>
 
-    <section style={{padding:pad,background:"#fff"}}>
-      <div style={{maxWidth:1120,margin:"0 auto"}}>
+    <section className={`bg-white ${pad}`}>
+      <div className="max-w-280 mx-auto">
         {H("The numbers so far.","Three years, one promise kept.","By the numbers")}
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"repeat(4,1fr)",gap:mob?12:0,border:mob?"none":`1px solid ${C.line}`,borderRadius:20,overflow:"hidden"}}>
+        <div className={`grid ${mob?"grid-cols-2 gap-3":"grid-cols-4"} rounded-3xl overflow-hidden`} style={{border:mob?"none":`1px solid ${C.line}`}}>
           {[["612k+","Job seekers"],["4,180","Employers"],["21,340","Live jobs"],["50k+","Hires made"]].map(([v,l],i)=>
-            <div key={l} style={{padding:mob?"28px 20px":"44px 32px",background:"#fff",textAlign:"center",
-              borderRight:!mob&&i<3?`1px solid ${C.line}`:"none",border:mob?`1px solid ${C.line}`:"none",borderRadius:mob?16:0}}>
-              <div style={{fontSize:mob?38:56,fontWeight:770,color:C.brand,letterSpacing:"-.05em",lineHeight:1}}>{v}</div>
-              <div style={{fontSize:mob?13:14,color:C.text2,marginTop:12,fontWeight:550}}>{l}</div></div>)}</div>
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:12,marginTop:12}}>
+            <div key={l} className={`bg-white text-center ${mob?"py-7 px-5 rounded-2xl border border-line":"py-11 px-8"}`} style={!mob&&i<3?{borderRight:`1px solid ${C.line}`}:undefined}>
+              <div className={`font-extrabold text-brand tracking-tight leading-none ${mob?"text-4xl":"text-6xl"}`}>{v}</div>
+              <div className={`text-text-2 font-semibold mt-3 ${mob?"text-sm":"text-sm"}`}>{l}</div></div>)}</div>
+        <div className={`grid gap-3 mt-3 ${mob?"grid-cols-1":"grid-cols-3"}`}>
           {[["11 days","Median time to hire"],["13/13","Provinces and territories"],["EN + FR","Fully bilingual"]].map(([v,l])=>
-            <div key={l} style={{padding:mob?"22px 20px":"32px 28px",background:C.bg,borderRadius:16,textAlign:"center"}}>
-              <div style={{fontSize:mob?26:32,fontWeight:730,color:C.text,letterSpacing:"-.035em",lineHeight:1}}>{v}</div>
-              <div style={{fontSize:13,color:C.text2,marginTop:10}}>{l}</div></div>)}</div>
+            <div key={l} className={`bg-bg rounded-2xl text-center ${mob?"py-6 px-5":"py-8 px-7"}`}>
+              <div className={`font-bold text-text tracking-tight leading-none ${mob?"text-3xl":"text-4xl"}`}>{v}</div>
+              <div className="text-sm text-text-2 mt-2.5">{l}</div></div>)}</div>
       </div>
     </section>
 
-    <section style={{padding:pad,background:C.bg}}>
-      <div style={{maxWidth:1120,margin:"0 auto"}}>
+    <section className={`bg-bg ${pad}`}>
+      <div className="max-w-280 mx-auto">
         {H("What we believe.","Four promises. We will not compromise on them.","Values")}
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:mob?12:16}}>
-          {values.map(v=><div key={v.t} style={{background:"#fff",borderRadius:20,padding:mob?26:36,border:`1px solid ${C.line}`}}>
-            <div style={{width:52,height:52,borderRadius:14,background:C.wash,color:C.brand,display:"flex",alignItems:"center",justifyContent:"center",marginBottom:22}}>
+        <div className={`grid ${mob?"grid-cols-1 gap-3":"grid-cols-2 gap-4"}`}>
+          {values.map(v=><div key={v.t} className={`bg-white rounded-3xl border border-line ${mob?"p-7":"p-9"}`}>
+            <div className="w-13 h-13 rounded-2xl bg-wash text-brand flex items-center justify-center mb-6">
               <I n={v.ic} s={26}/></div>
-            <div style={{fontSize:mob?19:22,fontWeight:700,color:C.text,letterSpacing:"-.025em",marginBottom:10,lineHeight:1.25}}>{v.t}</div>
-            <p style={{fontSize:mob?14.5:15.5,color:C.text2,lineHeight:1.65,margin:0}}>{v.b}</p></div>)}</div>
+            <div className={`font-bold text-text tracking-tight mb-2.5 leading-tight ${mob?"text-xl":"text-2xl"}`}>{v.t}</div>
+            <p className={`text-text-2 leading-relaxed m-0 ${mob?"text-sm":"text-base"}`}>{v.b}</p></div>)}</div>
       </div>
     </section>
 
-    <section style={{padding:pad,background:"#fff"}}>
-      <div style={{maxWidth:1120,margin:"0 auto"}}>
+    <section className={`bg-white ${pad}`}>
+      <div className="max-w-280 mx-auto">
         {H("Why teams choose us.","Same platform, whether you hire two or two hundred.","Why NorthHire")}
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:mob?14:20}}>
-          {whyus.map(w=><div key={w.t} style={{padding:mob?"22px 4px":"28px 8px"}}>
-            <div style={{width:44,height:44,borderRadius:12,background:C.wash,color:C.brand,display:"flex",alignItems:"center",justifyContent:"center",marginBottom:18}}>
+        <div className={`grid ${mob?"grid-cols-1 gap-3.5":"grid-cols-3 gap-5"}`}>
+          {whyus.map(w=><div key={w.t} className={mob?"py-6 px-1":"py-7 px-2"}>
+            <div className="w-11 h-11 rounded-xl bg-wash text-brand flex items-center justify-center mb-5">
               <I n={w.ic} s={22}/></div>
-            <div style={{fontSize:mob?17:18.5,fontWeight:680,color:C.text,letterSpacing:"-.02em",marginBottom:9}}>{w.t}</div>
-            <p style={{fontSize:mob?14:14.5,color:C.text2,lineHeight:1.65,margin:0}}>{w.b}</p></div>)}</div>
+            <div className={`font-bold text-text tracking-tight mb-2 ${mob?"text-lg":"text-xl"}`}>{w.t}</div>
+            <p className={`text-text-2 leading-relaxed m-0 ${mob?"text-sm":"text-sm"}`}>{w.b}</p></div>)}</div>
       </div>
     </section>
 
-    <section style={{padding:pad,background:C.bg}}>
-      <div style={{maxWidth:1120,margin:"0 auto"}}>
+    <section className={`bg-bg ${pad}`}>
+      <div className="max-w-280 mx-auto">
         {H("Our history.","Three years. Four moments.","The journey")}
-        <div style={{position:"relative"}}>
-          {!mob&&<div style={{position:"absolute",left:"50%",top:8,bottom:8,width:2,background:C.line,transform:"translateX(-1px)"}}/>}
+        <div className="relative">
+          {!mob&&<div className="absolute left-1/2 top-2 bottom-2 w-0.5 bg-line" style={{transform:"translateX(-1px)"}}/>}
           {history.map((h,i)=>{const left=i%2===0;
-            return <div key={h.y} style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 60px 1fr",gap:mob?0:20,alignItems:"center",marginBottom:mob?24:44}}>
-              <div style={{gridColumn:mob?"1":left?"1":"3",textAlign:mob?"left":left?"right":"left",padding:mob?0:"0 8px"}}>
-                <div style={{fontSize:mob?13:14,fontWeight:700,color:C.brand,letterSpacing:".08em",textTransform:"uppercase",marginBottom:mob?6:10}}>{h.y}</div>
-                <div style={{fontSize:mob?21:26,fontWeight:730,color:C.text,letterSpacing:"-.03em",marginBottom:10,lineHeight:1.2}}>{h.t}</div>
-                <p style={{fontSize:mob?14.5:15.5,color:C.text2,lineHeight:1.65,margin:0}}>{h.b}</p></div>
-              {!mob&&<div style={{gridColumn:"2",display:"flex",justifyContent:"center"}}>
-                <div style={{width:16,height:16,borderRadius:99,background:C.brand,border:"4px solid #fff",boxShadow:`0 0 0 2px ${C.brand}`}}/></div>}
+            return <div key={h.y} className={`grid items-center ${mob?"grid-cols-1 mb-6":"mb-11"}`} style={{gridTemplateColumns:mob?undefined:"1fr 60px 1fr",gap:mob?0:20}}>
+              <div className={mob?"text-left":left?"text-right px-2":"text-left px-2"} style={{gridColumn:mob?"1":left?"1":"3"}}>
+                <div className={`font-bold text-brand tracking-wide uppercase ${mob?"text-xs mb-1.5":"text-sm mb-2.5"}`}>{h.y}</div>
+                <div className={`font-bold text-text tracking-tight mb-2.5 leading-snug ${mob?"text-xl":"text-2xl"}`}>{h.t}</div>
+                <p className={`text-text-2 leading-relaxed m-0 ${mob?"text-sm":"text-base"}`}>{h.b}</p></div>
+              {!mob&&<div className="flex justify-center" style={{gridColumn:"2"}}>
+                <div className="w-4 h-4 rounded-full bg-brand border-4 border-white" style={{boxShadow:`0 0 0 2px ${C.brand}`}}/></div>}
             </div>;})}</div>
       </div>
     </section>
 
-    <section style={{padding:pad,background:"#fff"}}>
-      <div style={{maxWidth:1200,margin:"0 auto"}}>
+    <section className={`bg-white ${pad}`}>
+      <div className="max-w-300 mx-auto">
         {H("The people behind it.","Half the team has worked in the industries we serve.","Team")}
-        <div style={{display:"grid",gridTemplateColumns:`repeat(auto-fill,minmax(${mob?150:220}px,1fr))`,gap:mob?12:20}}>
+        <div className={`grid ${mob?"gap-3":"gap-5"}`} style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?150:220}px,1fr))`}}>
           {team.map(p=><div key={p.name}>
-            <div style={{aspectRatio:"1",borderRadius:16,overflow:"hidden",background:C.bg,marginBottom:14}}>
+            <div className="rounded-2xl overflow-hidden bg-bg mb-3.5" style={{aspectRatio:"1"}}>
               <SmartPortrait seed={p.seed} size="100%" radius={0}/></div>
-            <div style={{fontSize:mob?15:16.5,fontWeight:680,color:C.text,letterSpacing:"-.02em"}}>{p.name}</div>
-            <div style={{fontSize:mob?13:13.5,color:C.brand,fontWeight:580,marginTop:3}}>{p.role}</div>
-            <div style={{fontSize:12.5,color:C.text3,marginTop:6,lineHeight:1.5}}>Before: {p.from}</div></div>)}</div>
+            <div className={`font-bold text-text tracking-tight ${mob?"text-base":"text-lg"}`}>{p.name}</div>
+            <div className={`text-brand font-semibold mt-1 ${mob?"text-sm":"text-sm"}`}>{p.role}</div>
+            <div className="text-xs text-text-3 mt-1.5 leading-snug">Before: {p.from}</div></div>)}</div>
       </div>
     </section>
 
-    <section style={{padding:pad,background:C.bg}}>
-      <div style={{maxWidth:1120,margin:"0 auto"}}>
+    <section className={`bg-bg ${pad}`}>
+      <div className="max-w-280 mx-auto">
         {H("Where you'll find us.","Four offices. One country.","Offices")}
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:mob?14:20}}>
-          {offices.map(o=><div key={o.city} style={{background:"#fff",borderRadius:20,overflow:"hidden",border:`1px solid ${C.line}`}}>
-            <div style={{aspectRatio:"16/9",background:C.bg}}><SmartScene kind={o.kind} seed={o.city.length} w="100%" h="100%"/></div>
-            <div style={{padding:mob?22:28}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,marginBottom:8}}>
-                <div style={{fontSize:mob?21:25,fontWeight:720,color:C.text,letterSpacing:"-.03em"}}>{o.city}</div>
+        <div className={`grid ${mob?"grid-cols-1 gap-3.5":"grid-cols-2 gap-5"}`}>
+          {offices.map(o=><div key={o.city} className="bg-white rounded-3xl overflow-hidden border border-line">
+            <div className="bg-bg" style={{aspectRatio:"16/9"}}><SmartScene kind={o.kind} seed={o.city.length} w="100%" h="100%"/></div>
+            <div className={mob?"p-6":"p-7"}>
+              <div className="flex justify-between items-start gap-3 mb-2">
+                <div className={`font-bold text-text tracking-tight ${mob?"text-xl":"text-2xl"}`}>{o.city}</div>
                 <Tag tone="brand" sm>{o.team}</Tag></div>
-              <div style={{fontSize:14.5,color:C.text,fontWeight:550}}>{o.role}</div>
-              <div style={{fontSize:13.5,color:C.text2,marginTop:6,display:"flex",alignItems:"center",gap:6}}>
+              <div className="text-sm text-text font-semibold">{o.role}</div>
+              <div className="text-sm text-text-2 mt-1.5 flex items-center gap-1.5">
                 <I n="pin" s={13} c={C.text3}/>{o.addr}</div></div></div>)}</div>
       </div>
     </section>
 
-    <section style={{padding:padTight,background:"#fff",borderTop:`1px solid ${C.lineSoft}`,borderBottom:`1px solid ${C.lineSoft}`}}>
-      <div style={{maxWidth:1120,margin:"0 auto",textAlign:"center"}}>
-        <div style={{fontSize:12.5,fontWeight:600,color:C.text3,letterSpacing:".14em",textTransform:"uppercase",marginBottom:mob?24:28}}>
+    <section className={`bg-white border-y border-line-soft ${padTight}`}>
+      <div className="max-w-280 mx-auto text-center">
+        <div className={`text-xs font-semibold text-text-3 tracking-widest uppercase ${mob?"mb-6":"mb-7"}`}>
           Backed by</div>
-        <div style={{display:"grid",gridTemplateColumns:`repeat(${mob?2:3},1fr)`,gap:mob?"20px 16px":"28px",alignItems:"center",justifyItems:"center"}}>
-          {investors.map(v=><div key={v} style={{fontSize:mob?15:18,fontWeight:600,color:C.text3,letterSpacing:"-.02em",opacity:.75}}>{v}</div>)}</div>
+        <div className={`grid ${mob?"grid-cols-2 gap-5":"grid-cols-3 gap-7"} items-center justify-items-center`}>
+          {investors.map(v=><div key={v} className={`font-semibold text-text-3 tracking-tight opacity-75 ${mob?"text-base":"text-lg"}`}>{v}</div>)}</div>
       </div>
     </section>
 
-    <section style={{padding:pad,background:C.bg}}>
-      <div style={{maxWidth:1120,margin:"0 auto"}}>
+    <section className={`bg-bg ${pad}`}>
+      <div className="max-w-280 mx-auto">
         {H("Fresh from the blog.","Career tips, hiring data, sector deep dives.","Latest updates")}
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:mob?14:20}}>
+        <div className={`grid ${mob?"grid-cols-1 gap-3.5":"grid-cols-3 gap-5"}`}>
           {(SEED_BLOGS||[]).slice(0,3).map(b=><div key={b.id} onClick={()=>{A.setBlog(b.id);A.go("blog");}}
-            style={{background:"#fff",borderRadius:20,overflow:"hidden",border:`1px solid ${C.line}`,cursor:"pointer",transition:"transform .2s"}}
-            onMouseEnter={e=>e.currentTarget.style.transform="translateY(-4px)"}
-            onMouseLeave={e=>e.currentTarget.style.transform="none"}>
-            <div style={{aspectRatio:"16/10",background:C.bg}}><SmartScene kind={b.kind||"office"} seed={b.id.length} w="100%" h="100%"/></div>
-            <div style={{padding:mob?22:26}}>
+            className="bg-white rounded-3xl overflow-hidden border border-line cursor-pointer transition-transform duration-200 hover:-translate-y-1">
+            <div className="bg-bg" style={{aspectRatio:"16/10"}}><SmartScene kind={b.kind||"office"} seed={b.id.length} w="100%" h="100%"/></div>
+            <div className={mob?"p-6":"p-7"}>
               <Tag tone="brand" sm>{b.tag||"Insight"}</Tag>
-              <div style={{fontSize:mob?17:18,fontWeight:680,color:C.text,letterSpacing:"-.02em",margin:"12px 0 8px",lineHeight:1.3}}>{b.title}</div>
-              <div style={{fontSize:13,color:C.text3}}>{b.readMin||5} min read</div></div></div>)}</div>
-        <div style={{textAlign:"center",marginTop:32}}>
+              <div className={`font-bold text-text tracking-tight leading-snug my-3 ${mob?"text-lg":"text-lg"}`}>{b.title}</div>
+              <div className="text-sm text-text-3">{b.readMin||5} min read</div></div></div>)}</div>
+        <div className="text-center mt-8">
           <Btn kind="outline" iconR="arrowR" onClick={()=>A.go("blogs")}>All posts</Btn></div>
       </div>
     </section>
 
-    <section style={{padding:pad,background:"#fff"}}>
-      <div style={{maxWidth:1120,margin:"0 auto"}}>
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1.1fr 1fr",gap:mob?36:64,alignItems:"center"}}>
-          <div style={{borderRadius:20,overflow:"hidden",aspectRatio:"4/3",boxShadow:SH.lg,border:`1px solid ${C.line}`}}>
-            <SmartScene kind="office" seed={2} w="100%" h="100%"/></div>
-          <div>
-            <Tag tone="brand">We're hiring</Tag>
-            <h2 style={{fontSize:mob?30:44,fontWeight:740,letterSpacing:"-.04em",color:C.text,margin:"14px 0 20px",lineHeight:1.1}}>
-              Come build with us.</h2>
-            <p style={{fontSize:mob?15.5:17,color:C.text2,lineHeight:1.7,margin:"0 0 28px"}}>
-              Engineers, designers, employer partnerships, support. Remote across Canada. Real ownership from day one.</p>
-            <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:28}}>
-              {[["Senior Product Engineer","Remote · Full-time"],["Employer Success Manager","Toronto · Full-time"],["Designer, Growth","Remote · Full-time"]].map(([r,l])=>
-                <div key={r} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 18px",background:C.bg,borderRadius:12,border:`1px solid ${C.line}`}}>
-                  <div><div style={{fontSize:14.5,fontWeight:640,color:C.text}}>{r}</div>
-                    <div style={{fontSize:12.5,color:C.text3,marginTop:3}}>{l}</div></div>
-                  <I n="chevR" s={16} c={C.text3}/></div>)}</div>
-            <Btn kind="primary" iconR="arrowR" onClick={()=>A.go("contact")}>See all openings</Btn></div>
-        </div>
+    <section className={`bg-white ${pad}`}>
+      <div className={`max-w-280 mx-auto grid items-center ${mob?"grid-cols-1 gap-9":"gap-16"}`} style={{gridTemplateColumns:mob?undefined:"1.1fr 1fr"}}>
+        <div className="rounded-2xl overflow-hidden shadow-lg border border-line" style={{aspectRatio:"4/3"}}>
+          <SmartScene kind="office" seed={2} w="100%" h="100%"/></div>
+        <div>
+          <Tag tone="brand">We're hiring</Tag>
+          <h2 className={`font-bold text-text tracking-tight my-3.5 leading-snug ${mob?"text-3xl":"text-4xl"}`}>
+            Come build with us.</h2>
+          <p className={`text-text-2 leading-loose mb-7 ${mob?"text-base":"text-lg"}`}>
+            Engineers, designers, employer partnerships, support. Remote across Canada. Real ownership from day one.</p>
+          <div className="flex flex-col gap-2.5 mb-7">
+            {[["Senior Product Engineer","Remote · Full-time"],["Employer Success Manager","Toronto · Full-time"],["Designer, Growth","Remote · Full-time"]].map(([r,l])=>
+              <div key={r} className="flex justify-between items-center py-3.5 px-5 bg-bg rounded-xl border border-line">
+                <div><div className="text-sm font-semibold text-text">{r}</div>
+                  <div className="text-xs text-text-3 mt-1">{l}</div></div>
+                <I n="chevR" s={16} c={C.text3}/></div>)}</div>
+          <Btn kind="primary" iconR="arrowR" onClick={()=>A.go("contact")}>See all openings</Btn></div>
       </div>
     </section>
 
-    <section style={{padding:pad,background:C.bg}}>
-      <div style={{maxWidth:820,margin:"0 auto"}}>
+    <section className={`bg-bg ${pad}`}>
+      <div className="max-w-narrow mx-auto">
         {H("Common questions.","Short answers. No sales speak.","FAQ")}
-        <div style={{background:"#fff",borderRadius:20,border:`1px solid ${C.line}`,overflow:"hidden"}}>
-          {faq.map(([q,a],i)=><div key={q} style={{borderBottom:i<faq.length-1?`1px solid ${C.lineSoft}`:"none"}}>
-            <button onClick={()=>setFaqOpen(faqOpen===i?-1:i)} style={{width:"100%",display:"flex",justifyContent:"space-between",
-              alignItems:"center",gap:14,padding:mob?"20px 22px":"24px 28px",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",textAlign:"left"}}>
-              <span style={{fontSize:mob?15.5:16.5,fontWeight:650,color:C.text,lineHeight:1.4,letterSpacing:"-.015em"}}>{q}</span>
-              <span style={{color:C.brand,transform:faqOpen===i?"rotate(180deg)":"none",transition:"transform .22s",flexShrink:0}}><I n="chevD" s={19} w={2.2}/></span></button>
-            {faqOpen===i&&<div style={{padding:mob?"0 22px 22px":"0 28px 26px",fontSize:mob?14.5:15,color:C.text2,lineHeight:1.72}}>{a}</div>}</div>)}</div>
+        <div className="bg-white rounded-3xl border border-line overflow-hidden">
+          {faq.map(([q,a],i)=><div key={q} className={i<faq.length-1?"border-b border-line-soft":""}>
+            <button onClick={()=>setFaqOpen(faqOpen===i?-1:i)} className={`w-full flex justify-between items-center gap-3.5 bg-transparent border-0 cursor-pointer text-left ${mob?"py-5 px-6":"py-6 px-7"}`}>
+              <span className={`font-semibold text-text leading-snug tracking-tight ${mob?"text-base":"text-lg"}`}>{q}</span>
+              <span className={`text-brand shrink-0 transition-transform duration-200 ${faqOpen===i?"rotate-180":""}`}><I n="chevD" s={19} w={2.2}/></span></button>
+            {faqOpen===i&&<div className={`text-text-2 leading-loose ${mob?"pt-0 px-6 pb-6 text-sm":"pt-0 px-7 pb-7 text-base"}`}>{a}</div>}</div>)}</div>
       </div>
     </section>
 
-    <section style={{padding:pad,background:"#fff"}}>
-      <div style={{maxWidth:1120,margin:"0 auto",background:C.ink,borderRadius:24,padding:mob?"48px 24px":"80px 60px",textAlign:"center",color:"#fff",position:"relative",overflow:"hidden"}}>
-        <h2 style={{fontSize:mob?30:48,fontWeight:770,letterSpacing:"-.045em",margin:"0 0 18px",lineHeight:1.05}}>
+    <section className={`bg-white ${pad}`}>
+      <div className={`max-w-280 mx-auto bg-ink rounded-3xl text-center text-white relative overflow-hidden ${mob?"py-12 px-6":"py-20 px-15"}`}>
+        <h2 className={`font-extrabold tracking-tight mb-5 leading-tight ${mob?"text-3xl":"text-5xl"}`}>
           Say hello.</h2>
-        <p style={{fontSize:mob?15.5:18,color:"rgba(255,255,255,.7)",margin:"0 auto 36px",maxWidth:520,lineHeight:1.6}}>
-          A real person, within one business day. From <span style={{color:"#6AACFF",fontWeight:600}}>support@northhire.ca</span>.</p>
-        <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
+        <p className={`text-white/70 mx-auto mb-9 max-w-130 leading-snug ${mob?"text-base":"text-lg"}`}>
+          A real person, within one business day. From <span className="text-accent font-semibold">support@northhire.ca</span>.</p>
+        <div className="flex gap-3 justify-center flex-wrap">
           <Btn kind="primary" size="lg" icon="mail" onClick={()=>A.go("contact")}>Contact us</Btn>
           <Btn kind="onDark" size="lg" onClick={()=>A.go(A.user?.role==="seeker"?"profile":"signup")}>Create an account</Btn></div>
       </div>
@@ -791,16 +769,15 @@ export function ContactPage(){
     if(f.msg.trim().length<10)e.msg="A bit more, please";
     setErr(e); if(Object.keys(e).length)return;
     A.logActivity("contact.submitted",`Contact: ${f.topic}`); setSent(true);};
-  const pad=mob?"56px 16px":"96px 32px";
+  const pad=mob?"py-14 px-4":"py-24 px-8";
 
-  if(sent) return <div style={{background:"#fff",padding:pad}}>
-    <div style={{maxWidth:560,margin:"0 auto",textAlign:"center"}}>
-      <div style={{width:88,height:88,borderRadius:99,background:C.okBg,border:`2px solid ${C.okLn}`,display:"flex",
-        alignItems:"center",justifyContent:"center",margin:"0 auto 32px"}}>
+  if(sent) return <div className={`bg-white ${pad}`}>
+    <div className="max-w-140 mx-auto text-center">
+      <div className="w-22 h-22 rounded-full bg-ok-bg border-2 border-ok-ln flex items-center justify-center mx-auto mb-8">
         <I n="check" s={44} c={C.ok} w={2.6}/></div>
-      <h1 style={{fontSize:mob?32:44,fontWeight:750,letterSpacing:"-.045em",color:C.text,margin:"0 0 18px",lineHeight:1.1}}>Message received.</h1>
-      <p style={{fontSize:mob?16:18,color:C.text2,lineHeight:1.6,margin:"0 auto 36px",maxWidth:440}}>
-        Thanks {f.name.split(" ")[0]}. We'll reply to <strong style={{color:C.text}}>{f.email}</strong> by end of the next business day.</p>
+      <h1 className={`font-bold tracking-tight text-text mb-5 leading-snug ${mob?"text-3xl":"text-4xl"}`}>Message received.</h1>
+      <p className={`text-text-2 leading-snug mx-auto mb-9 max-w-110 ${mob?"text-base":"text-lg"}`}>
+        Thanks {f.name.split(" ")[0]}. We'll reply to <strong className="text-text">{f.email}</strong> by end of the next business day.</p>
       <Btn kind="primary" size="lg" onClick={()=>A.go("home")}>Back to home</Btn></div></div>;
 
   const topics=[["General","Something else"],["Job seeker","Help with my account"],["Hiring","Sales or demo"],["Report","Suspicious posting"]];
@@ -809,32 +786,30 @@ export function ContactPage(){
     {city:"Montreal",addr:"1250 René-Lévesque",phone:"1 888 555 0144"},
     {city:"Halifax",addr:"1959 Upper Water",phone:"1 888 555 0145"}];
 
-  return <div style={{background:"#fff",minHeight:"100%"}}>
+  return <div className="bg-white min-h-full">
 
-    <section style={{padding:pad,background:"#fff"}}>
-      <div style={{maxWidth:920,margin:"0 auto",textAlign:"center"}}>
+    <section className={`bg-white ${pad}`}>
+      <div className="max-w-230 mx-auto text-center">
         <Tag tone="brand">Contact us</Tag>
-        <h1 style={{fontSize:mob?38:72,fontWeight:770,letterSpacing:"-.05em",lineHeight:1.02,margin:"22px auto 26px",color:C.text}}>
+        <h1 className={`font-extrabold tracking-tight leading-none my-6 text-text ${mob?"text-4xl":"text-7xl"}`}>
           Talk to a real person</h1>
-        <p style={{fontSize:mob?17:20,color:C.text2,lineHeight:1.55,margin:"0 auto",maxWidth:560}}>
+        <p className={`text-text-2 leading-snug mx-auto max-w-140 ${mob?"text-lg":"text-xl"}`}>
           Our support team is based in Canada and responds to every message within one business day. Most people hear back the same day.</p>
       </div>
     </section>
 
-    <section style={{padding:mob?"0 16px 56px":"0 32px 96px",background:"#fff"}}>
-      <div style={{maxWidth:1120,margin:"0 auto",display:"grid",gridTemplateColumns:mob?"1fr":"1.3fr 1fr",gap:mob?24:32,alignItems:"start"}}>
-        <div style={{background:"#fff",border:`1px solid ${C.line}`,borderRadius:24,padding:mob?28:44}}>
-          <div style={{marginBottom:28}}>
+    <section className={`bg-white ${mob?"px-4 pb-14":"px-8 pb-24"}`}>
+      <div className={`max-w-280 mx-auto grid items-start ${mob?"grid-cols-1 gap-6":"gap-8"}`} style={{gridTemplateColumns:mob?undefined:"1.3fr 1fr"}}>
+        <div className={`bg-white border border-line rounded-3xl ${mob?"p-7":"p-11"}`}>
+          <div className="mb-7">
             <Lbl>What is this about?</Lbl>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:10}}>
+            <div className="grid grid-cols-2 gap-2.5 mt-2.5">
               {topics.map(([k,label])=>{const on=f.topic===k;
-                return <button key={k} onClick={()=>set("topic",k)} style={{padding:mob?"14px 14px":"16px 18px",borderRadius:14,cursor:"pointer",
-                  fontFamily:"inherit",textAlign:"left",lineHeight:1.35,transition:"all .16s",
-                  border:`1.5px solid ${on?C.brand:C.line}`,background:on?C.wash:"#fff"}}>
-                  <div style={{fontSize:14.5,fontWeight:on?680:600,color:on?C.brand:C.text}}>{k}</div>
-                  <div style={{fontSize:12.5,color:C.text3,fontWeight:400,marginTop:3}}>{label}</div></button>;})}</div></div>
-          <div style={{display:"flex",flexDirection:"column",gap:20}}>
-            <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:14}}>
+                return <button key={k} onClick={()=>set("topic",k)} className={`${mob?"py-3.5 px-3.5":"py-4 px-5"} rounded-2xl cursor-pointer text-left leading-snug transition-all duration-150 border-2 ${on?"border-brand bg-wash":"border-line bg-white"}`}>
+                  <div className={`text-sm ${on?"font-bold text-brand":"font-semibold text-text"}`}>{k}</div>
+                  <div className="text-xs text-text-3 font-normal mt-1">{label}</div></button>;})}</div></div>
+          <div className="flex flex-col gap-5">
+            <div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
               <Field label="Name" required error={err.name}><Input value={f.name} onChange={e=>set("name",e.target.value)} placeholder="Your name" invalid={!!err.name}/></Field>
               <Field label="Email" required error={err.email}><Input icon="mail" type="email" value={f.email} onChange={e=>set("email",e.target.value)} placeholder="you@example.ca" invalid={!!err.email}/></Field></div>
             <Field label="Message" required error={err.msg}>
@@ -842,47 +817,46 @@ export function ContactPage(){
             <Btn kind="primary" size="lg" icon="send" onClick={submit}>Send message</Btn></div>
         </div>
 
-        <div style={{display:"flex",flexDirection:"column",gap:16}}>
-          <div style={{background:C.bg,borderRadius:20,padding:mob?24:28,border:`1px solid ${C.line}`}}>
-            <div style={{display:"flex",gap:14,alignItems:"center",marginBottom:20}}>
+        <div className="flex flex-col gap-4">
+          <div className={`bg-bg rounded-2xl border border-line ${mob?"p-6":"p-7"}`}>
+            <div className="flex gap-3.5 items-center mb-5">
               <SmartPortrait seed={2} size={56}/>
-              <div><div style={{fontSize:15,fontWeight:670,color:C.text}}>Priya answers most days</div>
-                <div style={{fontSize:13,color:C.text2,marginTop:3}}>Head of Support</div></div></div>
-            <div style={{fontSize:13.5,color:C.text2,lineHeight:1.6,marginBottom:20,paddingBottom:20,borderBottom:`1px solid ${C.lineSoft}`}}>
+              <div><div className="text-base font-bold text-text">Priya answers most days</div>
+                <div className="text-sm text-text-2 mt-1">Head of Support</div></div></div>
+            <div className="text-sm text-text-2 leading-snug mb-5 pb-5 border-b border-line-soft">
               Six of us on the desk. Mon–Fri, 8am–8pm ET. Weekends we check on Monday.</div>
-            <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            <div className="flex flex-col gap-3">
               {[["mail","Email","support@northhire.ca"],["phone","Phone","1 888 555 0142"]].map(([ic,k,v])=>
-                <div key={v} style={{display:"flex",gap:12,alignItems:"center"}}>
-                  <div style={{width:36,height:36,borderRadius:10,background:"#fff",color:C.brand,display:"flex",alignItems:"center",justifyContent:"center",border:`1px solid ${C.line}`}}><I n={ic} s={16}/></div>
-                  <div><div style={{fontSize:12,color:C.text3}}>{k}</div>
-                    <div style={{fontSize:14,color:C.text,fontWeight:600,marginTop:1}}>{v}</div></div></div>)}</div></div>
-          <div style={{background:"#fff",borderRadius:20,padding:mob?24:28,border:`1px solid ${C.line}`}}>
+                <div key={v} className="flex gap-3 items-center">
+                  <div className="w-9 h-9 rounded-lg bg-white text-brand flex items-center justify-center border border-line"><I n={ic} s={16}/></div>
+                  <div><div className="text-xs text-text-3">{k}</div>
+                    <div className="text-sm text-text font-semibold mt-px">{v}</div></div></div>)}</div></div>
+          <div className={`bg-white rounded-2xl border border-line ${mob?"p-6":"p-7"}`}>
             <Lbl>Looking for help?</Lbl>
-            <div style={{display:"flex",flexDirection:"column",marginTop:6}}>
+            <div className="flex flex-col mt-1.5">
               {[["book","Career resources","blogs"],["cap","Free trainings","trainings"],["building","For employers","forEmployers"],["wallet","Pricing","pricing"]].map(([ic,l,p])=>
-                <button key={l} onClick={()=>A.go(p)} style={{display:"flex",alignItems:"center",gap:12,justifyContent:"space-between",
-                  background:"none",border:"none",padding:"12px 0",cursor:"pointer",fontFamily:"inherit",fontSize:14,color:C.text,fontWeight:540,borderBottom:`1px solid ${C.lineSoft}`}}>
-                  <span style={{display:"flex",alignItems:"center",gap:11}}><I n={ic} s={15} c={C.brand}/>{l}</span>
+                <button key={l} onClick={()=>A.go(p)} className="flex items-center gap-3 justify-between bg-transparent border-0 py-3 cursor-pointer text-sm text-text font-medium border-b border-line-soft">
+                  <span className="flex items-center gap-2.5"><I n={ic} s={15} c={C.brand}/>{l}</span>
                   <I n="chevR" s={14} c={C.text3}/></button>)}</div></div>
         </div>
       </div>
     </section>
 
-    <section style={{padding:pad,background:C.bg}}>
-      <div style={{maxWidth:1120,margin:"0 auto"}}>
-        <div style={{textAlign:"center",maxWidth:640,margin:"0 auto 48px"}}>
+    <section className={`bg-bg ${pad}`}>
+      <div className="max-w-280 mx-auto">
+        <div className="text-center max-w-160 mx-auto mb-12">
           <Tag tone="brand">Our offices</Tag>
-          <h2 style={{fontSize:mob?30:44,fontWeight:750,letterSpacing:"-.04em",color:C.text,margin:"14px 0 14px",lineHeight:1.1}}>
+          <h2 className={`font-bold text-text tracking-tight my-3.5 leading-snug ${mob?"text-3xl":"text-4xl"}`}>
             Or visit us in person.</h2>
-          <p style={{fontSize:mob?15.5:17,color:C.text2,lineHeight:1.6,margin:0}}>Four cities. Coffee on us.</p></div>
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:mob?14:20}}>
-          {offices.map(o=><div key={o.city} style={{background:"#fff",borderRadius:20,overflow:"hidden",border:`1px solid ${C.line}`}}>
-            <div style={{aspectRatio:"16/9",background:C.bg}}><SmartScene kind={["office","trades","office","care"][offices.indexOf(o)]} seed={o.city.length} w="100%" h="100%"/></div>
-            <div style={{padding:mob?24:28}}>
-              <div style={{fontSize:mob?22:26,fontWeight:720,color:C.text,letterSpacing:"-.03em",marginBottom:14}}>{o.city}</div>
-              <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                <div style={{fontSize:14,color:C.text2,display:"flex",alignItems:"center",gap:8}}><I n="pin" s={14} c={C.brand}/>{o.addr}</div>
-                <div style={{fontSize:14,color:C.text2,display:"flex",alignItems:"center",gap:8}}><I n="phone" s={14} c={C.brand}/>{o.phone}</div></div></div></div>)}</div>
+          <p className={`text-text-2 leading-snug m-0 ${mob?"text-base":"text-lg"}`}>Four cities. Coffee on us.</p></div>
+        <div className={`grid ${mob?"grid-cols-1 gap-3.5":"grid-cols-2 gap-5"}`}>
+          {offices.map(o=><div key={o.city} className="bg-white rounded-3xl overflow-hidden border border-line">
+            <div className="bg-bg" style={{aspectRatio:"16/9"}}><SmartScene kind={["office","trades","office","care"][offices.indexOf(o)]} seed={o.city.length} w="100%" h="100%"/></div>
+            <div className={mob?"p-6":"p-7"}>
+              <div className={`font-bold text-text tracking-tight mb-3.5 ${mob?"text-2xl":"text-2xl"}`}>{o.city}</div>
+              <div className="flex flex-col gap-2">
+                <div className="text-sm text-text-2 flex items-center gap-2"><I n="pin" s={14} c={C.brand}/>{o.addr}</div>
+                <div className="text-sm text-text-2 flex items-center gap-2"><I n="phone" s={14} c={C.brand}/>{o.phone}</div></div></div></div>)}</div>
       </div>
     </section>
   </div>;
@@ -906,23 +880,23 @@ export function LegalPage({kind}){
     ["Liability","To the extent permitted by law, NorthHire is not liable for hiring decisions made by employers, for the accuracy of employer-supplied listing content, or for indirect losses arising from use of the platform."],
     ["Governing law","These terms are governed by the laws of the Province of Ontario and the federal laws of Canada applicable there."]];
   const data=kind==="privacy"?privacy:terms;
-  return <div style={{background:C.bg,minHeight:"100%"}}>
-    <div style={{background:"#fff",borderBottom:`1px solid ${C.line}`}}>
-      <div style={{maxWidth:800,margin:"0 auto",padding:mob?"20px 16px 24px":"34px 24px 30px"}}>
+  return <div className="bg-bg min-h-full">
+    <div className="bg-white border-b border-line">
+      <div className={`max-w-200 mx-auto ${mob?"pt-5 px-4 pb-6":"pt-9 px-6 pb-8"}`}>
         <Tag tone="brand" sm icon={kind==="privacy"?"lock":"file"}>{kind==="privacy"?"Privacy":"Legal"}</Tag>
-        <h1 style={{fontSize:mob?26:34,fontWeight:740,letterSpacing:"-.04em",color:C.text,margin:"14px 0 10px"}}>
+        <h1 className={`font-bold tracking-tight text-text mt-3.5 mb-2.5 ${mob?"text-3xl":"text-4xl"}`}>
           {kind==="privacy"?"Privacy policy":"Terms of service"}</h1>
-        <p style={{fontSize:14.5,color:C.text2,margin:0}}>Last updated 1 August 2026 • Effective for all users in Canada</p></div></div>
-    <div style={{maxWidth:800,margin:"0 auto",padding:mob?"16px 16px 30px":"26px 24px 46px"}}>
+        <p className="text-sm text-text-2 m-0">Last updated 1 August 2026 • Effective for all users in Canada</p></div></div>
+    <div className={`max-w-200 mx-auto ${mob?"pt-4 px-4 pb-8":"pt-7 px-6 pb-12"}`}>
       <Card pad={mob?20:32}>
-        <div style={{marginBottom:26,paddingBottom:20,borderBottom:`1px solid ${C.lineSoft}`}}>
+        <div className="mb-7 pb-5 border-b border-line-soft">
           <Lbl>On this page</Lbl>
-          <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+          <div className="flex flex-wrap gap-2">
             {data.map(([h])=><Tag key={h} sm>{h}</Tag>)}</div></div>
-        {data.map(([h,p],i)=><section key={h} style={{marginBottom:i===data.length-1?0:26}}>
-          <h2 style={{fontSize:mob?17.5:19.5,fontWeight:700,letterSpacing:"-.025em",color:C.text,margin:"0 0 11px"}}>{i+1}. {h}</h2>
-          <p style={{fontSize:15,color:C.text2,lineHeight:1.8,margin:0}}>{p}</p></section>)}
-        <div style={{marginTop:30,paddingTop:22,borderTop:`1px solid ${C.lineSoft}`,display:"flex",gap:10,flexWrap:"wrap"}}>
+        {data.map(([h,p],i)=><section key={h} className={i===data.length-1?"mb-0":"mb-7"}>
+          <h2 className={`font-bold tracking-tight text-text mb-2.5 ${mob?"text-lg":"text-xl"}`}>{i+1}. {h}</h2>
+          <p className="text-base text-text-2 leading-loose m-0">{p}</p></section>)}
+        <div className="mt-8 pt-6 border-t border-line-soft flex gap-2.5 flex-wrap">
           <Btn kind="outline" onClick={()=>A.go(kind==="privacy"?"terms":"privacy")}>
             Read the {kind==="privacy"?"terms of service":"privacy policy"}</Btn>
           <Btn kind="ghost" onClick={()=>A.go("contact")}>Contact us about this</Btn></div></Card></div></div>;
@@ -947,60 +921,59 @@ export function PricingPage(){
     ["What payment methods work?","Visa, Mastercard, Amex, Interac direct debit. Invoices with net-30 terms available on Enterprise."],
   ];
   const [open,setOpen]=useState(-1);
-  const pad=mob?"56px 16px":"96px 32px";
+  const pad=mob?"py-14 px-4":"py-24 px-8";
   const currentPlan=A.company?.plan||null;
 
-  return <div style={{background:"#fff",minHeight:"100%"}}>
+  return <div className="bg-white min-h-full">
 
-    <section style={{padding:pad,background:"#fff"}}>
-      <div style={{maxWidth:960,margin:"0 auto",textAlign:"center"}}>
+    <section className={`bg-white ${pad}`}>
+      <div className="max-w-240 mx-auto text-center">
         <Tag tone="brand">Employer pricing</Tag>
-        <h1 style={{fontSize:mob?38:72,fontWeight:770,letterSpacing:"-.05em",lineHeight:1.02,margin:"22px auto 26px",maxWidth:820,color:C.text}}>
+        <h1 className={`font-extrabold tracking-tight leading-none my-6 mx-auto max-w-narrow text-text ${mob?"text-4xl":"text-7xl"}`}>
           Simple pricing. No per-applicant fees.</h1>
-        <p style={{fontSize:mob?17:20,color:C.text2,lineHeight:1.55,margin:"0 auto",maxWidth:600}}>
+        <p className={`text-text-2 leading-snug mx-auto max-w-150 ${mob?"text-lg":"text-xl"}`}>
           From your first hire to running an entire workforce. All prices in CAD. Cancel any time.</p>
       </div>
     </section>
 
-    <section style={{padding:mob?"0 16px 56px":"0 32px 96px",background:"#fff"}}>
-      <div style={{maxWidth:1200,margin:"0 auto"}}>
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:mob?14:20,alignItems:"stretch"}}>
+    <section className={`bg-white ${mob?"px-4 pb-14":"px-8 pb-24"}`}>
+      <div className="max-w-300 mx-auto">
+        <div className={`grid items-stretch ${mob?"grid-cols-1 gap-3.5":"grid-cols-3 gap-5"}`}>
           {plans.map(p=>{const isCurrent=currentPlan===p.n;
-          return <div key={p.n} style={{background:"#fff",border:`${p.best?2:1}px solid ${p.best?C.brand:C.line}`,
-            borderRadius:24,overflow:"hidden",boxShadow:p.best?SH.lg:"none",position:"relative",display:"flex",flexDirection:"column"}}>
-            {p.best&&<div style={{background:C.brand,color:"#fff",textAlign:"center",fontSize:12,fontWeight:700,padding:"10px 12px",letterSpacing:".08em",textTransform:"uppercase"}}>{p.tag}</div>}
-            <div style={{padding:mob?28:34,flex:1,display:"flex",flexDirection:"column"}}>
-              {!p.best&&<div style={{fontSize:12,fontWeight:600,color:C.text3,letterSpacing:".08em",textTransform:"uppercase",marginBottom:14}}>{p.tag}</div>}
-              <div style={{fontSize:mob?22:26,fontWeight:730,color:C.text,letterSpacing:"-.03em",marginBottom:8}}>{p.n}</div>
-              <div style={{fontSize:14,color:C.text2,lineHeight:1.55,marginBottom:18,minHeight:mob?"auto":44}}>{p.summary}</div>
-              <div style={{display:"flex",alignItems:"baseline",gap:6,marginBottom:24,paddingBottom:24,borderBottom:`1px solid ${C.lineSoft}`}}>
-                <span style={{fontSize:mob?48:56,fontWeight:770,color:C.text,letterSpacing:"-.05em",lineHeight:1}}>${p.p}</span>
-                <span style={{fontSize:15,color:C.text3}}>{p.p===0?"forever":"/month"}</span></div>
-              <div style={{display:"flex",flexDirection:"column",gap:12,marginBottom:28,flex:1}}>
-                {p.f.map((x,i)=>{if(!x)return <div key={i} style={{height:8}}/>;
+          return <div key={p.n} className="bg-white rounded-3xl overflow-hidden relative flex flex-col" style={{border:`${p.best?2:1}px solid ${p.best?C.brand:C.line}`,boxShadow:p.best?SH.lg:"none"}}>
+            {p.best&&<div className="bg-brand text-white text-center text-xs font-bold py-2.5 px-3 tracking-wide uppercase">{p.tag}</div>}
+            <div className={`flex-1 flex flex-col ${mob?"p-7":"p-9"}`}>
+              {!p.best&&<div className="text-xs font-semibold text-text-3 tracking-wide uppercase mb-3.5">{p.tag}</div>}
+              <div className={`font-bold text-text tracking-tight mb-2 ${mob?"text-2xl":"text-3xl"}`}>{p.n}</div>
+              <div className={`text-sm text-text-2 leading-snug mb-5 ${mob?"":"min-h-11"}`}>{p.summary}</div>
+              <div className="flex items-baseline gap-1.5 mb-6 pb-6 border-b border-line-soft">
+                <span className={`font-extrabold text-text tracking-tight leading-none ${mob?"text-5xl":"text-6xl"}`}>${p.p}</span>
+                <span className="text-base text-text-3">{p.p===0?"forever":"/month"}</span></div>
+              <div className="flex flex-col gap-3 mb-7 flex-1">
+                {p.f.map((x,i)=>{if(!x)return <div key={i} className="h-2"/>;
                   const isHeader=x.endsWith(":");
-                  if(isHeader)return <div key={x} style={{fontSize:12,fontWeight:700,color:C.brand,letterSpacing:".06em",textTransform:"uppercase",marginTop:6}}>{x.slice(0,-1)}</div>;
+                  if(isHeader)return <div key={x} className="text-xs font-bold text-brand tracking-wide uppercase mt-1.5">{x.slice(0,-1)}</div>;
                   const isSubItem=x.startsWith("• ");
-                  return <div key={x} style={{display:"flex",gap:11,fontSize:13.5,color:isSubItem?C.text2:C.text,lineHeight:1.5,paddingLeft:isSubItem?4:0}}>
-                    {!isSubItem&&<span style={{color:C.ok,flexShrink:0,display:"flex",marginTop:2}}><I n="check" s={16} w={2.6}/></span>}
+                  return <div key={x} className={`flex gap-2.5 text-sm leading-snug ${isSubItem?"text-text-2 pl-1":"text-text pl-0"}`}>
+                    {!isSubItem&&<span className="text-ok shrink-0 flex mt-0.5"><I n="check" s={16} w={2.6}/></span>}
                     <span>{isSubItem?x.slice(2):x}</span></div>;})}</div>
               <Btn kind={isCurrent?"outline":p.best?"primary":"outline"} size="lg" full disabled={isCurrent} onClick={()=>A.choosePlan(p.n)}>
                 {isCurrent?"Current plan":p.p===0?"Start free":"Choose "+p.n}</Btn></div></div>;})}</div>
       </div>
     </section>
 
-    <section style={{padding:mob?"32px 16px 56px":"48px 32px 96px",background:C.bg,borderTop:`1px solid ${C.line}`}}>
-      <div style={{maxWidth:1120,margin:"0 auto"}}>
-        <div style={{textAlign:"center",marginBottom:mob?28:44}}>
-          <h2 style={{fontSize:mob?26:36,fontWeight:750,letterSpacing:"-.04em",color:C.text,margin:"0 0 14px",lineHeight:1.15}}>
+    <section className={`bg-bg border-t border-line ${mob?"pt-8 px-4 pb-14":"pt-12 px-8 pb-24"}`}>
+      <div className="max-w-280 mx-auto">
+        <div className={`text-center ${mob?"mb-7":"mb-11"}`}>
+          <h2 className={`font-bold text-text tracking-tight mb-3.5 leading-snug ${mob?"text-2xl":"text-4xl"}`}>
             Compare features in detail</h2>
-          <p style={{fontSize:mob?15:16.5,color:C.text2,margin:0,lineHeight:1.55}}>Everything in one table so you can pick the right fit.</p></div>
-        <div style={{background:"#fff",borderRadius:20,border:`1px solid ${C.line}`,overflow:"hidden"}}>
-          <div style={{overflowX:"auto"}}>
-            <table style={{width:"100%",borderCollapse:"collapse",minWidth:mob?540:720}}>
-              <thead><tr style={{background:C.bg,borderBottom:`1px solid ${C.line}`}}>
-                <th style={{padding:mob?"14px 16px":"18px 24px",textAlign:"left",fontSize:12.5,fontWeight:700,color:C.text3,letterSpacing:".06em",textTransform:"uppercase"}}>Feature</th>
-                {plans.map(p=><th key={p.n} style={{padding:mob?"14px 12px":"18px 20px",textAlign:"center",fontSize:14,fontWeight:700,color:p.best?C.brand:C.text}}>{p.n}</th>)}
+          <p className={`text-text-2 leading-snug m-0 ${mob?"text-base":"text-lg"}`}>Everything in one table so you can pick the right fit.</p></div>
+        <div className="bg-white rounded-2xl border border-line overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse" style={{minWidth:mob?540:720}}>
+              <thead><tr className="bg-bg border-b border-line">
+                <th className={`text-left text-xs font-bold text-text-3 tracking-wide uppercase ${mob?"py-3.5 px-4":"py-5 px-6"}`}>Feature</th>
+                {plans.map(p=><th key={p.n} className={`text-center text-sm font-bold ${mob?"py-3.5 px-3":"py-5 px-5"} ${p.best?"text-brand":"text-text"}`}>{p.n}</th>)}
               </tr></thead>
               <tbody>
                 {[["Live job postings","1","10","Unlimited"],
@@ -1019,50 +992,49 @@ export function PricingPage(){
                   ["Single Sign-On (SSO)","—","—","✓"],
                   ["Dedicated account manager","—","—","✓"],
                   ["NorthHire HR Suite","—","—","✓ Full"]].map((row,i)=>
-                  <tr key={row[0]} style={{borderBottom:i<15?`1px solid ${C.lineSoft}`:"none"}}>
-                    <td style={{padding:mob?"12px 16px":"14px 24px",fontSize:13.5,color:C.text,fontWeight:500}}>{row[0]}</td>
-                    {row.slice(1).map((v,k)=><td key={k} style={{padding:mob?"12px 12px":"14px 20px",textAlign:"center",fontSize:13.5,color:v==="—"?C.text3:C.text,fontWeight:v==="—"?400:600}}>{v==="✓"?<span style={{color:C.ok,display:"inline-flex"}}><I n="check" s={16} w={2.8}/></span>:v}</td>)}
+                  <tr key={row[0]} className={i<15?"border-b border-line-soft":""}>
+                    <td className={`text-sm text-text font-medium ${mob?"py-3 px-4":"py-3.5 px-6"}`}>{row[0]}</td>
+                    {row.slice(1).map((v,k)=><td key={k} className={`text-center text-sm ${mob?"py-3 px-3":"py-3.5 px-5"} ${v==="—"?"text-text-3 font-normal":"text-text font-semibold"}`}>{v==="✓"?<span className="text-ok inline-flex"><I n="check" s={16} w={2.8}/></span>:v}</td>)}
                   </tr>)}
               </tbody></table></div></div>
       </div>
     </section>
 
-    <section style={{padding:pad,background:"#fff"}}>
-      <div style={{maxWidth:820,margin:"0 auto",background:C.ink,color:"#fff",borderRadius:24,padding:mob?"36px 24px":"56px 60px",textAlign:"center"}}>
+    <section className={`bg-white ${pad}`}>
+      <div className={`max-w-narrow mx-auto bg-ink text-white rounded-3xl text-center ${mob?"py-9 px-6":"py-14 px-15"}`}>
         <Tag tone="onDark">HR Suite</Tag>
-        <h2 style={{fontSize:mob?24:34,fontWeight:750,letterSpacing:"-.04em",margin:"18px 0 14px",lineHeight:1.15}}>
+        <h2 className={`font-bold tracking-tight my-3.5 leading-snug ${mob?"text-2xl":"text-3xl"}`}>
           One platform. From posting a role to running your entire workforce.</h2>
-        <p style={{fontSize:mob?15:16.5,color:"rgba(255,255,255,.7)",lineHeight:1.65,margin:"0 auto 26px",maxWidth:520}}>
+        <p className={`text-white/70 leading-relaxed mx-auto mb-7 max-w-130 ${mob?"text-base":"text-lg"}`}>
           Enterprise unlocks the full NorthHire HR Suite. Employees log in through a separate portal. Every employee's public NorthHire profile syncs with their internal record — with per-field privacy controls.</p>
         <Btn kind="onDark" size="lg" onClick={()=>A.choosePlan("Enterprise")}>Get Enterprise</Btn>
       </div>
     </section>
 
-    <section style={{padding:pad,background:C.bg,borderTop:`1px solid ${C.line}`}}>
-      <div style={{maxWidth:820,margin:"0 auto",background:"#fff",borderRadius:24,padding:mob?"40px 28px":"56px 60px",textAlign:"center",border:`1px solid ${C.line}`}}>
-        <div style={{width:64,height:64,borderRadius:99,background:C.okBg,color:C.ok,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 22px"}}>
+    <section className={`bg-bg border-t border-line ${pad}`}>
+      <div className={`max-w-narrow mx-auto bg-white rounded-3xl text-center border border-line ${mob?"py-10 px-7":"py-14 px-15"}`}>
+        <div className="w-16 h-16 rounded-full bg-ok-bg text-ok flex items-center justify-center mx-auto mb-6">
           <I n="heart" s={30}/></div>
-        <h2 style={{fontSize:mob?26:36,fontWeight:750,letterSpacing:"-.04em",color:C.text,margin:"0 0 14px",lineHeight:1.15}}>
+        <h2 className={`font-bold text-text tracking-tight mb-3.5 leading-snug ${mob?"text-2xl":"text-4xl"}`}>
           Job seekers pay nothing. Ever.</h2>
-        <p style={{fontSize:mob?15.5:17,color:C.text2,lineHeight:1.65,margin:"0 auto 32px",maxWidth:480}}>
+        <p className={`text-text-2 leading-relaxed mx-auto mb-8 max-w-120 ${mob?"text-base":"text-lg"}`}>
           Full profile, unlimited applications, CV builder, free trainings and direct employer messaging. No premium tier.</p>
         <Btn kind="primary" size="lg" onClick={()=>A.go(A.user?.role==="seeker"?"profile":"signup")}>Create a free profile</Btn>
       </div>
     </section>
 
-    <section style={{padding:pad,background:"#fff"}}>
-      <div style={{maxWidth:820,margin:"0 auto"}}>
-        <div style={{textAlign:"center",marginBottom:36}}>
+    <section className={`bg-white ${pad}`}>
+      <div className="max-w-narrow mx-auto">
+        <div className="text-center mb-9">
           <Tag tone="brand">Questions</Tag>
-          <h2 style={{fontSize:mob?26:36,fontWeight:750,letterSpacing:"-.04em",color:C.text,margin:"14px 0 0",lineHeight:1.15}}>
+          <h2 className={`font-bold text-text tracking-tight mt-3.5 leading-snug ${mob?"text-2xl":"text-4xl"}`}>
             Common questions.</h2></div>
-        <div style={{background:"#fff",borderRadius:20,border:`1px solid ${C.line}`,overflow:"hidden"}}>
-          {faq.map(([q,a],i)=><div key={q} style={{borderBottom:i<faq.length-1?`1px solid ${C.lineSoft}`:"none"}}>
-            <button onClick={()=>setOpen(open===i?-1:i)} style={{width:"100%",display:"flex",justifyContent:"space-between",
-              alignItems:"center",gap:14,padding:mob?"20px 22px":"24px 28px",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",textAlign:"left"}}>
-              <span style={{fontSize:mob?15.5:16.5,fontWeight:650,color:C.text,lineHeight:1.4,letterSpacing:"-.015em"}}>{q}</span>
-              <span style={{color:C.brand,transform:open===i?"rotate(180deg)":"none",transition:"transform .22s",flexShrink:0}}><I n="chevD" s={19} w={2.2}/></span></button>
-            {open===i&&<div style={{padding:mob?"0 22px 22px":"0 28px 26px",fontSize:mob?14.5:15,color:C.text2,lineHeight:1.72}}>{a}</div>}</div>)}</div>
+        <div className="bg-white rounded-2xl border border-line overflow-hidden">
+          {faq.map(([q,a],i)=><div key={q} className={i<faq.length-1?"border-b border-line-soft":""}>
+            <button onClick={()=>setOpen(open===i?-1:i)} className={`w-full flex justify-between items-center gap-3.5 bg-transparent border-0 cursor-pointer text-left ${mob?"py-5 px-6":"py-6 px-7"}`}>
+              <span className={`font-semibold text-text leading-snug tracking-tight ${mob?"text-base":"text-lg"}`}>{q}</span>
+              <span className={`text-brand shrink-0 transition-transform duration-200 ${open===i?"rotate-180":""}`}><I n="chevD" s={19} w={2.2}/></span></button>
+            {open===i&&<div className={`text-text-2 leading-loose ${mob?"pt-0 px-6 pb-6 text-sm":"pt-0 px-7 pb-7 text-base"}`}>{a}</div>}</div>)}</div>
       </div>
     </section>
 
@@ -1081,13 +1053,13 @@ export function AccessibilityPage(){
     ["Multi-year plan","Our accessibility plan is reviewed annually and is available on request. Progress reports are published each October."],
   ];
   return <Page>
-    <div style={{maxWidth:820,margin:"0 auto"}}>
+    <div className="max-w-narrow mx-auto">
       <Tag tone="brand" icon="shield">Accessibility</Tag>
-      <h1 style={{fontSize:mob?32:44,fontWeight:750,letterSpacing:"-.04em",margin:"18px 0 12px",color:C.text}}>Accessibility statement (AODA)</h1>
-      <p style={{fontSize:15,color:C.text3,marginBottom:36}}>Last reviewed: August 2026</p>
-      {secs.map(([h,b])=><div key={h} style={{marginBottom:28}}>
-        <h2 style={{fontSize:20,fontWeight:700,color:C.text,letterSpacing:"-.02em",margin:"0 0 10px"}}>{h}</h2>
-        <p style={{fontSize:15.5,color:C.text2,lineHeight:1.75,margin:0}}>{b}</p>
+      <h1 className={`font-bold tracking-tight mt-5 mb-3 text-text ${mob?"text-3xl":"text-4xl"}`}>Accessibility statement (AODA)</h1>
+      <p className="text-base text-text-3 mb-9">Last reviewed: August 2026</p>
+      {secs.map(([h,b])=><div key={h} className="mb-7">
+        <h2 className="text-xl font-bold text-text tracking-tight mb-2.5">{h}</h2>
+        <p className="text-base text-text-2 leading-loose m-0">{b}</p>
       </div>)}
     </div>
   </Page>;
@@ -1105,17 +1077,17 @@ export function PipedaPage(){
     ["Contact","Privacy questions or requests: privacy@northhire.ca or write to Privacy Officer, NorthHire Technologies Inc., 250 Front Street West, Toronto, ON M5V 3G5."],
   ];
   return <Page>
-    <div style={{maxWidth:820,margin:"0 auto"}}>
+    <div className="max-w-narrow mx-auto">
       <Tag tone="brand" icon="lock">Privacy law</Tag>
-      <h1 style={{fontSize:mob?32:44,fontWeight:750,letterSpacing:"-.04em",margin:"18px 0 12px",color:C.text}}>PIPEDA compliance</h1>
-      <p style={{fontSize:15,color:C.text3,marginBottom:36}}>Last reviewed: August 2026</p>
-      {secs.map(([h,b])=><div key={h} style={{marginBottom:28}}>
-        <h2 style={{fontSize:20,fontWeight:700,color:C.text,letterSpacing:"-.02em",margin:"0 0 10px"}}>{h}</h2>
-        <p style={{fontSize:15.5,color:C.text2,lineHeight:1.75,margin:0}}>{b}</p>
+      <h1 className={`font-bold tracking-tight mt-5 mb-3 text-text ${mob?"text-3xl":"text-4xl"}`}>PIPEDA compliance</h1>
+      <p className="text-base text-text-3 mb-9">Last reviewed: August 2026</p>
+      {secs.map(([h,b])=><div key={h} className="mb-7">
+        <h2 className="text-xl font-bold text-text tracking-tight mb-2.5">{h}</h2>
+        <p className="text-base text-text-2 leading-loose m-0">{b}</p>
       </div>)}
-      <div style={{background:C.bg,border:`1px solid ${C.line}`,borderRadius:14,padding:20,marginTop:32}}>
-        <div style={{fontSize:14,fontWeight:700,color:C.text,marginBottom:6}}>Full privacy policy</div>
-        <p style={{fontSize:13.5,color:C.text2,margin:"0 0 12px",lineHeight:1.6}}>Detailed disclosures on collection, use, retention and third-party processors are in our full policy.</p>
+      <div className="bg-bg border border-line rounded-xl p-5 mt-8">
+        <div className="text-sm font-bold text-text mb-1.5">Full privacy policy</div>
+        <p className="text-sm text-text-2 mb-3 leading-snug">Detailed disclosures on collection, use, retention and third-party processors are in our full policy.</p>
         <Btn kind="outline" size="sm" onClick={()=>A.go("privacy")}>Read the full privacy policy</Btn>
       </div>
     </div>
