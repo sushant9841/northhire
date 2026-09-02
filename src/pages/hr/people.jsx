@@ -8,6 +8,17 @@ import { _fmtDate } from "../../helpers/utils.js";
 import { HR_ROLES } from "../../store/seed/hrCompanySettings.js";
 import { HR_DEPARTMENTS } from "../../store/seed/hrDepartments.js";
 
+/* Shared underline-style tab bar used by both the People and Expenses pages */
+function _UnderlineTabs({items,value,onChange}){
+  return <div className="flex gap-1 mb-5 overflow-x-auto border-b border-line">
+    {items.map(t=><button key={t.k} onClick={()=>onChange(t.k)}
+      className={`bg-transparent border-0 py-2.5 px-3.5 cursor-pointer text-sm flex gap-1.5 items-center shrink-0 transition-colors duration-150 -mb-px border-b-2 ${value===t.k?"font-bold text-brand border-brand":"font-medium text-text-2 border-transparent"}`}>
+      <I n={t.icon} s={15}/>{t.label}
+      {t.count>0&&<span className={`text-xs font-bold py-0.5 px-1.5 rounded-full ${value===t.k?"bg-brand text-white":"bg-bg text-text-3"}`}>{t.count}</span>}
+    </button>)}
+  </div>;
+}
+
 export function HrPeoplePage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [tab,setTab]=useState("directory");
@@ -22,14 +33,7 @@ export function HrPeoplePage(){
   const isPriv=["hr","admin","owner"].includes(emp.role);
   const visibleTabs=isPriv?tabs:tabs.filter(t=>t.k!=="manage");
   return <div>
-    <div style={{display:"flex",gap:8,marginBottom:20,overflowX:"auto",borderBottom:`1px solid ${C.line}`,paddingBottom:0}}>
-      {visibleTabs.map(t=><button key={t.k} onClick={()=>setTab(t.k)}
-        style={{background:"none",border:"none",padding:"10px 14px",cursor:"pointer",fontFamily:"inherit",
-          fontSize:13.5,fontWeight:tab===t.k?680:520,color:tab===t.k?C.brand:C.text2,
-          borderBottom:tab===t.k?`2px solid ${C.brand}`:"2px solid transparent",
-          marginBottom:-1,display:"flex",gap:7,alignItems:"center",flexShrink:0,transition:"color .15s"}}>
-        <I n={t.icon} s={15}/>{t.label}</button>)}
-    </div>
+    <_UnderlineTabs items={visibleTabs} value={tab} onChange={setTab}/>
     {tab==="directory"&&<HrPeople_Directory/>}
     {tab==="orgchart"&&<HrPeople_OrgChart/>}
     {tab==="departments"&&<HrPeople_Departments/>}
@@ -52,34 +56,34 @@ function HrPeople_Directory(){
     return e.name.toLowerCase().includes(s)||e.title?.toLowerCase().includes(s)||e.email.toLowerCase().includes(s);
   }).sort((a,b)=>a.name.localeCompare(b.name));
   return <div>
-    <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap"}}>
+    <div className="flex gap-2.5 mb-4 flex-wrap">
       <Input icon="search" placeholder="Search by name, title, or email" value={q} onChange={e=>setQ(e.target.value)} style={{flex:"1 1 260px"}}/>
       <Sel value={deptFilter} onChange={e=>setDeptFilter(e.target.value)} style={{minWidth:180}}>
         <option value="all">All departments</option>
         {depts.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}
       </Sel>
     </div>
-    <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(auto-fill,minmax(280px,1fr))",gap:12}}>
+    <div className="grid gap-3" style={{gridTemplateColumns:mob?"1fr":"repeat(auto-fill,minmax(280px,1fr))"}}>
       {filtered.map(e=>{const d=depts.find(x=>x.id===e.dept);
         const mgr=A.hrEmp(e.manager);
         return <Card key={e.id} pad={16} style={{borderRadius:12,cursor:"pointer",transition:"all .15s"}}
           onMouseEnter={ev=>{ev.currentTarget.style.borderColor=C.brand;ev.currentTarget.style.boxShadow=SH.sm;}}
           onMouseLeave={ev=>{ev.currentTarget.style.borderColor=C.line;ev.currentTarget.style.boxShadow="none";}}>
-          <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:10}}>
+          <div className="flex gap-3 items-center mb-2.5">
             <SmartPortrait seed={e.seed} size={44} radius={11}/>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:14.5,fontWeight:660,color:C.text,letterSpacing:"-.015em",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.name}</div>
-              <div style={{fontSize:12.5,color:C.text3,marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.title}</div>
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-text tracking-tight overflow-hidden text-ellipsis whitespace-nowrap" style={{fontSize:14.5}}>{e.name}</div>
+              <div className="text-xs text-text-3 mt-0.5 overflow-hidden text-ellipsis whitespace-nowrap">{e.title}</div>
             </div>
           </div>
-          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
+          <div className="flex gap-1.5 flex-wrap mb-2.5">
             {d&&<Tag sm style={{background:d.color+"22",color:d.color,border:"1px solid "+d.color+"55"}}>{d.name}</Tag>}
             <Tag sm tone="neutral">{A.HR_ROLES.find(r=>r.k===e.role)?.label||e.role}</Tag>
           </div>
-          <div style={{fontSize:11.5,color:C.text3,lineHeight:1.5}}>
+          <div className="text-xs text-text-3 leading-snug">
             <div>📧 {e.email}</div>
             {e.phone&&<div>📞 {e.phone}</div>}
-            {mgr&&<div style={{marginTop:4}}>Reports to <span style={{color:C.text2,fontWeight:600}}>{mgr.name}</span></div>}
+            {mgr&&<div className="mt-1">Reports to <span className="text-text-2 font-semibold">{mgr.name}</span></div>}
           </div>
         </Card>;})}
       {filtered.length===0&&<div style={{gridColumn:"1/-1"}}><Empty icon="users" title="No matches" body="Try different search or filter terms."/></div>}
@@ -107,36 +111,36 @@ function HrPeople_OrgChart(){
     const kids=children[e.id]||[];
     const d=depts.find(x=>x.id===e.dept);
     const [open,setOpen]=useState(depth<2);
-    return <div style={{marginLeft:depth===0?0:mob?14:24,marginTop:depth===0?0:8,position:"relative"}}>
-      {depth>0&&<div style={{position:"absolute",left:-14,top:0,bottom:kids.length&&open?"50%":"50%",width:14,borderLeft:`2px solid ${C.line}`,borderBottom:`2px solid ${C.line}`,borderBottomLeftRadius:4}}/>}
-      <div style={{display:"flex",gap:10,alignItems:"center",padding:"10px 12px",background:"#fff",border:`1px solid ${C.line}`,borderRadius:10,transition:"all .15s"}}>
-        {kids.length>0&&<button onClick={()=>setOpen(!open)} style={{background:"none",border:"none",padding:2,cursor:"pointer",color:C.text3,display:"flex"}}>
+    return <div className="relative" style={{marginLeft:depth===0?0:mob?14:24,marginTop:depth===0?0:8}}>
+      {depth>0&&<div className="absolute left-3.5 top-0 rounded-bl" style={{bottom:"50%",width:14,borderLeft:`2px solid ${C.line}`,borderBottom:`2px solid ${C.line}`}}/>}
+      <div className="flex gap-2.5 items-center py-2.5 px-3 bg-white border border-line rounded-xl transition-all duration-150">
+        {kids.length>0&&<button onClick={()=>setOpen(!open)} className="bg-transparent border-0 p-0.5 cursor-pointer text-text-3 flex">
           <I n={open?"chevD":"chevR"} s={14}/>
         </button>}
-        {kids.length===0&&<div style={{width:18,height:18}}/>}
+        {kids.length===0&&<div className="w-5 h-5"/>}
         <SmartPortrait seed={e.seed} size={32} radius={8}/>
-        <div style={{flex:1,minWidth:0}}>
-          <div style={{fontSize:13.5,fontWeight:640,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.name}</div>
-          <div style={{fontSize:11.5,color:C.text3,marginTop:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.title}</div>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap">{e.name}</div>
+          <div className="text-xs text-text-3 mt-px overflow-hidden text-ellipsis whitespace-nowrap">{e.title}</div>
         </div>
         {d&&<Tag sm style={{background:d.color+"22",color:d.color,border:"1px solid "+d.color+"55",flexShrink:0}}>{d.name}</Tag>}
-        {kids.length>0&&<span style={{fontSize:11,fontWeight:640,color:C.text3,marginLeft:4,padding:"2px 8px",background:C.bg,borderRadius:99,flexShrink:0}}>{kids.length}</span>}
+        {kids.length>0&&<span className="text-xs font-semibold text-text-3 ml-1 py-0.5 px-2 bg-bg rounded-full shrink-0">{kids.length}</span>}
       </div>
-      {open&&kids.length>0&&<div style={{marginTop:6,paddingLeft:mob?4:14,borderLeft:`2px solid ${C.line}`}}>
+      {open&&kids.length>0&&<div className="mt-1.5 border-l-2 border-line" style={{paddingLeft:mob?4:14}}>
         {kids.map(k=><Node key={k.id} e={k} depth={depth+1}/>)}
       </div>}
     </div>;
   };
 
   return <div>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:10}}>
+    <div className="flex justify-between items-center mb-4 flex-wrap gap-2.5">
       <div>
-        <div style={{fontSize:16,fontWeight:660,color:C.text}}>Reporting structure</div>
-        <div style={{fontSize:12.5,color:C.text3,marginTop:2}}>{all.length} people · {roots.length} report{roots.length===1?"s":""} at the top level</div>
+        <div className="text-base font-semibold text-text">Reporting structure</div>
+        <div className="text-xs text-text-3 mt-0.5">{all.length} people · {roots.length} report{roots.length===1?"s":""} at the top level</div>
       </div>
     </div>
     <Card pad={mob?16:24} style={{borderRadius:14}}>
-      <div style={{display:"flex",flexDirection:"column",gap:6}}>
+      <div className="flex flex-col gap-1.5">
         {roots.map(r=><Node key={r.id} e={r}/>)}
         {roots.length===0&&<Empty icon="users" title="No org chart yet" body="Once employees have managers assigned, the tree appears here."/>}
       </div>
@@ -171,33 +175,33 @@ function HrPeople_Departments(){
   const colors=["#005CCC","#B45309","#0B6B3A","#5B2E8C","#0F5C8C","#D97706","#B91C1C","#0E7C86"];
 
   return <div>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:10}}>
+    <div className="flex justify-between items-center mb-4 flex-wrap gap-2.5">
       <div>
-        <div style={{fontSize:16,fontWeight:660,color:C.text}}>{depts.length} departments</div>
-        <div style={{fontSize:12.5,color:C.text3,marginTop:2}}>Group employees, set department leads, assign reporting.</div>
+        <div className="text-base font-semibold text-text">{depts.length} departments</div>
+        <div className="text-xs text-text-3 mt-0.5">Group employees, set department leads, assign reporting.</div>
       </div>
       {isPriv&&<Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowAdd(true)}>New department</Btn>}
     </div>
 
-    <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(auto-fill,minmax(280px,1fr))",gap:12}}>
+    <div className="grid gap-3" style={{gridTemplateColumns:mob?"1fr":"repeat(auto-fill,minmax(280px,1fr))"}}>
       {depts.map(d=>{const count=all.filter(e=>e.dept===d.id).length;
         const lead=d.lead?A.hrEmp(d.lead):null;
         return <Card key={d.id} pad={18} style={{borderRadius:12,borderTop:`4px solid ${d.color}`}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8,marginBottom:10}}>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:15.5,fontWeight:670,color:C.text,letterSpacing:"-.015em"}}>{d.name}</div>
-              <div style={{fontSize:12,color:C.text3,marginTop:2}}>{count} member{count===1?"":"s"}</div>
+          <div className="flex justify-between items-start gap-2 mb-2.5">
+            <div className="flex-1 min-w-0">
+              <div className="font-bold text-text tracking-tight" style={{fontSize:15.5}}>{d.name}</div>
+              <div className="text-xs text-text-3 mt-0.5">{count} member{count===1?"":"s"}</div>
             </div>
-            {isPriv&&<div style={{display:"flex",gap:4}}>
+            {isPriv&&<div className="flex gap-1">
               <Btn kind="ghost" size="xs" icon="edit" onClick={()=>setEditing({...d})}>Edit</Btn>
             </div>}
           </div>
-          {d.about&&<div style={{fontSize:13,color:C.text2,lineHeight:1.55,marginBottom:12}}>{d.about}</div>}
-          {lead&&<div style={{padding:"10px 12px",background:C.bg,borderRadius:9,display:"flex",gap:10,alignItems:"center"}}>
+          {d.about&&<div className="text-sm text-text-2 leading-snug mb-3">{d.about}</div>}
+          {lead&&<div className="py-2.5 px-3 bg-bg rounded-lg flex gap-2.5 items-center">
             <SmartPortrait seed={lead.seed} size={30} radius={7}/>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:11.5,color:C.text3}}>Department lead</div>
-              <div style={{fontSize:13,fontWeight:640,color:C.text,marginTop:1}}>{lead.name}</div>
+            <div className="flex-1 min-w-0">
+              <div className="text-xs text-text-3">Department lead</div>
+              <div className="text-sm font-semibold text-text mt-px">{lead.name}</div>
             </div>
           </div>}
           {isPriv&&count===0&&<Btn kind="dangerSoft" size="xs" full style={{marginTop:10}} onClick={()=>doRemove(d)}>Remove department</Btn>}
@@ -206,19 +210,19 @@ function HrPeople_Departments(){
     </div>
 
     {showAdd&&<Modal onClose={()=>setShowAdd(false)} title="New department">
-      <div style={{display:"flex",flexDirection:"column",gap:12}}>
+      <div className="flex flex-col gap-3">
         <Field label="Name" required><Input value={nd.name} onChange={e=>setNd({...nd,name:e.target.value})} placeholder="e.g. Engineering"/></Field>
         <Field label="Department lead"><Sel value={nd.lead} onChange={e=>setNd({...nd,lead:e.target.value})}>
           <option value="">— None —</option>
           {all.map(e=><option key={e.id} value={e.id}>{e.name} ({e.title})</option>)}
         </Sel></Field>
         <Field label="Color">
-          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-            {colors.map(c=><button key={c} onClick={()=>setNd({...nd,color:c})} style={{width:32,height:32,borderRadius:8,background:c,border:nd.color===c?`3px solid ${C.text}`:"3px solid transparent",cursor:"pointer",padding:0}}/>)}
+          <div className="flex gap-2 flex-wrap">
+            {colors.map(c=><button key={c} onClick={()=>setNd({...nd,color:c})} className="w-8 h-8 rounded-lg cursor-pointer p-0" style={{background:c,border:nd.color===c?`3px solid ${C.text}`:"3px solid transparent"}}/>)}
           </div>
         </Field>
         <Field label="Description"><Input value={nd.about} onChange={e=>setNd({...nd,about:e.target.value})} placeholder="What this department does"/></Field>
-        <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+        <div className="flex gap-2.5 justify-end">
           <Btn kind="ghost" onClick={()=>setShowAdd(false)}>Cancel</Btn>
           <Btn kind="primary" onClick={create} disabled={!nd.name.trim()}>Create department</Btn>
         </div>
@@ -226,19 +230,19 @@ function HrPeople_Departments(){
     </Modal>}
 
     {editing&&<Modal onClose={()=>setEditing(null)} title={`Edit ${editing.name}`}>
-      <div style={{display:"flex",flexDirection:"column",gap:12}}>
+      <div className="flex flex-col gap-3">
         <Field label="Name" required><Input value={editing.name} onChange={e=>setEditing({...editing,name:e.target.value})}/></Field>
         <Field label="Department lead"><Sel value={editing.lead||""} onChange={e=>setEditing({...editing,lead:e.target.value||null})}>
           <option value="">— None —</option>
           {all.map(e=><option key={e.id} value={e.id}>{e.name}</option>)}
         </Sel></Field>
         <Field label="Color">
-          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-            {colors.map(c=><button key={c} onClick={()=>setEditing({...editing,color:c})} style={{width:32,height:32,borderRadius:8,background:c,border:editing.color===c?`3px solid ${C.text}`:"3px solid transparent",cursor:"pointer",padding:0}}/>)}
+          <div className="flex gap-2 flex-wrap">
+            {colors.map(c=><button key={c} onClick={()=>setEditing({...editing,color:c})} className="w-8 h-8 rounded-lg cursor-pointer p-0" style={{background:c,border:editing.color===c?`3px solid ${C.text}`:"3px solid transparent"}}/>)}
           </div>
         </Field>
         <Field label="Description"><Input value={editing.about||""} onChange={e=>setEditing({...editing,about:e.target.value})}/></Field>
-        <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+        <div className="flex gap-2.5 justify-end">
           <Btn kind="ghost" onClick={()=>setEditing(null)}>Cancel</Btn>
           <Btn kind="primary" onClick={save}>Save changes</Btn>
         </div>
@@ -267,35 +271,35 @@ function HrPeople_Manage(){
     setEditing(null);};
 
   return <div>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:10}}>
+    <div className="flex justify-between items-center mb-4 flex-wrap gap-2.5">
       <div>
-        <div style={{fontSize:16,fontWeight:660,color:C.text}}>{active.length} active employees</div>
-        <div style={{fontSize:12.5,color:C.text3,marginTop:2}}>Add hires, change roles, set reporting lines, offboard.</div>
+        <div className="text-base font-semibold text-text">{active.length} active employees</div>
+        <div className="text-xs text-text-3 mt-0.5">Add hires, change roles, set reporting lines, offboard.</div>
       </div>
       <Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowAdd(true)}>Add employee</Btn>
     </div>
 
     <Card pad={0} style={{borderRadius:14,overflow:"hidden"}}>
-      <div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",minWidth:820}}>
-        <thead><tr style={{borderBottom:`2px solid ${C.line}`,textAlign:"left"}}>
+      <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:820}}>
+        <thead><tr className="border-b-2 border-line text-left">
           {["Name","Title","Department","Role","Reports to","Status","Actions"].map(h=>
-            <th key={h} style={{padding:"12px 14px",fontSize:11.5,fontWeight:700,color:C.text3,letterSpacing:".05em",textTransform:"uppercase"}}>{h}</th>)}
+            <th key={h} className="py-3 px-3.5 text-xs font-bold text-text-3 tracking-wide uppercase">{h}</th>)}
         </tr></thead>
         <tbody>{all.map(e=>{const d=depts.find(x=>x.id===e.dept); const mgr=A.hrEmp(e.manager);
-          return <tr key={e.id} style={{borderBottom:`1px solid ${C.lineSoft}`}}>
-            <td style={{padding:"11px 14px"}}><div style={{display:"flex",gap:10,alignItems:"center"}}>
+          return <tr key={e.id} className="border-b border-line-soft">
+            <td className="py-3 px-3.5"><div className="flex gap-2.5 items-center">
               <SmartPortrait seed={e.seed} size={30} radius={8}/>
-              <div style={{minWidth:0}}>
-                <div style={{fontSize:13.5,fontWeight:640,color:C.text}}>{e.name}</div>
-                <div style={{fontSize:11.5,color:C.text3,marginTop:1}}>{e.email}</div>
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-text">{e.name}</div>
+                <div className="text-xs text-text-3 mt-px">{e.email}</div>
               </div>
             </div></td>
-            <td style={{padding:"11px 14px",fontSize:13,color:C.text2}}>{e.title}</td>
-            <td style={{padding:"11px 14px"}}>{d?<Tag sm style={{background:d.color+"22",color:d.color,border:"1px solid "+d.color+"55"}}>{d.name}</Tag>:<span style={{fontSize:12,color:C.text3}}>—</span>}</td>
-            <td style={{padding:"11px 14px",fontSize:12.5,color:C.text2}}>{A.HR_ROLES.find(r=>r.k===e.role)?.label||e.role}</td>
-            <td style={{padding:"11px 14px",fontSize:12.5,color:C.text2}}>{mgr?.name||<span style={{color:C.text3}}>—</span>}</td>
-            <td style={{padding:"11px 14px"}}><Tag tone={e.status==="active"?"ok":"neutral"} sm>{e.status}</Tag></td>
-            <td style={{padding:"11px 14px"}}><div style={{display:"flex",gap:4}}>
+            <td className="py-3 px-3.5 text-sm text-text-2">{e.title}</td>
+            <td className="py-3 px-3.5">{d?<Tag sm style={{background:d.color+"22",color:d.color,border:"1px solid "+d.color+"55"}}>{d.name}</Tag>:<span className="text-xs text-text-3">—</span>}</td>
+            <td className="py-3 px-3.5 text-xs text-text-2">{A.HR_ROLES.find(r=>r.k===e.role)?.label||e.role}</td>
+            <td className="py-3 px-3.5 text-xs text-text-2">{mgr?.name||<span className="text-text-3">—</span>}</td>
+            <td className="py-3 px-3.5"><Tag tone={e.status==="active"?"ok":"neutral"} sm>{e.status}</Tag></td>
+            <td className="py-3 px-3.5"><div className="flex gap-1">
               <Btn kind="ghost" size="xs" icon="edit" onClick={()=>setEditing({...e})}>Edit</Btn>
               {e.status==="active"&&e.id!==emp.id&&<Btn kind="dangerSoft" size="xs" onClick={()=>{if(confirm(`Offboard ${e.name}?`))A.removeEmployee(e.id);}}>Offboard</Btn>}
             </div></td>
@@ -304,8 +308,8 @@ function HrPeople_Manage(){
     </Card>
 
     {showAdd&&<Modal onClose={()=>setShowAdd(false)} title="Add employee" wide>
-      <div style={{display:"flex",flexDirection:"column",gap:14}}>
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:12}}>
+      <div className="flex flex-col gap-3.5">
+        <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
           <Field label="Full name" required><Input value={ne.name} onChange={e=>setNe({...ne,name:e.target.value})}/></Field>
           <Field label="Email" required><Input icon="mail" value={ne.email} onChange={e=>setNe({...ne,email:e.target.value})}/></Field>
           <Field label="Job title"><Input value={ne.title} onChange={e=>setNe({...ne,title:e.target.value})}/></Field>
@@ -324,7 +328,7 @@ function HrPeople_Manage(){
           <Field label="Annual salary (CAD)"><Input type="number" value={ne.salary} onChange={e=>setNe({...ne,salary:Number(e.target.value)||0})}/></Field>
         </div>
         <Banner tone="brand" icon="mail" title="How they'll get access">The new employee will receive an email with sign-in instructions for HR Suite. Their access level is set by the role you assigned above.</Banner>
-        <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+        <div className="flex gap-2.5 justify-end">
           <Btn kind="ghost" onClick={()=>setShowAdd(false)}>Cancel</Btn>
           <Btn kind="primary" icon="check" onClick={submit} disabled={!ne.name.trim()||!ne.email.trim()}>Add employee</Btn>
         </div>
@@ -332,8 +336,8 @@ function HrPeople_Manage(){
     </Modal>}
 
     {editing&&<Modal onClose={()=>setEditing(null)} title={`Edit ${editing.name}`} wide>
-      <div style={{display:"flex",flexDirection:"column",gap:14}}>
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:12}}>
+      <div className="flex flex-col gap-3.5">
+        <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
           <Field label="Full name"><Input value={editing.name} onChange={e=>setEditing({...editing,name:e.target.value})}/></Field>
           <Field label="Job title"><Input value={editing.title||""} onChange={e=>setEditing({...editing,title:e.target.value})}/></Field>
           <Field label="Access role">
@@ -349,7 +353,7 @@ function HrPeople_Manage(){
           <Field label="Phone"><Input value={editing.phone||""} onChange={e=>setEditing({...editing,phone:e.target.value})}/></Field>
           <Field label="Annual salary (CAD)"><Input type="number" value={editing.salary||0} onChange={e=>setEditing({...editing,salary:Number(e.target.value)||0})}/></Field>
         </div>
-        <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+        <div className="flex gap-2.5 justify-end">
           <Btn kind="ghost" onClick={()=>setEditing(null)}>Cancel</Btn>
           <Btn kind="primary" onClick={saveEdit}>Save changes</Btn>
         </div>
@@ -400,58 +404,49 @@ export function HrExpensesPage(){
   const totalPending=allExp.filter(x=>x.status==="submitted"||x.status==="approved").reduce((s,x)=>s+x.amount,0);
 
   return <div>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20,flexWrap:"wrap",gap:12}}>
+    <div className="flex justify-between items-center mb-5 flex-wrap gap-3">
       <div>
-        <div style={{fontSize:20,fontWeight:730,color:C.text,letterSpacing:"-.02em"}}>Expense claims</div>
-        <div style={{fontSize:13,color:C.text3,marginTop:2}}>Submit receipts, get reimbursed on next payroll.</div>
+        <div className="text-xl font-bold text-text tracking-tight">Expense claims</div>
+        <div className="text-sm text-text-3 mt-0.5">Submit receipts, get reimbursed on next payroll.</div>
       </div>
       <Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowSubmit(true)}>Submit expense</Btn>
     </div>
 
-    {isApprover&&allExp.length>0&&<div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"repeat(4,1fr)",gap:12,marginBottom:20}}>
+    {isApprover&&allExp.length>0&&<div className={`grid gap-3 mb-5 ${mob?"grid-cols-2":"grid-cols-4"}`}>
       <Stat icon="clock" label="Awaiting review" value={queued.length} tone={queued.length>0?C.warn:C.ok}/>
       <Stat icon="check" label="Ready to pay" value={approved.length} tone={C.brand}/>
       <Stat icon="wallet" label="Total owed" value={`$${totalPending.toFixed(0)}`}/>
       <Stat icon="trend" label="This month" value={allExp.filter(x=>Date.now()-x.submitted<30*864e5).length}/>
     </div>}
 
-    <div style={{display:"flex",gap:4,marginBottom:16,overflowX:"auto",borderBottom:`1px solid ${C.line}`}}>
-      {tabs.map(t=><button key={t.k} onClick={()=>setTab(t.k)}
-        style={{background:"none",border:"none",padding:"10px 14px",cursor:"pointer",fontFamily:"inherit",
-          fontSize:13,fontWeight:tab===t.k?680:520,color:tab===t.k?C.brand:C.text2,
-          borderBottom:tab===t.k?`2px solid ${C.brand}`:"2px solid transparent",
-          marginBottom:-1,display:"flex",gap:7,alignItems:"center",flexShrink:0,transition:"color .15s"}}>
-        <I n={t.icon} s={14}/>{t.label}
-        {t.count>0&&<span style={{fontSize:10.5,fontWeight:700,color:tab===t.k?"#fff":C.text3,background:tab===t.k?C.brand:C.bg,padding:"2px 6px",borderRadius:99}}>{t.count}</span>}
-      </button>)}
-    </div>
+    <_UnderlineTabs items={tabs} value={tab} onChange={setTab}/>
 
     <Card pad={0} style={{borderRadius:14,overflow:"hidden"}}>
-      <div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",minWidth:720}}>
-        <thead><tr style={{borderBottom:`2px solid ${C.line}`,textAlign:"left"}}>
+      <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:720}}>
+        <thead><tr className="border-b-2 border-line text-left">
           {(tab==="mine"?["Date","Category","Merchant","Amount","Status",""]:["Date","Employee","Category","Merchant","Amount","Status","Actions"]).map(h=>
-            <th key={h} style={{padding:"12px 14px",fontSize:11.5,fontWeight:700,color:C.text3,letterSpacing:".05em",textTransform:"uppercase"}}>{h}</th>)}
+            <th key={h} className="py-3 px-3.5 text-xs font-bold text-text-3 tracking-wide uppercase">{h}</th>)}
         </tr></thead>
         <tbody>{list.map(x=>{const e=A.hrEmp(x.employee);
-          return <tr key={x.id} style={{borderBottom:`1px solid ${C.lineSoft}`,cursor:"pointer"}} onClick={()=>setDetail(x)}>
-            <td style={{padding:"11px 14px",fontSize:12.5,color:C.text2,fontFamily:"ui-monospace,monospace"}}>{x.date}</td>
-            {tab!=="mine"&&<td style={{padding:"11px 14px"}}><div style={{display:"flex",gap:8,alignItems:"center"}}>
+          return <tr key={x.id} className="border-b border-line-soft cursor-pointer" onClick={()=>setDetail(x)}>
+            <td className="py-3 px-3.5 text-xs text-text-2 font-mono">{x.date}</td>
+            {tab!=="mine"&&<td className="py-3 px-3.5"><div className="flex gap-2 items-center">
               <SmartPortrait seed={e?.seed||0} size={24} radius={6}/>
-              <span style={{fontSize:12.5,color:C.text,fontWeight:600}}>{e?.name||"—"}</span>
+              <span className="text-xs text-text font-semibold">{e?.name||"—"}</span>
             </div></td>}
-            <td style={{padding:"11px 14px",fontSize:12.5,color:C.text2}}>{x.category}</td>
-            <td style={{padding:"11px 14px",fontSize:13,color:C.text}}>{x.merchant}</td>
-            <td style={{padding:"11px 14px",fontSize:14,fontWeight:660,color:C.text}}>${x.amount.toFixed(2)}</td>
-            <td style={{padding:"11px 14px"}}><Tag tone={x.status==="paid"?"brand":x.status==="approved"?"ok":x.status==="rejected"?"danger":"warn"} sm>{x.status}</Tag></td>
-            <td style={{padding:"11px 14px"}} onClick={e=>e.stopPropagation()}>
-              {isApprover&&tab==="queue"&&<div style={{display:"flex",gap:4}}>
+            <td className="py-3 px-3.5 text-xs text-text-2">{x.category}</td>
+            <td className="py-3 px-3.5 text-sm text-text">{x.merchant}</td>
+            <td className="py-3 px-3.5 text-sm font-bold text-text">${x.amount.toFixed(2)}</td>
+            <td className="py-3 px-3.5"><Tag tone={x.status==="paid"?"brand":x.status==="approved"?"ok":x.status==="rejected"?"danger":"warn"} sm>{x.status}</Tag></td>
+            <td className="py-3 px-3.5" onClick={e=>e.stopPropagation()}>
+              {isApprover&&tab==="queue"&&<div className="flex gap-1">
                 <Btn kind="dangerSoft" size="xs" onClick={()=>{const r=prompt("Reason for rejection?"); if(r)A.decideExpense(x.id,"rejected",emp.id,r);}}>Reject</Btn>
                 <Btn kind="primary" size="xs" onClick={()=>A.decideExpense(x.id,"approved",emp.id)}>Approve</Btn>
               </div>}
               {isApprover&&tab==="approved"&&<Btn kind="primary" size="xs" onClick={()=>A.payExpense(x.id)}>Mark paid</Btn>}
             </td>
           </tr>;})}
-          {list.length===0&&<tr><td colSpan={tab==="mine"?6:7} style={{padding:32,textAlign:"center",color:C.text3,fontSize:13}}>No expenses in this view.</td></tr>}
+          {list.length===0&&<tr><td colSpan={tab==="mine"?6:7} className="p-8 text-center text-text-3 text-sm">No expenses in this view.</td></tr>}
         </tbody>
       </table></div>
     </Card>
@@ -467,22 +462,23 @@ function ExpenseSubmitModal({onClose,onSubmit}){
   const [description,setDescription]=useState(""); const [date,setDate]=useState(_fmtDate(new Date()));
   const canSubmit=merchant.trim()&&Number(amount)>0&&date;
   return <Modal onClose={onClose} title="Submit an expense" wide>
-    <div style={{display:"flex",flexDirection:"column",gap:14}}>
+    <div className="flex flex-col gap-3.5">
       <Field label="Category" required>
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"repeat(4,1fr)",gap:8}}>
-          {EXPENSE_CATEGORIES.map(c=><button key={c.k} onClick={()=>setCat(c.k)} type="button" style={{background:cat===c.k?C.tint:"#fff",border:`1.5px solid ${cat===c.k?C.brand:C.line}`,borderRadius:10,padding:"10px 12px",cursor:"pointer",fontFamily:"inherit",fontSize:12.5,fontWeight:cat===c.k?680:520,color:cat===c.k?C.brand:C.text2,textAlign:"left",display:"flex",gap:8,alignItems:"center"}}>
+        <div className={`grid gap-2 ${mob?"grid-cols-2":"grid-cols-4"}`}>
+          {EXPENSE_CATEGORIES.map(c=><button key={c.k} onClick={()=>setCat(c.k)} type="button"
+            className={`rounded-xl py-2.5 px-3 cursor-pointer text-xs text-left flex gap-2 items-center border-2 ${cat===c.k?"bg-tint border-brand font-bold text-brand":"bg-white border-line font-medium text-text-2"}`}>
             <I n={c.icon} s={15}/>{c.k}
           </button>)}
         </div>
       </Field>
-      <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:12}}>
+      <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
         <Field label="Merchant" required><Input value={merchant} onChange={e=>setMerchant(e.target.value)} placeholder={cat==="Mileage"?"Personal vehicle":"Company or store name"}/></Field>
         <Field label="Amount (CAD)" required><Input type="number" step="0.01" value={amount} onChange={e=>setAmount(e.target.value)} placeholder="0.00"/></Field>
         <Field label="Date" required><Input type="date" value={date} onChange={e=>setDate(e.target.value)}/></Field>
       </div>
       <Field label="Description" required hint="Business purpose. Required for CRA compliance."><Input value={description} onChange={e=>setDescription(e.target.value)} placeholder="What was this for?"/></Field>
       <Banner tone="neutral" icon="file" title="Receipt">In production, you'd upload a photo or PDF of the receipt here. For this prototype, receipts are simulated.</Banner>
-      <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+      <div className="flex gap-2.5 justify-end">
         <Btn kind="ghost" onClick={onClose}>Cancel</Btn>
         <Btn kind="primary" icon="check" onClick={()=>onSubmit({category:cat,merchant:merchant.trim(),amount:Number(amount),description:description.trim(),date})} disabled={!canSubmit}>Submit for review</Btn>
       </div>
@@ -494,48 +490,48 @@ function ExpenseDetailModal({expense:x,onClose,isApprover,currentEmpId}){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const e=A.hrEmp(x.employee); const approver=x.approvedBy?A.hrEmp(x.approvedBy):null;
   return <Modal onClose={onClose} title={`${x.category} · $${x.amount.toFixed(2)}`} wide>
-    <div style={{display:"flex",flexDirection:"column",gap:14}}>
-      <div style={{padding:14,background:C.bg,borderRadius:11,display:"flex",justifyContent:"space-between",alignItems:"center",gap:10}}>
-        <div style={{display:"flex",gap:10,alignItems:"center"}}>
+    <div className="flex flex-col gap-3.5">
+      <div className="p-3.5 bg-bg rounded-xl flex justify-between items-center gap-2.5">
+        <div className="flex gap-2.5 items-center">
           <SmartPortrait seed={e?.seed||0} size={36} radius={9}/>
           <div>
-            <div style={{fontSize:13.5,fontWeight:640,color:C.text}}>{e?.name}</div>
-            <div style={{fontSize:11.5,color:C.text3}}>{e?.title}</div>
+            <div className="text-sm font-semibold text-text">{e?.name}</div>
+            <div className="text-xs text-text-3">{e?.title}</div>
           </div>
         </div>
         <Tag tone={x.status==="paid"?"brand":x.status==="approved"?"ok":x.status==="rejected"?"danger":"warn"}>{x.status}</Tag>
       </div>
 
-      <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:12,fontSize:13}}>
+      <div className={`grid gap-3 text-sm ${mob?"grid-cols-1":"grid-cols-2"}`}>
         {[["Category",x.category],["Merchant",x.merchant],["Date",x.date],["Amount",`$${x.amount.toFixed(2)} ${x.currency}`],["Reimburse via",x.reimburseVia==="next-payroll"?"Next payroll":x.reimburseVia],["Submitted",new Date(x.submitted).toLocaleDateString("en-CA")]].map(([l,v])=>
-          <div key={l}><div style={{fontSize:11.5,color:C.text3,fontWeight:600,textTransform:"uppercase",letterSpacing:".04em",marginBottom:3}}>{l}</div><div style={{color:C.text,fontWeight:500}}>{v}</div></div>)}
+          <div key={l}><div className="text-xs text-text-3 font-semibold uppercase tracking-wide mb-1">{l}</div><div className="text-text font-medium">{v}</div></div>)}
       </div>
 
       {x.description&&<div>
-        <div style={{fontSize:11.5,color:C.text3,fontWeight:600,textTransform:"uppercase",letterSpacing:".04em",marginBottom:6}}>Business purpose</div>
-        <div style={{fontSize:13.5,color:C.text2,lineHeight:1.55,padding:12,background:C.bg,borderRadius:9}}>{x.description}</div>
+        <div className="text-xs text-text-3 font-semibold uppercase tracking-wide mb-1.5">Business purpose</div>
+        <div className="text-sm text-text-2 leading-snug p-3 bg-bg rounded-xl">{x.description}</div>
       </div>}
 
-      {x.receiptUrl&&<div style={{padding:14,background:C.bg,borderRadius:11,display:"flex",gap:10,alignItems:"center"}}>
+      {x.receiptUrl&&<div className="p-3.5 bg-bg rounded-xl flex gap-2.5 items-center">
         <I n="file" s={20} c={C.brand}/>
-        <div style={{flex:1}}>
-          <div style={{fontSize:13,fontWeight:640,color:C.text}}>Receipt attached</div>
-          <div style={{fontSize:11.5,color:C.text3,marginTop:1}}>{x.receiptUrl}</div>
+        <div className="flex-1">
+          <div className="text-sm font-semibold text-text">Receipt attached</div>
+          <div className="text-xs text-text-3 mt-px">{x.receiptUrl}</div>
         </div>
         <Btn kind="ghost" size="xs">View</Btn>
       </div>}
 
-      {approver&&<div style={{fontSize:12,color:C.text3,padding:"10px 12px",background:C.bg,borderRadius:9}}>
-        {x.status==="approved"?"Approved":x.status==="rejected"?"Rejected":x.status==="paid"?"Approved":""} by <strong style={{color:C.text2}}>{approver.name}</strong> on {new Date(x.approvedAt).toLocaleDateString("en-CA")}
-        {x.rejectReason&&<div style={{marginTop:6,color:C.danger,fontStyle:"italic"}}>Reason: {x.rejectReason}</div>}
-        {x.paidAt&&<div style={{marginTop:6,color:C.ok}}>Paid on {new Date(x.paidAt).toLocaleDateString("en-CA")}</div>}
+      {approver&&<div className="text-xs text-text-3 py-2.5 px-3 bg-bg rounded-xl">
+        {x.status==="approved"?"Approved":x.status==="rejected"?"Rejected":x.status==="paid"?"Approved":""} by <strong className="text-text-2">{approver.name}</strong> on {new Date(x.approvedAt).toLocaleDateString("en-CA")}
+        {x.rejectReason&&<div className="mt-1.5 text-red italic">Reason: {x.rejectReason}</div>}
+        {x.paidAt&&<div className="mt-1.5 text-ok">Paid on {new Date(x.paidAt).toLocaleDateString("en-CA")}</div>}
       </div>}
 
-      {isApprover&&x.status==="submitted"&&<div style={{display:"flex",gap:10,justifyContent:"flex-end",paddingTop:12,borderTop:`1px solid ${C.line}`}}>
+      {isApprover&&x.status==="submitted"&&<div className="flex gap-2.5 justify-end pt-3 border-t border-line">
         <Btn kind="dangerSoft" onClick={()=>{const r=prompt("Reason for rejection?"); if(r){A.decideExpense(x.id,"rejected",currentEmpId,r); onClose();}}}>Reject</Btn>
         <Btn kind="primary" onClick={()=>{A.decideExpense(x.id,"approved",currentEmpId); onClose();}}>Approve</Btn>
       </div>}
-      {isApprover&&x.status==="approved"&&<div style={{display:"flex",gap:10,justifyContent:"flex-end",paddingTop:12,borderTop:`1px solid ${C.line}`}}>
+      {isApprover&&x.status==="approved"&&<div className="flex gap-2.5 justify-end pt-3 border-t border-line">
         <Btn kind="primary" icon="check" onClick={()=>{A.payExpense(x.id); onClose();}}>Mark as paid</Btn>
       </div>}
     </div>
