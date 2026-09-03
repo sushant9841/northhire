@@ -232,7 +232,8 @@ export function AgencyJobOrders(){
   const list=A.jobOrders.filter(j=>{
     if(tab!=="all"&&j.status!==tab)return false;
     if(q){const s=q.toLowerCase();
-      if(!(j.title.toLowerCase().includes(s)||j.location.toLowerCase().includes(s)))return false;}
+      const c=A.staffingClient(j.client); const clientName=c?A.employers.find(e=>e.id===c.employerId)?.name||"":"";
+      if(!(j.title.toLowerCase().includes(s)||j.location.toLowerCase().includes(s)||clientName.toLowerCase().includes(s)))return false;}
     return true;
   }).sort((a,b)=>b.createdAt-a.createdAt);
 
@@ -292,6 +293,7 @@ function _JobOrderDetail({id,onClose}){
   const client=A.staffingClient(jo.client);
   const filled=A.assignments.filter(a=>a.jobOrder===jo.id);
   const [showPlace,setShowPlace]=useState(false);
+  const [showAllMatches,setShowAllMatches]=useState(false);
   const availableWorkers=A.workers.filter(w=>w.status==="active"&&w.availability==="available");
   /* Match: a worker "has" a must-have ticket if either string contains the other in full,
      not just a first-word substring check (was matching "Red Seal Electrician" against any
@@ -356,7 +358,7 @@ function _JobOrderDetail({id,onClose}){
       <div>
         <Lbl>Matched from bench</Lbl>
         <div className="flex flex-col gap-2 mb-3">
-          {matched.slice(0,6).map(({w,score,hasAll})=>{const person=(A.people||[]).find(p=>p.id===w.personId);
+          {matched.slice(0,showAllMatches?matched.length:6).map(({w,score,hasAll})=>{const person=(A.people||[]).find(p=>p.id===w.personId);
             return <div key={w.id} className="py-2.5 px-3 bg-bg rounded-lg flex gap-2.5 items-center" style={{border:`1px solid ${hasAll?C.okLn:C.line}`}}>
               <SmartPortrait seed={person?.seed||0} size={32} radius={8}/>
               <div className="flex-1 min-w-0">
@@ -368,6 +370,8 @@ function _JobOrderDetail({id,onClose}){
               </div>
             </div>;})}
           {matched.length===0&&<div className="text-xs text-text-3 p-3 text-center">No available workers.</div>}
+          {matched.length>6&&<button onClick={()=>setShowAllMatches(v=>!v)} className="bg-transparent border-0 p-0 cursor-pointer text-sm text-brand font-semibold text-center">
+            {showAllMatches?"Show fewer":`Show all ${matched.length} matches`}</button>}
         </div>
         {jo.status==="open"&&<Btn kind="primary" size="sm" full icon="plus" onClick={()=>setShowPlace(true)}>Place a worker</Btn>}
       </div>
@@ -924,7 +928,11 @@ export function AgencyPlacements(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [tab,setTab]=useState("in-progress");
   const [clawingBack,setClawingBack]=useState(null); const [clawReason,setClawReason]=useState("");
-  const list=A.placements.filter(p=>tab==="all"?true:p.status===tab).sort((a,b)=>b.offeredAt.localeCompare(a.offeredAt));
+  /* In the guarantee-window views, sort by soonest-expiring guarantee first (proactive triage)
+     instead of always sorting by offer date - previously the only way to see what's expiring
+     soon was the ad-hoc "<=30 days" badge, with no way to see the full order. */
+  const list=A.placements.filter(p=>tab==="all"?true:p.status===tab).sort((a,b)=>
+    (tab==="guaranteed"||tab==="all")&&a.guaranteeEnds&&b.guaranteeEnds?a.guaranteeEnds.localeCompare(b.guaranteeEnds):b.offeredAt.localeCompare(a.offeredAt));
   return <div>
     <div className="mb-3.5">
       <div className="text-lg font-bold text-text">Permanent placements</div>
@@ -983,15 +991,18 @@ export function AgencyPlacements(){
 /* ─── Clients (staffing) ─── */
 export function AgencyClients(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
-  const [q,setQ]=useState(""); const [showAdd,setShowAdd]=useState(false);
+  const [q,setQ]=useState(""); const [showAdd,setShowAdd]=useState(false); const [sort,setSort]=useState("name");
   const [nc,setNc]=useState({employerId:"",industry:"",province:"ON",city:""});
   const availableEmployers=A.employers.filter(e=>!A.staffingClients.some(c=>c.employerId===e.id));
   const submitAdd=()=>{if(!nc.employerId)return;
     A.upsertStaffingClient(nc);
     setShowAdd(false); setNc({employerId:"",industry:"",province:"ON",city:""});};
-  const list=A.staffingClients.filter(c=>{if(!q)return true;
+  const filtered=A.staffingClients.filter(c=>{if(!q)return true;
     const emp=A.employers.find(e=>e.id===c.employerId);
     return (emp?.name||"").toLowerCase().includes(q.toLowerCase())||(c.industry||"").toLowerCase().includes(q.toLowerCase());});
+  /* AR-risk coloring was purely cosmetic (a color flip) with no way to actually triage by it -
+     add a sort so at-risk clients surface to the top instead of being scattered alphabetically. */
+  const list=[...filtered].sort((a,b)=>sort==="risk"?(b.currentAR/(b.creditLimit||1))-(a.currentAR/(a.creditLimit||1)):(A.employers.find(e=>e.id===a.employerId)?.name||"").localeCompare(A.employers.find(e=>e.id===b.employerId)?.name||""));
   return <div>
     <div className="flex justify-between items-start gap-3 flex-wrap mb-3.5">
       <div>
@@ -1000,7 +1011,11 @@ export function AgencyClients(){
       </div>
       <Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowAdd(true)}>Add client</Btn>
     </div>
-    <div className="max-w-105 mb-4"><Input icon="search" placeholder="Search by employer or industry" value={q} onChange={e=>setQ(e.target.value)}/></div>
+    <div className="flex gap-3 mb-4 flex-wrap items-center">
+      <div className="max-w-105 flex-1 min-w-60"><Input icon="search" placeholder="Search by employer or industry" value={q} onChange={e=>setQ(e.target.value)}/></div>
+      <Sel value={sort} onChange={e=>setSort(e.target.value)} style={{width:170}}>
+        <option value="name">Sort: Name</option><option value="risk">Sort: AR risk (highest first)</option></Sel>
+    </div>
 
     <div className="grid gap-3" style={{gridTemplateColumns:mob?"1fr":"repeat(auto-fill,minmax(340px,1fr))"}}>
       {list.map(c=>{const emp=A.employers.find(e=>e.id===c.employerId);
@@ -1031,6 +1046,9 @@ export function AgencyClients(){
             {" · "}Markup target {c.markup}%
           </div>
           {!c.signedMsa&&<Btn kind="primary" size="xs" full style={{marginTop:10}} onClick={()=>A.signMsa(c.id)}>Mark MSA signed</Btn>}
+          {c.currentAR>c.creditLimit*0.8&&<Btn kind="dangerSoft" size="xs" full style={{marginTop:10}}
+            onClick={()=>{A.logActivity("client.ar_followup",`Followed up with ${emp?.name||c.id} on $${(c.currentAR/1000).toFixed(0)}k outstanding AR`,"alert");A.toast(`Follow-up logged for ${emp?.name}`,"ok");}}>
+            Log AR follow-up</Btn>}
         </Card>;})}
       {list.length===0&&<Empty icon="building" title="No clients match" body="Try a different search, or add a new client below."/>}
     </div>
@@ -1160,17 +1178,25 @@ export function AgencyWorkers(){
 export function AgencyMargins(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const active=A.activeAssignments();
-  const margins=active.map(a=>({a,econ:A.assignmentMargin(a.id),client:A.staffingClient(a.client),worker:A.worker(a.worker)}));
-  const totalWeeklyBill=margins.reduce((s,m)=>s+(m.a.billRate*40),0);
-  const totalWeeklyPay=margins.reduce((s,m)=>s+(m.a.payRate*40),0);
-  const totalWeeklyMargin=margins.reduce((s,m)=>s+((m.econ?.margin||0)*40),0);
+  /* Was a flat 40hr/week assumption for every assignment - use the average of that assignment's
+     actual recent timesheets when any exist (a real signal of scheduled + OT hours), falling
+     back to 40 only for a brand-new assignment with no timesheet history yet. */
+  const weeklyHoursFor=a=>{
+    const ts=A.timesheets.filter(t=>t.assignment===a.id).sort((x,y)=>y.weekStart.localeCompare(x.weekStart)).slice(0,4);
+    if(!ts.length)return 40;
+    return ts.reduce((s,t)=>s+A.timesheetTotal(t),0)/ts.length;
+  };
+  const margins=active.map(a=>({a,econ:A.assignmentMargin(a.id),client:A.staffingClient(a.client),worker:A.worker(a.worker),wk:weeklyHoursFor(a)}));
+  const totalWeeklyBill=margins.reduce((s,m)=>s+(m.a.billRate*m.wk),0);
+  const totalWeeklyPay=margins.reduce((s,m)=>s+(m.a.payRate*m.wk),0);
+  const totalWeeklyMargin=margins.reduce((s,m)=>s+((m.econ?.margin||0)*m.wk),0);
   const avgMarkup=margins.length?margins.reduce((s,m)=>s+(m.econ?.markupPct||0),0)/margins.length:0;
   const belowFloor=margins.filter(m=>(m.econ?.markupPct||0)<A.STAFFING_AGENCY.markupFloor);
 
   return <div>
     <div className="mb-3.5">
       <div className="text-lg font-bold text-text">Margins & run rate</div>
-      <div className="text-sm text-text-3 mt-0.5">Real-time margin per active assignment (at 40 hrs/week).</div>
+      <div className="text-sm text-text-3 mt-0.5">Real-time margin per active assignment (weekly figures use each assignment's actual recent average hours, falling back to 40 when there's no timesheet history yet).</div>
     </div>
 
     <div className={`grid gap-3 mb-4 ${mob?"grid-cols-2":"grid-cols-4"}`}>
@@ -1237,8 +1263,12 @@ export function AgencyCompliance(){
     {ok:overdueInvoices.length===0, title:"Aging under control", body:overdueInvoices.length===0?"No overdue invoices past terms.":`${overdueInvoices.length} invoices overdue. Chase or refer to collections.`, count:overdueInvoices.length,
       drillRows:overdueInvoices.map(i=>{const c=A.staffingClients.find(x=>x.id===i.client); const emp=c?A.employers.find(e=>e.id===c.employerId):null;
         return {name:emp?.name||i.client,detail:`$${i.total?.toLocaleString?.()||i.total} · due ${i.dueDate}`};})},
-    {ok:true, title:"Ontario THA license active", body:`License ${SEED_AGENCY_LICENSE} valid through 2027-01-01. $25,000 LOC on file.`, count:0},
-    {ok:true, title:"WSIB coverage", body:"Registered in ON, AB, BC. Rate group 3 (Staffing).", count:0},
+    /* Was static hardcoded text (a fake expiry date, a fake LOC amount) that would silently go
+       stale forever - now derived from STAFFING_AGENCY fields and a real expiry check. */
+    (()=>{const expiresIn=Math.ceil((new Date(A.STAFFING_AGENCY.licenseExpiry)-Date.now())/864e5); const expiringSoon=expiresIn<=90;
+      return {ok:!expiringSoon, title:"Ontario THA license active",
+        body:`License ${SEED_AGENCY_LICENSE} ${expiringSoon?`expires in ${expiresIn} days`:`valid through ${A.STAFFING_AGENCY.licenseExpiry}`}. $${A.STAFFING_AGENCY.licenseLocAmount.toLocaleString()} LOC on file.`, count:0};})(),
+    {ok:true, title:"WSIB coverage", body:`Registered in ${A.STAFFING_AGENCY.wsibProvinces.join(", ")}. Rate group ${A.STAFFING_AGENCY.wsibRateGroup}.`, count:0},
   ];
 
   return <div>
@@ -1249,11 +1279,17 @@ export function AgencyCompliance(){
 
     <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
       {items.map(item=><Card key={item.title} pad={mob?18:22} style={{borderRadius:14,borderLeft:`4px solid ${item.ok?C.ok:C.warn}`,cursor:item.count>0?"pointer":"default"}}
-        onClick={()=>item.count>0&&setDrill(item)}>
+        role={item.count>0?"button":undefined} tabIndex={item.count>0?0:undefined}
+        aria-label={`${item.title}: ${item.ok?"OK":"Needs attention"}`}
+        onClick={()=>item.count>0&&setDrill(item)}
+        onKeyDown={e=>{if(item.count>0&&(e.key==="Enter"||e.key===" ")){e.preventDefault();setDrill(item);}}}>
         <div className="flex gap-3 items-start">
           <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{background:item.ok?C.okBg:C.warnBg,color:item.ok?C.ok:C.warn}}><I n={item.ok?"check":"alert"} s={18}/></div>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-semibold text-text">{item.title}</div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="text-sm font-semibold text-text">{item.title}</div>
+              <Tag tone={item.ok?"ok":"warn"} sm>{item.ok?"OK":"Needs attention"}</Tag>
+            </div>
             <div className="text-xs text-text-2 mt-1 leading-snug">{item.body}</div>
           </div>
           {item.count>0&&<Tag tone={item.ok?"ok":"warn"} sm>{item.count}</Tag>}

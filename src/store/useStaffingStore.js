@@ -44,6 +44,8 @@ const STAFFING_AGENCY = {
   name:"NorthHire Staffing",
   tagline:"Canadian workers, Canadian workplaces",
   license:"ON-THA-2026-4471", /* Ontario Temp Help Agency license */
+  licenseExpiry:"2027-01-01", licenseLocAmount:25000, /* was hardcoded straight into the Compliance page's display text */
+  wsibProvinces:["ON","AB","BC"], wsibRateGroup:"3 (Staffing)",
   provinces:["ON","AB","BC","QC","MB","SK","NS","NB"],
   founded:"2026-01-01",
   markupFloor:25, /* Below this markup %, warn — losing money */
