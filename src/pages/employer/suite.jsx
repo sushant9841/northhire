@@ -6,7 +6,7 @@ import { I } from "../../design/icons.jsx";
 import {
   Page, H1, H2, Btn, Banner, Stat, Card, Empty, Tag, Bar, Modal, Area, Field, Input, Sel,
   RichText, Switch, DatePicker, Ring, Tabs, Lbl, SmartPortrait, SmartScene, SmartLogo, Mark, MARKS, ConfirmDialog,
-  usePagination, Pagination,
+  usePagination, Pagination, HERO_WIDE,
 } from "../../design/primitives.jsx";
 import { pay, payShort, dlText, money, uid } from "../../helpers/utils.js";
 import { sanitizeHtml } from "../../helpers/sanitize.js";
@@ -1090,7 +1090,7 @@ export function EmpAnalyticsPage(){
     <section className={`bg-white border-b border-line-soft ${pad}`}>
       <div className="max-w-280 mx-auto">
         <Tag tone="brand" icon="activity">Analytics</Tag>
-        <h1 className={`font-extrabold tracking-tight text-text mt-5 mb-3 leading-tight ${mob?"text-4xl":"text-6xl"}`}>How your hiring is doing.</h1>
+        <h1 className={`${HERO_WIDE} mt-5 mb-3 ${mob?"text-4xl":"text-6xl"}`}>How your hiring is doing.</h1>
         <p className={`text-text-2 leading-snug m-0 max-w-140 ${mob?"text-base":"text-xl"}`}>Live numbers from your postings.</p></div>
     </section>
     <section className={`bg-bg ${mob?"pt-8 px-4 pb-14":"pt-12 px-8 pb-24"}`}>
