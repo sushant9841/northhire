@@ -178,6 +178,7 @@ export function useStore(){
     if(!passwords[e])return {ok:false,msg:"No account with that email"};
     if(passwords[e]!==pw)return {ok:false,msg:"Password does not match"};
     const seeker=people.find(p=>(p.email||"").toLowerCase()===e);
+    if(seeker&&suspended.has(seeker.id))return {ok:false,msg:"This account has been suspended. Contact support for help."};
     if(seeker){setUser({...seeker,role:"seeker",defaultCv:cvs.find(c=>c.userEmail===e)?.id||null});
       setStack([]);setPg("home");log("auth.login",`Signed in as ${seeker.name}`,"logout");
       return {ok:true};}
@@ -463,10 +464,12 @@ export function useStore(){
     lines.slice(1).forEach((row,i)=>{
       const cells=row.split(",").map(c=>c.trim());
       const t=cells[idx.title]; if(!t){errors.push(`Row ${i+2}: missing title`);return;}
+      const lo=Number(cells[idx.pay_low])||0, hi=Number(cells[idx.pay_high])||0;
+      if(settings.payTransparency&&lo<=0&&hi<=0){errors.push(`Row ${i+2}: pay_low or pay_high is required`);return;}
       const prov=PCODE[cells[idx.province]]||cells[idx.province];
       const nj={id:uid("j"),t,e:company.id,cat:cells[idx.category]||"trades",city:cells[idx.city]||"",prov,
         type:cells[idx.type]||"Full Time",mode:cells[idx.mode]||"On-site",
-        lo:Number(cells[idx.pay_low])||0,hi:Number(cells[idx.pay_high])||0,unit:cells[idx.pay_unit]||"hr",
+        lo,hi,unit:cells[idx.pay_unit]||"hr",
         vac:Number(cells[idx.vacancies])||1,exp:cells[idx.experience]||"1+ years",
         edu:cells[idx.education]||"High school diploma",dl:14,posted:"Just now",views:0,
         urgent:false,featured:false,skills:(cells[idx.skills]||"").split(";").map(s=>s.trim()).filter(Boolean),
@@ -622,6 +625,9 @@ export function useStore(){
       log("plan.gate",`Blocked job publish — at ${planName()} cap`,"lock");
       return {ok:false,msg:`Your ${planName()} plan allows ${limitOf("jobs")} live job${limitOf("jobs")===1?"":"s"}. Pause one first, or upgrade.`};
     }
+    if(settings.payTransparency&&!(Number(f.lo)>0)&&!(Number(f.hi)>0)){
+      return {ok:false,msg:"This platform requires every listing to state a pay range or fixed rate."};
+    }
     const nj={id:uid("j"),t:f.t.trim(),e:company.id,cat:f.cat,city:f.city.trim(),prov:PCODE[f.prov],type:f.type,mode:f.mode,
       lo:Number(f.lo)||0,hi:Number(f.hi)||0,unit:f.unit,vac:f.vac,exp:f.exp,edu:f.edu,dl:f.dl,posted:"Just now",views:0,
       urgent:f.urgent,featured:f.featured&&settings.employerFeature,
@@ -653,9 +659,11 @@ export function useStore(){
   const setPipelineJobFn=id=>setPipelineJob(id);
 
   const saveCompany=d=>{setEmployers(l=>l.map(e=>e.id===d.id?d:e));log("company.update",`Updated ${d.name} profile`,"building");};
-  const verifyEmployer=(id,v)=>{setEmployers(l=>l.map(e=>e.id===id?{...e,verified:v}:e));
+  const verifyEmployer=(id,v)=>{setEmployers(l=>l.map(e=>e.id===id?{...e,verified:v,hold:v?false:e.hold}:e));
     log("employer.verify",`${v?"Verified":"Revoked verification for"} ${emp(id).name}`,"shield");};
-  const holdEmployer=id=>log("employer.hold",`Placed ${emp(id).name} on hold`,"clock");
+  const holdEmployer=id=>{const wasHeld=!!emp(id)?.hold;
+    setEmployers(l=>l.map(e=>e.id===id?{...e,hold:!e.hold}:e));
+    log("employer.hold",`${wasHeld?"Released":"Placed"} ${emp(id).name} ${wasHeld?"from":"on"} hold`,"clock");};
   const toggleSuspend=id=>{setSuspended(p=>{const n=new Set(p);n.has(id)?n.delete(id):n.add(id);return n;});
     log("user.suspend",`${suspended.has(id)?"Restored":"Suspended"} ${person(id).name}`,"users");};
 
@@ -799,8 +807,8 @@ export function useStore(){
     const rows=[["Name","Email","Stage","Applied","Fit"],...applications.filter(a=>a.job===jid)
       .map(a=>{const u=person(a.user);return [u.name,u.email,a.stage,a.at,scoreCandidate(u,j)];})];
     downloadText(`applicants-${jid}.csv`,rows.map(r=>r.join(",")).join("\n"),"text/csv");};
-  const exportLog=()=>downloadText("activity-log.csv",
-    ["Time,Actor,Action,Detail",...activity.map(e=>`${e.at},"${e.actor}",${e.action},"${e.text}"`)].join("\n"),"text/csv");
+  const exportLog=(list)=>downloadText("activity-log.csv",
+    ["Time,Actor,Action,Detail",...(list||activity).map(e=>`${e.at},"${e.actor}",${e.action},"${e.text}"`)].join("\n"),"text/csv");
   const share=x=>log("share",`Shared "${x.t||x.title}"`,"share");
   const choosePlan=n=>{
     if(!PLANS[n])return;

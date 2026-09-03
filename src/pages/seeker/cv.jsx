@@ -75,6 +75,8 @@ export function CvPreview({cv,u,scale=1,mob=false}){
 export function CvsPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const heroPad=mob?"py-11 px-4":"py-18 px-8";
+  if(!A.settings.cvBuilder)return <Page><Empty icon="lock" title="CV builder is temporarily unavailable"
+    body="The platform administrator has turned the CV builder off for all job seekers. Your existing CVs are unaffected — check back later."/></Page>;
   return <div className="bg-white min-h-full">
     <section className={`${heroPad} bg-white border-b border-line-soft`}>
       <div className="max-w-6xl mx-auto">
@@ -117,6 +119,8 @@ export function CvEditPage(){
   const [d,setD]=useState(cv?{...cv}:null);
   const [sec,setSec]=useState("basics");
   useEffect(()=>{if(cv)setD({...cv});},[A.cvId]);
+  if(!A.settings.cvBuilder)return <Page><Empty icon="lock" title="CV builder is temporarily unavailable"
+    body="The platform administrator has turned the CV builder off for all job seekers." action={<Btn kind="primary" onClick={()=>A.go("cvs")}>Back</Btn>}/></Page>;
   if(!cv||!d) return <Page><Empty icon="file" title="CV not found" body="It may have been deleted."
     action={<Btn kind="primary" onClick={()=>A.go("cvs")}>My CVs</Btn>}/></Page>;
   const set=(k,v)=>setD(p=>({...p,[k]:v}));

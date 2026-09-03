@@ -10,10 +10,10 @@ import { EmpMark } from "../shared/cards.jsx";
 
 export function AdmHome(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
-  const pending=A.employers.filter(e=>!e.verified);
+  const pending=A.employers.filter(e=>!e.verified&&!e.hold);
   const flagged=A.jobs.filter(j=>j.flagged);
   const drafts=[...A.blogs,...A.trainings].filter(x=>x.status==="draft");
-  const mrr=A.employers.length*149;
+  const mrr=A.employers.reduce((s,e)=>s+(A.PLANS[e.plan]?.price||0),0);
   return <Page wide>
     <H1 sub="Everything happening across NorthHire right now"
       action={<div className="flex gap-2.5 flex-wrap">
@@ -28,7 +28,7 @@ export function AdmHome(){
       <Stat icon="users" label="Job seekers" value={A.people.length.toLocaleString()} tone={C.brand} onClick={()=>A.go("admUsers")}/>
       <Stat icon="building" label="Employers" value={A.employers.length} delta={`${pending.length} pending`} onClick={()=>A.go("admEmployers")}/>
       <Stat icon="briefcase" label="Live listings" value={A.jobs.filter(j=>j.status==="live").length} tone={C.violet} onClick={()=>A.go("admJobs")}/>
-      <Stat icon="wallet" label="Monthly revenue" value={`$${(mrr/1000).toFixed(1)}k`} tone={C.ok} delta="+22% MoM"/></div>
+      <Stat icon="wallet" label="Monthly revenue" value={`$${(mrr/1000).toFixed(1)}k`} tone={C.ok}/></div>
     <div className="grid gap-4" style={{gridTemplateColumns:mob?"1fr":"1.3fr 1fr"}}>
       <Card><H2 action={<Btn kind="ghost" size="sm" onClick={()=>A.go("admEmployers")}>Review all</Btn>}>Employers awaiting verification</H2>
         {pending.length===0?<div className="text-sm text-text-3 py-5 text-center">Every employer is verified.</div>
@@ -84,12 +84,14 @@ export function AdmUsers(){
 
 export function AdmEmployers(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
-  const [tab,setTab]=useState("pending");
-  const pending=A.employers.filter(e=>!e.verified), verified=A.employers.filter(e=>e.verified);
-  const list=tab==="pending"?pending:verified;
+  const [tab,setTab]=useState("pending"); const [q,setQ]=useState("");
+  const match=e=>!q||e.name.toLowerCase().includes(q.toLowerCase())||e.industry.toLowerCase().includes(q.toLowerCase())||(e.owner||"").toLowerCase().includes(q.toLowerCase());
+  const pending=A.employers.filter(e=>!e.verified&&!e.hold&&match(e)), held=A.employers.filter(e=>!e.verified&&e.hold&&match(e)), verified=A.employers.filter(e=>e.verified&&match(e));
+  const list=tab==="pending"?pending:tab==="held"?held:verified;
   return <Page wide>
     <H1 sub="Approve companies before their listings carry a verified badge">Employers</H1>
-    <Tabs items={[{k:"pending",label:"Awaiting review",n:pending.length},{k:"verified",label:"Verified",n:verified.length}]}
+    <div className="max-w-105 mb-4"><Input icon="search" placeholder="Search by name, industry or contact" value={q} onChange={e=>setQ(e.target.value)}/></div>
+    <Tabs items={[{k:"pending",label:"Awaiting review",n:pending.length},{k:"held",label:"On hold",n:held.length},{k:"verified",label:"Verified",n:verified.length}]}
       value={tab} onChange={setTab} style={{marginBottom:18}}/>
     {list.length===0?<Empty icon="checkC2" title="Nothing to review" body="All employer accounts in this bucket are handled."/>
       :<div className="grid gap-3.5" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:320}px,1fr))`}}>
@@ -111,6 +113,8 @@ export function AdmEmployers(){
               <Btn kind="ghost" size="sm" onClick={()=>A.openEmployer(e.id)}>View page</Btn>
               <div className="flex-1"/>
               {e.verified?<Btn kind="outline" size="sm" onClick={()=>A.verifyEmployer(e.id,false)}>Revoke</Btn>
+                :e.hold?<><Btn kind="ok" size="sm" icon="check" onClick={()=>A.verifyEmployer(e.id,true)}>Approve</Btn>
+                  <Btn kind="outline" size="sm" onClick={()=>A.holdEmployer(e.id)}>Release hold</Btn></>
                 :<><Btn kind="ok" size="sm" icon="check" onClick={()=>A.verifyEmployer(e.id,true)}>Approve</Btn>
                   <Btn kind="dangerSoft" size="sm" onClick={()=>A.holdEmployer(e.id)}>Hold</Btn></>}</div></Card>;})}</div>}
   </Page>;
@@ -135,7 +139,7 @@ export function AdmJobs(){
             <div className="text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap">{j.t}</div>
             <div className="text-xs text-text-3 mt-0.5">{e.name} • {j.city}, {j.prov} • {pay(j)}{payShort(j)}</div></div>
           {!mob&&<div className="w-22 text-sm text-text-2">{n} applicant{n===1?"":"s"}</div>}
-          <Tag tone={j.status==="live"?"ok":"warn"} sm>{j.status==="live"?"Live":j.status==="paused"?"Paused":"Closed"}</Tag>
+          <Tag tone={j.status==="live"?"ok":j.status==="review"?"violet":"warn"} sm>{j.status==="live"?"Live":j.status==="paused"?"Paused":j.status==="review"?"Pending review":"Closed"}</Tag>
           <div className="flex gap-2 flex-wrap">
             <Btn kind="ghost" size="xs" icon="eye" title="Preview" onClick={()=>A.openJob(j.id)}/>
             <Btn kind="outline" size="xs" onClick={()=>A.toggleJobStatus(j.id)}>{j.status==="live"?"Pause":"Restore"}</Btn>
@@ -196,7 +200,7 @@ export function AdmLog(){
   });
   return <Page narrow>
     <H1 sub={`${A.activity.length} recorded event${A.activity.length===1?"":"s"} in this session`}
-      action={<Btn kind="outline" size="sm" icon="download" onClick={A.exportLog}>Export CSV</Btn>}>Activity log</H1>
+      action={<Btn kind="outline" size="sm" icon="download" onClick={()=>A.exportLog(list)}>Export {list.length<A.activity.length?`filtered (${list.length})`:"CSV"}</Btn>}>Activity log</H1>
     <Card pad={mob?16:20} style={{marginBottom:14,borderRadius:16}}>
       <div className="grid gap-3" style={{gridTemplateColumns:"2fr 1fr"}}>
         <Input icon="search" placeholder="Search text or actor" value={q} onChange={e=>setQ(e.target.value)}/>
@@ -223,7 +227,8 @@ export function AdmStats(){
   const byCat=CATS.map(c=>({...c,n:A.jobs.filter(j=>j.cat===c.id).length})).sort((a,b)=>b.n-a.n);
   const max=Math.max(1,...byCat.map(c=>c.n));
   const byStage=STAGES.map(s=>[s,A.applications.filter(a=>a.stage===s).length]);
-  const months=[["Mar",58],["Apr",64],["May",71],["Jun",78],["Jul",86],["Aug",94]];
+  const byPlan=A.PLAN_ORDER.map(p=>({name:p,n:A.employers.filter(e=>e.plan===p).length,revenue:A.employers.filter(e=>e.plan===p).length*(A.PLANS[p]?.price||0)}));
+  const totalRevenue=byPlan.reduce((s,p)=>s+p.revenue,0);
   const BarRow=({label,value,max,tone=C.brand})=><div className="flex items-center gap-3 mb-3">
     <div className={`${mob?"w-28":"w-43"} text-sm text-text font-medium shrink-0 overflow-hidden text-ellipsis whitespace-nowrap`}>{label}</div>
     <div className="flex-1 min-w-8"><Bar v={max?(value/max)*100:0} tone={tone} h={9}/></div>
@@ -245,12 +250,8 @@ export function AdmStats(){
             <div key={k} className="bg-bg rounded-xl py-3 px-3.5">
               <div className="text-xs text-text-3">{k}</div>
               <div className="text-xl font-bold text-text mt-1 tracking-tight">{v}</div></div>)}</div></Card></div>
-    <Card><H2 sub="Subscription revenue, thousands CAD">Revenue trend</H2>
-      <div className={`flex items-end ${mob?"gap-2.5":"gap-5"} h-48 py-2.5`}>
-        {months.map(([m,v],i)=><div key={m} className="flex-1 flex flex-col items-center gap-2">
-          <div className="text-xs font-bold text-text">${v}k</div>
-          <div className="w-full bg-brand rounded-t-lg rounded-b-sm min-h-2"
-            style={{height:`${v}%`,animation:`grow .6s cubic-bezier(.22,.68,.35,1) ${i*0.07}s both`}}/>
-          <div className="text-xs text-text-3">{m}</div></div>)}</div></Card>
+    <Card><H2 sub={`$${totalRevenue.toLocaleString()}/mo across ${A.employers.length} employer accounts`}>Revenue by plan</H2>
+      {byPlan.map(p=><BarRow key={p.name} label={`${p.name} (${p.n})`} value={p.revenue} max={Math.max(1,totalRevenue)} tone={p.name==="Enterprise"?C.violet:p.name==="Growth"?C.brand:C.text3}/>)}
+    </Card>
   </Page>;
 }
