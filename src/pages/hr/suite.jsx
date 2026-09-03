@@ -5,7 +5,7 @@ import { C, SH } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
 import {
   Btn, Card, Tag, Field, Input, Sel, Area, CheckRow, Banner, Lbl, Modal, Switch, DatePicker,
-  SmartPortrait, Empty, ConfirmDialog,
+  SmartPortrait, Empty, ConfirmDialog, usePagination, Pagination,
 } from "../../design/primitives.jsx";
 import { _fmtDate } from "../../helpers/utils.js";
 import { invoiceTone } from "../../helpers/statusTone.js";
@@ -1055,6 +1055,8 @@ export function HrInvoices(){
   const [tab,setTab]=useState("all");
   const list=tab==="all"?A.hrInvoices:A.hrInvoices.filter(i=>i.status===tab);
   const canManage=["owner","admin","finance"].includes(emp.role);
+  const pg=usePagination(list,20);
+  useEffect(()=>{pg.setPage(1);},[tab]);
 
   const updateItem=(i,patch)=>setNInv(p=>({...p,items:p.items.map((it,idx)=>idx===i?{...it,...patch}:it)}));
   const addItem=()=>setNInv(p=>({...p,items:[...p.items,{desc:"",qty:1,unitPrice:0}]}));
@@ -1095,7 +1097,7 @@ export function HrInvoices(){
           {["Number","Client","Amount","Issued","Due","Status","Actions"].map(h=>
             <th key={h} className={TH_CLS}>{h}</th>)}
         </tr></thead>
-        <tbody>{list.map(inv=><tr key={inv.id} className="border-b border-line-soft cursor-pointer" onClick={()=>setDetail(inv)}>
+        <tbody>{pg.pageItems.map(inv=><tr key={inv.id} className="border-b border-line-soft cursor-pointer" onClick={()=>setDetail(inv)}>
           <td className={`${TD_CLS} text-xs text-text-2 font-mono`}>{inv.number}</td>
           <td className={`${TD_CLS} text-sm text-text font-semibold`}>{inv.client}</td>
           <td className={`${TD_CLS} text-sm text-text font-semibold`}>${inv.amount.toLocaleString()}</td>
@@ -1110,6 +1112,7 @@ export function HrInvoices(){
         </tr>)}</tbody>
       </table></div>
     </Card>
+    <Pagination {...pg}/>
 
     {showAdd&&<Modal onClose={()=>setShowAdd(false)} title="New invoice" wide>
       <div className="flex flex-col gap-3.5">

@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C, SH } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
-import { Btn, Card, Tag, Field, Input, Sel, Area, Banner, Modal, SmartPortrait, Empty, Stat, ConfirmDialog } from "../../design/primitives.jsx";
+import { Btn, Card, Tag, Field, Input, Sel, Area, Banner, Modal, SmartPortrait, Empty, Stat, ConfirmDialog, usePagination, Pagination } from "../../design/primitives.jsx";
 import { _fmtDate } from "../../helpers/utils.js";
 import { HR_ROLES } from "../../store/seed/hrCompanySettings.js";
 import { HR_DEPARTMENTS } from "../../store/seed/hrDepartments.js";
@@ -55,6 +55,7 @@ function HrPeople_Directory(){
     const s=q.toLowerCase();
     return e.name.toLowerCase().includes(s)||e.title?.toLowerCase().includes(s)||e.email.toLowerCase().includes(s);
   }).sort((a,b)=>a.name.localeCompare(b.name));
+  const pg=usePagination(filtered,24);
   return <div>
     <div className="flex gap-2.5 mb-4 flex-wrap">
       <Input icon="search" placeholder="Search by name, title, or email" value={q} onChange={e=>setQ(e.target.value)} style={{flex:"1 1 260px"}}/>
@@ -64,7 +65,7 @@ function HrPeople_Directory(){
       </Sel>
     </div>
     <div className="grid gap-3" style={{gridTemplateColumns:mob?"1fr":"repeat(auto-fill,minmax(280px,1fr))"}}>
-      {filtered.map(e=>{const d=depts.find(x=>x.id===e.dept);
+      {pg.pageItems.map(e=>{const d=depts.find(x=>x.id===e.dept);
         const mgr=A.hrEmp(e.manager);
         return <Card key={e.id} pad={16} style={{borderRadius:12,cursor:"pointer",transition:"all .15s"}}
           onMouseEnter={ev=>{ev.currentTarget.style.borderColor=C.brand;ev.currentTarget.style.boxShadow=SH.sm;}}
@@ -88,6 +89,7 @@ function HrPeople_Directory(){
         </Card>;})}
       {filtered.length===0&&<div style={{gridColumn:"1/-1"}}><Empty icon="users" title="No matches" body="Try different search or filter terms."/></div>}
     </div>
+    <Pagination {...pg}/>
   </div>;
 }
 
@@ -296,6 +298,7 @@ function HrPeople_Manage(){
   const depts=A.hrDeptsAtCompany?.(company.id)||A.HR_DEPARTMENTS;
   const all=A.hrEmpsAtCompany(company.id);
   const active=all.filter(e=>e.status==="active");
+  const pg=usePagination(all,25);
   const submit=()=>{if(!ne.name.trim()||!ne.email.trim())return;
     if(!(Number(ne.salary)>0)){A.toast("Enter a salary greater than $0.","danger");return;}
     A.addEmployee({...ne,companyId:company.id});
@@ -329,7 +332,7 @@ function HrPeople_Manage(){
           {["Name","Title","Department","Role","Reports to","Status","Actions"].map(h=>
             <th key={h} className="py-3 px-3.5 text-xs font-bold text-text-3 tracking-wide uppercase">{h}</th>)}
         </tr></thead>
-        <tbody>{all.map(e=>{const d=depts.find(x=>x.id===e.dept); const mgr=A.hrEmp(e.manager);
+        <tbody>{pg.pageItems.map(e=>{const d=depts.find(x=>x.id===e.dept); const mgr=A.hrEmp(e.manager);
           return <tr key={e.id} className="border-b border-line-soft">
             <td className="py-3 px-3.5"><div className="flex gap-2.5 items-center">
               <SmartPortrait seed={e.seed} size={30} radius={8}/>
@@ -350,6 +353,7 @@ function HrPeople_Manage(){
           </tr>;})}</tbody>
       </table></div>
     </Card>
+    <Pagination {...pg}/>
 
     {showAdd&&<Modal onClose={()=>setShowAdd(false)} title="Add employee" wide>
       <div className="flex flex-col gap-3.5">
@@ -451,6 +455,8 @@ export function HrExpensesPage(){
 
   const list=tab==="mine"?myExp:tab==="queue"?queued:tab==="approved"?approved:allExp;
   const totalPending=allExp.filter(x=>x.status==="submitted"||x.status==="approved").reduce((s,x)=>s+x.amount,0);
+  const pg=usePagination(list,20);
+  useEffect(()=>{pg.setPage(1);},[tab]);
 
   return <div>
     <div className="flex justify-between items-center mb-5 flex-wrap gap-3">
@@ -476,7 +482,7 @@ export function HrExpensesPage(){
           {(tab==="mine"?["Date","Category","Merchant","Amount","Status",""]:["Date","Employee","Category","Merchant","Amount","Status","Actions"]).map(h=>
             <th key={h} className="py-3 px-3.5 text-xs font-bold text-text-3 tracking-wide uppercase">{h}</th>)}
         </tr></thead>
-        <tbody>{list.map(x=>{const e=A.hrEmp(x.employee);
+        <tbody>{pg.pageItems.map(x=>{const e=A.hrEmp(x.employee);
           return <tr key={x.id} className="border-b border-line-soft cursor-pointer" onClick={()=>setDetail(x)}>
             <td className="py-3 px-3.5 text-xs text-text-2 font-mono">{x.date}</td>
             {tab!=="mine"&&<td className="py-3 px-3.5"><div className="flex gap-2 items-center">
@@ -499,6 +505,7 @@ export function HrExpensesPage(){
         </tbody>
       </table></div>
     </Card>
+    <Pagination {...pg}/>
 
     {showSubmit&&<ExpenseSubmitModal onClose={()=>setShowSubmit(false)} onSubmit={(data)=>{A.submitExpense({...data,employee:emp.id}); setShowSubmit(false);}}/>}
     {detail&&<ExpenseDetailModal expense={detail} onClose={()=>setDetail(null)} isApprover={isApprover} currentEmpId={emp.id}/>}
