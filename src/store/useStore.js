@@ -97,6 +97,13 @@ export function useStore(){
   const [trainingId,setTrainingId]=useState(null),[cvId,setCvId]=useState(null),[editId,setEditId]=useState(null);
   const [candidateId,setCandidateId]=useState(null),[pipelineJob,setPipelineJob]=useState(null);
   const [applyDraft,setApplyDraft]=useState({job:null,avail:"Within 2 weeks",expect:"",letter:"",meets:"Yes"});
+  /* Lightweight prefill for ContactPage — there's no real URL/param passing between pages, so
+     this is the same pattern as applyDraft: a small piece of shared state a page reads and
+     clears on mount. Used so "I'm interested in [role]" style links actually carry context. */
+  const [contactPrefill,setContactPrefill]=useState(null);
+  /* Same idea for the pricing-page CTAs: which tier a prospect picked before signing up,
+     previously discarded entirely — every signup landed on Free regardless of the button clicked. */
+  const [pendingPlan,setPendingPlan]=useState(null);
   const [pageTitle,setPageTitle]=useState(null);
 
 
@@ -264,11 +271,13 @@ export function useStore(){
     const domain=email.split("@")[1]||"example.com";
     const e={id:uid("e"),name:d.company.trim(),industry:d.industry||"Other",city:d.city||"Toronto",prov:PCODE[d.prov||"Ontario"],
       size:d.size||"1-50",founded:new Date().getFullYear(),site:domain,mark:"hex",a:C.brand,b:"#EAF2FF",
-      about:d.about||`${d.company.trim()} is hiring on NorthHire.`,verified:false,rating:0,plan:"Free",
+      about:d.about||`${d.company.trim()} is hiring on NorthHire.`,verified:false,rating:0,
+      plan:(pendingPlan&&PLANS[pendingPlan])?pendingPlan:"Free",
       owner:email,ownerName:d.name||"Hiring Team"};
     setEmployers(list=>[e,...list]);
     setPasswords(p=>({...p,[email]:d.password}));
     setUser({id:e.id+"_owner",role:"employer",name:e.ownerName,email,seed:9,skills:[]});
+    setPendingPlan(null);
     setStack([]);setPg("welcomeEmp");
     log("auth.signup.employer",`New employer registered: ${e.name}`,"building");
     notify({icon:"sparkle",title:"Welcome to NorthHire",body:"Post your first job to start receiving applicants. Verification usually takes 1 business day.",for:e.id+"_owner",link:"empPost"});
@@ -875,7 +884,8 @@ export function useStore(){
     if(!PLANS[n])return;
     if(user?.role==="employer"){setEmployers(l=>l.map(e=>e.id===company.id?{...e,plan:n}:e));
       log("billing.plan",`Switched to the ${n} plan`,"wallet");go("empBilling");
-    }else go(user?"denied":"login");};
+    }else if(!user){setPendingPlan(n);go("signup");}
+    else go("denied");};
 
   /* --- plan gating: single source of truth for feature access --- */
   const currentPlan=()=>{if(!company)return null; return PLANS[company.plan]||PLANS.Free;};
@@ -910,6 +920,7 @@ export function useStore(){
     saved,following,enrolled,trainingProgress,suspended,notifications,activity,settings,userSettings,search,setSearch,
     toasts,toast,dismissToast,
     jobId,empId,blogId,trainingId,cvId,editId,candidateId,pipelineJob,applyDraft,setApplyDraft,
+    contactPrefill,setContactPrefill,pendingPlan,setPendingPlan,
     emp,job,person,score,scoreCandidate,matchReasons,myApps,appliedJobIds,myNotifications,defaultCv,
     completeness,completenessHint,tabBadges,
     login,logout,completeSignup,saveProfile,deleteAccount,exportData,setUserSetting,

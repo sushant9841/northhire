@@ -30,7 +30,7 @@ export function Footer(){
             Canada's job platform for every kind of work. Trades, care, transport, kitchens, warehouses and offices, with real pay published on every listing.</p>
           <div className="flex gap-2.5">
             {["linkedin","facebook","twitter"].map(s=>
-              <a key={s} href="#" onClick={e=>e.preventDefault()} aria-label={s} className="w-10 h-10 rounded-xl bg-white/9 border border-white/14 text-white/75 flex items-center justify-center no-underline"><I n={s} s={17}/></a>)}</div>
+              <span key={s} title="Coming soon" className="w-10 h-10 rounded-xl bg-white/9 border border-white/14 text-white/75 flex items-center justify-center"><I n={s} s={17}/></span>)}</div>
         </div>
         {cols.map(col=><div key={col.h}>
           <div className="text-xs font-bold tracking-wider uppercase text-white/45 mb-3.5">{col.h}</div>

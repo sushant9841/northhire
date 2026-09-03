@@ -129,7 +129,8 @@ export function ForEmployersPage(){
               {t.features.map(f=><div key={f} className="flex gap-2 items-start text-sm text-text-2">
                 <I n="check" s={16} c={C.ok}/><span>{f}</span></div>)}
             </div>
-            <Btn kind={t.featured?"primary":"ghost"} full onClick={()=>A.go("signup")}>{t.cta}</Btn>
+            <Btn kind={t.featured?"primary":"ghost"} full
+              onClick={()=>t.name==="Enterprise"?A.go("contact"):(A.setPendingPlan(t.name),A.go("signup"))}>{t.cta}</Btn>
           </Card>)}
         </div>
 

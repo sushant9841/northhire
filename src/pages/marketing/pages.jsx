@@ -1,6 +1,6 @@
 /* ═══════════════ HOME ═══════════════ */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C, SH } from "../../design/tokens.js";
@@ -10,7 +10,7 @@ import {
 } from "../../design/primitives.jsx";
 import { money, pay, payShort } from "../../helpers/utils.js";
 import { sanitizeHtml } from "../../helpers/sanitize.js";
-import { CATS } from "../../store/seed/constants.js";
+import { CATS, PLANS } from "../../store/seed/constants.js";
 import { SEED_BLOGS } from "../../store/seed/blogs.js";
 import { JobCard, TrainingCard, BlogCard, EmpMark } from "../shared/cards.jsx";
 
@@ -37,6 +37,7 @@ export function HomePage(){
   const industryCounts=live.reduce((a,j)=>{a[j.cat]=(a[j.cat]||0)+1;return a;},{});
   const topIndustries=Object.entries(industryCounts).sort((a,b)=>b[1]-a[1]).slice(0,6)
     .map(([id,n])=>({...CATS.find(c=>c.id===id),n}));
+  const hiringEmployerCount=new Set(live.map(j=>j.e)).size;
 
   const go=()=>{A.setSearch({q,where,cats:[]});A.go("search");};
   const pad=mob?"py-13 px-4":"py-20 px-8";
@@ -177,7 +178,7 @@ export function HomePage(){
     <section className={`bg-white border-y border-line-soft ${mob?"py-10 px-4":"py-14 px-8"}`}>
       <div className={wrapCls}>
         <div className={`grid text-center ${mob?"grid-cols-2 gap-6":"grid-cols-4 gap-8"}`}>
-          {[[`${(live.length*712).toLocaleString()}+`,"Live openings across Canada"],["4,180","Employers actively hiring"],["100%","Wages published on every listing"],["11 days","Average time to hire"]].map(([v,l])=>
+          {[[live.length.toLocaleString(),"Live openings across Canada"],[hiringEmployerCount.toLocaleString(),"Employers actively hiring"],["100%","Wages published on every listing"],["11 days","Average time to hire"]].map(([v,l])=>
             <div key={l}><div className={`font-extrabold text-brand tracking-tight leading-none ${mob?"text-3xl":"text-5xl"}`}>{v}</div>
               <div className={`text-text-2 font-medium tracking-tight ${mob?"text-xs mt-2.5":"text-sm mt-3.5"}`}>{l}</div></div>)}</div>
       </div>
@@ -192,7 +193,7 @@ export function HomePage(){
             data-card className={`flex flex-col gap-2.5 rounded-xl cursor-pointer border border-line bg-white text-left hover:border-brand hover:bg-tint transition-colors duration-150 ${mob?"p-3.5":"p-4"}`}>
             <span className="w-9 h-9 rounded-lg bg-wash text-brand flex items-center justify-center shrink-0"><I n={c.icon} s={18}/></span>
             <div><div className="text-sm font-semibold text-text tracking-tight mb-0.5">{c.label}</div>
-              <div className="text-xs text-text-3">{c.n.toLocaleString()} jobs</div></div></button>)}</div>
+              <div className="text-xs text-text-3">{(industryCounts[c.id]||0).toLocaleString()} jobs</div></div></button>)}</div>
       </div>
     </section>
 
@@ -735,10 +736,11 @@ export function AboutPage(){
             Engineers, designers, employer partnerships, support. Remote across Canada. Real ownership from day one.</p>
           <div className="flex flex-col gap-2.5 mb-7">
             {[["Senior Product Engineer","Remote · Full-time"],["Employer Success Manager","Toronto · Full-time"],["Designer, Growth","Remote · Full-time"]].map(([r,l])=>
-              <div key={r} className="flex justify-between items-center py-3.5 px-5 bg-bg rounded-xl border border-line">
+              <button key={r} onClick={()=>{A.setContactPrefill({topic:"General",msg:`I'm interested in applying for: ${r}.`});A.go("contact");}}
+                className="flex justify-between items-center py-3.5 px-5 bg-bg rounded-xl border border-line cursor-pointer text-left w-full hover:border-brand hover:bg-tint transition-colors duration-150">
                 <div><div className="text-sm font-semibold text-text">{r}</div>
                   <div className="text-xs text-text-3 mt-1">{l}</div></div>
-                <I n="chevR" s={16} c={C.text3}/></div>)}</div>
+                <I n="chevR" s={16} c={C.text3}/></button>)}</div>
           <Btn kind="primary" iconR="arrowR" onClick={()=>A.go("contact")}>See all openings</Btn></div>
       </div>
     </section>
@@ -770,7 +772,9 @@ export function AboutPage(){
 }
 export function ContactPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
-  const [f,setF]=useState({name:A.user?.name||"",email:A.user?.email||"",topic:"General",msg:""});
+  const [f,setF]=useState({name:A.user?.name||"",email:A.user?.email||"",
+    topic:A.contactPrefill?.topic||"General",msg:A.contactPrefill?.msg||""});
+  useEffect(()=>{if(A.contactPrefill)A.setContactPrefill(null);},[]);
   const [err,setErr]=useState({}); const [sent,setSent]=useState(false);
   const set=(k,v)=>{setF(p=>({...p,[k]:v}));setErr(e=>({...e,[k]:undefined}));};
   const submit=()=>{const e={};
@@ -778,7 +782,11 @@ export function ContactPage(){
     if(!f.email.includes("@"))e.email="Enter a valid email";
     if(f.msg.trim().length<10)e.msg="A bit more, please";
     setErr(e); if(Object.keys(e).length)return;
-    A.logActivity("contact.submitted",`Contact: ${f.topic}`); setSent(true);};
+    /* No dedicated contact-inbox store exists yet, so the full submission (not just the topic)
+       goes into the activity log, which admins can already search/read via Activity Log —
+       previously the actual message text was discarded entirely. */
+    A.logActivity("contact.submitted",`Contact (${f.topic}) from ${f.name} <${f.email}>: "${f.msg.trim()}"`);
+    setSent(true);};
   const pad=mob?"py-14 px-4":"py-24 px-8";
 
   if(sent) return <div className={`bg-white ${pad}`}>
@@ -915,11 +923,11 @@ export function LegalPage({kind}){
 export function PricingPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const plans=[
-    {n:"Free",p:0,best:false,tag:"Try it out",summary:"For solo hiring or trying NorthHire before committing.",
-     f:["1 active job posting","30 applications per month","Applicant pipeline with match scoring","Basic analytics","Verified employer badge","Email support"]},
-    {n:"Growth",p:149,best:true,tag:"Recommended for most",summary:"Everything a growing team needs to run a real hiring pipeline.",
+    {n:"Free",p:PLANS.Free.price,best:false,tag:"Try it out",summary:"For solo hiring or trying NorthHire before committing.",
+     f:["1 active job posting","Applicant pipeline with match scoring","Basic analytics","Verified employer badge","Email support"]},
+    {n:"Growth",p:PLANS.Growth.price,best:true,tag:"Recommended for most",summary:"Everything a growing team needs to run a real hiring pipeline.",
      f:["10 active job postings","Unlimited applications","Direct candidate messaging","Interview scheduling","Talent pool (reverse match)","CSV bulk job import","Full analytics dashboard","2 featured job upgrades per month","Employer branded page","5 recruiter seats","Priority support"]},
-    {n:"Enterprise",p:499,best:false,tag:"For large teams",summary:"Unlimited hiring + the full NorthHire HR Suite for running your whole workforce.",
+    {n:"Enterprise",p:PLANS.Enterprise.price,best:false,tag:"For large teams",summary:"Unlimited hiring + the full NorthHire HR Suite for running your whole workforce.",
      f:["Unlimited job postings & applications","Unlimited featured upgrades","Unlimited recruiter seats","Full analytics with trend history","Custom employer branding (colors, hero)","API access","Single Sign-On (SAML / OIDC)","Dedicated account manager","","NorthHire HR Suite included:","• Employee directory & profiles","• Attendance & punch-in/out","• Leave management & approvals","• Tasks, calendar, events & trainings","• Internal chat (1:1 & groups)","• Invoices, salary, notifications","• Role management (Admin/HR/Finance/Employee)","• Feature toggles per module","• Sync with public NorthHire profiles"]}
   ];
   const faq=[
