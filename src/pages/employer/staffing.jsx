@@ -3,7 +3,7 @@ import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
-import { Page, Btn, Tag, Stat, Card, Lbl, Empty, SmartPortrait, Modal, Banner, H1, Field, Input, Sel, Area } from "../../design/primitives.jsx";
+import { Page, Btn, Tag, Stat, Card, Lbl, Empty, SmartPortrait, Modal, Banner, H1, Field, Input, Sel, Area, usePagination, Pagination } from "../../design/primitives.jsx";
 import { PROVS, PCODE } from "../../store/seed/constants.js";
 import { invoiceTone, timesheetTone } from "../../helpers/statusTone.js";
 
@@ -170,6 +170,7 @@ export function EmpStaffingTimesheets(){
   const asns=A.clientAssignments(client.id).map(a=>a.id);
   const list=A.timesheets.filter(t=>asns.includes(t.assignment)).sort((a,b)=>b.weekStart.localeCompare(a.weekStart));
   const pending=list.filter(t=>t.status==="submitted");
+  const pg=usePagination(list,20);
 
   return <Page wide>
     <H1 sub={`${pending.length} submitted, ${list.filter(t=>t.status==="approved").length} approved`}>Timesheets to review</H1>
@@ -180,7 +181,7 @@ export function EmpStaffingTimesheets(){
           {["Week","Worker","Hours","Details","Status","Actions"].map(h=>
             <th key={h} className="py-3 px-3.5 text-xs font-bold text-text-3 tracking-wide uppercase">{h}</th>)}
         </tr></thead>
-        <tbody>{list.map(t=>{const w=A.worker(t.worker); const person=w?(A.people||[]).find(p=>p.id===w.personId):null;
+        <tbody>{pg.pageItems.map(t=>{const w=A.worker(t.worker); const person=w?(A.people||[]).find(p=>p.id===w.personId):null;
           const totalHrs=A.timesheetTotal(t);
           return <tr key={t.id} className="border-b border-line-soft">
             <td className="py-3 px-3.5 text-xs text-text-2 font-mono">{t.weekStart}</td>
@@ -205,6 +206,7 @@ export function EmpStaffingTimesheets(){
         </tbody>
       </table></div>
     </Card>
+    <Pagination {...pg}/>
     {returning&&<Modal onClose={()=>setReturning(null)} title="Return timesheet">
       <div className="flex flex-col gap-3.5">
         <Field label="Reason for the worker / agency" required>
@@ -224,6 +226,7 @@ export function EmpStaffingInvoices(){
   const client=A.staffingClientByEmployerId(A.company?.id);
   if(!client)return <Page><Empty icon="file" title="Not a staffing client" body="Contact us to set up staffing services."/></Page>;
   const invoices=A.staffingInvoices.filter(i=>i.client===client.id).sort((a,b)=>b.issued.localeCompare(a.issued));
+  const pg=usePagination(invoices,20);
 
   return <Page wide>
     <H1 sub="From NorthHire Staffing. Weekly cycle. HST included per province.">Staffing invoices</H1>
@@ -234,7 +237,7 @@ export function EmpStaffingInvoices(){
           {["Number","Week","Subtotal","HST","Total","Due","Status"].map(h=>
             <th key={h} className="py-3 px-3.5 text-xs font-bold text-text-3 tracking-wide uppercase">{h}</th>)}
         </tr></thead>
-        <tbody>{invoices.map(inv=>{const daysOverdue=inv.status==="overdue"&&inv.due?Math.floor((Date.now()-new Date(inv.due).getTime())/864e5):0;
+        <tbody>{pg.pageItems.map(inv=>{const daysOverdue=inv.status==="overdue"&&inv.due?Math.floor((Date.now()-new Date(inv.due).getTime())/864e5):0;
           return <tr key={inv.id} className="border-b border-line-soft">
             <td className="py-3 px-3.5 text-xs text-text-2 font-mono">{inv.number}</td>
             <td className="py-3 px-3.5 text-xs text-text-3">{inv.weekStart}</td>
@@ -248,6 +251,7 @@ export function EmpStaffingInvoices(){
         </tbody>
       </table></div>
     </Card>
+    <Pagination {...pg}/>
   </Page>;
 }
 
@@ -257,11 +261,12 @@ export function EmpStaffingAssignments(){
   const client=A.staffingClientByEmployerId(A.company?.id);
   if(!client)return <Page><Empty icon="activity" title="Not a staffing client" body="Contact us to set up staffing services."/></Page>;
   const list=A.clientAssignments(client.id).sort((a,b)=>b.startDate.localeCompare(a.startDate));
+  const pg=usePagination(list,18);
 
   return <Page wide>
     <H1 sub="Every worker deployed to your site — active and past.">Active assignments</H1>
     <div className="grid gap-3" style={{gridTemplateColumns:mob?"1fr":"repeat(auto-fill,minmax(340px,1fr))"}}>
-      {list.map(a=>{const w=A.worker(a.worker); const person=w?(A.people||[]).find(p=>p.id===w.personId):null;
+      {pg.pageItems.map(a=>{const w=A.worker(a.worker); const person=w?(A.people||[]).find(p=>p.id===w.personId):null;
         return <Card key={a.id} pad={mob?18:22} style={{borderRadius:14}}>
           <div className="flex gap-3 items-center mb-3">
             <SmartPortrait seed={person?.seed||0} size={44} radius={11}/>
@@ -280,6 +285,7 @@ export function EmpStaffingAssignments(){
         </Card>;})}
       {list.length===0&&<div className="col-span-full"><Empty icon="activity" title="No assignments yet" body="Request workers to start filling roles."/></div>}
     </div>
+    <Pagination {...pg}/>
   </Page>;
 }
 
@@ -288,11 +294,12 @@ export function EmpStaffingRequests(){
   const client=A.staffingClientByEmployerId(A.company?.id);
   if(!client)return <Page><Empty icon="plus" title="Not a staffing client" body="Contact us to set up staffing services."/></Page>;
   const orders=A.jobOrders.filter(j=>j.client===client.id).sort((a,b)=>b.createdAt-a.createdAt);
+  const pg=usePagination(orders,18);
 
   return <Page wide>
     <H1 sub="Your requests for workers. NorthHire Staffing fills these from our bench.">Job order history</H1>
     <div className="grid gap-3" style={{gridTemplateColumns:mob?"1fr":"repeat(auto-fill,minmax(340px,1fr))"}}>
-      {orders.map(jo=><Card key={jo.id} pad={mob?18:22} style={{borderRadius:14}}>
+      {pg.pageItems.map(jo=><Card key={jo.id} pad={mob?18:22} style={{borderRadius:14}}>
         <div className="flex gap-2 mb-2.5 flex-wrap">
           <Tag tone={jo.urgency==="high"?"danger":jo.urgency==="medium"?"warn":"neutral"} sm>{jo.urgency}</Tag>
           <Tag tone={jo.status==="open"?"brand":jo.status==="filled"?"ok":"neutral"} sm>{jo.status}</Tag>
@@ -306,5 +313,6 @@ export function EmpStaffingRequests(){
       </Card>)}
       {orders.length===0&&<div className="col-span-full"><Empty icon="briefcase" title="No requests yet" body="Use the 'Request workers' button on Staffing dashboard to submit your first."/></div>}
     </div>
+    <Pagination {...pg}/>
   </Page>;
 }
