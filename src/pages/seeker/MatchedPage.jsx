@@ -29,7 +29,7 @@ export function MatchedPage(){
                 <span className={`font-bold text-brand tracking-tight ${mob?"text-lg":"text-xl"}`}>{pay(j)}</span>
                 <span className="text-sm text-text-2">{payUnit(j)}</span></div>
               <div className="flex flex-wrap gap-2 mt-3.5">
-                {A.matchReasons(j).slice(0,3).map(r=><Tag key={r} tone="ok" sm icon="check">{r}</Tag>)}</div></div>
+                {A.matchReasons(j).map(r=><Tag key={r} tone="ok" sm icon="check">{r}</Tag>)}</div></div>
             <Ring v={s} size={mob?48:60} label="Match"/></div></div>;})}</div></section>;
 
   return <div className="bg-white min-h-full">

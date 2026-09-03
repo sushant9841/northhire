@@ -123,13 +123,17 @@ export function WorkerTimesheet(){
 
   const total=Object.values(hours).reduce((s,h)=>s+(Number(h)||0),0);
   const asn=A.assignment(asnId);
-  const regHrs=Math.max(0,total-otHours);
-  const gross=asn?regHrs*asn.payRate+otHours*asn.payRate*1.5:0;
+  /* otHours is clamped on entry, but if daily hours are edited afterward (lowering total) a
+     stale otHours could exceed the new total - re-clamp at the point of use so gross pay can
+     never be computed from more overtime hours than were actually worked. */
+  const otHrs=Math.min(otHours,total);
+  const regHrs=Math.max(0,total-otHrs);
+  const gross=asn?regHrs*asn.payRate+otHrs*asn.payRate*1.5:0;
   const locked=existing&&(existing.status==="submitted"||existing.status==="approved"||existing.status==="paid");
 
-  const save=()=>{const r=A.upsertTimesheetDraft(asnId,worker.id,weekStart,hours,otHours,notes);
+  const save=()=>{const r=A.upsertTimesheetDraft(asnId,worker.id,weekStart,hours,otHrs,notes);
     if(r.ok)A.toast("Draft saved.");};
-  const submit=()=>{A.upsertTimesheetDraft(asnId,worker.id,weekStart,hours,otHours,notes);
+  const submit=()=>{A.upsertTimesheetDraft(asnId,worker.id,weekStart,hours,otHrs,notes);
     const t=A.timesheets.find(t=>t.assignment===asnId&&t.weekStart===weekStart);
     if(t){const r=A.submitTimesheet(t.id); if(r.ok)A.toast("Timesheet submitted for supervisor approval.","ok");}};
 
@@ -163,14 +167,14 @@ export function WorkerTimesheet(){
           <Field key={k} label={l}>
             <Input type="number" step="0.5" min="0" max="16" value={hours[k]||0}
               disabled={locked}
-              onChange={e=>setHours(h=>({...h,[k]:Number(e.target.value)||0}))}/>
+              onChange={e=>{const v=Math.min(16,Math.max(0,Number(e.target.value)||0)); setHours(h=>({...h,[k]:v}));}}/>
           </Field>)}
       </div>
 
       <div className={`grid gap-3 mb-3.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
         <Field label="Overtime hours (of total)" hint="Hours beyond 44/wk in Ontario. Paid at 1.5×.">
           <Input type="number" step="0.5" min="0" max={total} value={otHours} disabled={locked}
-            onChange={e=>setOtHours(Number(e.target.value)||0)}/>
+            onChange={e=>setOtHours(Math.min(total,Math.max(0,Number(e.target.value)||0)))}/>
         </Field>
         <Field label="Notes for supervisor">
           <Input value={notes} disabled={locked} onChange={e=>setNotes(e.target.value)} placeholder="e.g. Left early Wed for medical"/>

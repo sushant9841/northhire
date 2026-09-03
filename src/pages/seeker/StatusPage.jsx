@@ -2,15 +2,47 @@ import { useState } from "react";
 import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
-import { Btn, Card, Tag, Bar, Stat, Tabs, Empty, H1, Page } from "../../design/primitives.jsx";
+import { Btn, Card, Tag, Bar, Stat, Tabs, Empty, H1, Page, ConfirmDialog, Modal } from "../../design/primitives.jsx";
 import { pay, payShort } from "../../helpers/utils.js";
 import { STAGES } from "../../store/seed/constants.js";
 import { EmpMark } from "../shared/cards.jsx";
+
+function AnswersModal({app:a,job:j,onClose}){
+  const rows=[["Availability",a.avail],["Pay expectation",a.expect],["Cover note",a.letter],["Meets requirement",a.meets]].filter(([,v])=>v);
+  return <Modal onClose={onClose} title={`Your application — ${j.t}`}>
+    <div className="flex flex-col gap-4">
+      {rows.length===0?<div className="text-sm text-text-3">No additional answers were submitted with this application.</div>
+        :rows.map(([label,v])=><div key={label}>
+          <div className="text-xs font-bold text-text-3 tracking-wide uppercase mb-1">{label}</div>
+          <div className="text-sm text-text leading-relaxed">{v}</div></div>)}
+    </div>
+  </Modal>;
+}
+
+function HistoryModal({app:a,onClose}){
+  const hist=[...(a.history||[])].reverse();
+  return <Modal onClose={onClose} title="Application timeline">
+    <div className="flex flex-col gap-3">
+      {hist.length===0?<div className="text-sm text-text-3">No history recorded yet.</div>
+        :hist.map((h,i)=><div key={i} className="flex gap-3">
+          <div className="flex flex-col items-center pt-1">
+            <div className="w-2.5 h-2.5 rounded-full bg-brand shrink-0"/>
+            {i<hist.length-1&&<div className="w-px flex-1 bg-line-soft mt-1"/>}</div>
+          <div className="pb-3 min-w-0">
+            <div className="text-sm font-semibold text-text">{h.stage}</div>
+            <div className="text-xs text-text-3 mt-0.5">{h.at}</div>
+            <div className="text-sm text-text-2 mt-1">{h.note}</div></div></div>)}
+    </div>
+  </Modal>;
+}
 
 /* ═══════════════ SEEKER: STATUS · ALERTS · PROFILE · SETTINGS ═══════════════ */
 export function StatusPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [tab,setTab]=useState("all");
+  const [withdrawing,setWithdrawing]=useState(null);
+  const [viewingAnswers,setViewingAnswers]=useState(null);
+  const [viewingHistory,setViewingHistory]=useState(null);
   const mine=A.myApps;
   const counts=mine.reduce((m,a)=>({...m,[a.stage]:(m[a.stage]||0)+1}),{});
   const list=tab==="all"?mine:mine.filter(a=>a.stage===tab);
@@ -51,9 +83,17 @@ export function StatusPage(){
                   <div className={`text-xs ${k<=idx?"text-text-2":"text-text-3"} ${k===idx?"font-bold":"font-normal"}`}>{s}</div></div>)}</div></div>}
             <div className="py-3 px-5 border-t border-line-soft flex gap-2.5 flex-wrap">
               <Btn kind="outline" size="sm" iconR="chevR" onClick={()=>A.openJob(j.id)}>View job</Btn>
-              {a.stage!=="Withdrawn"&&a.stage!=="Offer"&&<Btn kind="ghost" size="sm" onClick={()=>A.withdraw(a.id)}>Withdraw</Btn>}
+              <Btn kind="ghost" size="sm" icon="file" onClick={()=>setViewingAnswers({app:a,job:j})}>Your answers</Btn>
+              {(a.history?.length||0)>1&&<Btn kind="ghost" size="sm" icon="clock" onClick={()=>setViewingHistory(a)}>Timeline</Btn>}
+              {a.stage!=="Withdrawn"&&a.stage!=="Offer"&&<Btn kind="ghost" size="sm" onClick={()=>setWithdrawing(a)}>Withdraw</Btn>}
               {a.stage==="Offer"&&<Btn kind="ok" size="sm" icon="check" onClick={()=>A.acceptOffer(a.id)}>Accept offer</Btn>}
             {a.stage==="Withdrawn"&&a.withdrawnAt&&(Date.now()-a.withdrawnAt<7*24*60*60*1000)&&
               <Btn kind="outline" size="sm" icon="refresh" onClick={()=>A.restoreApp(a.id)}>Restore</Btn>}</div></Card>;})}</div>}
+    <ConfirmDialog open={!!withdrawing} onClose={()=>setWithdrawing(null)} confirmLabel="Withdraw"
+      title="Withdraw this application?" onConfirm={()=>A.withdraw(withdrawing.id)}>
+      You can restore it within 7 days from this page if you change your mind.
+    </ConfirmDialog>
+    {viewingAnswers&&<AnswersModal app={viewingAnswers.app} job={viewingAnswers.job} onClose={()=>setViewingAnswers(null)}/>}
+    {viewingHistory&&<HistoryModal app={viewingHistory} onClose={()=>setViewingHistory(null)}/>}
   </Page>;
 }

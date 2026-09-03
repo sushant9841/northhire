@@ -3,7 +3,7 @@ import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C, FONT, SH } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
-import { Btn, Tag, Card, Input, Field, Banner, H2, Empty, Tabs, SmartPortrait, RichText, Page } from "../../design/primitives.jsx";
+import { Btn, Tag, Card, Input, Field, Banner, H2, Empty, Tabs, SmartPortrait, RichText, Page, ConfirmDialog } from "../../design/primitives.jsx";
 import { uid } from "../../helpers/utils.js";
 import { sanitizeHtml } from "../../helpers/sanitize.js";
 import { CV_TEMPLATES } from "../../store/seed/constants.js";
@@ -118,6 +118,7 @@ export function CvEditPage(){
   const cv=A.cvs.find(c=>c.id===A.cvId);
   const [d,setD]=useState(cv?{...cv}:null);
   const [sec,setSec]=useState("basics");
+  const [confirmLeave,setConfirmLeave]=useState(false);
   useEffect(()=>{if(cv)setD({...cv});},[A.cvId]);
   if(!A.settings.cvBuilder)return <Page><Empty icon="lock" title="CV builder is temporarily unavailable"
     body="The platform administrator has turned the CV builder off for all job seekers." action={<Btn kind="primary" onClick={()=>A.go("cvs")}>Back</Btn>}/></Page>;
@@ -145,7 +146,7 @@ export function CvEditPage(){
           <Input value={d.name} onChange={e=>set("name",e.target.value)} placeholder="CV name, e.g. Trades CV"
             style={{fontWeight:640,fontSize:15,border:"none",padding:"6px 0",boxShadow:"none"}}/></div>
         <div className="flex gap-2.5 flex-wrap">
-          <Btn kind="ghost" size="sm" icon="chevL" onClick={()=>A.go("cvs")}>Back to CVs</Btn>
+          <Btn kind="ghost" size="sm" icon="chevL" onClick={()=>dirty?setConfirmLeave(true):A.go("cvs")}>Back to CVs</Btn>
           <Btn kind="outline" size="sm" icon="download" onClick={()=>A.printCv(d)}>Print / Save as PDF</Btn>
           <Btn kind="primary" size="sm" icon="check" disabled={!dirty} onClick={()=>A.saveCv(d)}>{dirty?"Save":"Saved"}</Btn></div></div></div>
     <div className={`max-w-site mx-auto grid items-start gap-5 ${mob?"grid-cols-1 pt-4 px-4 pb-8":"grid-cols-[1fr_400px] pt-6 px-7 pb-11"}`}>
@@ -154,6 +155,7 @@ export function CvEditPage(){
         <Card pad={mob?18:24}>
           {sec==="basics"&&<div className="flex flex-col gap-3.5">
             <H2 sub="Pulled from your profile — edit here for this CV only">Contact details</H2>
+            {!isPrimary&&<Banner tone="neutral" icon="lock">Name and email are locked on this CV — they're set from your first CV so every CV stays consistent. Edit them there, or in your main profile.</Banner>}
             <div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
               <Field label="Full name" hint={isPrimary?null:"Locked — edit in your main profile to change everywhere."}>
                 <Input value={d.name0||A.user.name} onChange={e=>set("name0",e.target.value)} disabled={!isPrimary} placeholder={A.user.name}/></Field>
@@ -254,5 +256,9 @@ export function CvEditPage(){
           <div className={`bg-bg p-3.5 overflow-y-auto ${mob?"max-h-105":"max-h-155"}`}>
             <div className="shadow-md rounded overflow-hidden bg-white">
               <CvPreview cv={d} u={A.user} scale={0.86} mob={mob}/></div></div></Card></div>
-    </div></div>;
+    </div>
+    <ConfirmDialog open={confirmLeave} onClose={()=>setConfirmLeave(false)} kind="primary" confirmLabel="Discard changes"
+      title="Discard unsaved changes?" onConfirm={()=>A.go("cvs")}>
+      You have unsaved edits to this CV. Leaving now will discard them.
+    </ConfirmDialog></div>;
 }

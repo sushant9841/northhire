@@ -84,9 +84,12 @@ export function JobDetailPage(){
 
         {!mob&&<div className="sticky top-20 flex flex-col gap-4">
           <div className="bg-white rounded-3xl p-6 border border-line">
-            {A.user?.role==="seeker"&&<div className="flex items-center gap-3.5 pb-5 mb-5 border-b border-line-soft">
-              <Ring v={score} size={56}/><div><div className="text-sm font-bold text-text">Your match score</div>
-                <div className="text-sm text-text-2 mt-1">From your skills and preferences</div></div></div>}
+            {A.user?.role==="seeker"&&<div className="pb-5 mb-5 border-b border-line-soft">
+              <div className="flex items-center gap-3.5">
+                <Ring v={score} size={56}/><div><div className="text-sm font-bold text-text">Your match score</div>
+                  <div className="text-sm text-text-2 mt-1">From your skills and preferences</div></div></div>
+              {A.matchReasons(job).length>0&&<div className="flex flex-wrap gap-1.5 mt-3.5">
+                {A.matchReasons(job).map(r=><Tag key={r} tone="ok" sm icon="check">{r}</Tag>)}</div>}</div>}
             <Btn kind={applied?"soft":"primary"} size="lg" full disabled={applied} icon={applied?"check":"send"} onClick={apply}>
               {applied?"Application sent":"Apply for this job"}</Btn>
             <div className="flex gap-2.5 mt-3">

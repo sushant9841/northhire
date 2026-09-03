@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C, SH } from "../../design/tokens.js";
@@ -10,7 +10,7 @@ import { JobCard } from "../shared/cards.jsx";
 import { matchJobsToFilters } from "../../helpers/jobSearch.js";
 
 /* ═══════════════ SEARCH · MATCHED · SAVED · EMPLOYERS ═══════════════ */
-function Filters({f,set,clear,n}){
+function Filters({f,set,clear,n,q,where}){
   const A=use();
   const tog=(k,v)=>{const c=f[k]||[];set({...f,[k]:c.includes(v)?c.filter(x=>x!==v):[...c,v]});};
   const G=({t,children})=><div className="pb-6 mb-6 border-b border-line-soft"><Lbl>{t}</Lbl>{children}</div>;
@@ -19,11 +19,16 @@ function Filters({f,set,clear,n}){
     <span className={`w-5 h-5 rounded-md shrink-0 border-2 flex items-center justify-center transition duration-150 ${on?"border-brand bg-brand":"border-line bg-white"}`}>{on&&<I n="check" s={12} c="#fff" w={3}/>}</span>
     <span className={`flex-1 text-sm text-text ${on?"font-semibold":"font-medium"}`}>{label}</span>
     {num!=null&&<span className="text-xs text-text-3">{num}</span>}</button>;
+  /* Sector counts previously ignored every OTHER active filter (type/mode/experience/province/pay/
+     search text), so a count could look wrong relative to what the page was actually showing.
+     Compute each sector's count against the same result set the page uses, minus the sector filter
+     itself - the standard faceted-search pattern. */
+  const withoutCats=matchJobsToFilters(A.jobs,{q,where,...f,cats:[]},{expandQuery:A.expandQuery,emp:A.emp});
   return <div>
     <div className="flex justify-between items-center mb-6">
       <div className="text-base font-bold text-text tracking-tight">Filters</div>
       {n>0&&<button onClick={clear} className="bg-transparent border-0 cursor-pointer text-sm text-brand font-semibold p-0">Clear ({n})</button>}</div>
-    <G t="Sector">{CATS.map(c=><R key={c.id} label={c.label} num={A.jobs.filter(j=>j.cat===c.id&&j.status==="live").length}
+    <G t="Sector">{CATS.map(c=><R key={c.id} label={c.label} num={withoutCats.filter(j=>j.cat===c.id).length}
       on={(f.cats||[]).includes(c.id)} onClick={()=>tog("cats",c.id)}/>)}</G>
     <G t="Employment type">{["Full Time","Part Time","Contract","Seasonal","Apprenticeship"].map(t=>
       <R key={t} label={t} on={(f.types||[]).includes(t)} onClick={()=>tog("types",t)}/>)}</G>
@@ -48,6 +53,14 @@ export function SearchPage(){
   useEffect(()=>{setQ(A.search.q||"");setWhere(A.search.where||"");
     setF({cats:A.search.cats||[],types:A.search.types||[],modes:A.search.modes||[],
       exps:A.search.exps||[],prov:A.search.prov||"",minPay:A.search.minPay||""});},[A.search]);
+  /* Filters lived only in this component's local state - opening a job and pressing Back
+     re-mounted the page seeded from the stale global A.search, silently dropping every filter
+     except whatever q/where/cats the ORIGINAL entry point had set. Write the live filter state
+     back to the shared store on unmount (not on every keystroke, to avoid ping-ponging against
+     the read-effect above) so returning to this page restores exactly where the user left off. */
+  const latestFilters=useRef();
+  latestFilters.current={q,where,...f};
+  useEffect(()=>()=>{A.setSearch(latestFilters.current);},[]);
   const n=(f.cats?.length||0)+(f.types?.length||0)+(f.modes?.length||0)+(f.exps?.length||0)+(f.prov?1:0)+(f.minPay?1:0);
   const clear=()=>setF({cats:[],types:[],modes:[],exps:[],prov:"",minPay:""});
   const res=useMemo(()=>{
@@ -80,7 +93,7 @@ export function SearchPage(){
     <section className={`bg-bg min-h-100 ${mob?"pt-5 px-4 pb-14":"pt-8 px-8 pb-24"}`}>
       <div className={`max-w-site mx-auto grid items-start ${mob?"grid-cols-1 gap-0":"grid-cols-[280px_1fr] gap-8"}`}>
         {!mob&&<div className="bg-white rounded-3xl p-6 border border-line sticky top-20">
-          <Filters f={f} set={setF} clear={clear} n={n}/></div>}
+          <Filters f={f} set={setF} clear={clear} n={n} q={q} where={where}/></div>}
         <div>
           <div className="flex justify-between items-center mb-5 gap-3 flex-wrap">
             <div className="text-base text-text-2"><strong className={`text-text font-bold tracking-tight ${mob?"text-lg":"text-2xl"}`}>{res.length}</strong> {res.length===1?"job":"jobs"}
@@ -106,7 +119,7 @@ export function SearchPage(){
       </div>
     </section>
 
-    {mob&&panel&&<Modal onClose={()=>setPanel(false)} title="Filters"><Filters f={f} set={setF} clear={clear} n={n}/>
+    {mob&&panel&&<Modal onClose={()=>setPanel(false)} title="Filters"><Filters f={f} set={setF} clear={clear} n={n} q={q} where={where}/>
       <Btn kind="primary" size="lg" full onClick={()=>setPanel(false)} style={{marginTop:14}}>Show {res.length} {res.length===1?"job":"jobs"}</Btn></Modal>}
 
   </div>;

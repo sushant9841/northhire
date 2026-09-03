@@ -170,7 +170,7 @@ export function useStore(){
     const target=u.payUnit===j.unit?u.payMin:u.payUnit==="hr"?u.payMin*2080:u.payMin;
     if(j.unit===u.payUnit&&j.lo>=target)r.push("Above your pay target");
     if(u.cat===j.cat)r.push("Your sector");
-    return r.slice(0,4);
+    return r;
   };
 
   /* --- seeker derived --- */
@@ -619,36 +619,42 @@ export function useStore(){
     setApplications(l=>[...l,{id:uid("a"),job:j.id,user:user.id,stage:"Applied",at:"Just now",
       note:"Waiting for employer review",avail:applyDraft.avail,expect:applyDraft.expect,letter:applyDraft.letter,
       cv:applyDraft.cv||defaultCv?.id||null,
-      withdrawnAt:null,previousStage:null}]);
+      withdrawnAt:null,previousStage:null,
+      history:[{stage:"Applied",note:"Waiting for employer review",at:nowStamp()}]}]);
     notify({icon:"send",title:`Application sent to ${e.name}`,body:`Your application for ${j.t} is now in their pipeline.`,for:user.id,link:"status"});
     log("application.create",`Applied to ${j.t} at ${e.name}`,"send");
     go("applyDone");
   };
   const withdraw=id=>{
     setApplications(l=>l.map(a=>a.id===id?{...a,previousStage:a.stage,stage:"Withdrawn",
-      note:"You withdrew this application",withdrawnAt:Date.now()}:a));
+      note:"You withdrew this application",withdrawnAt:Date.now(),
+      history:[...(a.history||[]),{stage:"Withdrawn",note:"You withdrew this application",at:nowStamp()}]}:a));
     log("application.withdraw","Withdrew an application","x");
     notify({icon:"x",title:"Application withdrawn",body:"You can restore it within 7 days from My Status.",for:user?.id,link:"status"});
   };
   const restoreApp=id=>{
     setApplications(l=>l.map(a=>{if(a.id!==id)return a;
       if(!a.withdrawnAt||Date.now()-a.withdrawnAt>7*24*60*60*1000)return a;
-      return {...a,stage:a.previousStage||"Applied",note:"Restored from withdrawn",withdrawnAt:null,previousStage:null};
+      const restoredStage=a.previousStage||"Applied";
+      return {...a,stage:restoredStage,note:"Restored from withdrawn",withdrawnAt:null,previousStage:null,
+        history:[...(a.history||[]),{stage:restoredStage,note:"Restored from withdrawn",at:nowStamp()}]};
     }));
     log("application.restore","Restored a withdrawn application","refresh");
   };
   const acceptOffer=id=>{const a=applications.find(x=>x.id===id);const j=job(a.job);
-    setApplications(l=>l.map(x=>x.id===id?{...x,note:"Offer accepted — congratulations"}:x));
+    setApplications(l=>l.map(x=>x.id===id?{...x,note:"Offer accepted — congratulations",
+      history:[...(x.history||[]),{stage:"Offer",note:"Offer accepted — congratulations",at:nowStamp()}]}:x));
     notify({icon:"award",title:"Offer accepted",body:`You accepted the offer for ${j.t}.`,for:user.id,link:"status"});
     log("application.accept",`Accepted offer for ${j.t}`,"award");};
 
   const [hireOnboarding,setHireOnboarding]=useState(null); /* {app,job,person} — surfaces onboarding modal */
   const moveApp=(id,stage)=>{
     const a=applications.find(x=>x.id===id); const j=job(a.job); const e=emp(j.e);
-    setApplications(l=>l.map(x=>x.id===id?{...x,stage,note:
-      stage==="Reviewed"?"Employer reviewed your profile":stage==="Shortlisted"?"Shortlisted by the employer"
+    const stageNote=stage==="Reviewed"?"Employer reviewed your profile":stage==="Shortlisted"?"Shortlisted by the employer"
       :stage==="Interview"?"Interview stage — expect scheduling details":stage==="Offer"?"Offer extended — check your notifications"
-      :stage==="Hired"?"Welcome to the team! Onboarding details coming.":"Waiting for employer review"}:x));
+      :stage==="Hired"?"Welcome to the team! Onboarding details coming.":"Waiting for employer review";
+    setApplications(l=>l.map(x=>x.id===id?{...x,stage,note:stageNote,
+      history:[...(x.history||[]),{stage,note:stageNote,at:nowStamp()}]}:x));
     /* Filling the last opening closes the listing instead of leaving it live (and collecting
        applicants) forever — vac previously was only ever set at posting time, never decremented. */
     if(stage==="Hired"){
@@ -666,7 +672,9 @@ export function useStore(){
     }
   };
   const rejectApp=id=>{const a=applications.find(x=>x.id===id);
-    setApplications(l=>l.map(x=>x.id===id?{...x,stage:"Withdrawn",note:"The employer has decided not to move forward with your application at this time."}:x));
+    const rejectNote="The employer has decided not to move forward with your application at this time.";
+    setApplications(l=>l.map(x=>x.id===id?{...x,stage:"Withdrawn",note:rejectNote,
+      history:[...(x.history||[]),{stage:"Withdrawn",note:rejectNote,at:nowStamp()}]}:x));
     log("pipeline.reject",`Rejected ${person(a.user).name}`,"x");};
 
   const publishJob=f=>{

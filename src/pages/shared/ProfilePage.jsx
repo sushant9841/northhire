@@ -70,6 +70,15 @@ export function ProfilePage(){
 
     <Tabs items={tabs} value={tab} onChange={setTab} style={{marginBottom:18}}/>
 
+    {/* The Save/Discard controls at the bottom of this card are easy to lose track of on a long
+       tabbed form - this sticky bar keeps unsaved-changes state visible and actionable no matter
+       which tab or scroll position the user is on. */}
+    {dirty&&<div className="sticky flex items-center justify-between gap-3 bg-tint border border-line-2 rounded-xl py-2.5 px-4 mb-4 z-20" style={{top:72}}>
+      <span className="text-sm font-semibold text-brand">You have unsaved changes.</span>
+      <div className="flex gap-2">
+        <Btn kind="ghost" size="sm" onClick={()=>setD({...u})}>Discard</Btn>
+        <Btn kind="primary" size="sm" icon="check" onClick={()=>A.saveProfile(d)}>Save changes</Btn></div></div>}
+
     <Card pad={mob?24:32} style={{borderRadius:20}}>
       {tab==="about"&&<div className="flex flex-col gap-4">
         <H2>Personal details</H2>
