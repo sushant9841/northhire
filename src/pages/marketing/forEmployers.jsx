@@ -24,10 +24,16 @@ export function ForEmployersPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [openFaq,setOpenFaq]=useState(null);
 
-  /* Deep-link on load, e.g. arriving via /forEmployers#staffing */
+  /* Deep-link on load, e.g. arriving via /forEmployers#staffing. Also listen for hashchange -
+     the footer's "Overview" link sets the hash directly (not through React state) and calls
+     A.go("forEmployers"), which is a no-op re-render when already on this page, so a mount-only
+     effect never re-fires and the scroll silently does nothing the second time. */
   useEffect(()=>{if(typeof window==="undefined")return;
-    const h=window.location.hash?.replace("#","");
-    if(h)setTimeout(()=>_scrollTo(h),120);
+    const scrollToHash=()=>{const h=window.location.hash?.replace("#","");
+      if(h)setTimeout(()=>_scrollTo(h),120);};
+    scrollToHash();
+    window.addEventListener("hashchange",scrollToHash);
+    return ()=>window.removeEventListener("hashchange",scrollToHash);
   },[]);
 
   const products=[

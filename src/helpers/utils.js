@@ -12,3 +12,11 @@ export const _dayAgo=(n)=>{const d=new Date(); d.setDate(d.getDate()-n); return 
 export const _dayFromNow=(n)=>{const d=new Date(); d.setDate(d.getDate()+n); return _fmtDate(d);};
 export const _weekStart=(offsetWeeks=0)=>{const d=new Date(); d.setDate(d.getDate()-((d.getDay()+6)%7)-offsetWeeks*7); return _fmtDate(d);};
 export const nowStamp=()=>{const d=new Date();return d.toLocaleTimeString("en-CA",{hour:"2-digit",minute:"2-digit"});};
+/* Multi-word-tolerant text search: every word in the query must appear somewhere across the
+   given text fields, in any order - a plain single .includes() call fails on word order or
+   extra whitespace ("electrician red seal" wouldn't match "Red Seal Electrician"). */
+export const matchesQuery=(query,...fields)=>{
+  const q=query.trim().toLowerCase(); if(!q)return true;
+  const haystack=fields.join(" ").toLowerCase();
+  return q.split(/\s+/).every(word=>haystack.includes(word));
+};

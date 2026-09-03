@@ -8,7 +8,7 @@ import { I } from "../../design/icons.jsx";
 import {
   Page, Btn, Tag, Card, Input, Tabs, Empty, Bar, Lbl, Field, Area, SmartScene, SmartPortrait, ConfirmDialog,
 } from "../../design/primitives.jsx";
-import { money, pay, payShort } from "../../helpers/utils.js";
+import { money, pay, payShort, matchesQuery } from "../../helpers/utils.js";
 import { sanitizeHtml } from "../../helpers/sanitize.js";
 import { CATS, PLANS } from "../../store/seed/constants.js";
 import { SEED_BLOGS } from "../../store/seed/blogs.js";
@@ -282,7 +282,7 @@ export function BlogsPage(){
   const [cat,setCat]=useState("all"); const [q,setQ]=useState("");
   const pub=A.blogs.filter(b=>b.status==="published");
   const cats=["all",...Array.from(new Set(pub.map(b=>b.cat)))];
-  const list=pub.filter(b=>(cat==="all"||b.cat===cat)&&(!q||b.title.toLowerCase().includes(q.toLowerCase())||b.excerpt.toLowerCase().includes(q.toLowerCase())));
+  const list=pub.filter(b=>(cat==="all"||b.cat===cat)&&matchesQuery(q,b.title,b.excerpt));
   const lead=list[0];
   const pad=mob?"py-14 px-4":"py-24 px-8";
   return <div className="bg-white min-h-full">
@@ -390,7 +390,7 @@ export function TrainingsPage(){
   const pub=A.trainings.filter(t=>t.status==="published");
   const cats=["all",...Array.from(new Set(pub.map(t=>t.cat)))];
   const list=pub.filter(t=>(cat==="all"||t.cat===cat)&&(price==="all"||(price==="free"?t.price===0:t.price>0))
-    &&(!q||t.title.toLowerCase().includes(q.toLowerCase())));
+    &&matchesQuery(q,t.title));
   const pad=mob?"py-14 px-4":"py-24 px-8";
   return <div className="bg-white min-h-full">
 

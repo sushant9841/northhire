@@ -325,13 +325,18 @@ export function Card({children,style,onClick,hover,pad=24,delay=0}){
   style={{padding:pad,...style}}>{children}</div>;
 }
 export const inp = "w-full bg-white border border-line rounded-xl py-3.5 px-4 text-base text-text outline-none transition-[border-color,box-shadow] duration-150 disabled:bg-bg disabled:text-text-3 disabled:cursor-not-allowed disabled:opacity-70";
-export function Input({icon,suffix,invalid,style,...r}){
+export function Input({icon,suffix,invalid,style,type,...r}){
+ const [show,setShow]=useState(false);
+ const isPw=type==="password";
  return <div className="relative flex items-center">
   {icon&&<span className="absolute left-3.5 text-text-3 pointer-events-none flex"><I n={icon} s={17}/></span>}
-  <input {...r}
-   className={`${inp} ${icon?"pl-10":""} ${suffix?"pr-12":""} ${invalid?"border-red ring-4 ring-red-bg":"focus:border-brand focus:ring-4 focus:ring-wash"}`}
+  <input {...r} type={isPw?(show?"text":"password"):type}
+   className={`${inp} ${icon?"pl-10":""} ${suffix||isPw?"pr-12":""} ${invalid?"border-red ring-4 ring-red-bg":"focus:border-brand focus:ring-4 focus:ring-wash"}`}
    style={style}/>
-  {suffix&&<span className="absolute right-3.5 text-text-3 text-sm font-medium">{suffix}</span>}</div>;}
+  {isPw?<button type="button" onClick={()=>setShow(v=>!v)} aria-label={show?"Hide password":"Show password"}
+    className="absolute right-3.5 text-text-3 bg-transparent border-0 cursor-pointer flex p-0 hover:text-text-2">
+    <I n={show?"eyeOff":"eye"} s={17}/></button>
+   :suffix&&<span className="absolute right-3.5 text-text-3 text-sm font-medium">{suffix}</span>}</div>;}
 export function Area({style,invalid,...r}){
  return <textarea {...r}
   className={`${inp} resize-none leading-relaxed ${invalid?"border-red":"focus:border-brand focus:ring-4 focus:ring-wash"}`}

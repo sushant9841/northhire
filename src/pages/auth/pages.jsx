@@ -17,14 +17,25 @@ const SU_STEPS_EMPLOYER=[{k:"role",t:"Get started",d:"Are you looking for work, 
   {k:"account",t:"Create your account",d:"Work email and a secure password"},
   {k:"company",t:"About your company",d:"Company name, industry and size"}];
 
-export function SignupPage(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
-  const [i,setI]=useState(0); const [err,setErr]=useState({}); const [submitErr,setSubmitErr]=useState("");
-  const [d,setD]=useState({role:"",email:"",password:"",phone:"",first:"",last:"",city:"",prov:"Ontario",eligible:"",
+const SIGNUP_DRAFT_KEY="northhire.signupDraft";
+const _defaultSignupData=()=>({role:"",email:"",password:"",phone:"",first:"",last:"",city:"",prov:"Ontario",eligible:"",
     cat:"",title:"",years:"",edu:"",skills:[],draft:"",payMin:"",payUnit:"hr",types:["Full Time"],modes:["On-site"],
     startWhen:"Within 2 weeks",alerts:true,
     company:"",industry:"",size:"1-50",about:"",name:""});
+const _loadSignupDraft=()=>{try{return JSON.parse(sessionStorage.getItem(SIGNUP_DRAFT_KEY)||"null");}catch{return null;}};
+
+export function SignupPage(){
+  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const draft=_loadSignupDraft();
+  const [resumed]=useState(!!draft&&draft.i>0);
+  const [i,setI]=useState(draft?.i||0); const [err,setErr]=useState({}); const [submitErr,setSubmitErr]=useState("");
+  const [d,setD]=useState(draft?.d||_defaultSignupData());
   const STEPS=d.role==="employer"?SU_STEPS_EMPLOYER:SU_STEPS_SEEKER;
+  /* A refresh or back-button used to silently wipe an in-progress signup with no warning - persist
+     the wizard's state so it survives, and let the person explicitly discard it if they'd rather
+     start clean. */
+  useEffect(()=>{try{sessionStorage.setItem(SIGNUP_DRAFT_KEY,JSON.stringify({i,d}));}catch{}},[i,d]);
+  const startOver=()=>{try{sessionStorage.removeItem(SIGNUP_DRAFT_KEY);}catch{} setI(0); setD(_defaultSignupData()); setErr({}); setSubmitErr("");};
   const step=STEPS[i];
   const set=(k,v)=>{setD(p=>({...p,[k]:v}));setErr(e=>({...e,[k]:undefined}));setSubmitErr("");};
   const tog=(k,v)=>setD(p=>({...p,[k]:p[k].includes(v)?p[k].filter(x=>x!==v):[...p[k],v]}));
@@ -67,6 +78,7 @@ export function SignupPage(){
       const r=A.completeSignup(d);
       if(!r.ok){setSubmitErr(r.msg);return;}
     }
+    try{sessionStorage.removeItem(SIGNUP_DRAFT_KEY);}catch{}
   };
   const next=()=>{if(!validate())return; i<STEPS.length-1?setI(i+1):submit();};
 
@@ -85,11 +97,20 @@ export function SignupPage(){
           <I n="chevL" s={16} w={2}/> Back to NorthHire</button>
         <button onClick={()=>A.go("login")} className="bg-transparent border-0 cursor-pointer p-0 text-brand text-sm font-semibold">Already have an account?</button>
       </div>
+      {resumed&&<Banner tone="brand" icon="clock" style={{marginBottom:14}}
+        action={<button onClick={startOver} className="bg-transparent border-0 p-0 cursor-pointer text-sm font-semibold text-brand">Start over</button>}>
+        Picked up where you left off.</Banner>}
       {i>0&&<div className="mb-5">
         <div className="flex justify-between items-center mb-2.5">
           <span className="text-sm font-semibold text-text">Step {i} of {STEPS.length-1}</span>
           <span className="text-sm text-text-2">{Math.round((i/(STEPS.length-1))*100)}% complete</span></div>
-        <Bar v={(i/(STEPS.length-1))*100} h={7}/></div>}
+        <Bar v={(i/(STEPS.length-1))*100} h={7}/>
+        <div className="flex gap-1.5 mt-2.5">
+          {STEPS.map((s,idx)=>idx===0?null:
+            <button key={s.k} type="button" disabled={idx>i} title={idx<i?`Back to "${s.t}"`:s.t}
+              onClick={()=>idx<i&&setI(idx)}
+              className={`flex-1 h-1.5 rounded-full border-0 p-0 ${idx<i?"cursor-pointer bg-brand":idx===i?"bg-brand cursor-default":"bg-line cursor-not-allowed"}`}/>)}
+        </div></div>}
 
       <Card pad={mob?22:30} style={{borderRadius:20}}>
         <div key={step.k}>
@@ -208,7 +229,7 @@ export function SignupPage(){
         </div>
         {submitErr&&<Banner tone="danger" icon="alert" title="Sign-up failed" style={{marginTop:18}}>{submitErr}</Banner>}
         <div className="flex gap-2.5 justify-between mt-7 pt-5 border-t border-line-soft">
-          <Btn kind="ghost" icon="arrowL" onClick={()=>i===0?A.go("home"):setI(i-1)}>{i===0?"Cancel":"Back"}</Btn>
+          <Btn kind="ghost" icon="arrowL" onClick={()=>{if(i===0){try{sessionStorage.removeItem(SIGNUP_DRAFT_KEY);}catch{} A.go("home");}else setI(i-1);}}>{i===0?"Cancel":"Back"}</Btn>
           <Btn kind="primary" size="lg" iconR={i===STEPS.length-1?"check":"arrowR"} onClick={next} disabled={step.k==="role"&&!d.role}>
             {i===STEPS.length-1?(d.role==="employer"?"Create employer account":"Finish and start matching"):"Continue"}</Btn></div>
       </Card>
