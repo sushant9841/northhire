@@ -180,10 +180,10 @@ export function AgencyDashboard(){
             <div className="w-9 h-9 rounded-xl bg-white text-warn flex items-center justify-center"><I n="clock" s={18}/></div>
             <div>
               <div className="text-sm font-semibold text-text">Timesheets waiting</div>
-              <div className="text-xs text-text-2 mt-0.5">{submittedTs.length} submitted, awaiting client approval</div>
+              <div className="text-xs text-text-2 mt-0.5">{submittedTs.length} submitted, awaiting approval</div>
             </div>
           </div>
-          <Btn kind="warn" size="sm" full onClick={()=>A.go("agencyTimesheets")}>Chase supervisors</Btn>
+          <Btn kind="warn" size="sm" full onClick={()=>A.go("agencyTimesheets")}>Review pending timesheets</Btn>
         </Card>}
       </div>
     </div>
@@ -585,7 +585,7 @@ export function AgencyAssignments(){
     <Card pad={0} style={{borderRadius:14,overflow:"hidden"}}>
       <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:720}}>
         <thead><tr className="border-b-2 border-line text-left">
-          {["Worker","Client","Site","Rates","Duration","Margin","Status"].map(h=>
+          {["Worker","Client","Site","Rates","Duration","Margin","Status","Actions"].map(h=>
             <th key={h} className={TH_CLS}>{h}</th>)}
         </tr></thead>
         <tbody>{list.map(a=>{const w=A.worker(a.worker); const person=w?(A.people||[]).find(p=>p.id===w.personId):null;
@@ -607,6 +607,7 @@ export function AgencyAssignments(){
               {econ?<>${econ.margin}/hr <span className="text-text-3 font-medium">({econ.markupPct}%)</span></>:"—"}
             </td>
             <td className={TD_CLS}><Tag tone={a.status==="active"?"ok":"neutral"} sm>{a.status}</Tag></td>
+            <td className={TD_CLS}>{a.status==="active"&&<Btn kind="ghost" size="xs" onClick={()=>A.endAssignment(a.id)}>Complete</Btn>}</td>
           </tr>;})}
         </tbody>
       </table></div>
@@ -618,6 +619,7 @@ export function AgencyAssignments(){
 export function AgencyTimesheets(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [tab,setTab]=useState("submitted");
+  const [returning,setReturning]=useState(null); const [reason,setReason]=useState("");
   const list=A.timesheets.filter(t=>tab==="all"?true:t.status===tab).sort((a,b)=>b.weekStart.localeCompare(a.weekStart));
   return <div>
     <div className="mb-3.5">
@@ -650,7 +652,7 @@ export function AgencyTimesheets(){
             <td className={TD_CLS}><Tag tone={t.status==="approved"?"ok":t.status==="submitted"?"warn":t.status==="paid"?"brand":"neutral"} sm>{t.status}</Tag></td>
             <td className={TD_CLS}>
               {t.status==="submitted"&&<div className="flex gap-1">
-                <Btn kind="dangerSoft" size="xs" onClick={()=>A.rejectTimesheet(t.id,"Ask client to resubmit")}>Return</Btn>
+                <Btn kind="dangerSoft" size="xs" onClick={()=>{setReturning(t.id);setReason("");}}>Return</Btn>
                 <Btn kind="primary" size="xs" onClick={()=>A.approveTimesheet(t.id,client?.defaultSupervisorEmail||"—")}>Approve on client's behalf</Btn>
               </div>}
               {t.status==="submitted"&&<div className="text-xs text-text-3 mt-0.5" style={{fontSize:10.5}}>Chase: {client?.defaultSupervisorEmail}</div>}
@@ -660,6 +662,16 @@ export function AgencyTimesheets(){
         </tbody>
       </table></div>
     </Card>
+    {returning&&<Modal onClose={()=>setReturning(null)} title="Return timesheet">
+      <div className="flex flex-col gap-3.5">
+        <Field label="Reason for the client / worker" required>
+          <Area rows={3} value={reason} onChange={e=>setReason(e.target.value)} placeholder="e.g. Hours don't match the site sign-in sheet for Thursday — please confirm and resubmit."/></Field>
+        <div className="flex gap-2.5 justify-end">
+          <Btn kind="ghost" onClick={()=>setReturning(null)}>Cancel</Btn>
+          <Btn kind="dangerSoft" disabled={!reason.trim()} onClick={()=>{A.rejectTimesheet(returning,reason.trim());setReturning(null);}}>Return timesheet</Btn>
+        </div>
+      </div>
+    </Modal>}
   </div>;
 }
 
@@ -667,8 +679,14 @@ export function AgencyTimesheets(){
 export function AgencyPayroll(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [showRun,setShowRun]=useState(false);
-  const readyToPay=A.timesheets.filter(t=>t.status==="approved").length;
-  const readyGross=A.timesheets.filter(t=>t.status==="approved").reduce((s,t)=>s+A.timesheetGross(t),0);
+  /* The run only ever sweeps a rolling 14-day window — the "ready" count has to use the same
+     window, or an approved timesheet older than that shows as ready forever but never actually
+     gets paid. */
+  const periodStart=(()=>{const d=new Date();d.setDate(d.getDate()-14);return _fmtDate(d);})();
+  const periodEnd=_fmtDate(new Date());
+  const readyTs=A.timesheets.filter(t=>t.status==="approved"&&t.weekStart>=periodStart&&t.weekStart<periodEnd);
+  const readyToPay=readyTs.length;
+  const readyGross=readyTs.reduce((s,t)=>s+A.timesheetGross(t),0);
   return <div>
     <div className="mb-3.5">
       <div className="text-lg font-bold text-text">Staffing payroll</div>
@@ -719,8 +737,7 @@ export function AgencyPayroll(){
         <div className="flex gap-2.5 justify-end">
           <Btn kind="ghost" onClick={()=>setShowRun(false)}>Cancel</Btn>
           <Btn kind="primary" onClick={()=>{
-            const twoWksAgo=new Date(); twoWksAgo.setDate(twoWksAgo.getDate()-14);
-            A.runStaffingPayroll(_fmtDate(twoWksAgo),_fmtDate(new Date()));
+            A.runStaffingPayroll(periodStart,periodEnd);
             setShowRun(false);
           }}>Run payroll</Btn>
         </div>
@@ -734,6 +751,7 @@ export function AgencyInvoicing(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [tab,setTab]=useState("pending");
   const [showGen,setShowGen]=useState(false);
+  const [genWeek,setGenWeek]=useState(_weekStart(1));
   const list=A.staffingInvoices.filter(i=>tab==="all"?true:i.status===tab).sort((a,b)=>b.issued.localeCompare(a.issued));
 
   const kpis={
@@ -760,7 +778,7 @@ export function AgencyInvoicing(){
 
     <div className="flex justify-between items-center mb-3.5 flex-wrap gap-2.5">
       <_PillTabs items={[["pending","Pending"],["overdue","Overdue"],["paid","Paid"],["all","All"]]} value={tab} onChange={setTab}/>
-      <Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowGen(true)}>Generate weekly invoices</Btn>
+      <Btn kind="primary" size="sm" icon="plus" onClick={()=>{setGenWeek(_weekStart(1));setShowGen(true);}}>Generate weekly invoices</Btn>
     </div>
 
     <Card pad={0} style={{borderRadius:14,overflow:"hidden"}}>
@@ -794,11 +812,11 @@ export function AgencyInvoicing(){
           This will batch all approved timesheets for a given week into per-client invoices. HST/GST added per province. Emailed to each client's billing contact.
         </Banner>
         <Field label="Week starting" required>
-          <DatePicker value={_weekStart(1)} onChange={()=>{}}/>
+          <DatePicker value={genWeek} onChange={setGenWeek}/>
         </Field>
         <div className="flex gap-2.5 justify-end">
           <Btn kind="ghost" onClick={()=>setShowGen(false)}>Cancel</Btn>
-          <Btn kind="primary" onClick={()=>{A.generateStaffingInvoices(_weekStart(1)); setShowGen(false);}}>Generate</Btn>
+          <Btn kind="primary" onClick={()=>{A.generateStaffingInvoices(genWeek); setShowGen(false);}}>Generate</Btn>
         </div>
       </div>
     </Modal>}
@@ -809,6 +827,7 @@ export function AgencyInvoicing(){
 export function AgencyPlacements(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [tab,setTab]=useState("in-progress");
+  const [clawingBack,setClawingBack]=useState(null); const [clawReason,setClawReason]=useState("");
   const list=A.placements.filter(p=>tab==="all"?true:p.status===tab).sort((a,b)=>b.offeredAt.localeCompare(a.offeredAt));
   return <div>
     <div className="mb-3.5">
@@ -845,22 +864,47 @@ export function AgencyPlacements(){
           </div>
           {p.status==="clawed-back"&&<Banner tone="danger" icon="alert" title="Clawed back">
             {p.clawbackReason||"Replacement owed to client."}</Banner>}
+          {p.status==="in-progress"&&<Btn kind="primary" size="xs" full onClick={()=>A.acceptPlacement(p.id,_fmtDate(new Date()))}>Mark accepted &amp; started</Btn>}
           {p.status==="accepted"&&<Btn kind="primary" size="xs" full onClick={()=>A.invoicePlacement(p.id)}>Invoice on start</Btn>}
+          {p.status==="guaranteed"&&<Btn kind="dangerSoft" size="xs" full onClick={()=>{setClawingBack(p.id);setClawReason("");}}>Claw back (guarantee)</Btn>}
         </div>;})}
       {list.length===0&&<div style={{gridColumn:"1 / -1"}}><Empty icon="award" title="No placements in this state" body="Start with a job order and convert to placement."/></div>}
     </div>
+    {clawingBack&&<Modal onClose={()=>setClawingBack(null)} title="Claw back placement">
+      <div className="flex flex-col gap-3.5">
+        <Banner tone="warn" icon="alert">This marks the placement clawed-back and flags a replacement owed to the client under the 90-day guarantee.</Banner>
+        <Field label="Reason" required>
+          <Area rows={3} value={clawReason} onChange={e=>setClawReason(e.target.value)} placeholder="e.g. Worker resigned after 3 weeks — client requesting a replacement."/></Field>
+        <div className="flex gap-2.5 justify-end">
+          <Btn kind="ghost" onClick={()=>setClawingBack(null)}>Cancel</Btn>
+          <Btn kind="dangerSoft" disabled={!clawReason.trim()} onClick={()=>{A.clawbackPlacement(clawingBack,clawReason.trim());setClawingBack(null);}}>Confirm claw back</Btn>
+        </div>
+      </div>
+    </Modal>}
   </div>;
 }
 
 /* ─── Clients (staffing) ─── */
 export function AgencyClients(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
-  const list=A.staffingClients;
+  const [q,setQ]=useState(""); const [showAdd,setShowAdd]=useState(false);
+  const [nc,setNc]=useState({employerId:"",industry:"",province:"ON",city:""});
+  const availableEmployers=A.employers.filter(e=>!A.staffingClients.some(c=>c.employerId===e.id));
+  const submitAdd=()=>{if(!nc.employerId)return;
+    A.upsertStaffingClient(nc);
+    setShowAdd(false); setNc({employerId:"",industry:"",province:"ON",city:""});};
+  const list=A.staffingClients.filter(c=>{if(!q)return true;
+    const emp=A.employers.find(e=>e.id===c.employerId);
+    return (emp?.name||"").toLowerCase().includes(q.toLowerCase())||(c.industry||"").toLowerCase().includes(q.toLowerCase());});
   return <div>
-    <div className="mb-3.5">
-      <div className="text-lg font-bold text-text">{list.length} clients</div>
-      <div className="text-sm text-text-3 mt-0.5">Employers we have (or want) a staffing relationship with.</div>
+    <div className="flex justify-between items-start gap-3 flex-wrap mb-3.5">
+      <div>
+        <div className="text-lg font-bold text-text">{list.length} clients</div>
+        <div className="text-sm text-text-3 mt-0.5">Employers we have (or want) a staffing relationship with.</div>
+      </div>
+      <Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowAdd(true)}>Add client</Btn>
     </div>
+    <div className="max-w-105 mb-4"><Input icon="search" placeholder="Search by employer or industry" value={q} onChange={e=>setQ(e.target.value)}/></div>
 
     <div className="grid gap-3" style={{gridTemplateColumns:mob?"1fr":"repeat(auto-fill,minmax(340px,1fr))"}}>
       {list.map(c=>{const emp=A.employers.find(e=>e.id===c.employerId);
@@ -892,7 +936,28 @@ export function AgencyClients(){
           </div>
           {!c.signedMsa&&<Btn kind="primary" size="xs" full style={{marginTop:10}} onClick={()=>A.signMsa(c.id)}>Mark MSA signed</Btn>}
         </Card>;})}
+      {list.length===0&&<Empty icon="building" title="No clients match" body="Try a different search, or add a new client below."/>}
     </div>
+    {showAdd&&<Modal onClose={()=>setShowAdd(false)} title="Add a staffing client">
+      <div className="flex flex-col gap-3.5">
+        <Field label="Employer" required hint="Must already be a NorthHire employer account.">
+          <Sel value={nc.employerId} onChange={e=>setNc({...nc,employerId:e.target.value})}>
+            <option value="">Choose an employer…</option>
+            {availableEmployers.map(e=><option key={e.id} value={e.id}>{e.name}</option>)}
+          </Sel>
+        </Field>
+        <Field label="Industry"><Input value={nc.industry} onChange={e=>setNc({...nc,industry:e.target.value})} placeholder="e.g. Construction, Healthcare"/></Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Province"><Sel value={nc.province} onChange={e=>setNc({...nc,province:e.target.value})}>
+            {["AB","BC","MB","NB","NS","ON","QC","SK"].map(p=><option key={p}>{p}</option>)}</Sel></Field>
+          <Field label="City"><Input value={nc.city} onChange={e=>setNc({...nc,city:e.target.value})} placeholder="e.g. Winnipeg"/></Field>
+        </div>
+        <div className="flex gap-2.5 justify-end">
+          <Btn kind="ghost" onClick={()=>setShowAdd(false)}>Cancel</Btn>
+          <Btn kind="primary" disabled={!nc.employerId} onClick={submitAdd}>Add as prospect</Btn>
+        </div>
+      </div>
+    </Modal>}
   </div>;
 }
 

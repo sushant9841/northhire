@@ -35,6 +35,15 @@ function calcStaffingEconomics(pay,bill,prov,benefitsPerHr=0){
 function round2(n){return Math.round(n*100)/100;}
 function round1(n){return Math.round(n*10)/10;}
 
+/* Combined GST/HST (+ QST where applicable) by province — public, stable rates, unlike the
+   payroll-burden table above which is a deliberately-simplified stand-in. */
+const SALES_TAX_RATE = {
+  ON:0.13, NB:0.15, NL:0.15, NS:0.14, PE:0.15, /* HST provinces */
+  QC:0.14975, /* GST 5% + QST 9.975% */
+  AB:0.05, BC:0.05, MB:0.05, SK:0.05, NT:0.05, NU:0.05, YT:0.05, /* GST only */
+};
+function salesTaxRate(prov){return SALES_TAX_RATE[prov]??0.05;}
+
 /* ─── The staffing agency itself is a tenant ─── */
 const STAFFING_AGENCY = {
   id:"stf1",
@@ -240,16 +249,20 @@ export function useStaffingStore(_persisted){
       const totalHrs=timesheetTotal(t); const regHrs=Math.max(0,totalHrs-(t.otHours||0));
       const subtotal=round2(regHrs*a.billRate + (t.otHours||0)*a.billRate*1.5);
       byClient[a.client].lines.push({assignment:a.id,worker:t.worker,hours:totalHrs,billRate:a.billRate,otHrs:t.otHours||0,subtotal});});
+    const usedNumbers=new Set(staffingInvoices.map(i=>i.number));
+    const nextNumber=()=>{const y=new Date().getFullYear(); let n;
+      do{n=`SI-${y}-${1000+usedNumbers.size+1+Math.floor(Math.random()*50)}`;}while(usedNumbers.has(n));
+      usedNumbers.add(n); return n;};
     const newInvoices=Object.entries(byClient).map(([cid,d])=>{
       const client=staffingClient(cid);
       const subtotal=round2(d.lines.reduce((s,l)=>s+l.subtotal,0));
-      const hst=round2(subtotal*(client?.industry==="Healthcare"?0:0.13)); /* HST for ON, simplified */
+      const hst=round2(subtotal*salesTaxRate(client?.province));
       const total=round2(subtotal+hst);
       const dueDays=client?.paymentTermsDays||30;
       const due=new Date(); due.setDate(due.getDate()+dueDays);
-      return {id:_uid("si"),number:`SI-2026-${1050+Math.floor(Math.random()*900)}`,client:cid,weekStart,
+      return {id:_uid("si"),number:nextNumber(),client:cid,weekStart,
         issued:_fmtDate(new Date()),due:_fmtDate(due),status:"pending",
-        lines:d.lines,subtotal,gst:0,hst,total,po:client?.notes?.includes("PO")?"":"—"};
+        lines:d.lines,subtotal,gst:0,hst,total,po:client?.poNumber||"—"};
     });
     setStaffingInvoices(l=>[...newInvoices,...l]);
     return newInvoices;
