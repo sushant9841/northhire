@@ -5,7 +5,7 @@ import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
 import {
   Btn, Card, Tag, Field, Input, Sel, Area, Banner, Lbl, Modal, DatePicker, SmartPortrait,
-  SmartLogo, Empty, ConfirmDialog,
+  SmartLogo, Empty, ConfirmDialog, usePagination, Pagination,
 } from "../../design/primitives.jsx";
 import { _fmtDate, _weekStart } from "../../helpers/utils.js";
 import { InlineList } from "../shared/formControls.jsx";
@@ -236,6 +236,8 @@ export function AgencyJobOrders(){
       if(!(j.title.toLowerCase().includes(s)||j.location.toLowerCase().includes(s)||clientName.toLowerCase().includes(s)))return false;}
     return true;
   }).sort((a,b)=>b.createdAt-a.createdAt);
+  const pg=usePagination(list,18);
+  useEffect(()=>{pg.setPage(1);},[tab,q]);
 
   return <div>
     <div className="flex justify-between items-center mb-4 flex-wrap gap-2.5">
@@ -255,7 +257,7 @@ export function AgencyJobOrders(){
     </Card>
 
     <div className="grid gap-3" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?280:340}px,1fr))`}}>
-      {list.map(jo=>{const client=A.staffingClient(jo.client);
+      {pg.pageItems.map(jo=>{const client=A.staffingClient(jo.client);
         const remaining=jo.positions-jo.filled;
         const daysOld=Math.floor((Date.now()-jo.createdAt)/864e5);
         return <div key={jo.id} data-card onClick={()=>setSelected(jo.id)}
@@ -281,6 +283,7 @@ export function AgencyJobOrders(){
         </div>;})}
       {list.length===0&&<Empty icon="briefcase" title="No job orders" body="Add a new order or change the filter."/>}
     </div>
+    <Pagination {...pg}/>
 
     {selected&&<_JobOrderDetail id={selected} onClose={()=>setSelected(null)}/>}
     {showAdd&&<_NewJobOrderModal onClose={()=>setShowAdd(false)}/>}
@@ -593,6 +596,8 @@ export function AgencyBench(){
       if(!searchable.includes(s))return false;}
     return true;
   });
+  const pg=usePagination(list,20);
+  useEffect(()=>{pg.setPage(1);},[q,prov,avail]);
   return <div>
     <div className="mb-3.5">
       <div className="text-lg font-bold text-text">{list.length} workers on bench</div>
@@ -620,7 +625,7 @@ export function AgencyBench(){
           {["Worker","Location","Availability","Rate target","Tickets","Vac accrued",""].map(h=>
             <th key={h} className={TH_CLS}>{h}</th>)}
         </tr></thead>
-        <tbody>{list.map(w=>{const person=(A.people||[]).find(p=>p.id===w.personId);
+        <tbody>{pg.pageItems.map(w=>{const person=(A.people||[]).find(p=>p.id===w.personId);
           return <tr key={w.id} className="border-b border-line-soft transition-colors duration-150 cursor-pointer hover:bg-bg" onClick={()=>A.go("agencyWorkers")}>
             <td className={TD_CLS}>
               <div className="flex gap-2.5 items-center">
@@ -649,6 +654,7 @@ export function AgencyBench(){
         </tbody>
       </table></div>
     </Card>
+    <Pagination {...pg}/>
     {placing&&<_PlaceFromBenchModal worker={placing} onClose={()=>setPlacing(null)} onPlace={()=>{A.toast(`Placement created`,"ok");setPlacing(null);}}/>}
   </div>;
 }
@@ -658,6 +664,8 @@ export function AgencyAssignments(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [tab,setTab]=useState("active");
   const list=A.assignments.filter(a=>tab==="all"?true:a.status===tab).sort((a,b)=>b.startDate.localeCompare(a.startDate));
+  const pg=usePagination(list,20);
+  useEffect(()=>{pg.setPage(1);},[tab]);
   return <div>
     <div className="mb-3.5">
       <div className="text-lg font-bold text-text">{list.length} assignments</div>
@@ -672,7 +680,7 @@ export function AgencyAssignments(){
           {["Worker","Client","Site","Rates","Duration","Margin","Status","Actions"].map(h=>
             <th key={h} className={TH_CLS}>{h}</th>)}
         </tr></thead>
-        <tbody>{list.map(a=>{const w=A.worker(a.worker); const person=w?(A.people||[]).find(p=>p.id===w.personId):null;
+        <tbody>{pg.pageItems.map(a=>{const w=A.worker(a.worker); const person=w?(A.people||[]).find(p=>p.id===w.personId):null;
           const client=A.staffingClient(a.client);
           const emp=client?A.employers.find(e=>e.id===client.employerId):null;
           const econ=A.assignmentMargin(a.id);
@@ -696,6 +704,7 @@ export function AgencyAssignments(){
         </tbody>
       </table></div>
     </Card>
+    <Pagination {...pg}/>
   </div>;
 }
 
@@ -705,6 +714,8 @@ export function AgencyTimesheets(){
   const [tab,setTab]=useState("submitted");
   const [returning,setReturning]=useState(null); const [reason,setReason]=useState("");
   const list=A.timesheets.filter(t=>tab==="all"?true:t.status===tab).sort((a,b)=>b.weekStart.localeCompare(a.weekStart));
+  const pg=usePagination(list,20);
+  useEffect(()=>{pg.setPage(1);},[tab]);
   return <div>
     <div className="mb-3.5">
       <div className="text-lg font-bold text-text">Timesheets</div>
@@ -720,7 +731,7 @@ export function AgencyTimesheets(){
           {["Week","Worker","Client","Hours","Gross pay","Bill","Status","Actions"].map(h=>
             <th key={h} className={TH_CLS}>{h}</th>)}
         </tr></thead>
-        <tbody>{list.map(t=>{const w=A.worker(t.worker); const person=w?(A.people||[]).find(p=>p.id===w.personId):null;
+        <tbody>{pg.pageItems.map(t=>{const w=A.worker(t.worker); const person=w?(A.people||[]).find(p=>p.id===w.personId):null;
           const asn=A.assignment(t.assignment); const client=asn?A.staffingClient(asn.client):null;
           const emp=client?A.employers.find(e=>e.id===client.employerId):null;
           const totalHrs=A.timesheetTotal(t); const gross=A.timesheetGross(t); const bill=A.timesheetBill(t);
@@ -746,6 +757,7 @@ export function AgencyTimesheets(){
         </tbody>
       </table></div>
     </Card>
+    <Pagination {...pg}/>
     {returning&&<Modal onClose={()=>setReturning(null)} title="Return timesheet">
       <div className="flex flex-col gap-3.5">
         <Field label="Reason for the client / worker" required>
@@ -772,6 +784,7 @@ export function AgencyPayroll(){
   const readyTs=A.timesheets.filter(t=>t.status==="approved"&&t.weekStart>=periodStart&&t.weekStart<periodEnd);
   const readyToPay=readyTs.length;
   const readyGross=readyTs.reduce((s,t)=>s+A.timesheetGross(t),0);
+  const pg=usePagination(A.staffingPayruns,20);
   return <div>
     <div className="mb-3.5">
       <div className="text-lg font-bold text-text">Staffing payroll</div>
@@ -795,7 +808,7 @@ export function AgencyPayroll(){
           {["Period","Run date","Workers","Hours","Gross","Net","Status","Actions"].map(h=>
             <th key={h} className={TH_CLS}>{h}</th>)}
         </tr></thead>
-        <tbody>{A.staffingPayruns.map(p=><tr key={p.id} className="border-b border-line-soft">
+        <tbody>{pg.pageItems.map(p=><tr key={p.id} className="border-b border-line-soft">
           <td className={`${TD_CLS} text-xs text-text-2 font-mono`}>{p.periodStart} → {p.periodEnd}</td>
           <td className={`${TD_CLS} text-xs text-text-3`}>{p.runDate}</td>
           <td className={`${TD_CLS} text-sm text-text`}>{p.workers}</td>
@@ -809,6 +822,7 @@ export function AgencyPayroll(){
         </tbody>
       </table></div>
     </Card>
+    <Pagination {...pg}/>
 
     {showRun&&<Modal onClose={()=>setShowRun(false)} title="Run biweekly payroll">
       <div className="flex flex-col gap-3.5">
@@ -853,6 +867,8 @@ export function AgencyInvoicing(){
   const [showGen,setShowGen]=useState(false);
   const [genWeek,setGenWeek]=useState(_weekStart(1));
   const list=A.staffingInvoices.filter(i=>tab==="all"?true:i.status===tab).sort((a,b)=>b.issued.localeCompare(a.issued));
+  const pg=usePagination(list,20);
+  useEffect(()=>{pg.setPage(1);},[tab]);
 
   const kpis={
     pending:A.staffingInvoices.filter(i=>i.status==="pending").reduce((s,i)=>s+i.total,0),
@@ -887,7 +903,7 @@ export function AgencyInvoicing(){
           {["Number","Client","Week","Total","Due","Status","Actions"].map(h=>
             <th key={h} className={TH_CLS}>{h}</th>)}
         </tr></thead>
-        <tbody>{list.map(inv=>{const client=A.staffingClient(inv.client);
+        <tbody>{pg.pageItems.map(inv=>{const client=A.staffingClient(inv.client);
           const emp=client?A.employers.find(e=>e.id===client.employerId):null;
           const daysOverdue=inv.status==="overdue"&&inv.due?Math.floor((Date.now()-new Date(inv.due).getTime())/864e5):0;
           return <tr key={inv.id} className="border-b border-line-soft">
@@ -905,6 +921,7 @@ export function AgencyInvoicing(){
         </tbody>
       </table></div>
     </Card>
+    <Pagination {...pg}/>
 
     {showGen&&<Modal onClose={()=>setShowGen(false)} title="Generate weekly invoices">
       <div className="flex flex-col gap-3.5">
@@ -933,6 +950,8 @@ export function AgencyPlacements(){
      soon was the ad-hoc "<=30 days" badge, with no way to see the full order. */
   const list=A.placements.filter(p=>tab==="all"?true:p.status===tab).sort((a,b)=>
     (tab==="guaranteed"||tab==="all")&&a.guaranteeEnds&&b.guaranteeEnds?a.guaranteeEnds.localeCompare(b.guaranteeEnds):b.offeredAt.localeCompare(a.offeredAt));
+  const pg=usePagination(list,18);
+  useEffect(()=>{pg.setPage(1);},[tab]);
   return <div>
     <div className="mb-3.5">
       <div className="text-lg font-bold text-text">Permanent placements</div>
@@ -943,7 +962,7 @@ export function AgencyPlacements(){
       [v,`${l} (${A.placements.filter(p=>v==="all"?true:p.status===v).length})`])} value={tab} onChange={setTab}/></div>
 
     <div className="grid gap-3" style={{gridTemplateColumns:mob?"1fr":"repeat(auto-fill,minmax(340px,1fr))"}}>
-      {list.map(p=>{const client=A.staffingClient(p.client);
+      {pg.pageItems.map(p=>{const client=A.staffingClient(p.client);
         const emp=client?A.employers.find(e=>e.id===client.employerId):null;
         const guaranteeDaysLeft=p.guaranteeEnds?Math.floor((new Date(p.guaranteeEnds)-Date.now())/864e5):null;
         return <div key={p.id} data-card className={`bg-white rounded-2xl border border-line ${mob?"p-4":"p-5"}`}>
@@ -974,6 +993,7 @@ export function AgencyPlacements(){
         </div>;})}
       {list.length===0&&<div style={{gridColumn:"1 / -1"}}><Empty icon="award" title="No placements in this state" body="Start with a job order and convert to placement."/></div>}
     </div>
+    <Pagination {...pg}/>
     {clawingBack&&<Modal onClose={()=>setClawingBack(null)} title="Claw back placement">
       <div className="flex flex-col gap-3.5">
         <Banner tone="warn" icon="alert">This marks the placement clawed-back and flags a replacement owed to the client under the 90-day guarantee.</Banner>
@@ -1003,6 +1023,8 @@ export function AgencyClients(){
   /* AR-risk coloring was purely cosmetic (a color flip) with no way to actually triage by it -
      add a sort so at-risk clients surface to the top instead of being scattered alphabetically. */
   const list=[...filtered].sort((a,b)=>sort==="risk"?(b.currentAR/(b.creditLimit||1))-(a.currentAR/(a.creditLimit||1)):(A.employers.find(e=>e.id===a.employerId)?.name||"").localeCompare(A.employers.find(e=>e.id===b.employerId)?.name||""));
+  const pg=usePagination(list,18);
+  useEffect(()=>{pg.setPage(1);},[q]);
   return <div>
     <div className="flex justify-between items-start gap-3 flex-wrap mb-3.5">
       <div>
@@ -1018,7 +1040,7 @@ export function AgencyClients(){
     </div>
 
     <div className="grid gap-3" style={{gridTemplateColumns:mob?"1fr":"repeat(auto-fill,minmax(340px,1fr))"}}>
-      {list.map(c=>{const emp=A.employers.find(e=>e.id===c.employerId);
+      {pg.pageItems.map(c=>{const emp=A.employers.find(e=>e.id===c.employerId);
         const activeAsns=A.assignments.filter(a=>a.client===c.id&&a.status==="active").length;
         const openOrds=A.jobOrders.filter(j=>j.client===c.id&&j.status==="open").length;
         return <Card key={c.id} pad={mob?18:22} style={{borderRadius:14}}>
@@ -1052,6 +1074,7 @@ export function AgencyClients(){
         </Card>;})}
       {list.length===0&&<Empty icon="building" title="No clients match" body="Try a different search, or add a new client below."/>}
     </div>
+    <Pagination {...pg}/>
     {showAdd&&<Modal onClose={()=>setShowAdd(false)} title="Add a staffing client">
       <div className="flex flex-col gap-3.5">
         <Field label="Employer" required hint="Must already be a NorthHire employer account.">
@@ -1080,6 +1103,7 @@ export function AgencyWorkers(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [selected,setSelected]=useState(null);
   const list=A.workers;
+  const pg=usePagination(list,20);
   return <div>
     <div className="mb-3.5">
       <div className="text-lg font-bold text-text">{list.length} workers on record</div>
@@ -1092,7 +1116,7 @@ export function AgencyWorkers(){
           {["Worker","Location","Availability","Work eligibility","Docs complete","Vac accrued","Actions"].map(h=>
             <th key={h} className={TH_CLS}>{h}</th>)}
         </tr></thead>
-        <tbody>{list.map(w=>{const person=(A.people||[]).find(p=>p.id===w.personId);
+        <tbody>{pg.pageItems.map(w=>{const person=(A.people||[]).find(p=>p.id===w.personId);
           const docsComplete=w.tdOnFile&&w.directDepositOnFile&&w.workEligibility;
           return <tr key={w.id} className="border-b border-line-soft cursor-pointer" onClick={()=>setSelected(w.id)}>
             <td className={TD_CLS}>
@@ -1126,6 +1150,7 @@ export function AgencyWorkers(){
         </tbody>
       </table></div>
     </Card>
+    <Pagination {...pg}/>
 
     {selected&&(()=>{const w=A.worker(selected); const person=(A.people||[]).find(p=>p.id===w.personId);
       return <Modal onClose={()=>setSelected(null)} title="Worker file" wide>
@@ -1192,6 +1217,8 @@ export function AgencyMargins(){
   const totalWeeklyMargin=margins.reduce((s,m)=>s+((m.econ?.margin||0)*m.wk),0);
   const avgMarkup=margins.length?margins.reduce((s,m)=>s+(m.econ?.markupPct||0),0)/margins.length:0;
   const belowFloor=margins.filter(m=>(m.econ?.markupPct||0)<A.STAFFING_AGENCY.markupFloor);
+  const sortedMargins=[...margins].sort((a,b)=>(a.econ?.markupPct||0)-(b.econ?.markupPct||0));
+  const pg=usePagination(sortedMargins,25);
 
   return <div>
     <div className="mb-3.5">
@@ -1220,7 +1247,7 @@ export function AgencyMargins(){
           {["Worker","Client","Pay","Burden","True cost","Bill","Margin/hr","Markup %"].map(h=>
             <th key={h} className={TH_CLS}>{h}</th>)}
         </tr></thead>
-        <tbody>{margins.sort((a,b)=>(a.econ?.markupPct||0)-(b.econ?.markupPct||0)).map(m=>{
+        <tbody>{pg.pageItems.map(m=>{
           const person=m.worker?(A.people||[]).find(p=>p.id===m.worker.personId):null;
           const emp=m.client?A.employers.find(e=>e.id===m.client.employerId):null;
           const below=(m.econ?.markupPct||0)<A.STAFFING_AGENCY.markupFloor;
@@ -1237,6 +1264,7 @@ export function AgencyMargins(){
         </tbody>
       </table></div>
     </Card>
+    <Pagination {...pg}/>
   </div>;
 }
 
