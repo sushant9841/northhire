@@ -110,6 +110,17 @@ export function useStore(){
     actor:user?`${user.name} (${user.role})`:"Guest",at:nowStamp()},...a].slice(0,120));
   const notify=(n)=>setNotifications(list=>[{id:uid("n"),read:false,at:"Just now",...n},...list]);
 
+  /* Auto-dismissing toast/snackbar — the shared feedback primitive that never existed, which is
+     why so many actions across the app reached for alert() instead. Rendered by <ToastHost/>,
+     mounted once at the app root. */
+  const [toasts,setToasts]=useState([]);
+  const toast=(message,tone="brand")=>{
+    const id=uid("toast");
+    setToasts(l=>[...l,{id,message,tone}]);
+    setTimeout(()=>setToasts(l=>l.filter(t=>t.id!==id)),3500);
+  };
+  const dismissToast=id=>setToasts(l=>l.filter(t=>t.id!==id));
+
   const go=(p,title)=>{
     const r=ROUTES[p];
     if(r?.roles&&(!user||!r.roles.includes(user.role))){setStack(s=>[...s,pg]);setPg("denied");setPageTitle(null);return;}
@@ -712,21 +723,30 @@ export function useStore(){
     const t=trainings.find(x=>x.id===id); log("training.status",`${t.status==="published"?"Unpublished":"Published"} "${t.title}"`,"cap");};
 
   /* trainings */
-  const enrol=id=>{if(!user)return go("login"); if(user.role!=="seeker")return go("denied");
-    if(!settings.enrolments)return;
-    /* Gate paid trainings behind purchase */
-    const _preT=trainings.find(x=>x.id===id);
-    if(_preT&&_preT.price>0&&!paidTrainings.has(id)){
-      const ok=typeof confirm==="function"?confirm(`This training costs ${money(_preT.price)}. Enroll and charge your default payment method on file?`):true;
-      if(!ok)return {ok:false,msg:"Payment cancelled"};
-      setPaidTrainings(p=>new Set(p).add(id));
-      notify({icon:"wallet",title:"Payment received",body:`${money(_preT.price)} charged for "${_preT.title}"`,for:user.id});
-    }
+  const _finishEnrol=id=>{
     setEnrolled(p=>new Set(p).add(id)); setTrainingProgress(p=>({...p,[id]:0}));
     setTrainings(l=>l.map(t=>t.id===id?{...t,enrolled:t.enrolled+1}:t));
     const t=trainings.find(x=>x.id===id);
     notify({icon:"cap",title:`Enrolled in ${t.title}`,body:"Your progress is tracked on your profile under Learning.",for:user.id,link:"profile"});
-    log("training.enrol",`Enrolled in "${t.title}"`,"cap");};
+    log("training.enrol",`Enrolled in "${t.title}"`,"cap");
+    return {ok:true};
+  };
+  /* Paid trainings can't be charged synchronously behind a native confirm() — this returns a
+     needsPayment flag so the caller can show a real confirm modal, then call confirmPaidEnrol. */
+  const enrol=id=>{if(!user)return go("login"); if(user.role!=="seeker")return go("denied");
+    if(!settings.enrolments)return {ok:false,msg:"Enrolments are currently disabled."};
+    const _preT=trainings.find(x=>x.id===id);
+    if(_preT&&_preT.price>0&&!paidTrainings.has(id)){
+      return {ok:false,needsPayment:true,price:_preT.price,title:_preT.title};
+    }
+    return _finishEnrol(id);
+  };
+  const confirmPaidEnrol=id=>{
+    const _preT=trainings.find(x=>x.id===id);
+    if(_preT){setPaidTrainings(p=>new Set(p).add(id));
+      notify({icon:"wallet",title:"Payment received",body:`${money(_preT.price)} charged for "${_preT.title}"`,for:user.id});}
+    return _finishEnrol(id);
+  };
   const advanceTraining=id=>{const t=trainings.find(x=>x.id===id);
     setTrainingProgress(p=>{const cur=p[id]||0; const step=Math.ceil(100/t.mods.length);
       const nx=Math.min(100,cur+step);
@@ -774,13 +794,13 @@ export function useStore(){
       ${cv.certs?.length?`<h2>Certifications</h2><div>${cv.certs.map(c=>`<span class="chip">${c}</span>`).join("")}</div>`:""}
       <script>window.onload=()=>setTimeout(()=>window.print(),300);</script>
       </body></html>`;
-    const w=window.open("","_blank"); if(!w){alert("Enable pop-ups to download your CV as a PDF");return;}
+    const w=window.open("","_blank"); if(!w){toast("Enable pop-ups to download your CV as a PDF","danger");return;}
     w.document.write(html); w.document.close();
     log("cv.print",`Printed CV "${cv.name}"`,"download");
   };
   const printCert=t=>{
     if(!user){go("login");return;}
-    if(!t){alert("Course not found");return;}
+    if(!t){toast("Course not found","danger");return;}
     /* Build a proper printable certificate page rather than a text file */
     if(typeof window==="undefined"){
       downloadText(`certificate-${t.id}.txt`,
@@ -820,7 +840,7 @@ export function useStore(){
       /* Popup blocked — fall back to text file */
       downloadText(`certificate-${t.id}.txt`,
         `NorthHire Certificate of Completion\n\nAwarded to: ${user.name}\nCourse: ${t.title}\nProvider: ${t.provider}\nHours: ${t.hours}\nDate: ${new Date().toLocaleDateString("en-CA")}`);
-      alert("Enable pop-ups to print a professionally formatted certificate. A text version has been downloaded.");
+      toast("Enable pop-ups to print a professionally formatted certificate — a text version was downloaded instead.","warn");
       return;
     }
     w.document.write(html); w.document.close();
@@ -871,6 +891,7 @@ export function useStore(){
     references,addReference,removeReference,
     addReview,deleteReview,
     saved,following,enrolled,trainingProgress,suspended,notifications,activity,settings,userSettings,search,setSearch,
+    toasts,toast,dismissToast,
     jobId,empId,blogId,trainingId,cvId,editId,candidateId,pipelineJob,applyDraft,setApplyDraft,
     emp,job,person,score,scoreCandidate,matchReasons,myApps,appliedJobIds,myNotifications,defaultCv,
     completeness,completenessHint,tabBadges,
@@ -879,7 +900,7 @@ export function useStore(){
     beginApply,submitApply,withdraw,acceptOffer,moveApp,rejectApp,
     publishJob,toggleJobStatus,flagJob,setPipelineJob:setPipelineJobFn,saveCompany,verifyEmployer,holdEmployer,toggleSuspend,
     editBlog,editTraining,saveBlog,saveTraining,deleteBlog,deleteTraining,toggleBlogStatus,toggleTrainingStatus,
-    enrol,advanceTraining,paidTrainings,newCv,editCv,saveCv,duplicateCv,deleteCv,setDefaultCv,
+    enrol,confirmPaidEnrol,advanceTraining,paidTrainings,newCv,editCv,saveCv,duplicateCv,deleteCv,setDefaultCv,
     printCv,printCert,printInvoice,exportApplicants,exportLog,share,choosePlan,updateCard,setSetting,
     readNotif,markAllRead,logActivity:log,
     ...HR,

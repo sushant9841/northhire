@@ -389,6 +389,22 @@ export function Banner({tone="brand",icon,title,children,action,onClose,style}){
    {children&&<div className="text-sm text-text-2 leading-relaxed">{children}</div>}</div>
   {action}
   {onClose&&<button onClick={onClose} className="border-0 cursor-pointer flex p-0 shrink-0"><I n="x" s={16}/></button>}</div>;}
+
+/* Auto-dismissing toast stack, driven by A.toasts (see useStore's toast()/dismissToast()).
+   Mount once at the app root — pass toasts/dismiss from the store, don't build a second one. */
+export function ToastHost({toasts,dismiss}){
+ if(!toasts?.length)return null;
+ const T={brand:"bg-ink text-white",ok:"bg-ok text-white",warn:"bg-warn text-white",danger:"bg-red text-white"};
+ return <div className="fixed left-1/2 z-[900] flex flex-col gap-2.5 items-center" style={{bottom:24,transform:"translateX(-50%)",width:"min(92vw,420px)"}}>
+  {toasts.map(t=><div key={t.id} role="status"
+    className={`w-full rounded-xl py-3 px-4 flex gap-3 items-center shadow-lg ${T[t.tone]||T.brand}`}
+    style={{animation:"up .22s cubic-bezier(.22,.68,.35,1) both"}}>
+   <span className="text-sm font-medium flex-1 min-w-0">{t.message}</span>
+   <button onClick={()=>dismiss(t.id)} className="border-0 bg-transparent p-0 cursor-pointer flex shrink-0 opacity-70"><I n="x" s={15} c="#fff"/></button>
+  </div>)}
+ </div>;
+}
+
 export function H1({children,sub,action,style}){
  return <div className="flex items-end justify-between gap-5 flex-wrap mb-8" style={style}>
   <div><h1 className="text-4xl font-bold tracking-tight text-text m-0 leading-none">{children}</h1>
@@ -440,6 +456,23 @@ export function Modal({open=true,onClose,title,sub,children,footer,width=520}){
    <div className="p-6 overflow-y-auto flex-1">{children}</div>
    {footer&&<div className={`py-4 px-6 border-t border-line-soft bg-bg shrink-0 ${mob?"":"rounded-b-2xl"}`}
      style={{paddingBottom: mob ? "calc(16px + env(safe-area-inset-bottom))" : undefined}}>{footer}</div>}</div></div>;}
+
+/* Shared "are you sure?" dialog — replaces the native confirm()/window.confirm() calls scattered
+   across destructive actions (offboard, wipe data, execute payroll, remove badge). Renders nothing
+   when closed, so a caller can mount it unconditionally and just flip `open`. */
+export function ConfirmDialog({open,onClose,onConfirm,title,children,confirmLabel="Confirm",kind="danger"}){
+ if(!open)return null;
+ return <Modal onClose={onClose} title={title} width={440}>
+  <div className="flex flex-col gap-4">
+   {children&&<div className="text-sm text-text-2 leading-relaxed">{children}</div>}
+   <div className="flex gap-2.5 justify-end">
+    <Btn kind="ghost" onClick={onClose}>Cancel</Btn>
+    <Btn kind={kind} onClick={()=>{onConfirm();onClose();}}>{confirmLabel}</Btn>
+   </div>
+  </div>
+ </Modal>;
+}
+
 export function Tabs({items,value,onChange,style}){
  return <div className="flex gap-1.5 overflow-x-auto pb-0.5" style={style}>
   {items.map(it=>{const on=value===it.k;

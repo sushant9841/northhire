@@ -6,6 +6,7 @@ import { I } from "../../design/icons.jsx";
 import { Page, Btn, Banner, Stat, Card, Switch, Input, Sel, SmartPortrait, Tag, Tabs, Empty, Bar, H1, H2 } from "../../design/primitives.jsx";
 import { pay, payShort } from "../../helpers/utils.js";
 import { CATS, STAGES } from "../../store/seed/constants.js";
+import { jobTone, jobStatusLabel } from "../../helpers/statusTone.js";
 import { EmpMark } from "../shared/cards.jsx";
 
 export function AdmHome(){
@@ -139,7 +140,7 @@ export function AdmJobs(){
             <div className="text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap">{j.t}</div>
             <div className="text-xs text-text-3 mt-0.5">{e.name} • {j.city}, {j.prov} • {pay(j)}{payShort(j)}</div></div>
           {!mob&&<div className="w-22 text-sm text-text-2">{n} applicant{n===1?"":"s"}</div>}
-          <Tag tone={j.status==="live"?"ok":j.status==="review"?"violet":"warn"} sm>{j.status==="live"?"Live":j.status==="paused"?"Paused":j.status==="review"?"Pending review":"Closed"}</Tag>
+          <Tag tone={jobTone(j.status)} sm>{jobStatusLabel(j.status)}</Tag>
           <div className="flex gap-2 flex-wrap">
             <Btn kind="ghost" size="xs" icon="eye" title="Preview" onClick={()=>A.openJob(j.id,{preview:true})}/>
             <Btn kind="outline" size="xs" onClick={()=>A.toggleJobStatus(j.id)}>{j.status==="live"?"Pause":"Restore"}</Btn>

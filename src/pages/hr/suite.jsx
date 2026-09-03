@@ -5,9 +5,10 @@ import { C, SH } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
 import {
   Btn, Card, Tag, Field, Input, Sel, Area, CheckRow, Banner, Lbl, Modal, Switch, DatePicker,
-  SmartPortrait, Empty,
+  SmartPortrait, Empty, ConfirmDialog,
 } from "../../design/primitives.jsx";
 import { _fmtDate } from "../../helpers/utils.js";
+import { invoiceTone } from "../../helpers/statusTone.js";
 import { HR_ROLES, HR_COMPANY_SETTINGS_DEFAULT, PUNCH_VENDORS, PRIOR_HR_VENDORS } from "../../store/seed/hrCompanySettings.js";
 import { HR_DEPARTMENTS } from "../../store/seed/hrDepartments.js";
 import { InlineList } from "../shared/formControls.jsx";
@@ -183,11 +184,11 @@ export function HrDashboard(){
           </div>
           {!todayAttendance?<div>
             <p className="text-sm text-text-2 mb-3.5 leading-relaxed">Start your day by punching in.</p>
-            <Btn kind="primary" icon="clock" onClick={()=>{const r=A.punchIn(emp.id,"web"); if(!r.ok)alert(r.msg);}}>Punch in</Btn>
+            <Btn kind="primary" icon="clock" onClick={()=>{const r=A.punchIn(emp.id,"web"); if(!r.ok)A.toast(r.msg,"danger");}}>Punch in</Btn>
           </div>:!todayAttendance.clockOut?<div>
             <div className="text-base text-text mb-2">Punched in at <strong>{todayAttendance.clockIn}</strong></div>
             <p className="text-sm text-text-2 mb-3.5">Have a great day. Punch out when you're wrapping up.</p>
-            <Btn kind="outline" icon="clock" onClick={()=>{const r=A.punchOut(emp.id); if(!r.ok)alert(r.msg);}}>Punch out</Btn>
+            <Btn kind="outline" icon="clock" onClick={()=>{const r=A.punchOut(emp.id); if(!r.ok)A.toast(r.msg,"danger");}}>Punch out</Btn>
           </div>:<div>
             <div className="text-sm text-text">In: <strong>{todayAttendance.clockIn}</strong> · Out: <strong>{todayAttendance.clockOut}</strong> · Total: <strong className="text-brand">{todayAttendance.hours}h</strong></div>
             <p className="text-sm text-text-2 mt-2">Good work today. See you tomorrow.</p></div>}
@@ -517,11 +518,11 @@ export function HrAttendance(){
         <Tag tone={todayRecord?"ok":"neutral"} sm>{todayRecord?(todayRecord.clockOut?"Signed out":"On the clock"):"Not clocked in"}</Tag>
       </div>
       {!todayRecord?
-        <Btn kind="primary" size="lg" icon="clock" onClick={()=>{const r=A.punchIn(emp.id,"web"); if(!r.ok)alert(r.msg);}}>Punch in now</Btn>
+        <Btn kind="primary" size="lg" icon="clock" onClick={()=>{const r=A.punchIn(emp.id,"web"); if(!r.ok)A.toast(r.msg,"danger");}}>Punch in now</Btn>
         :!todayRecord.clockOut?
         <div className="flex gap-3 flex-wrap items-center">
           <div className="text-base text-text-2">Punched in at <strong className="text-text">{todayRecord.clockIn}</strong> via {todayRecord.source}</div>
-          <Btn kind="outline" icon="clock" onClick={()=>{const r=A.punchOut(emp.id); if(!r.ok)alert(r.msg);}}>Punch out</Btn>
+          <Btn kind="outline" icon="clock" onClick={()=>{const r=A.punchOut(emp.id); if(!r.ok)A.toast(r.msg,"danger");}}>Punch out</Btn>
         </div>
         :
         <div className="text-base text-text-2">In: <strong>{todayRecord.clockIn}</strong> · Out: <strong>{todayRecord.clockOut}</strong> · Total: <strong className="text-brand">{todayRecord.hours}h</strong></div>}
@@ -873,8 +874,8 @@ export function HrChat(){
           <div className="text-xs text-text-3 mt-0.5">{chat.about}</div>
         </div>
         {chatSettings.allowCalls&&<div className="flex gap-1.5">
-          <Btn kind="ghost" size="xs" icon="phone" onClick={()=>alert("Voice/video calling isn't available in this preview build.")}/>
-          <Btn kind="ghost" size="xs" icon="play" onClick={()=>alert("Voice/video calling isn't available in this preview build.")}/>
+          <Btn kind="ghost" size="xs" icon="phone" onClick={()=>A.toast("Voice/video calling isn't available in this preview build.")}/>
+          <Btn kind="ghost" size="xs" icon="play" onClick={()=>A.toast("Voice/video calling isn't available in this preview build.")}/>
         </div>}
       </div>
 
@@ -1070,7 +1071,7 @@ export function HrInvoices(){
           <td className={`${TD_CLS} text-sm text-text font-semibold`}>${inv.amount.toLocaleString()}</td>
           <td className={`${TD_CLS} text-xs text-text-3`}>{inv.issued}</td>
           <td className={`${TD_CLS} text-xs text-text-3`}>{inv.due}</td>
-          <td className={TD_CLS}><Tag tone={inv.status==="paid"?"ok":inv.status==="overdue"?"danger":"warn"} sm>{inv.status}</Tag></td>
+          <td className={TD_CLS}><Tag tone={invoiceTone(inv.status)} sm>{inv.status}</Tag></td>
           <td className={TD_CLS} onClick={e=>e.stopPropagation()}><div className="flex gap-1">
             <Btn kind="ghost" size="xs" onClick={()=>setDetail(inv)}>View</Btn>
             {canManage&&inv.status==="pending"&&<Btn kind="primary" size="xs" onClick={()=>A.markInvoicePaid(inv.id)}>Mark paid</Btn>}
@@ -1129,7 +1130,7 @@ export function HrInvoices(){
 }
 
 function InvoiceDetailModal({invoice:inv,company,onClose,canManage,onMarkPaid,onSend}){
-  const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)");
   const items=inv.items||[{desc:"Services",qty:1,unitPrice:inv.amount}];
   const subtotal=inv.subtotal||inv.amount;
   const hst=inv.hst||0;
@@ -1188,7 +1189,7 @@ function InvoiceDetailModal({invoice:inv,company,onClose,canManage,onMarkPaid,on
 
       <div className="flex gap-2.5 justify-end pt-2 border-t border-line">
         <Btn kind="ghost" onClick={onClose}>Close</Btn>
-        <Btn kind="ghost" icon="download" onClick={()=>alert("PDF generation would happen server-side. This is a prototype.")}>Download PDF</Btn>
+        <Btn kind="ghost" icon="download" onClick={()=>A.printHrInvoice(inv,company)}>Download PDF</Btn>
         {canManage&&inv.status==="draft"&&<Btn kind="primary" onClick={onSend}>Send to client</Btn>}
         {canManage&&inv.status==="pending"&&<Btn kind="primary" icon="check" onClick={onMarkPaid}>Mark as paid</Btn>}
       </div>
@@ -1206,6 +1207,7 @@ export function HrPayroll(){
   const runs=A.hrPayruns.filter(p=>!p.companyId||p.companyId===company.id).sort((a,b)=>(b.runDate||"").localeCompare(a.runDate||""));
   const [showNew,setShowNew]=useState(false);
   const [detail,setDetail]=useState(null);
+  const [executing,setExecuting]=useState(null);
 
   const today=new Date();
   const twoWeeksAgo=new Date(today.getTime()-14*864e5);
@@ -1257,7 +1259,7 @@ export function HrPayroll(){
               <div className="flex gap-1">
                 <Btn kind="ghost" size="xs" onClick={()=>setDetail(p)}>View</Btn>
                 {isPayrollMgr&&p.status==="draft"&&<Btn kind="primary" size="xs" onClick={()=>A.approvePayroll(p.id)}>Approve</Btn>}
-                {isPayrollMgr&&p.status==="approved"&&<Btn kind="primary" size="xs" onClick={()=>{if(confirm(`Execute payroll for ${p.employees} employees? Total net $${p.totalNet.toLocaleString()}. This will trigger direct deposit and mark all approved expenses as paid.`))A.executePayroll(p.id);}}>Execute</Btn>}
+                {isPayrollMgr&&p.status==="approved"&&<Btn kind="primary" size="xs" onClick={()=>setExecuting(p)}>Execute</Btn>}
               </div>
             </td>
           </tr>)}
@@ -1312,7 +1314,12 @@ export function HrPayroll(){
       </div>
     </Modal>}
 
-    {detail&&<PayrollDetailModal run={detail} onClose={()=>setDetail(null)} canApprove={isPayrollMgr} onApprove={()=>{A.approvePayroll(detail.id); setDetail({...detail,status:"approved"});}} onExecute={()=>{if(confirm(`Execute payroll for ${detail.employees} employees? Total net $${detail.totalNet.toLocaleString()}.`)){A.executePayroll(detail.id); setDetail(null);}}}/>}
+    {detail&&<PayrollDetailModal run={detail} onClose={()=>setDetail(null)} canApprove={isPayrollMgr} onApprove={()=>{A.approvePayroll(detail.id); setDetail({...detail,status:"approved"});}} onExecute={()=>setExecuting(detail)}/>}
+
+    <ConfirmDialog open={!!executing} onClose={()=>setExecuting(null)} confirmLabel="Execute payroll"
+      title="Execute this payroll run?" onConfirm={()=>{A.executePayroll(executing.id); if(detail?.id===executing.id)setDetail(null);}}>
+      {executing&&<>Pays {executing.employees} employees, total net <strong>${executing.totalNet?.toLocaleString()}</strong>. This triggers direct deposit and marks all approved expenses as paid — it can't be undone from here.</>}
+    </ConfirmDialog>
   </div>;
 }
 
@@ -1391,6 +1398,7 @@ export function HrBadges(){
   const [showAward,setShowAward]=useState(false);
   const [selEmp,setSelEmp]=useState("");
   const [badgeName,setBadgeName]=useState("");
+  const [removing,setRemoving]=useState(null); /* {emp,badge} */
 
   /* Popular badge presets so awarders don't type from scratch */
   const presets=["Top Performer","5 Years","10 Years","3 Years","Safety Champion","Peer Chosen","Rising Star","Team Player","Mentor","Perfect Attendance","Innovator","Above & Beyond","Client Favorite","Numbers Wizard","Apprentice Mentor"];
@@ -1423,7 +1431,7 @@ export function HrBadges(){
         <div className="flex flex-wrap gap-1.5">
           {e.badges.map(b=><div key={b} className="inline-flex gap-1 items-center py-1 pr-2 pl-2.5 bg-warn-bg text-warn border border-warn-ln rounded-full text-xs font-semibold">
             <I n="award" s={11}/>{b}
-            {canAward&&<button onClick={()=>{if(confirm(`Remove "${b}" from ${e.name}?`))A.removeBadge(e.id,b);}} className="bg-transparent border-0 p-0 ml-1 cursor-pointer text-warn opacity-60 flex"><I n="x" s={11}/></button>}
+            {canAward&&<button onClick={()=>setRemoving({emp:e,badge:b})} className="bg-transparent border-0 p-0 ml-1 cursor-pointer text-warn opacity-60 flex"><I n="x" s={11}/></button>}
           </div>)}
         </div>
       </Card>)}
@@ -1456,6 +1464,11 @@ export function HrBadges(){
         </div>
       </div>
     </Modal>}
+
+    <ConfirmDialog open={!!removing} onClose={()=>setRemoving(null)} confirmLabel="Remove badge"
+      title="Remove this badge?" onConfirm={()=>A.removeBadge(removing.emp.id,removing.badge)}>
+      {removing&&<>Remove "{removing.badge}" from {removing.emp.name}? This can't be undone.</>}
+    </ConfirmDialog>
   </div>;
 }
 
@@ -1730,7 +1743,7 @@ export function HrIntegrations(){
       <div className="flex flex-col gap-3.5">
         <Banner tone="brand" icon="upload" title="Migration wizard">We'll import employees, roles, salaries and (where available) attendance history. Your existing NorthHire data won't be overwritten.</Banner>
         <div className="flex flex-col gap-2">
-          {A.PRIOR_HR_VENDORS.map(v=><button key={v.id} onClick={()=>{A.connectPriorSystem(company.id,v.name); setShowImport(false); setTimeout(()=>alert("Import started — you'll get a summary email when it's done."),200);}}
+          {A.PRIOR_HR_VENDORS.map(v=><button key={v.id} onClick={()=>{A.connectPriorSystem(company.id,v.name); setShowImport(false); setTimeout(()=>A.toast("Import started — you'll get a summary email when it's done.","ok"),200);}}
             className="flex gap-3 items-center py-3.5 px-4 bg-white border border-line rounded-xl cursor-pointer text-left transition-all duration-150 hover:border-brand hover:bg-tint">
             <div className="w-9 h-9 rounded-lg bg-violet-bg text-violet flex items-center justify-center shrink-0"><I n="refresh" s={18}/></div>
             <div className="text-sm font-semibold text-text flex-1">{v.name}</div>

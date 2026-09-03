@@ -10,6 +10,7 @@ import {
 import { pay, payShort, dlText, money, uid } from "../../helpers/utils.js";
 import { sanitizeHtml } from "../../helpers/sanitize.js";
 import { STAGES, PROVS, PCODE, CATS, CATM } from "../../store/seed/constants.js";
+import { jobTone, jobStatusLabel } from "../../helpers/statusTone.js";
 import { LocationInput, InlineList, QuestionBuilder, aiSuggestJD } from "../shared/formControls.jsx";
 
 export function EmpHome(){
@@ -44,7 +45,7 @@ export function EmpHome(){
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap">{j.t}</div>
                 <div className="text-xs text-text-3 mt-1">{n} applicant{n===1?"":"s"} • {j.views.toLocaleString()} views • {j.posted}</div></div>
-              <Tag tone={j.status==="live"?"ok":j.status==="paused"?"warn":"neutral"} sm>{j.status==="live"?"Live":j.status==="paused"?"Paused":"Closed"}</Tag></div>;})}</Card>
+              <Tag tone={jobTone(j.status)} sm>{jobStatusLabel(j.status)}</Tag></div>;})}</Card>
       <div className="flex flex-col gap-4">
         <Card><H2>Pipeline</H2>
           {STAGES.map(s=>{const n=byStage[s]||0;
@@ -92,7 +93,7 @@ export function EmpJobs(){
               <div className="grow shrink basis-60 min-w-0">
                 <div className="flex items-center gap-2.5 flex-wrap">
                   <span className="font-bold text-text tracking-tight" style={{fontSize:16.5}}>{j.t}</span>
-                  <Tag tone={j.status==="live"?"ok":j.status==="paused"?"warn":"neutral"} sm>{j.status==="live"?"Live":j.status==="paused"?"Paused":"Closed"}</Tag>
+                  <Tag tone={jobTone(j.status)} sm>{jobStatusLabel(j.status)}</Tag>
                   {j.flagged&&<Tag tone="danger" sm icon="alert">Flagged by admin</Tag>}</div>
                 <div className="text-sm text-text-2 mt-1.5">{j.city}, {j.prov} • {j.mode} • {j.type} • {pay(j)}{payShort(j)}</div>
                 <div className="flex gap-5 mt-3 flex-wrap">

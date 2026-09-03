@@ -187,6 +187,27 @@ export function useHrStore(seed,mainStore){
   };
   const markInvoicePaid=id=>setHrInvoices(l=>l.map(i=>i.id===id?{...i,status:"paid",paid:_fmtDate(new Date())}:i));
   const sendInvoice=id=>setHrInvoices(l=>l.map(i=>i.id===id?{...i,status:"pending"}:i));
+  const printHrInvoice=(inv,company)=>{
+    const items=inv.items||[{desc:"Services",qty:1,unitPrice:inv.amount}];
+    const lines=[
+      `NorthHire HR Suite — Invoice ${inv.number}`,
+      `From: ${company?.name||"Your company"}`,
+      `Bill to: ${inv.client}${inv.po?` (PO: ${inv.po})`:""}`,
+      `Issued: ${inv.issued}   Due: ${inv.due}   Status: ${inv.status.toUpperCase()}`,
+      "",
+      "Description                Qty   Unit price   Line total",
+      ...items.map(it=>`${(it.desc||"—").padEnd(26)}${String(it.qty||1).padStart(4)}   $${(it.unitPrice||0).toLocaleString().padStart(9)}   $${((it.qty||1)*(it.unitPrice||0)).toLocaleString().padStart(9)}`),
+      "",
+      inv.hst?`Subtotal: $${(inv.subtotal||inv.amount).toLocaleString()}\nHST (13%): $${inv.hst.toLocaleString()}`:"",
+      `Total: $${inv.amount.toLocaleString()} CAD`,
+    ].filter(Boolean).join("\n");
+    if(typeof document!=="undefined"){
+      const blob=new Blob([lines],{type:"text/plain"});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a"); a.href=url; a.download=`${inv.number}.txt`; a.click();
+      URL.revokeObjectURL(url);
+    }
+  };
 
   /* --- Departments --- */
   const hrDeptsAtCompany=cid=>hrDepartments.filter(d=>d.companyId===cid);
@@ -340,7 +361,7 @@ export function useHrStore(seed,mainStore){
     hrPublicProfile,updateEmpVisibility,updateEmp,addEmployee,removeEmployee,
     punchIn,punchOut,requestLeave,decideLeave,
     addTask,updateTaskStatus,deleteTask,addEvent,deleteEvent,
-    addInvoice,markInvoicePaid,sendInvoice,
+    addInvoice,markInvoicePaid,sendInvoice,printHrInvoice,
     hrDeptsAtCompany,addDepartment,updateDepartment,removeDepartment,
     empExpenses,companyExpenses,submitExpense,decideExpense,payExpense,
     runPayroll,approvePayroll,executePayroll,

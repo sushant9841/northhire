@@ -5,6 +5,7 @@ import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
 import { Page, Btn, Tag, Stat, Card, Lbl, Empty, SmartPortrait, Modal, Banner, H1, Field, Input, Sel } from "../../design/primitives.jsx";
 import { PROVS, PCODE } from "../../store/seed/constants.js";
+import { invoiceTone, timesheetTone } from "../../helpers/statusTone.js";
 
 /* Quick-action tile tones — kept as a literal lookup (not string-interpolated into a
    className) so Tailwind's static scanner can see every possible class it needs to generate. */
@@ -115,7 +116,7 @@ export function EmpStaffing(){
             </div>
             <div className="flex justify-between text-xs mt-1">
               <span className="text-text-3">Due {inv.due}</span>
-              <Tag tone={inv.status==="paid"?"ok":inv.status==="overdue"?"danger":"warn"} sm>{inv.status}</Tag>
+              <Tag tone={invoiceTone(inv.status)} sm>{inv.status}</Tag>
             </div>
           </div>)}
           {invoices.length===0&&<div className="text-xs text-text-3 p-2 text-center">No invoices yet.</div>}
@@ -191,7 +192,7 @@ export function EmpStaffingTimesheets(){
               {t.otHours>0&&<div>OT: {t.otHours}h</div>}
               {t.notes&&<div className="mt-1 italic">"{t.notes}"</div>}
             </td>
-            <td className="py-3 px-3.5"><Tag tone={t.status==="approved"?"ok":t.status==="submitted"?"warn":t.status==="paid"?"brand":"neutral"} sm>{t.status}</Tag></td>
+            <td className="py-3 px-3.5"><Tag tone={timesheetTone(t.status)} sm>{t.status}</Tag></td>
             <td className="py-3 px-3.5">
               {t.status==="submitted"&&<div className="flex gap-1">
                 <Btn kind="dangerSoft" size="xs" onClick={()=>{const reason=prompt("Reason for returning?"); if(reason)A.rejectTimesheet(t.id,reason);}}>Return</Btn>
@@ -230,7 +231,7 @@ export function EmpStaffingInvoices(){
             <td className="py-3 px-3.5 text-xs text-text-3">${inv.hst.toLocaleString()}</td>
             <td className="py-3 px-3.5 text-sm text-brand font-bold">${inv.total.toLocaleString()}</td>
             <td className="py-3 px-3.5 text-xs" style={{color:daysOverdue>0?C.danger:C.text3}}>{inv.due}{daysOverdue>0?` (+${daysOverdue}d)`:""}</td>
-            <td className="py-3 px-3.5"><Tag tone={inv.status==="paid"?"ok":inv.status==="overdue"?"danger":"warn"} sm>{inv.status}</Tag></td>
+            <td className="py-3 px-3.5"><Tag tone={invoiceTone(inv.status)} sm>{inv.status}</Tag></td>
           </tr>;})}
           {invoices.length===0&&<tr><td colSpan={7} className="p-6 text-center text-text-3 text-sm">No invoices yet.</td></tr>}
         </tbody>

@@ -128,9 +128,10 @@ export function WorkerTimesheet(){
   const locked=existing&&(existing.status==="submitted"||existing.status==="approved"||existing.status==="paid");
 
   const save=()=>{const r=A.upsertTimesheetDraft(asnId,worker.id,weekStart,hours,otHours,notes);
-    if(r.ok)alert("Draft saved.");};
-  const submit=()=>{save(); const t=A.timesheets.find(t=>t.assignment===asnId&&t.weekStart===weekStart);
-    if(t){const r=A.submitTimesheet(t.id); if(r.ok)alert("Timesheet submitted for supervisor approval.");}};
+    if(r.ok)A.toast("Draft saved.");};
+  const submit=()=>{A.upsertTimesheetDraft(asnId,worker.id,weekStart,hours,otHours,notes);
+    const t=A.timesheets.find(t=>t.assignment===asnId&&t.weekStart===weekStart);
+    if(t){const r=A.submitTimesheet(t.id); if(r.ok)A.toast("Timesheet submitted for supervisor approval.","ok");}};
 
   return <Page narrow>
     <H1 sub="Enter your hours. Submit weekly by Monday for the previous week.">Weekly timesheet</H1>
@@ -269,7 +270,7 @@ export function WorkerDocuments(){
         </div>)}
       </div>}
       <div className="mt-3.5 pt-3.5 border-t border-line-soft">
-        <Btn kind="primary" size="sm" icon="plus" onClick={()=>alert("File upload coming soon — in production, secure signed upload URLs to encrypted storage.")}>Upload a document</Btn>
+        <Btn kind="primary" size="sm" icon="plus" onClick={()=>A.toast("File upload isn't available in this preview build.")}>Upload a document</Btn>
       </div>
     </Card>
 

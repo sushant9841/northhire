@@ -10,6 +10,7 @@ import {
 import { _fmtDate, _weekStart } from "../../helpers/utils.js";
 import { InlineList } from "../shared/formControls.jsx";
 import { SEED_AGENCY_LICENSE } from "../../store/seed/agency.js";
+import { invoiceTone, timesheetTone } from "../../helpers/statusTone.js";
 
 /* Quick-action tile tones — literal lookup (not string-interpolated into a className)
    so Tailwind's static scanner can see every class it needs to generate. */
@@ -649,7 +650,7 @@ export function AgencyTimesheets(){
             <td className={`${TD_CLS} text-sm text-text font-semibold`}>{totalHrs}h{t.otHours>0?` (${t.otHours} OT)`:""}</td>
             <td className={`${TD_CLS} text-sm text-text`}>${gross.toFixed(2)}</td>
             <td className={`${TD_CLS} text-sm text-brand font-semibold`}>${bill.toFixed(2)}</td>
-            <td className={TD_CLS}><Tag tone={t.status==="approved"?"ok":t.status==="submitted"?"warn":t.status==="paid"?"brand":"neutral"} sm>{t.status}</Tag></td>
+            <td className={TD_CLS}><Tag tone={timesheetTone(t.status)} sm>{t.status}</Tag></td>
             <td className={TD_CLS}>
               {t.status==="submitted"&&<div className="flex gap-1">
                 <Btn kind="dangerSoft" size="xs" onClick={()=>{setReturning(t.id);setReason("");}}>Return</Btn>
@@ -796,7 +797,7 @@ export function AgencyInvoicing(){
             <td className={`${TD_CLS} text-xs text-text-3`}>{inv.weekStart}</td>
             <td className={`${TD_CLS} text-sm text-text font-semibold`}>${inv.total.toLocaleString()}</td>
             <td className={TD_CLS} style={{fontSize:12.5,color:daysOverdue>0?C.danger:C.text3}}>{inv.due}{daysOverdue>0?` (+${daysOverdue}d)`:""}</td>
-            <td className={TD_CLS}><Tag tone={inv.status==="paid"?"ok":inv.status==="overdue"?"danger":"warn"} sm>{inv.status}</Tag></td>
+            <td className={TD_CLS}><Tag tone={invoiceTone(inv.status)} sm>{inv.status}</Tag></td>
             <td className={TD_CLS}>
               {inv.status!=="paid"&&<Btn kind="ghost" size="xs" onClick={()=>A.markStaffingInvoicePaid(inv.id)}>Mark paid</Btn>}
             </td>

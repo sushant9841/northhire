@@ -3,7 +3,7 @@ import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C, SH } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
-import { Btn, Card, Tag, Field, Input, Sel, Banner, Modal, SmartPortrait, Empty, Stat } from "../../design/primitives.jsx";
+import { Btn, Card, Tag, Field, Input, Sel, Banner, Modal, SmartPortrait, Empty, Stat, ConfirmDialog } from "../../design/primitives.jsx";
 import { _fmtDate } from "../../helpers/utils.js";
 import { HR_ROLES } from "../../store/seed/hrCompanySettings.js";
 import { HR_DEPARTMENTS } from "../../store/seed/hrDepartments.js";
@@ -158,6 +158,7 @@ function HrPeople_Departments(){
   const [showAdd,setShowAdd]=useState(false);
   const [nd,setNd]=useState({name:"",lead:"",color:"#6AACFF",about:""});
   const [editing,setEditing]=useState(null);
+  const [removing,setRemoving]=useState(null);
   const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
   if(!emp||!company)return null;
   const depts=A.hrDeptsAtCompany?.(company.id)||[];
@@ -171,9 +172,8 @@ function HrPeople_Departments(){
     A.updateDepartment(editing.id,{name:editing.name.trim(),lead:editing.lead,color:editing.color,about:editing.about});
     setEditing(null);};
   const doRemove=(d)=>{
-    if(!confirm(`Remove "${d.name}"? Any employees in it must be moved first.`))return;
     const r=A.removeDepartment(d.id);
-    if(!r.ok)alert(r.msg);
+    if(!r.ok)A.toast(r.msg,"danger");
   };
 
   const colors=["#005CCC","#B45309","#0B6B3A","#5B2E8C","#0F5C8C","#D97706","#B91C1C","#0E7C86"];
@@ -208,7 +208,7 @@ function HrPeople_Departments(){
               <div className="text-sm font-semibold text-text mt-px">{lead.name}</div>
             </div>
           </div>}
-          {isPriv&&count===0&&<Btn kind="dangerSoft" size="xs" full style={{marginTop:10}} onClick={()=>doRemove(d)}>Remove department</Btn>}
+          {isPriv&&<Btn kind="dangerSoft" size="xs" full style={{marginTop:10}} onClick={()=>setRemoving(d)}>Remove department</Btn>}
         </Card>;})}
       {depts.length===0&&<div style={{gridColumn:"1/-1"}}><Empty icon="building" title="No departments yet" body={isPriv?"Create the first department to organize your team.":"Ask HR to set up departments."}/></div>}
     </div>
@@ -252,6 +252,13 @@ function HrPeople_Departments(){
         </div>
       </div>
     </Modal>}
+
+    <ConfirmDialog open={!!removing} onClose={()=>setRemoving(null)} confirmLabel="Remove department"
+      title={`Remove "${removing?.name}"?`} onConfirm={()=>doRemove(removing)}>
+      {removing&&(all.filter(e=>e.dept===removing.id).length>0
+        ?`${all.filter(e=>e.dept===removing.id).length} employees are currently in this department — move them first, or removal will be rejected.`
+        :"This department has no members. This can't be undone.")}
+    </ConfirmDialog>
   </div>;
 }
 
@@ -269,6 +276,7 @@ function HrPeople_Manage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [showAdd,setShowAdd]=useState(false);
   const [editing,setEditing]=useState(null);
+  const [offboarding,setOffboarding]=useState(null);
   const [ne,setNe]=useState({name:"",email:"",role:"employee",dept:"d1",title:"",city:"",prov:"AB",phone:"",salary:60000,manager:""});
   const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
   if(!emp||!company)return null;
@@ -314,7 +322,7 @@ function HrPeople_Manage(){
             <td className="py-3 px-3.5"><Tag tone={e.status==="active"?"ok":"neutral"} sm>{e.status}</Tag></td>
             <td className="py-3 px-3.5"><div className="flex gap-1">
               <Btn kind="ghost" size="xs" icon="edit" onClick={()=>setEditing({...e})}>Edit</Btn>
-              {e.status==="active"&&e.id!==emp.id&&<Btn kind="dangerSoft" size="xs" onClick={()=>{if(confirm(`Offboard ${e.name}?`))A.removeEmployee(e.id);}}>Offboard</Btn>}
+              {e.status==="active"&&e.id!==emp.id&&<Btn kind="dangerSoft" size="xs" onClick={()=>setOffboarding(e)}>Offboard</Btn>}
             </div></td>
           </tr>;})}</tbody>
       </table></div>
@@ -372,6 +380,11 @@ function HrPeople_Manage(){
         </div>
       </div>
     </Modal>}
+
+    <ConfirmDialog open={!!offboarding} onClose={()=>setOffboarding(null)} confirmLabel="Offboard"
+      title={`Offboard ${offboarding?.name}?`} onConfirm={()=>A.removeEmployee(offboarding.id)}>
+      Their direct reports will be reassigned up to their own manager. This can't be undone from here.
+    </ConfirmDialog>
   </div>;
 }
 

@@ -37,6 +37,7 @@ import {
 } from "./pages/hr/suite.jsx";
 import { HrPeoplePage, HrExpensesPage } from "./pages/hr/people.jsx";
 import { HireOnboardingModal } from "./pages/shared/HireOnboardingModal.jsx";
+import { ToastHost } from "./design/primitives.jsx";
 import {
   AgencyLoginPage, AgencyDashboard, AgencyJobOrders, AgencyBench, AgencyAssignments,
   AgencyTimesheets, AgencyPayroll, AgencyInvoicing, AgencyPlacements, AgencyClients,
@@ -200,6 +201,7 @@ export default function NorthHire(){
             {showFooter&&<Footer/>}
             {showTabs&&<TabBar/>}
             {hireOnboarding&&<HireOnboardingModal payload={hireOnboarding} onClose={()=>setHireOnboarding(null)}/>}
+            <ToastHost toasts={A.toasts} dismiss={A.dismissToast}/>
             {!cookieAck&&<div style={{position:"fixed",bottom:mob?76:20,left:mob?12:20,right:mob?12:20,maxWidth:560,margin:mob?"0":"0",
               background:C.ink,color:"#fff",borderRadius:14,padding:mob?"14px 16px":"16px 20px",boxShadow:SH.xl,
               display:"flex",gap:14,alignItems:"center",flexWrap:"wrap",zIndex:600}} data-cookie-accepted="false">

@@ -6,7 +6,7 @@ import { useMedia } from "../../helpers/hooks.js";
 import { C, SH } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
 import {
-  Page, Btn, Tag, Card, Input, Tabs, Empty, Bar, Lbl, Field, Area, SmartScene, SmartPortrait,
+  Page, Btn, Tag, Card, Input, Tabs, Empty, Bar, Lbl, Field, Area, SmartScene, SmartPortrait, ConfirmDialog,
 } from "../../design/primitives.jsx";
 import { money, pay, payShort } from "../../helpers/utils.js";
 import { sanitizeHtml } from "../../helpers/sanitize.js";
@@ -432,6 +432,11 @@ export function TrainingPage(){
   const enrolled=A.enrolled.has(t.id);
   const prog=A.trainingProgress[t.id]||0;
   const pad=mob?"py-11 px-4":"py-18 px-8";
+  const [payConfirm,setPayConfirm]=useState(null); /* {price,title} */
+  const tryEnrol=()=>{
+    const r=A.enrol(t.id);
+    if(r&&r.needsPayment)setPayConfirm(r);
+  };
   return <div className="bg-white min-h-full">
 
     <section className={`bg-white ${pad}`}>
@@ -461,7 +466,7 @@ export function TrainingPage(){
                 <Btn kind="primary" size="lg" full icon="play" onClick={()=>A.advanceTraining(t.id)}>
                   {prog>=100?"Review course":"Continue learning"}</Btn>
                 {prog>=100&&<Btn kind="outline" full icon="download" style={{marginTop:10}} onClick={()=>A.printCert(t)}>Download certificate</Btn>}
-              </>:<Btn kind="primary" size="lg" full icon="cap" onClick={()=>A.enrol(t.id)}>Enrol now</Btn>}
+              </>:<Btn kind="primary" size="lg" full icon="cap" onClick={tryEnrol}>Enrol now</Btn>}
               <div className="mt-5 pt-5 border-t border-line-soft flex flex-col gap-2.5">
                 {[["clock",`${t.hours} hours of content`],["file","Certificate on completion"],["globe","Fully online, self-paced"],["refresh","Lifetime access to updates"]].map(([ic,l])=>
                   <div key={l} className="flex items-center gap-2.5 text-sm text-text-2"><I n={ic} s={16} c={C.brand}/>{l}</div>)}</div></div></div>
@@ -498,6 +503,10 @@ export function TrainingPage(){
       </div>
     </section>
 
+    <ConfirmDialog open={!!payConfirm} onClose={()=>setPayConfirm(null)} confirmLabel={payConfirm?`Pay ${money(payConfirm.price)}`:"Pay"}
+      title="Confirm payment" onConfirm={()=>A.confirmPaidEnrol(t.id)}>
+      {payConfirm&&<>This training costs <strong>{money(payConfirm.price)}</strong>. Enrol and charge your default payment method on file?</>}
+    </ConfirmDialog>
   </div>;
 }
 
