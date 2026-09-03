@@ -7,6 +7,7 @@ import { Btn, Tag, Input, Sel, Empty, Lbl, Modal } from "../../design/primitives
 import { annual } from "../../helpers/utils.js";
 import { CATS, CATM, PCODE, PROVS } from "../../store/seed/constants.js";
 import { JobCard } from "../shared/cards.jsx";
+import { matchJobsToFilters } from "../../helpers/jobSearch.js";
 
 /* ═══════════════ SEARCH · MATCHED · SAVED · EMPLOYERS ═══════════════ */
 function Filters({f,set,clear,n}){
@@ -40,25 +41,17 @@ function Filters({f,set,clear,n}){
 export function SearchPage(){
   const A=use(); const mob=useMedia("(max-width: 960px)");
   const [q,setQ]=useState(A.search.q||""); const [where,setWhere]=useState(A.search.where||"");
-  const [f,setF]=useState({cats:A.search.cats||[],types:[],modes:[],exps:[],prov:"",minPay:""});
+  const [f,setF]=useState({cats:A.search.cats||[],types:A.search.types||[],modes:A.search.modes||[],
+    exps:A.search.exps||[],prov:A.search.prov||"",minPay:A.search.minPay||""});
   const [sort,setSort]=useState(A.user?.role==="seeker"?"match":"recent");
   const [panel,setPanel]=useState(false);
-  useEffect(()=>{setQ(A.search.q||"");setWhere(A.search.where||"");setF(p=>({...p,cats:A.search.cats||[]}));},[A.search]);
+  useEffect(()=>{setQ(A.search.q||"");setWhere(A.search.where||"");
+    setF({cats:A.search.cats||[],types:A.search.types||[],modes:A.search.modes||[],
+      exps:A.search.exps||[],prov:A.search.prov||"",minPay:A.search.minPay||""});},[A.search]);
   const n=(f.cats?.length||0)+(f.types?.length||0)+(f.modes?.length||0)+(f.exps?.length||0)+(f.prov?1:0)+(f.minPay?1:0);
   const clear=()=>setF({cats:[],types:[],modes:[],exps:[],prov:"",minPay:""});
   const res=useMemo(()=>{
-    let o=A.jobs.filter(j=>j.status==="live");
-    const s=q.trim().toLowerCase(),w=where.trim().toLowerCase();
-    if(s){const terms=A.expandQuery(s);
-      o=o.filter(j=>terms.some(t=>j.t.toLowerCase().includes(t)||A.emp(j.e).name.toLowerCase().includes(t)
-        ||j.skills.some(k=>k.toLowerCase().includes(t))||CATM[j.cat].label.toLowerCase().includes(t)));}
-    if(w)o=o.filter(j=>j.city.toLowerCase().includes(w)||j.prov.toLowerCase()===w||(PCODE[where.trim()]&&j.prov===PCODE[where.trim()])||j.mode.toLowerCase().includes(w));
-    if(f.cats?.length)o=o.filter(j=>f.cats.includes(j.cat));
-    if(f.types?.length)o=o.filter(j=>f.types.includes(j.type));
-    if(f.modes?.length)o=o.filter(j=>f.modes.includes(j.mode));
-    if(f.exps?.length)o=o.filter(j=>f.exps.includes(j.exp));
-    if(f.prov)o=o.filter(j=>j.prov===PCODE[f.prov]);
-    if(f.minPay)o=o.filter(j=>annual(j)>=Number(f.minPay));
+    const o=matchJobsToFilters(A.jobs,{q,where,...f},{expandQuery:A.expandQuery,emp:A.emp});
     const c=[...o];
     if(sort==="match")c.sort((a,b)=>A.score(b)-A.score(a));
     if(sort==="pay")c.sort((a,b)=>annual(b)-annual(a));
@@ -93,7 +86,7 @@ export function SearchPage(){
             <div className="text-base text-text-2"><strong className={`text-text font-bold tracking-tight ${mob?"text-lg":"text-2xl"}`}>{res.length}</strong> {res.length===1?"job":"jobs"}
               {q&&<> for "<strong className="text-text">{q}</strong>"</>}</div>
             {A.user?.role==="seeker"&&(q||where||f.cats?.length)&&<Btn kind="outline" size="sm" icon="bookmark"
-              onClick={()=>{const nm=q||CATM[f.cats?.[0]]?.label||"Search";A.saveSearch(q,where,f.cats,nm);}}>Save this search</Btn>}
+              onClick={()=>{const nm=q||CATM[f.cats?.[0]]?.label||"Search";A.saveSearch(q,where,f.cats,nm,f);}}>Save this search</Btn>}
             <Sel value={sort} onChange={e=>setSort(e.target.value)} style={{width:mob?170:200,padding:"10px 14px",fontSize:14}}>
               {A.user?.role==="seeker"&&<option value="match">Best match</option>}
               <option value="recent">Most recent</option><option value="pay">Highest pay</option><option value="closing">Closing soon</option></Sel></div>

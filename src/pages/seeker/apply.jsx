@@ -133,7 +133,9 @@ export function Apply1(){
 export function Apply2(){
   const A=use(); const job=A.job(A.applyDraft.job); if(!job) return null;
   const d=A.applyDraft; const set=(k,v)=>A.setApplyDraft({...d,[k]:v});
-  return <ApplyShell step={2} job={job} onBack={()=>A.go("apply1")} onNext={()=>A.go("apply3")} nextLabel="Review application">
+  const meetsRequired=job.exp!=="No experience required"&&job.exp!=="Entry level welcome";
+  const nextDisabled=!d.avail||(meetsRequired&&!d.meets);
+  return <ApplyShell step={2} job={job} onBack={()=>A.go("apply1")} onNext={()=>A.go("apply3")} nextLabel="Review application" nextDisabled={nextDisabled}>
     <Card pad={22}>
       <H2 sub="Three quick questions the employer asked for">A few questions</H2>
       <div className="flex flex-col gap-5">
@@ -157,9 +159,10 @@ export function Apply2(){
 export function Apply3(){
   const A=use(); const job=A.job(A.applyDraft.job); if(!job) return null;
   const e=A.emp(job.e); const d=A.applyDraft; const u=A.user;
+  const selectedCv=(A.cvs||[]).find(c=>c.id===d.cv)||A.defaultCv;
   const rows=[["Position",job.t],["Employer",e.name],["Location",`${job.city}, ${job.prov} • ${job.mode}`],
     ["Posted pay",`${pay(job)} ${payUnit(job)}`],["Applicant",u.name],["Contact",`${u.email} • ${u.phone}`],
-    ["CV",A.defaultCv?A.defaultCv.name:"None attached"],["Available from",d.avail],
+    ["CV",selectedCv?selectedCv.name:"None attached"],["Available from",d.avail],
     ["Expected pay",d.expect?`${d.expect}${payShort(job)}`:"Open to posted range"],
     ["Note",d.letter.trim()?`${d.letter.trim().split(/\s+/).length} words`:"Not included"]];
   return <ApplyShell step={3} job={job} onBack={()=>A.go("apply2")} onNext={()=>A.submitApply()} nextLabel="Send application">

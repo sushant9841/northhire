@@ -3,21 +3,17 @@ import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
 import { Btn, Tag, Switch, Empty } from "../../design/primitives.jsx";
 import { CATM } from "../../store/seed/constants.js";
+import { matchJobsToFilters } from "../../helpers/jobSearch.js";
 
 export function SavedSearchesPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const list=A.savedSearches.filter(s=>s.user===A.user?.id);
   const heroPad=mob?"py-11 px-4":"py-18 px-8";
-  const runSearch=s=>{A.setSearch({q:s.q||"",where:s.where||"",cats:s.cats||[]});A.go("search");};
-  const countFor=s=>{
-    const terms=A.expandQuery(s.q);
-    return A.jobs.filter(j=>{if(j.status!=="live")return false;
-      if(s.q&&!terms.some(t=>j.t.toLowerCase().includes(t)||j.skills.some(k=>k.toLowerCase().includes(t))))return false;
-      if(s.where&&!j.city.toLowerCase().includes(s.where.toLowerCase())&&j.prov.toLowerCase()!==s.where.toLowerCase())return false;
-      if(s.cats?.length&&!s.cats.includes(j.cat))return false;
-      return true;
-    }).length;
-  };
+  const runSearch=s=>{A.setSearch({q:s.q||"",where:s.where||"",cats:s.cats||[],
+    types:s.types||[],modes:s.modes||[],exps:s.exps||[],prov:s.prov||"",minPay:s.minPay||""});A.go("search");};
+  /* Same matching function SearchPage's real results use — this used to be a thinner,
+     independently-written reimplementation that could disagree with actual search results. */
+  const countFor=s=>matchJobsToFilters(A.jobs,s,{expandQuery:A.expandQuery,emp:A.emp}).length;
   return <div className="bg-white min-h-full">
     <section className={`${heroPad} bg-white border-b border-line-soft`}>
       <div className="max-w-6xl mx-auto">

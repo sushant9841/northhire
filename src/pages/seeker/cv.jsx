@@ -146,7 +146,7 @@ export function CvEditPage(){
             style={{fontWeight:640,fontSize:15,border:"none",padding:"6px 0",boxShadow:"none"}}/></div>
         <div className="flex gap-2.5 flex-wrap">
           <Btn kind="ghost" size="sm" icon="chevL" onClick={()=>A.go("cvs")}>Back to CVs</Btn>
-          <Btn kind="outline" size="sm" icon="download" onClick={()=>A.printCv(d)}>Download PDF</Btn>
+          <Btn kind="outline" size="sm" icon="download" onClick={()=>A.printCv(d)}>Print / Save as PDF</Btn>
           <Btn kind="primary" size="sm" icon="check" disabled={!dirty} onClick={()=>A.saveCv(d)}>{dirty?"Save":"Saved"}</Btn></div></div></div>
     <div className={`max-w-site mx-auto grid items-start gap-5 ${mob?"grid-cols-1 pt-4 px-4 pb-8":"grid-cols-[1fr_400px] pt-6 px-7 pb-11"}`}>
       <div>

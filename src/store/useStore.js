@@ -281,10 +281,15 @@ export function useStore(){
   const setUserSetting=(k,v)=>setUserSettings(s=>({...s,[k]:v}));
 
   /* --- saved searches --- */
-  const saveSearch=(q,where,cats,name)=>{
+  const saveSearch=(q,where,cats,name,filters)=>{
     if(!user||user.role!=="seeker")return;
+    /* filters carries the rest of the SearchPage filter panel (type/work-setting/experience/
+       min-pay) — previously only q/where/cats were saved, silently dropping everything else
+       the user had just set. */
     const s={id:uid("ss"),user:user.id,name:name||(q||CATM[cats?.[0]]?.label||"Untitled search"),
-      q:q||"",where:where||"",cats:cats||[],alerts:true,createdAt:Date.now(),lastRun:Date.now(),lastCount:0};
+      q:q||"",where:where||"",cats:cats||[],
+      types:filters?.types||[],modes:filters?.modes||[],exps:filters?.exps||[],prov:filters?.prov||"",minPay:filters?.minPay||"",
+      alerts:true,createdAt:Date.now(),lastRun:Date.now(),lastCount:0};
     setSavedSearches(l=>[s,...l]);
     log("search.save",`Saved search "${s.name}"`,"bookmark");
     notify({icon:"bell",title:"Search saved",body:`We'll alert you when new jobs match "${s.name}".`,for:user.id,link:"savedSearches"});
@@ -590,7 +595,7 @@ export function useStore(){
   const openCandidate=id=>{setCandidateId(id);const a=applications.find(x=>x.id===id);
     go("empCandidate",a?person(a.user).name:"Candidate");};
 
-  const beginApply=id=>{setApplyDraft({job:id,avail:"Within 2 weeks",expect:"",letter:"",meets:"Yes"});go("apply1");};
+  const beginApply=id=>{setApplyDraft({job:id,avail:"Within 2 weeks",expect:"",letter:"",meets:""});go("apply1");};
   const submitApply=()=>{
     const j=job(applyDraft.job); const e=emp(j.e);
     /* rate limit: prevent duplicate application to same job */
@@ -601,6 +606,7 @@ export function useStore(){
     }
     setApplications(l=>[...l,{id:uid("a"),job:j.id,user:user.id,stage:"Applied",at:"Just now",
       note:"Waiting for employer review",avail:applyDraft.avail,expect:applyDraft.expect,letter:applyDraft.letter,
+      cv:applyDraft.cv||defaultCv?.id||null,
       withdrawnAt:null,previousStage:null}]);
     notify({icon:"send",title:`Application sent to ${e.name}`,body:`Your application for ${j.t} is now in their pipeline.`,for:user.id,link:"status"});
     log("application.create",`Applied to ${j.t} at ${e.name}`,"send");
@@ -853,7 +859,18 @@ export function useStore(){
     downloadText(`applicants-${jid}.csv`,rows.map(r=>r.join(",")).join("\n"),"text/csv");};
   const exportLog=(list)=>downloadText("activity-log.csv",
     ["Time,Actor,Action,Detail",...(list||activity).map(e=>`${e.at},"${e.actor}",${e.action},"${e.text}"`)].join("\n"),"text/csv");
-  const share=x=>log("share",`Shared "${x.t||x.title}"`,"share");
+  /* Real share sheet / clipboard copy, not just a silent activity-log entry. Can't deep-link to
+     this specific listing (no real per-item routing exists yet — see Systemic #8), so this
+     shares the title as text rather than a URL that would just resolve to the generic home page. */
+  const share=x=>{
+    const title=x.t||x.title; const text=`${title} — on NorthHire`;
+    if(typeof navigator!=="undefined"&&navigator.share){
+      navigator.share({title,text}).catch(()=>{});
+    } else if(typeof navigator!=="undefined"&&navigator.clipboard?.writeText){
+      navigator.clipboard.writeText(text).then(()=>toast("Copied to clipboard")).catch(()=>toast("Couldn't copy to clipboard","danger"));
+    } else toast("Sharing isn't supported in this browser","warn");
+    log("share",`Shared "${title}"`,"share");
+  };
   const choosePlan=n=>{
     if(!PLANS[n])return;
     if(user?.role==="employer"){setEmployers(l=>l.map(e=>e.id===company.id?{...e,plan:n}:e));
