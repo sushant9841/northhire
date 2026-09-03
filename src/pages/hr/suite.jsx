@@ -717,9 +717,9 @@ export function HrTasks(){
                   {assn&&<span>• {assn.name.split(" ")[0]}</span>}
                 </div>
                 <div className="flex gap-1">
-                  {col.k!=="todo"&&<Btn kind="ghost" size="xs" onClick={()=>A.updateTaskStatus(t.id,cols[cols.findIndex(c=>c.k===col.k)-1].k)}>←</Btn>}
-                  {col.k!=="done"&&<Btn kind="ghost" size="xs" onClick={()=>A.updateTaskStatus(t.id,cols[cols.findIndex(c=>c.k===col.k)+1].k)}>→</Btn>}
-                  {(t.assignedBy===emp.id||emp.role==="owner"||emp.role==="admin")&&<Btn kind="ghost" size="xs" icon="trash" onClick={()=>A.deleteTask(t.id)}/>}
+                  {col.k!=="todo"&&<Btn kind="ghost" size="xs" aria-label={`Move "${t.title}" back to ${cols[cols.findIndex(c=>c.k===col.k)-1].label}`} onClick={()=>A.updateTaskStatus(t.id,cols[cols.findIndex(c=>c.k===col.k)-1].k)}>←</Btn>}
+                  {col.k!=="done"&&<Btn kind="ghost" size="xs" aria-label={`Move "${t.title}" forward to ${cols[cols.findIndex(c=>c.k===col.k)+1].label}`} onClick={()=>A.updateTaskStatus(t.id,cols[cols.findIndex(c=>c.k===col.k)+1].k)}>→</Btn>}
+                  {(t.assignedBy===emp.id||emp.role==="owner"||emp.role==="admin")&&<Btn kind="ghost" size="xs" icon="trash" aria-label={`Delete task "${t.title}"`} onClick={()=>A.deleteTask(t.id)}/>}
                 </div>
               </div>;})}
             {tasks.length===0&&<div className="p-5 text-center text-xs text-text-3">No tasks here.</div>}
@@ -879,8 +879,8 @@ export function HrChat(){
           <div className="text-xs text-text-3 mt-0.5">{chat.about}</div>
         </div>
         {chatSettings.allowCalls&&<div className="flex gap-1.5">
-          <Btn kind="ghost" size="xs" icon="phone" onClick={()=>A.toast("Voice/video calling isn't available in this preview build.")}/>
-          <Btn kind="ghost" size="xs" icon="play" onClick={()=>A.toast("Voice/video calling isn't available in this preview build.")}/>
+          <Btn kind="ghost" size="xs" icon="phone" title={`Call ${chat.name}`} onClick={()=>A.toast("Voice/video calling isn't available in this preview build.")}/>
+          <Btn kind="ghost" size="xs" icon="play" title={`Video call ${chat.name}`} onClick={()=>A.toast("Voice/video calling isn't available in this preview build.")}/>
         </div>}
       </div>
 

@@ -283,7 +283,7 @@ export function SmartPortrait({ seed = 0, size = 48, radius = 999, bg }) {
 }
 
 /* ═══════════════ CORE UI ATOMS ═══════════════ */
-export function Btn({children,onClick,kind="primary",size="md",full,disabled,icon,iconR,style,title,type}){
+export function Btn({children,onClick,kind="primary",size="md",full,disabled,icon,iconR,style,title,type,"aria-label":ariaLabel}){
  const S={xs:"text-xs py-2 px-3 rounded-lg gap-1.5",sm:"text-sm py-2.5 px-4 rounded-xl gap-2",
    md:"text-sm py-3 px-5 rounded-xl gap-2",lg:"text-base py-4 px-7 rounded-xl gap-2.5"}[size];
  const I_SIZE={xs:14,sm:16,md:18,lg:19}[size];
@@ -296,7 +296,7 @@ export function Btn({children,onClick,kind="primary",size="md",full,disabled,ico
   danger:"bg-red hover:bg-[#8E1A13] text-white border border-transparent",
   dangerSoft:"bg-red-bg text-red border border-red-ln",
   onDark:"bg-white/12 hover:bg-white/20 text-white border border-white/22"}[kind];
- return <button type={type||"button"} title={title} disabled={disabled} onClick={disabled?undefined:onClick}
+ return <button type={type||"button"} title={title} aria-label={ariaLabel||(!children&&(icon||iconR)?title:undefined)} disabled={disabled} onClick={disabled?undefined:onClick}
   className={`inline-flex items-center justify-center font-semibold leading-tight whitespace-nowrap cursor-pointer
    transition duration-150 hover:-translate-y-px active:scale-95 disabled:opacity-45 disabled:cursor-not-allowed disabled:pointer-events-none
    ${full?"w-full":""} ${S} ${K}`}
