@@ -334,7 +334,7 @@ export function ForEmployersPage(){
           ["What's the difference between HR Suite and Staffing?","HR Suite is software for running your own employees. Staffing is a service where we employ workers on your behalf. HR Suite manages people on your payroll; Staffing puts people from our payroll on your site."],
           ["Can Staffing workers convert to permanent hires?","Yes. If you want to hire a contract worker directly, we charge a conversion fee that scales down based on how long they've been on assignment. Details in the MSA."],
           ["What's your ATS integration story?","Growth and Enterprise support CSV import/export. Enterprise adds direct integrations with Workday, Greenhouse, and Lever. HR Suite has its own import tool for BambooHR, Rise, and Workday."],
-          ["Do you support French?","Job posts, worker communications, and client documents are available in English and Canadian French. HR Suite UI is English-only for now — French coming Q2 2026."],
+          ["Do you support French?","The platform is English-only today, including job posts, worker communications, and HR Suite. Canadian French support is on our roadmap — no committed date yet."],
           ["Where does your data live?","Canadian data residency. AWS ca-central-1 (Montréal). SOC 2 Type II. Details on request under NDA."],
           ["Can I try Staffing without an MSA?","We can send you a small trial roster with a short-form services agreement for a week's engagement. Full MSA required for ongoing relationships."],
         ].map(([q,a],i)=><div key={i} className="border-b border-line py-5">

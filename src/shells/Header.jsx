@@ -41,7 +41,8 @@ export function Header(){
   const browseCats=[
     {h:"By sector",items:CATS.slice(0,6).map(c=>[c.label,()=>{A.setSearch({q:"",where:"",cats:[c.id]});A.go("search");setBrowseOpen(false);}])},
     {h:"By location",items:[["Toronto, ON","Vancouver, BC","Calgary, AB","Montreal, QC","Edmonton, AB","Ottawa, ON"].map(l=>[l,()=>{A.setSearch({q:"",where:l,cats:[]});A.go("search");setBrowseOpen(false);}])].flat()},
-    {h:"By employer",items:[["Browse all companies",()=>{A.go("employers");setBrowseOpen(false);}],["Verified employers only",()=>{A.go("employers");setBrowseOpen(false);}]]},
+    {h:"By employer",items:[["Browse all companies",()=>{A.go("employers");setBrowseOpen(false);}],
+      ["Verified employers only",()=>{A.setEmployersPrefill("verified");A.go("employers");setBrowseOpen(false);}]]},
   ];
 
   return <header className={`h-15 bg-white border-b border-line flex items-center gap-3.5 sticky top-0 z-400 shrink-0 ${mob?"px-3.5":"px-6"}`}>

@@ -51,7 +51,10 @@ export function SignupPage(){
     finance:["Excel","Reconciliation","Bookkeeping","Payroll","QuickBooks","Claims Handling","Compliance","Client Advice"],
     tech:["JavaScript","React","Python","SQL","Git","Cloud","REST APIs","Testing"],
     agri:["Tractor Operation","Harvest Equipment","Livestock Handling","Irrigation","Crop Care","Equipment Maintenance","Packing","Pesticide Safety"],
-    security:["Security Licence","CCTV Monitoring","Report Writing","Access Control","Patrolling","De-escalation","First Aid","WHMIS"]}[d.cat]||[];
+    security:["Security Licence","CCTV Monitoring","Report Writing","Access Control","Patrolling","De-escalation","First Aid","WHMIS"]}[d.cat]
+    /* A sector added to CATS elsewhere without a matching entry here previously fell through to
+       an empty list silently - fall back to generic, broadly-applicable suggestions instead. */
+    ||["Communication","Time Management","Problem Solving","Teamwork","Attention to Detail","Customer Service"];
 
   const validate=()=>{const e={};
     if(step.k==="role"&&!d.role)e.role="Choose one to continue";

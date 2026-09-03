@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
@@ -8,7 +8,9 @@ import { EmpMark, JobCard } from "./cards.jsx";
 
 export function EmployersPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)"); const [q,setQ]=useState("");
-  const list=A.employers.filter(e=>!q||e.name.toLowerCase().includes(q.toLowerCase())||e.industry.toLowerCase().includes(q.toLowerCase()));
+  const [verifiedOnly,setVerifiedOnly]=useState(A.employersPrefill==="verified");
+  useEffect(()=>{if(A.employersPrefill){setVerifiedOnly(A.employersPrefill==="verified");A.setEmployersPrefill(null);}},[]);
+  const list=A.employers.filter(e=>(!q||e.name.toLowerCase().includes(q.toLowerCase())||e.industry.toLowerCase().includes(q.toLowerCase()))&&(!verifiedOnly||e.verified));
   const heroPad=mob?"py-14 px-4":"py-24 px-8";
   return <div className="bg-white min-h-full">
     <section className={`${heroPad} bg-white`}>
@@ -18,15 +20,22 @@ export function EmployersPage(){
           Companies actively hiring across Canada</h1>
         <p className={`text-text-2 leading-normal mx-auto mb-8 max-w-xl ${mob?"text-lg":"text-xl"}`}>
           Every employer on NorthHire is verified, and every listing shows the wage. Browse by sector, size, or the province where you want to work.</p>
-        <div className="max-w-lg mx-auto">
-          <Input icon="search" placeholder="Search company or industry" value={q} onChange={e=>setQ(e.target.value)}/></div>
+        <div className="max-w-lg mx-auto flex gap-2.5 items-center">
+          <Input icon="search" placeholder="Search company or industry" value={q} onChange={e=>setQ(e.target.value)}/>
+          <button onClick={()=>setVerifiedOnly(v=>!v)}
+            className={`shrink-0 text-sm font-semibold py-3 px-4 rounded-xl border cursor-pointer transition-colors duration-150 ${verifiedOnly?"bg-brand text-white border-brand":"bg-white text-text-2 border-line"}`}>
+            Verified only</button>
+        </div>
       </div>
     </section>
     <section className={`bg-white ${mob?"px-4 pb-14":"px-8 pb-24"}`}>
       <div className="max-w-site mx-auto">
+        {list.length===0?<Empty icon="building" title="No employers match" body="Try a different search, or turn off the verified-only filter."/>:
         <div className="grid gap-4" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:300}px,1fr))`}}>
           {list.map(e=>{const n=A.jobs.filter(j=>j.e===e.id&&j.status==="live").length;
-            return <div key={e.id} onClick={()=>A.openEmployer(e.id)} className="bg-white rounded-3xl p-6 border border-line cursor-pointer transition duration-200 hover:border-line-2 hover:-translate-y-1">
+            return <div key={e.id} onClick={()=>A.openEmployer(e.id)} role="button" tabIndex={0}
+              onKeyDown={ev=>{if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();A.openEmployer(e.id);}}}
+              className="bg-white rounded-3xl p-6 border border-line cursor-pointer transition duration-200 hover:border-line-2 hover:-translate-y-1">
               <div className="flex justify-between items-start mb-4">
                 <EmpMark e={e} size={56} radius={14}/>
                 {e.verified&&<Tag tone="brand" sm icon="checkC2">Verified</Tag>}</div>
@@ -35,7 +44,7 @@ export function EmployersPage(){
               <div className="text-xs text-text-3 mt-2">{e.size} employees</div>
               <div className="flex justify-between items-center mt-5 pt-4 border-t border-line-soft">
                 <span className="text-sm text-warn font-bold flex items-center gap-1.5"><I n="star" s={13} fill={C.warn} w={0}/>{e.rating}</span>
-                <span className="text-sm text-brand font-bold">{n} open {n===1?"role":"roles"}</span></div></div>;})}</div>
+                <span className="text-sm text-brand font-bold">{n} open {n===1?"role":"roles"}</span></div></div>;})}</div>}
       </div>
     </section>
   </div>;

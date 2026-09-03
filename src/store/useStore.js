@@ -105,6 +105,10 @@ export function useStore(){
   /* Same idea for the pricing-page CTAs: which tier a prospect picked before signing up,
      previously discarded entirely — every signup landed on Free regardless of the button clicked. */
   const [pendingPlan,setPendingPlan]=useState(null);
+  /* Same carry pattern for the "Verified employers only" browse-jobs dropdown link, which
+     previously called the identical A.go("employers") as "Browse all companies" - no filter
+     ever actually reached the destination page. */
+  const [employersPrefill,setEmployersPrefill]=useState(null);
   const [pageTitle,setPageTitle]=useState(null);
 
 
@@ -938,7 +942,7 @@ export function useStore(){
     saved,following,enrolled,trainingProgress,suspended,suspensionInfo,notifications,activity,settings,userSettings,search,setSearch,
     toasts,toast,dismissToast,
     jobId,empId,blogId,trainingId,cvId,editId,candidateId,pipelineJob,applyDraft,setApplyDraft,
-    contactPrefill,setContactPrefill,pendingPlan,setPendingPlan,
+    contactPrefill,setContactPrefill,pendingPlan,setPendingPlan,employersPrefill,setEmployersPrefill,
     emp,job,person,score,scoreCandidate,matchReasons,myApps,appliedJobIds,myNotifications,defaultCv,
     completeness,completenessHint,tabBadges,
     login,logout,completeSignup,saveProfile,deleteAccount,exportData,setUserSetting,

@@ -800,9 +800,9 @@ export function ContactPage(){
 
   const topics=[["General","Something else"],["Job seeker","Help with my account"],["Hiring","Sales or demo"],["Report","Suspicious posting"]];
   const offices=[{city:"Toronto",addr:"250 Front St W",phone:"1 888 555 0142"},
-    {city:"Calgary",addr:"525 8th Ave SW",phone:"1 888 555 0143"},
-    {city:"Montreal",addr:"1250 René-Lévesque",phone:"1 888 555 0144"},
-    {city:"Halifax",addr:"1959 Upper Water",phone:"1 888 555 0145"}];
+    {city:"Calgary",addr:"525 8th Ave SW",phone:"1 888 555 0187"},
+    {city:"Montreal",addr:"1250 René-Lévesque",phone:"1 888 555 0219"},
+    {city:"Halifax",addr:"1959 Upper Water",phone:"1 888 555 0264"}];
 
   return <div className="bg-white min-h-full">
 
