@@ -39,8 +39,8 @@ export function AdmHome(){
               <div className="text-sm font-semibold text-text">{e.name}</div>
               <div className="text-xs text-text-3 mt-0.5">{e.industry} • {e.owner}</div></div>
             <div className="flex gap-2">
-              <Btn kind="ok" size="xs" icon="check" onClick={()=>A.verifyEmployer(e.id,true)}>Approve</Btn>
-              <Btn kind="outline" size="xs" onClick={()=>A.holdEmployer(e.id)}>Hold</Btn></div></div>)}</Card>
+              <Btn kind="ok" size="xs" icon="check" onClick={()=>{A.verifyEmployer(e.id,true);A.toast(`${e.name} approved`,"ok");}}>Approve</Btn>
+              <Btn kind="outline" size="xs" onClick={()=>{A.holdEmployer(e.id);A.toast(`${e.name} put on hold`);}}>Hold</Btn></div></div>)}</Card>
       <div className="flex flex-col gap-4">
         <Card><H2 action={<Btn kind="ghost" size="sm" onClick={()=>A.go("admJobs")}>Open</Btn>}>Moderation queue</H2>
           {flagged.length===0?<div className="text-sm text-text-3 py-3.5 text-center">No listings flagged.</div>
@@ -61,13 +61,24 @@ export function AdmHome(){
 
 export function AdmUsers(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
-  const [q,setQ]=useState("");
-  const list=A.people.filter(u=>!q||u.name.toLowerCase().includes(q.toLowerCase())||u.email.toLowerCase().includes(q.toLowerCase())||u.title.toLowerCase().includes(q.toLowerCase()));
+  const [q,setQ]=useState(""); const [status,setStatus]=useState("all"); const [sort,setSort]=useState("name");
+  const withApps=A.people.map(u=>({...u,_apps:A.applications.filter(a=>a.user===u.id).length,_sus:A.suspended.has(u.id)}));
+  const filtered=withApps.filter(u=>
+    (!q||u.name.toLowerCase().includes(q.toLowerCase())||u.email.toLowerCase().includes(q.toLowerCase())||u.title.toLowerCase().includes(q.toLowerCase()))
+    &&(status==="all"||(status==="suspended"?u._sus:!u._sus)));
+  const list=[...filtered].sort((a,b)=>
+    sort==="apps"?b._apps-a._apps:sort==="city"?a.city.localeCompare(b.city):a.name.localeCompare(b.name));
   return <Page wide>
     <H1 sub={`${A.people.length} registered job seekers`}>Users</H1>
-    <div className="max-w-105 mb-4"><Input icon="search" placeholder="Search by name, email or title" value={q} onChange={e=>setQ(e.target.value)}/></div>
+    <div className="flex gap-3 mb-4 flex-wrap items-center">
+      <div className="grow shrink basis-60 max-w-90"><Input icon="search" placeholder="Search by name, email or title" value={q} onChange={e=>setQ(e.target.value)}/></div>
+      <Sel value={status} onChange={e=>setStatus(e.target.value)} style={{width:150}}>
+        <option value="all">All statuses</option><option value="active">Active only</option><option value="suspended">Suspended only</option></Sel>
+      <Sel value={sort} onChange={e=>setSort(e.target.value)} style={{width:170}}>
+        <option value="name">Sort: Name</option><option value="apps">Sort: Most applications</option><option value="city">Sort: City</option></Sel>
+    </div>
     <Card pad={0} style={{overflow:"hidden"}}>
-      {list.map((u,i)=>{const apps=A.applications.filter(a=>a.user===u.id).length; const sus=A.suspended.has(u.id);
+      {list.map((u,i)=>{const apps=u._apps; const sus=u._sus;
         return <div key={u.id} className={`flex items-center gap-3.5 py-3.5 px-5 flex-wrap ${i<list.length-1?"border-b border-line-soft":""} ${sus?"bg-red-bg":"bg-white"}`}>
           <SmartPortrait seed={u.seed} size={40}/>
           <div className="grow shrink basis-43 min-w-0">
@@ -78,7 +89,7 @@ export function AdmUsers(){
           <div className="w-20 text-sm text-text-2">{apps} apps</div>
           <Tag tone={sus?"danger":"ok"} sm>{sus?"Suspended":"Active"}</Tag>
           <Btn kind="ghost" size="xs" icon="eye" onClick={()=>A.impersonate(u.id)}>View as</Btn>
-          <Btn kind={sus?"outline":"ghost"} size="xs" onClick={()=>A.toggleSuspend(u.id)}>{sus?"Restore":"Suspend"}</Btn></div>;})}
+          <Btn kind={sus?"outline":"ghost"} size="xs" onClick={()=>{A.toggleSuspend(u.id);A.toast(sus?`${u.name} restored`:`${u.name} suspended`,sus?"ok":"danger");}}>{sus?"Restore":"Suspend"}</Btn></div>;})}
       {list.length===0&&<div className="p-5"><Empty icon="search" title="No users match that search" body="Try a different name, email, or title."/></div>}</Card>
   </Page>;
 }
@@ -113,28 +124,46 @@ export function AdmEmployers(){
             <div className="flex gap-2 pt-3 border-t border-line-soft flex-wrap">
               <Btn kind="ghost" size="sm" onClick={()=>A.openEmployer(e.id)}>View page</Btn>
               <div className="flex-1"/>
-              {e.verified?<Btn kind="outline" size="sm" onClick={()=>A.verifyEmployer(e.id,false)}>Revoke</Btn>
-                :e.hold?<><Btn kind="ok" size="sm" icon="check" onClick={()=>A.verifyEmployer(e.id,true)}>Approve</Btn>
-                  <Btn kind="outline" size="sm" onClick={()=>A.holdEmployer(e.id)}>Release hold</Btn></>
-                :<><Btn kind="ok" size="sm" icon="check" onClick={()=>A.verifyEmployer(e.id,true)}>Approve</Btn>
-                  <Btn kind="dangerSoft" size="sm" onClick={()=>A.holdEmployer(e.id)}>Hold</Btn></>}</div></Card>;})}</div>}
+              {e.verified?<Btn kind="outline" size="sm" onClick={()=>{A.verifyEmployer(e.id,false);A.toast(`${e.name}'s verification revoked`,"danger");}}>Revoke</Btn>
+                :e.hold?<><Btn kind="ok" size="sm" icon="check" onClick={()=>{A.verifyEmployer(e.id,true);A.toast(`${e.name} approved`,"ok");}}>Approve</Btn>
+                  <Btn kind="outline" size="sm" onClick={()=>{A.holdEmployer(e.id);A.toast(`${e.name}'s hold released`);}}>Release hold</Btn></>
+                :<><Btn kind="ok" size="sm" icon="check" onClick={()=>{A.verifyEmployer(e.id,true);A.toast(`${e.name} approved`,"ok");}}>Approve</Btn>
+                  <Btn kind="dangerSoft" size="sm" onClick={()=>{A.holdEmployer(e.id);A.toast(`${e.name} put on hold`);}}>Hold</Btn></>}</div></Card>;})}</div>}
   </Page>;
 }
 
 export function AdmJobs(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
-  const [tab,setTab]=useState("all"); const [q,setQ]=useState("");
-  const base=tab==="flagged"?A.jobs.filter(j=>j.flagged):tab==="paused"?A.jobs.filter(j=>j.status!=="live"):A.jobs;
+  const [tab,setTab]=useState("all"); const [q,setQ]=useState(""); const [sel,setSel]=useState(new Set());
+  const base=tab==="flagged"?A.jobs.filter(j=>j.flagged):tab==="review"?A.jobs.filter(j=>j.status==="review"):tab==="paused"?A.jobs.filter(j=>j.status==="paused"):A.jobs;
   const list=base.filter(j=>!q||j.t.toLowerCase().includes(q.toLowerCase())||A.emp(j.e).name.toLowerCase().includes(q.toLowerCase()));
+  const toggleSel=id=>setSel(s=>{const n=new Set(s); n.has(id)?n.delete(id):n.add(id); return n;});
+  const allSelected=list.length>0&&list.every(j=>sel.has(j.id));
+  const selJobs=list.filter(j=>sel.has(j.id));
+  const bulkFlag=on=>{selJobs.forEach(j=>{if(!!j.flagged!==on)A.flagJob(j.id);}); A.toast(`${selJobs.length} listing${selJobs.length===1?"":"s"} ${on?"flagged":"unflagged"}`); setSel(new Set());};
+  const bulkPause=()=>{selJobs.filter(j=>j.status==="live").forEach(j=>A.toggleJobStatus(j.id)); A.toast(`${selJobs.length} listing${selJobs.length===1?"":"s"} paused`); setSel(new Set());};
+  const bulkApprove=()=>{selJobs.filter(j=>j.status!=="live").forEach(j=>A.toggleJobStatus(j.id)); A.toast(`${selJobs.length} listing${selJobs.length===1?"":"s"} approved`,"ok"); setSel(new Set());};
   return <Page wide>
     <H1 sub="Review, pause or flag any listing on the platform">Job moderation</H1>
     <div className="flex gap-3 mb-5 flex-wrap items-center">
       <div className="grow shrink basis-60 max-w-90"><Input icon="search" placeholder="Search listings or employers" value={q} onChange={e=>setQ(e.target.value)}/></div>
       <Tabs items={[{k:"all",label:"All",n:A.jobs.length},{k:"flagged",label:"Flagged",n:A.jobs.filter(j=>j.flagged).length},
-        {k:"paused",label:"Not live",n:A.jobs.filter(j=>j.status!=="live").length}]} value={tab} onChange={setTab}/></div>
+        {k:"review",label:"Pending review",n:A.jobs.filter(j=>j.status==="review").length},
+        {k:"paused",label:"Paused",n:A.jobs.filter(j=>j.status==="paused").length}]} value={tab} onChange={t=>{setTab(t);setSel(new Set());}}/></div>
+    {sel.size>0&&<Banner tone="brand" icon="check" style={{marginBottom:14}}
+      action={<div className="flex gap-2 flex-wrap">
+        <Btn kind="ok" size="xs" onClick={bulkApprove}>Approve/restore</Btn>
+        <Btn kind="outline" size="xs" onClick={bulkPause}>Pause</Btn>
+        <Btn kind="dangerSoft" size="xs" onClick={()=>bulkFlag(true)}>Flag</Btn>
+        <Btn kind="ghost" size="xs" onClick={()=>bulkFlag(false)}>Unflag</Btn></div>}>
+      {sel.size} listing{sel.size===1?"":"s"} selected</Banner>}
     <Card pad={0} style={{overflow:"hidden"}}>
+      {list.length>0&&<div className="flex items-center gap-3 py-2.5 px-5 border-b border-line-soft bg-bg">
+        <input type="checkbox" checked={allSelected} onChange={e=>setSel(e.target.checked?new Set(list.map(j=>j.id)):new Set())}/>
+        <span className="text-xs font-semibold text-text-3 uppercase tracking-wide">Select all</span></div>}
       {list.map((j,i)=>{const e=A.emp(j.e); const n=A.applications.filter(a=>a.job===j.id).length;
         return <div key={j.id} className={`flex items-center gap-3 py-3.5 px-5 flex-wrap ${i<list.length-1?"border-b border-line-soft":""} ${j.flagged?"bg-warn-bg":"bg-white"}`}>
+          <input type="checkbox" checked={sel.has(j.id)} onChange={()=>toggleSel(j.id)}/>
           <EmpMark e={e} size={38} radius={10}/>
           <div className="grow shrink basis-50 min-w-0">
             <div className="text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap">{j.t}</div>
@@ -143,8 +172,8 @@ export function AdmJobs(){
           <Tag tone={jobTone(j.status)} sm>{jobStatusLabel(j.status)}</Tag>
           <div className="flex gap-2 flex-wrap">
             <Btn kind="ghost" size="xs" icon="eye" title="Preview" onClick={()=>A.openJob(j.id,{preview:true})}/>
-            <Btn kind="outline" size="xs" onClick={()=>A.toggleJobStatus(j.id)}>{j.status==="live"?"Pause":j.status==="review"?"Approve":"Restore"}</Btn>
-            <Btn kind={j.flagged?"dangerSoft":"ghost"} size="xs" onClick={()=>A.flagJob(j.id)}>{j.flagged?"Unflag":"Flag"}</Btn></div></div>;})}
+            <Btn kind="outline" size="xs" onClick={()=>{const label=j.status==="live"?"paused":j.status==="review"?"approved":"restored";A.toggleJobStatus(j.id);A.toast(`"${j.t}" ${label}`,label==="paused"?"warn":"ok");}}>{j.status==="live"?"Pause":j.status==="review"?"Approve":"Restore"}</Btn>
+            <Btn kind={j.flagged?"dangerSoft":"ghost"} size="xs" onClick={()=>{const willFlag=!j.flagged;A.flagJob(j.id);A.toast(`"${j.t}" ${willFlag?"flagged":"unflagged"}`,willFlag?"danger":"brand");}}>{j.flagged?"Unflag":"Flag"}</Btn></div></div>;})}
       {list.length===0&&<div className="p-5"><Empty icon="search" title="Nothing matches that filter" body="Try a different search term or switch tabs."/></div>}</Card>
   </Page>;
 }
@@ -152,14 +181,18 @@ export function AdmJobs(){
 export function AdmSettings(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const S=A.settings;
+  /* setSetting logs "Enabled {k}"/"Disabled {k}" to the activity feed - surface the most recent
+     one inline instead of forcing a cross-reference to the separate activity log. */
+  const lastChange=k=>A.activity.find(a=>a.action==="settings.change"&&(a.text===`Enabled ${k}`||a.text===`Disabled ${k}`));
   const Group=({title,sub,rows})=><Card pad={mob?18:24} style={{marginBottom:16}}>
     <H2 sub={sub}>{title}</H2>
-    {rows.map(([k,label,desc,danger])=>
-      <div key={k} className="flex gap-3.5 items-center py-4 border-b border-line-soft">
+    {rows.map(([k,label,desc,danger])=>{const lc=lastChange(k);
+      return <div key={k} className="flex gap-3.5 items-center py-4 border-b border-line-soft">
         <div className="flex-1 min-w-0">
           <div className={`text-sm font-semibold ${danger?"text-red":"text-text"}`}>{label}</div>
-          <div className="text-sm text-text-2 mt-1 leading-normal">{desc}</div></div>
-        <Switch on={S[k]} onChange={v=>A.setSetting(k,v)}/></div>)}</Card>;
+          <div className="text-sm text-text-2 mt-1 leading-normal">{desc}</div>
+          {lc&&<div className="text-xs text-text-3 mt-1.5">Last changed by {lc.actor} · {lc.at}</div>}</div>
+        <Switch on={S[k]} onChange={v=>A.setSetting(k,v)}/></div>;})}</Card>;
   return <Page narrow>
     <H1 sub="Platform-wide switches. Changes apply immediately for every account."
       action={<Btn kind="outline" size="sm" icon="file" onClick={()=>A.go("admLog")}>Activity log</Btn>}>Platform settings</H1>
