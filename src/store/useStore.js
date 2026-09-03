@@ -114,7 +114,10 @@ export function useStore(){
   const homePg=user?.role==="employer"?"empHome":user?.role==="admin"?"admHome":"home";
 
   const log=(action,text,icon)=>setActivity(a=>[{id:uid("l"),action,text,icon,
-    actor:user?`${user.name} (${user.role})`:"Guest",at:nowStamp()},...a].slice(0,120));
+    /* Was capped at 120 — silently dropped anything older with no warning. 1000 is still a
+       client-only cap (no real backend/archival exists), but it's no longer trivial to blow
+       through in normal demo use. */
+    actor:user?`${user.name} (${user.role})`:"Guest",at:nowStamp()},...a].slice(0,1000));
   const notify=(n)=>setNotifications(list=>[{id:uid("n"),read:false,at:"Just now",...n},...list]);
 
   /* Auto-dismissing toast/snackbar — the shared feedback primitive that never existed, which is

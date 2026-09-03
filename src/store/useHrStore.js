@@ -140,12 +140,14 @@ export function useHrStore(seed,mainStore){
     return {ok:true,rec};
   };
   const punchOut=empId=>{
-    const today=_fmtDate(new Date());
     const now=new Date(); const time=`${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
-    const existing=hrAttendance.find(a=>a.employee===empId&&a.date===today&&!a.clockOut);
-    if(!existing)return {ok:false,msg:"You haven't punched in today"};
-    const [ih,im]=existing.clockIn.split(":").map(Number);
-    const hours=Math.round((now.getHours()+now.getMinutes()/60-ih-im/60)*100)/100;
+    /* Find the open punch regardless of date — an overnight shift clocks in "yesterday" and
+       clocks out "today", so requiring today's date here meant punchOut incorrectly claimed
+       "you haven't punched in today" for anyone working past midnight. */
+    const existing=[...hrAttendance].sort((a,b)=>b.date.localeCompare(a.date)).find(a=>a.employee===empId&&!a.clockOut);
+    if(!existing)return {ok:false,msg:"You haven't punched in"};
+    const clockInAt=new Date(`${existing.date}T${existing.clockIn}:00`);
+    const hours=Math.max(0,Math.round((now-clockInAt)/36000)/100);
     setHrAttendance(l=>l.map(a=>a.id===existing.id?{...a,clockOut:time,hours}:a));
     return {ok:true,hours};
   };
@@ -342,7 +344,9 @@ export function useHrStore(seed,mainStore){
 
   /* --- Role-gated module visibility --- */
   const modulesForRole=(role)=>{
-    const base=["dashboard","directory","profile","chat","calendar","tasks"];
+    /* "expenses" belongs on base, not just employee - finance builds off base (not employee) and
+       still needs to see and decide on submitted expenses. */
+    const base=["dashboard","directory","profile","chat","calendar","tasks","expenses"];
     const employee=[...base,"attendance","leave","payslips"];
     const hr=[...employee,"people","hiring","trainings","badges","reports"];
     const finance=[...base,"invoices","payroll","reports","attendance"];

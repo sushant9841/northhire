@@ -3,7 +3,7 @@ import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C, SH } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
-import { Btn, Card, Tag, Field, Input, Sel, Banner, Modal, SmartPortrait, Empty, Stat, ConfirmDialog } from "../../design/primitives.jsx";
+import { Btn, Card, Tag, Field, Input, Sel, Area, Banner, Modal, SmartPortrait, Empty, Stat, ConfirmDialog } from "../../design/primitives.jsx";
 import { _fmtDate } from "../../helpers/utils.js";
 import { HR_ROLES } from "../../store/seed/hrCompanySettings.js";
 import { HR_DEPARTMENTS } from "../../store/seed/hrDepartments.js";
@@ -284,10 +284,20 @@ function HrPeople_Manage(){
   const all=A.hrEmpsAtCompany(company.id);
   const active=all.filter(e=>e.status==="active");
   const submit=()=>{if(!ne.name.trim()||!ne.email.trim())return;
+    if(!(Number(ne.salary)>0)){A.toast("Enter a salary greater than $0.","danger");return;}
     A.addEmployee({...ne,companyId:company.id});
     setNe({name:"",email:"",role:"employee",dept:defaultDept,title:"",city:"",prov:"AB",phone:"",salary:60000,manager:""});
     setShowAdd(false);};
   const saveEdit=()=>{if(!editing)return;
+    /* A plain role dropdown with no confirmation could silently demote a company's last Owner —
+       block that specific case rather than add friction to every routine role change. */
+    const wasOwner=all.find(e=>e.id===editing.id)?.role==="owner";
+    const ownerCount=all.filter(e=>e.role==="owner").length;
+    if(wasOwner&&editing.role!=="owner"&&ownerCount<=1){
+      A.toast("This is the last Owner on the account — assign another Owner first.","danger");
+      return;
+    }
+    if(!(Number(editing.salary)>0)){A.toast("Enter a salary greater than $0.","danger");return;}
     A.updateEmp(editing.id,{name:editing.name,title:editing.title,role:editing.role,dept:editing.dept,manager:editing.manager||null,phone:editing.phone,salary:editing.salary});
     setEditing(null);};
 
@@ -466,7 +476,7 @@ export function HrExpensesPage(){
             <td className="py-3 px-3.5"><Tag tone={x.status==="paid"?"brand":x.status==="approved"?"ok":x.status==="rejected"?"danger":"warn"} sm>{x.status}</Tag></td>
             <td className="py-3 px-3.5" onClick={e=>e.stopPropagation()}>
               {isApprover&&tab==="queue"&&<div className="flex gap-1">
-                <Btn kind="dangerSoft" size="xs" onClick={()=>{const r=prompt("Reason for rejection?"); if(r)A.decideExpense(x.id,"rejected",emp.id,r);}}>Reject</Btn>
+                <Btn kind="dangerSoft" size="xs" onClick={()=>setDetail(x)}>Reject</Btn>
                 <Btn kind="primary" size="xs" onClick={()=>A.decideExpense(x.id,"approved",emp.id)}>Approve</Btn>
               </div>}
               {isApprover&&tab==="approved"&&<Btn kind="primary" size="xs" onClick={()=>A.payExpense(x.id)}>Mark paid</Btn>}
@@ -515,6 +525,7 @@ function ExpenseSubmitModal({onClose,onSubmit}){
 function ExpenseDetailModal({expense:x,onClose,isApprover,currentEmpId}){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const e=A.hrEmp(x.employee); const approver=x.approvedBy?A.hrEmp(x.approvedBy):null;
+  const [rejecting,setRejecting]=useState(false); const [reason,setReason]=useState("");
   return <Modal onClose={onClose} title={`${x.category} · $${x.amount.toFixed(2)}`} wide>
     <div className="flex flex-col gap-3.5">
       <div className="p-3.5 bg-bg rounded-xl flex justify-between items-center gap-2.5">
@@ -553,9 +564,16 @@ function ExpenseDetailModal({expense:x,onClose,isApprover,currentEmpId}){
         {x.paidAt&&<div className="mt-1.5 text-ok">Paid on {new Date(x.paidAt).toLocaleDateString("en-CA")}</div>}
       </div>}
 
-      {isApprover&&x.status==="submitted"&&<div className="flex gap-2.5 justify-end pt-3 border-t border-line">
-        <Btn kind="dangerSoft" onClick={()=>{const r=prompt("Reason for rejection?"); if(r){A.decideExpense(x.id,"rejected",currentEmpId,r); onClose();}}}>Reject</Btn>
+      {isApprover&&x.status==="submitted"&&!rejecting&&<div className="flex gap-2.5 justify-end pt-3 border-t border-line">
+        <Btn kind="dangerSoft" onClick={()=>setRejecting(true)}>Reject</Btn>
         <Btn kind="primary" onClick={()=>{A.decideExpense(x.id,"approved",currentEmpId); onClose();}}>Approve</Btn>
+      </div>}
+      {isApprover&&x.status==="submitted"&&rejecting&&<div className="flex flex-col gap-2.5 pt-3 border-t border-line">
+        <Field label="Reason for rejection" required><Area rows={2} value={reason} onChange={ev=>setReason(ev.target.value)} placeholder="e.g. Missing itemized receipt"/></Field>
+        <div className="flex gap-2.5 justify-end">
+          <Btn kind="ghost" onClick={()=>{setRejecting(false);setReason("");}}>Cancel</Btn>
+          <Btn kind="dangerSoft" disabled={!reason.trim()} onClick={()=>{A.decideExpense(x.id,"rejected",currentEmpId,reason.trim()); onClose();}}>Confirm reject</Btn>
+        </div>
       </div>}
       {isApprover&&x.status==="approved"&&<div className="flex gap-2.5 justify-end pt-3 border-t border-line">
         <Btn kind="primary" icon="check" onClick={()=>{A.payExpense(x.id); onClose();}}>Mark as paid</Btn>

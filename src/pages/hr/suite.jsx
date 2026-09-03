@@ -123,7 +123,10 @@ export function HrDashboard(){
   const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
   if(!emp) return null;
   const myTasks=A.hrTasks.filter(t=>t.assignee===emp.id&&t.status!=="done");
-  const todayAttendance=A.hrAttendance.find(a=>a.employee===emp.id&&a.date===_fmtDate(new Date()));
+  /* An overnight shift's open punch carries yesterday's date, so an open record (any date) takes
+     priority over strictly-today's row - otherwise an overnight worker shows "Not clocked in" and
+     can double punch-in instead of seeing the punch-out button. */
+  const todayAttendance=A.hrAttendance.find(a=>a.employee===emp.id&&!a.clockOut)||A.hrAttendance.find(a=>a.employee===emp.id&&a.date===_fmtDate(new Date()));
   const pendingLeave=A.hrLeave.filter(l=>l.status==="pending");
   const myLeave=A.hrLeave.filter(l=>l.employee===emp.id);
   const upcomingEvents=A.hrEvents.filter(ev=>new Date(ev.when)>=new Date()).sort((a,b)=>new Date(a.when)-new Date(b.when)).slice(0,3);
@@ -498,7 +501,9 @@ export function HrAttendance(){
   const [view,setView]=useState(canSeeAll?"team":"mine");
   const [empFilter,setEmpFilter]=useState("all");
   const today=_fmtDate(new Date());
-  const todayRecord=A.hrAttendance.find(a=>a.employee===emp.id&&a.date===today);
+  /* Same overnight-shift fix as HrDashboard: an open punch from a prior date must still surface
+     the punch-out button instead of "Not clocked in". */
+  const todayRecord=A.hrAttendance.find(a=>a.employee===emp.id&&!a.clockOut)||A.hrAttendance.find(a=>a.employee===emp.id&&a.date===today);
 
   const records=view==="mine"
     ? A.hrAttendance.filter(a=>a.employee===emp.id)
