@@ -130,6 +130,7 @@ export function HrDashboard(){
   const openInvoices=A.hrInvoices.filter(i=>i.status==="pending"||i.status==="overdue");
   const overdueInvoices=A.hrInvoices.filter(i=>i.status==="overdue");
   const dept=A.HR_DEPARTMENTS.find(d=>d.id===emp.dept);
+  const settings=A.hrCompanySettings[company.id]||HR_COMPANY_SETTINGS_DEFAULT;
 
   /* Role-specific hero KPIs */
   const kpis=(()=>{
@@ -151,7 +152,7 @@ export function HrDashboard(){
     return [
       {label:"My tasks",value:myTasks.length,icon:"check"},
       {label:"Today's status",value:todayAttendance?(todayAttendance.clockOut?"Signed out":"Working"):"Not clocked in",icon:"clock",tone:todayAttendance?C.ok:C.text3},
-      {label:"Leave balance",value:15-myLeave.filter(l=>l.status==="approved"&&l.type==="Vacation").reduce((s,l)=>s+l.days,0),icon:"calendar"},
+      {label:"Leave balance",value:settings.leave.annualVacationDays-myLeave.filter(l=>l.status==="approved"&&l.type==="Vacation").reduce((s,l)=>s+l.days,0),icon:"calendar"},
       {label:"Badges",value:emp.badges.length,icon:"award"}];
   })();
 
@@ -560,7 +561,7 @@ export function HrAttendance(){
               return <tr key={r.id} className="border-b border-line-soft transition-colors duration-150 hover:bg-bg">
                 <td className={`${TD_CLS} text-sm text-text`}>{r.date}</td>
                 {view==="team"&&<td className={`${TD_CLS} text-sm text-text`}>{who?.name||"—"}</td>}
-                <td className={`${TD_CLS} text-sm text-text`}>{r.clockIn||"—"}</td>
+                <td className={`${TD_CLS} text-sm text-text`}>{r.clockIn||"—"}{r.late&&<Tag tone="warn" sm style={{marginLeft:6}}>Late</Tag>}</td>
                 <td className={`${TD_CLS} text-sm text-text-2`}>{r.clockOut||"—"}</td>
                 <td className={`${TD_CLS} text-sm text-brand font-semibold`}>{r.hours||0}h</td>
                 <td className={`${TD_CLS} text-xs text-text-3`}>{r.source}</td>
@@ -584,20 +585,36 @@ export function HrLeave(){
   const settings=A.hrCompanySettings[emp.companyId]||HR_COMPANY_SETTINGS_DEFAULT;
   const myLeave=A.hrLeave.filter(l=>l.employee===emp.id);
   const usedVacation=myLeave.filter(l=>l.status==="approved"&&l.type==="Vacation").reduce((s,l)=>s+l.days,0);
+  const usedSick=myLeave.filter(l=>l.status==="approved"&&l.type==="Sick").reduce((s,l)=>s+l.days,0);
+  const usedPersonal=myLeave.filter(l=>l.status==="approved"&&l.type==="Personal").reduce((s,l)=>s+l.days,0);
   const pending=A.hrLeave.filter(l=>l.status==="pending");
   const list=tab==="mine"?myLeave:tab==="pending"?pending:A.hrLeave;
   const sorted=[...list].sort((a,b)=>b.requestedAt-a.requestedAt);
 
+  const [reqErr,setReqErr]=useState("");
   const submitReq=()=>{if(!req.from||!req.to)return;
-    const days=Math.max(1,Math.ceil((new Date(req.to)-new Date(req.from))/(1000*60*60*24))+1);
+    /* Advance-notice policy only makes sense for plannable leave — sick/bereavement/parental
+       are routinely short-notice by nature, so they're exempt. */
+    if(req.type==="Vacation"||req.type==="Personal"){
+      const daysNotice=Math.ceil((new Date(req.from)-new Date())/(1000*60*60*24));
+      if(daysNotice<settings.leave.advanceNoticeDays){
+        setReqErr(`${req.type} requests need at least ${settings.leave.advanceNoticeDays} days' notice — choose a start date on or after ${_fmtDate(new Date(Date.now()+settings.leave.advanceNoticeDays*864e5))}.`);
+        return;
+      }
+    }
+    setReqErr("");
+    /* Weekday count, not a raw calendar-day span — a Fri-to-Mon request is 2 vacation days, not 4. */
+    let days=0; const d=new Date(req.from); const end=new Date(req.to);
+    for(;d<=end;d.setDate(d.getDate()+1)){if(d.getDay()!==0&&d.getDay()!==6)days++;}
+    days=Math.max(1,days);
     A.requestLeave({...req,days}); setReq({type:"Vacation",from:"",to:"",reason:""}); setShowReq(false);};
 
   return <div>
     <div className={`grid gap-3 mb-4 ${mob?"grid-cols-2":"grid-cols-4"}`}>
       {[
         {l:"Vacation days used",v:usedVacation,total:settings.leave.annualVacationDays,tone:C.brand},
-        {l:"Sick days available",v:settings.leave.sickDays,tone:C.ok},
-        {l:"Personal days",v:settings.leave.personalDays,tone:C.violet},
+        {l:"Sick days used",v:usedSick,total:settings.leave.sickDays,tone:C.ok},
+        {l:"Personal days used",v:usedPersonal,total:settings.leave.personalDays,tone:C.violet},
         {l:"My open requests",v:myLeave.filter(l=>l.status==="pending").length,tone:C.warn}
       ].map(k=><Card key={k.l} pad={mob?16:20} style={{borderRadius:14}}>
         <div className={`font-bold tracking-tight ${mob?"text-2xl":"text-3xl"}`} style={{color:k.tone}}>{k.v}{k.total?<span className="text-sm text-text-3 font-medium"> / {k.total}</span>:""}</div>
@@ -639,8 +656,9 @@ export function HrLeave(){
           <Field label="To" required><DatePicker value={req.to} onChange={v=>setReq({...req,to:v})} min={req.from}/></Field>
         </div>
         <Field label="Reason" hint="Optional but helpful for approver."><Area rows={3} value={req.reason} onChange={e=>setReq({...req,reason:e.target.value})} placeholder="Family trip, medical appointment, etc."/></Field>
+        {reqErr&&<Banner tone="danger" icon="alert">{reqErr}</Banner>}
         <div className="flex gap-2.5 justify-end">
-          <Btn kind="ghost" onClick={()=>setShowReq(false)}>Cancel</Btn>
+          <Btn kind="ghost" onClick={()=>{setShowReq(false);setReqErr("");}}>Cancel</Btn>
           <Btn kind="primary" icon="check" onClick={submitReq} disabled={!req.from||!req.to}>Submit request</Btn>
         </div>
       </div>
@@ -808,6 +826,7 @@ export function HrCalendar(){
 export function HrChat(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
+  const chatSettings=(A.hrCompanySettings[company?.id]||HR_COMPANY_SETTINGS_DEFAULT).chat;
   const [selected,setSelected]=useState(A.hrChats[0]?.id||null);
   const [msg,setMsg]=useState("");
   const [showNew,setShowNew]=useState(false);
@@ -830,7 +849,7 @@ export function HrChat(){
     {(showThreads||!mob)&&<Card pad={0} style={{borderRadius:14,overflow:"hidden",display:"flex",flexDirection:"column"}}>
       <div className="py-3.5 px-4 border-b border-line-soft flex justify-between items-center">
         <div className="text-sm font-semibold text-text">Conversations</div>
-        <Btn kind="ghost" size="xs" icon="plus" onClick={()=>setShowNew(true)}/>
+        {(chatSettings.allowDirectMessages||chatSettings.allowGroupCreation)&&<Btn kind="ghost" size="xs" icon="plus" onClick={()=>setShowNew(true)}/>}
       </div>
       <div className="flex-1 overflow-y-auto">
         {myChats.map(c=>{const isActive=selected===c.id;
@@ -853,10 +872,10 @@ export function HrChat(){
           <div className="text-base font-semibold text-text">{chat.name}</div>
           <div className="text-xs text-text-3 mt-0.5">{chat.about}</div>
         </div>
-        <div className="flex gap-1.5">
-          <Btn kind="ghost" size="xs" icon="phone" onClick={()=>alert("Voice call — connecting via NorthHire Voice…")}/>
-          <Btn kind="ghost" size="xs" icon="play" onClick={()=>alert("Video call — starting NorthHire Meet room…")}/>
-        </div>
+        {chatSettings.allowCalls&&<div className="flex gap-1.5">
+          <Btn kind="ghost" size="xs" icon="phone" onClick={()=>alert("Voice/video calling isn't available in this preview build.")}/>
+          <Btn kind="ghost" size="xs" icon="play" onClick={()=>alert("Voice/video calling isn't available in this preview build.")}/>
+        </div>}
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 bg-bg flex flex-col gap-2.5">
@@ -880,13 +899,14 @@ export function HrChat(){
     </Card>}
 
     {showNew&&<Modal onClose={()=>setShowNew(false)} title="Start a new conversation">
-      <_HrNewChat onClose={()=>setShowNew(false)} onCreate={id=>{setSelected(id); setShowNew(false);}}/>
+      <_HrNewChat allowDm={chatSettings.allowDirectMessages} allowGroup={chatSettings.allowGroupCreation}
+        onClose={()=>setShowNew(false)} onCreate={id=>{setSelected(id); setShowNew(false);}}/>
     </Modal>}
   </div>;
 }
-function _HrNewChat({onClose,onCreate}){
+function _HrNewChat({onClose,onCreate,allowDm=true,allowGroup=true}){
   const A=use(); const emp=A.hrCurrentEmp();
-  const [kind,setKind]=useState("dm"); /* dm | group */
+  const [kind,setKind]=useState(allowDm?"dm":"group"); /* dm | group */
   const [name,setName]=useState("");
   const [selected,setSelected]=useState([]);
   const all=A.hrEmpsAtCompany(emp.companyId).filter(e=>e.id!==emp.id&&e.status==="active");
@@ -903,7 +923,7 @@ function _HrNewChat({onClose,onCreate}){
   };
   return <div className="flex flex-col gap-3.5">
     <div className="grid grid-cols-2 gap-2.5">
-      {[["dm","Direct message"],["group","Group chat"]].map(([k,l])=>
+      {[["dm","Direct message",allowDm],["group","Group chat",allowGroup]].filter(([,,allowed])=>allowed).map(([k,l])=>
         <button key={k} onClick={()=>setKind(k)} className={`p-3.5 rounded-xl cursor-pointer text-sm border-2 ${kind===k?"border-brand bg-tint font-bold text-brand":"border-line bg-white font-medium text-text"}`}>{l}</button>)}
     </div>
     {kind==="group"&&<Field label="Group name"><Input value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. field-crew-calgary"/></Field>}
@@ -1201,7 +1221,7 @@ export function HrPayroll(){
       <div className="flex justify-between items-center mb-4 flex-wrap gap-2.5">
         <div>
           <div className="text-xl font-bold text-text tracking-tight">Payroll</div>
-          <div className="text-sm text-text-3 mt-0.5">Biweekly runs. CPP/EI/tax calculated per CRA rates. Approved expenses flow through automatically.</div>
+          <div className="text-sm text-text-3 mt-0.5">Biweekly runs. CPP/EI/tax estimated at flat statutory rates (not full CRA brackets or credits). Approved expenses flow through automatically.</div>
         </div>
         {isPayrollMgr&&<Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowNew(true)}>Create payroll run</Btn>}
       </div>
@@ -1274,7 +1294,7 @@ export function HrPayroll(){
 
     {showNew&&<Modal onClose={()=>setShowNew(false)} title="Create payroll run">
       <div className="flex flex-col gap-3.5">
-        <Banner tone="brand" icon="info">Runs pay for {all.length} active employees. CPP, EI, and tax are calculated at 2026 CRA rates. Approved expenses awaiting reimbursement will be included.</Banner>
+        <Banner tone="brand" icon="info">Runs pay for {all.length} active employees. CPP, EI, and tax are estimated at flat statutory rates — not a substitute for real CRA payroll calculation. Approved expenses awaiting reimbursement will be included.</Banner>
         <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
           <Field label="Period start" required><Input type="date" value={np.periodStart} onChange={e=>setNp({...np,periodStart:e.target.value})}/></Field>
           <Field label="Period end" required><Input type="date" value={np.periodEnd} onChange={e=>setNp({...np,periodEnd:e.target.value})}/></Field>
@@ -1604,7 +1624,6 @@ export function HrSettings(){
           ["shareTenureToNorthHire","Years at company","'4 years at PCL' visible publicly"],
           ["shareDepartmentToNorthHire","Department","Department name shown publicly (usually private)"],
           ["syncSkillsToNorthHire","Skills","Skills tracked in HR sync to their public profile"],
-          ["syncCertificationsToNorthHire","Certifications","Red Seal, WHMIS, CPR expiry all show publicly"],
           ["syncBadgesToNorthHire","Internal badges","Badges you award internally show on the employer's public NorthHire profile"],
         ].map(([k,label,desc])=><div key={k} className="flex justify-between items-center py-3 px-3 rounded-lg transition-colors duration-150 hover:bg-bg">
           <div className="flex-1 min-w-0">
@@ -1617,7 +1636,7 @@ export function HrSettings(){
         <div className="flex justify-between items-center py-3 px-3 rounded-lg transition-colors duration-150 hover:bg-bg">
           <div className="flex-1 min-w-0">
             <div className="text-sm text-text font-medium">Auto-prompt HR record on hire</div>
-            <div className="text-xs text-text-3 mt-0.5 leading-snug">When Marketing your Job Platform hires someone, prompt for their HR Suite record (department, manager, salary)</div>
+            <div className="text-xs text-text-3 mt-0.5 leading-snug">When someone is hired through your NorthHire job listings, prompt to create their HR Suite record (department, manager, salary)</div>
           </div>
           <Switch on={d.privacy?.allowNorthHireProfileImport??true} onChange={v=>setSection("privacy","allowNorthHireProfileImport",v)}/>
         </div>

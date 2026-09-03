@@ -128,7 +128,14 @@ export function useHrStore(seed,mainStore){
     const now=new Date(); const time=`${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
     const existing=hrAttendance.find(a=>a.employee===empId&&a.date===today);
     if(existing)return {ok:false,msg:"Already punched in today at "+existing.clockIn};
-    const rec={id:`att_${empId}_${today}`,employee:empId,date:today,clockIn:time,clockOut:null,source:source||"web",hours:0,site:"Head Office"};
+    /* Late flag actually derived from the company's own working-hours/threshold settings
+       instead of those settings sitting unread. */
+    const companyId=hrEmp(empId)?.companyId;
+    const att=(hrCompanySettings[companyId]||HR_COMPANY_SETTINGS_DEFAULT).attendance;
+    const [sh,sm]=att.workingHoursStart.split(":").map(Number);
+    const lateAfter=sh*60+sm+(att.lateThresholdMin||0);
+    const late=(now.getHours()*60+now.getMinutes())>lateAfter;
+    const rec={id:`att_${empId}_${today}`,employee:empId,date:today,clockIn:time,clockOut:null,source:source||"web",hours:0,site:"Head Office",late};
     setHrAttendance(l=>[rec,...l]);
     return {ok:true,rec};
   };
