@@ -523,10 +523,16 @@ export const Page=({children,wide,narrow})=>{
 /* ═══════════════ RICH TEXT EDITOR — used across CV builder, job posting, articles ═══════════════ */
 export function RichText({value,onChange,placeholder,rows=6,minHeight}){
   const ref=useRef(null);
+  const fileRef=useRef(null);
   const savedRange=useRef(null);
   const [showing,setShowing]=useState(value||"");
   const [linkOpen,setLinkOpen]=useState(false);
   const [linkUrl,setLinkUrl]=useState("");
+  const [imageOpen,setImageOpen]=useState(false);
+  const [imageUrl,setImageUrl]=useState("");
+  const [imageAlt,setImageAlt]=useState("");
+  const [imageErr,setImageErr]=useState("");
+  const [sourceMode,setSourceMode]=useState(false);
   useEffect(()=>{
     if(ref.current&&ref.current.innerHTML!==(value||"")){
       ref.current.innerHTML=value||"";
@@ -535,21 +541,49 @@ export function RichText({value,onChange,placeholder,rows=6,minHeight}){
   },[value]);
   const cmd=(c,arg)=>{document.execCommand(c,false,arg); ref.current?.focus(); update();};
   const update=()=>{if(ref.current){const html=ref.current.innerHTML; setShowing(html); onChange(html);}};
-  /* Opening the URL modal moves focus off the editable div, which would normally collapse the
-     text selection — so the selection is snapshotted here and restored right before createLink runs. */
-  const addLink=()=>{
+  /* Opening a modal (link or image) moves focus off the editable div, which would normally
+     collapse the text selection — so the selection is snapshotted here and restored right
+     before the insert command runs. */
+  const snapshotSelection=()=>{
     const sel=window.getSelection();
     if(sel&&sel.rangeCount>0)savedRange.current=sel.getRangeAt(0).cloneRange();
-    setLinkUrl("https://"); setLinkOpen(true);
   };
+  const restoreSelection=()=>{
+    ref.current?.focus();
+    const sel=window.getSelection();
+    if(savedRange.current){sel.removeAllRanges(); sel.addRange(savedRange.current);}
+  };
+  const addLink=()=>{snapshotSelection(); setLinkUrl("https://"); setLinkOpen(true);};
   const confirmLink=()=>{
-    if(linkUrl.trim()&&linkUrl.trim()!=="https://"){
-      ref.current?.focus();
-      const sel=window.getSelection();
-      if(savedRange.current){sel.removeAllRanges(); sel.addRange(savedRange.current);}
-      cmd("createLink",linkUrl.trim());
-    }
+    if(linkUrl.trim()&&linkUrl.trim()!=="https://"){restoreSelection(); cmd("createLink",linkUrl.trim());}
     setLinkOpen(false);
+  };
+  const addImage=()=>{snapshotSelection(); setImageUrl(""); setImageAlt(""); setImageErr(""); setImageOpen(true);};
+  /* No backend/file-hosting exists, so a local upload embeds the image as a base64 data: URI
+     directly in the stored HTML - the same "honest ceiling" the print-to-PDF helpers already
+     settled on elsewhere in the app. Capped well under localStorage's practical per-key limits
+     so one oversized photo can't silently corrupt the rest of a user's saved draft. */
+  const MAX_IMAGE_BYTES=2*1024*1024;
+  const handleFile=file=>{
+    if(!file)return;
+    if(!file.type.startsWith("image/")){setImageErr("Choose an image file.");return;}
+    if(file.size>MAX_IMAGE_BYTES){setImageErr("Image is too large — please use one under 2 MB.");return;}
+    setImageErr("");
+    const reader=new FileReader();
+    reader.onload=()=>setImageUrl(String(reader.result||""));
+    reader.readAsDataURL(file);
+  };
+  const confirmImage=()=>{
+    if(!imageUrl.trim()){setImageErr("Add an image URL or upload a file first.");return;}
+    restoreSelection();
+    document.execCommand("insertHTML",false,`<img src="${imageUrl.trim().replace(/"/g,"&quot;")}" alt="${imageAlt.trim().replace(/"/g,"&quot;")}">`);
+    ref.current?.focus(); update();
+    setImageOpen(false);
+  };
+  const toggleSource=()=>{
+    if(!sourceMode){update();} /* capture any pending WYSIWYG edit before switching away from it */
+    else if(ref.current){ref.current.innerHTML=showing; onChange(showing);} /* push edited source back into the editable div */
+    setSourceMode(s=>!s);
   };
   const tools=[
     {ic:"B",act:()=>cmd("bold"),style:{fontWeight:800}},
@@ -560,24 +594,32 @@ export function RichText({value,onChange,placeholder,rows=6,minHeight}){
     {label:"1. List",act:()=>cmd("insertOrderedList")},
     {sep:true},
     {label:"Link",act:addLink},
+    {label:"Image",act:addImage},
     {label:"Clear",act:()=>cmd("removeFormat")},
   ];
   const isEmpty=!showing||showing==="<br>"||showing.trim()==="";
   return <div className="border-2 border-line has-focus:border-brand rounded-xl bg-white has-focus:ring-4 has-focus:ring-wash transition-[border-color,box-shadow] duration-150 overflow-hidden">
-    <div className="flex flex-wrap gap-0.5 py-1.5 px-2 border-b border-line-soft bg-bg">
-      {tools.map((t,i)=>t.sep
+    <div className="flex flex-wrap gap-0.5 py-1.5 px-2 border-b border-line-soft bg-bg items-center">
+      {!sourceMode&&tools.map((t,i)=>t.sep
         ? <div key={i} className="w-px bg-line m-1"/>
         : <button key={i} type="button" onMouseDown={e=>{e.preventDefault(); t.act();}}
             className="bg-transparent border-0 cursor-pointer py-1.5 px-2.5 rounded-md text-xs font-semibold text-text-2 transition-colors duration-100 hover:bg-wash"
             style={t.style}>{t.ic||t.label}</button>)}
+      <div className="flex-1"/>
+      <button type="button" onClick={toggleSource} title={sourceMode?"Back to formatted view":"View/edit raw HTML"}
+        className={`border-0 cursor-pointer py-1.5 px-2.5 rounded-md text-xs font-semibold font-mono transition-colors duration-100 ${sourceMode?"bg-brand text-white":"bg-transparent text-text-2 hover:bg-wash"}`}>&lt;/&gt;</button>
     </div>
-    <div className="relative">
-      <div ref={ref} contentEditable suppressContentEditableWarning
-        onInput={update}
-        className="rich-content peer py-3 px-3.5 text-sm text-text leading-relaxed outline-none whitespace-pre-wrap"
-        style={{minHeight:minHeight||`${rows*22}px`}}/>
-      {isEmpty&&<div className="absolute top-3 left-3.5 text-text-3 text-sm pointer-events-none peer-focus:hidden">{placeholder}</div>}
-    </div>
+    {sourceMode
+      ? <textarea value={showing} onChange={e=>{setShowing(e.target.value); onChange(e.target.value);}}
+          className="w-full py-3 px-3.5 text-xs text-text font-mono leading-relaxed outline-none resize-y block"
+          style={{minHeight:minHeight||`${rows*22}px`}} spellCheck={false}/>
+      : <div className="relative">
+          <div ref={ref} contentEditable suppressContentEditableWarning
+            onInput={update}
+            className="rich-content peer py-3 px-3.5 text-sm text-text leading-relaxed outline-none whitespace-pre-wrap"
+            style={{minHeight:minHeight||`${rows*22}px`}}/>
+          {isEmpty&&<div className="absolute top-3 left-3.5 text-text-3 text-sm pointer-events-none peer-focus:hidden">{placeholder}</div>}
+        </div>}
     {linkOpen&&<Modal onClose={()=>setLinkOpen(false)} title="Add a link" width={420}>
       <div className="flex flex-col gap-3">
         <Field label="URL" hint="Applies to the currently selected text.">
@@ -587,6 +629,28 @@ export function RichText({value,onChange,placeholder,rows=6,minHeight}){
         <div className="flex gap-2.5 justify-end">
           <Btn kind="ghost" onClick={()=>setLinkOpen(false)}>Cancel</Btn>
           <Btn kind="primary" onClick={confirmLink}>Insert link</Btn>
+        </div>
+      </div>
+    </Modal>}
+    {imageOpen&&<Modal onClose={()=>setImageOpen(false)} title="Add an image" width={440}>
+      <div className="flex flex-col gap-3">
+        <Field label="Upload from your device">
+          <input ref={fileRef} type="file" accept="image/*" onChange={e=>handleFile(e.target.files?.[0])}
+            className="text-sm text-text-2"/>
+        </Field>
+        <div className="text-xs text-text-3 text-center -my-1">or</div>
+        <Field label="Image URL" hint="A direct link to an already-hosted image.">
+          <Input icon="externalLink" value={imageUrl.startsWith("data:")?"":imageUrl}
+            onChange={e=>{setImageUrl(e.target.value); setImageErr("");}} placeholder="https://example.com/photo.jpg"/>
+        </Field>
+        {imageUrl.startsWith("data:")&&<div className="text-xs text-ok font-semibold">Image loaded from your device — ready to insert.</div>}
+        <Field label="Alt text" hint="Describes the image for screen readers.">
+          <Input value={imageAlt} onChange={e=>setImageAlt(e.target.value)} placeholder="e.g. Team on a job site"/>
+        </Field>
+        {imageErr&&<div className="text-xs text-red font-semibold">{imageErr}</div>}
+        <div className="flex gap-2.5 justify-end">
+          <Btn kind="ghost" onClick={()=>setImageOpen(false)}>Cancel</Btn>
+          <Btn kind="primary" onClick={confirmImage}>Insert image</Btn>
         </div>
       </div>
     </Modal>}
