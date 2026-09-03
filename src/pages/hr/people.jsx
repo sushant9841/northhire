@@ -472,7 +472,7 @@ export function HrExpensesPage(){
               {isApprover&&tab==="approved"&&<Btn kind="primary" size="xs" onClick={()=>A.payExpense(x.id)}>Mark paid</Btn>}
             </td>
           </tr>;})}
-          {list.length===0&&<tr><td colSpan={tab==="mine"?6:7} className="p-8 text-center text-text-3 text-sm">No expenses in this view.</td></tr>}
+          {list.length===0&&<tr><td colSpan={tab==="mine"?6:7} className="p-5"><Empty icon="wallet" title="No expenses in this view" body="Submitted expense claims will show up here."/></td></tr>}
         </tbody>
       </table></div>
     </Card>

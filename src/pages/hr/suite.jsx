@@ -567,7 +567,7 @@ export function HrAttendance(){
                 <td className={`${TD_CLS} text-sm text-brand font-semibold`}>{r.hours||0}h</td>
                 <td className={`${TD_CLS} text-xs text-text-3`}>{r.source}</td>
               </tr>;})}
-            {sorted.length===0&&<tr><td colSpan={view==="team"?6:5} className="p-6 text-center text-text-3 text-sm">No attendance records yet.</td></tr>}
+            {sorted.length===0&&<tr><td colSpan={view==="team"?6:5} className="p-5"><Empty icon="clock" title="No attendance records yet" body="Punch-in history will show up here."/></td></tr>}
           </tbody>
         </table>
       </div>
@@ -630,7 +630,7 @@ export function HrLeave(){
       </div>
 
       {sorted.length===0
-        ? <div className="p-8 text-center text-text-3 text-sm">No leave records to show.</div>
+        ? <Empty icon="calendar" title="No leave records to show" body="Requests will appear here once submitted."/>
         : <div className="flex flex-col gap-2">
             {sorted.map(r=>{const who=A.hrEmp(r.employee);
               return <div key={r.id} className="flex gap-3.5 items-center py-3 px-3.5 bg-bg rounded-xl border border-line flex-wrap">
@@ -881,7 +881,7 @@ export function HrChat(){
 
       <div className="flex-1 overflow-y-auto p-4 bg-bg flex flex-col gap-2.5">
         {messages.length===0
-          ? <div className="text-center text-text-3 text-sm p-5">No messages yet. Start the conversation.</div>
+          ? <Empty icon="mail" title="No messages yet" body="Start the conversation below."/>
           : messages.map(m=>{const from=A.hrEmp(m.from); const isMe=m.from===emp.id;
               return <div key={m.id} className={`flex gap-2.5 ${isMe?"flex-row-reverse self-end":"flex-row self-start"}`} style={{maxWidth:"85%"}}>
                 {!isMe&&<SmartPortrait seed={from?.seed||0} size={30} radius={8}/>}
@@ -1263,7 +1263,7 @@ export function HrPayroll(){
               </div>
             </td>
           </tr>)}
-          {runs.length===0&&<tr><td colSpan={8} className="p-8 text-center text-text-3 text-sm">No payroll runs yet. Click "Create payroll run" to start.</td></tr>}
+          {runs.length===0&&<tr><td colSpan={8} className="p-5"><Empty icon="wallet" title="No payroll runs yet" body='Click "Create payroll run" above to start.'/></td></tr>}
           </tbody>
         </table></div>
       </Card>

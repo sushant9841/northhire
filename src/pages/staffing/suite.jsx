@@ -563,7 +563,7 @@ export function AgencyBench(){
             </td>
             <td className={`${TD_CLS} text-xs text-brand font-semibold`}>${w.vacBalance.toFixed(2)}</td>
           </tr>;})}
-          {list.length===0&&<tr><td colSpan={6} className="p-6 text-center text-text-3 text-sm">No matching workers.</td></tr>}
+          {list.length===0&&<tr><td colSpan={6} className="p-5"><Empty icon="users" title="No matching workers" body="Try a different filter or ticket search."/></td></tr>}
         </tbody>
       </table></div>
     </Card>
@@ -659,7 +659,7 @@ export function AgencyTimesheets(){
               {t.status==="submitted"&&<div className="text-xs text-text-3 mt-0.5" style={{fontSize:10.5}}>Chase: {client?.defaultSupervisorEmail}</div>}
             </td>
           </tr>;})}
-          {list.length===0&&<tr><td colSpan={8} className="p-6 text-center text-text-3 text-sm">No timesheets in this state.</td></tr>}
+          {list.length===0&&<tr><td colSpan={8} className="p-5"><Empty icon="clock" title="No timesheets in this state" body="Try a different tab."/></td></tr>}
         </tbody>
       </table></div>
     </Card>
@@ -721,7 +721,7 @@ export function AgencyPayroll(){
           <td className={TD_CLS}><Tag tone={p.status==="paid"?"ok":"warn"} sm>{p.status}</Tag></td>
           <td className={TD_CLS}>{p.status==="pending"&&<Btn kind="primary" size="xs" onClick={()=>A.finalizeStaffingPayrun(p.id)}>Finalize</Btn>}</td>
         </tr>)}
-        {A.staffingPayruns.length===0&&<tr><td colSpan={8} className="p-6 text-center text-text-3 text-sm">No payroll runs yet.</td></tr>}
+        {A.staffingPayruns.length===0&&<tr><td colSpan={8} className="p-5"><Empty icon="wallet" title="No payroll runs yet" body="Run payroll once approved timesheets are ready."/></td></tr>}
         </tbody>
       </table></div>
     </Card>
@@ -802,7 +802,7 @@ export function AgencyInvoicing(){
               {inv.status!=="paid"&&<Btn kind="ghost" size="xs" onClick={()=>A.markStaffingInvoicePaid(inv.id)}>Mark paid</Btn>}
             </td>
           </tr>;})}
-          {list.length===0&&<tr><td colSpan={7} className="p-6 text-center text-text-3 text-sm">No invoices.</td></tr>}
+          {list.length===0&&<tr><td colSpan={7} className="p-5"><Empty icon="file" title="No invoices" body='Click "Generate weekly invoices" once approved timesheets are ready.'/></td></tr>}
         </tbody>
       </table></div>
     </Card>

@@ -200,7 +200,7 @@ export function EmpStaffingTimesheets(){
               </div>}
             </td>
           </tr>;})}
-          {list.length===0&&<tr><td colSpan={6} className="p-6 text-center text-text-3 text-sm">No timesheets from active assignments.</td></tr>}
+          {list.length===0&&<tr><td colSpan={6} className="p-5"><Empty icon="clock" title="No timesheets yet" body="They'll appear here once workers on your active assignments submit hours."/></td></tr>}
         </tbody>
       </table></div>
     </Card>
@@ -233,7 +233,7 @@ export function EmpStaffingInvoices(){
             <td className="py-3 px-3.5 text-xs" style={{color:daysOverdue>0?C.danger:C.text3}}>{inv.due}{daysOverdue>0?` (+${daysOverdue}d)`:""}</td>
             <td className="py-3 px-3.5"><Tag tone={invoiceTone(inv.status)} sm>{inv.status}</Tag></td>
           </tr>;})}
-          {invoices.length===0&&<tr><td colSpan={7} className="p-6 text-center text-text-3 text-sm">No invoices yet.</td></tr>}
+          {invoices.length===0&&<tr><td colSpan={7} className="p-5"><Empty icon="file" title="No invoices yet" body="Invoices appear here once your recruiter generates the weekly billing run."/></td></tr>}
         </tbody>
       </table></div>
     </Card>

@@ -785,7 +785,7 @@ export function TrainingEditor(){
             </div>
             {err.mods&&<div className="text-xs text-red mb-2">{err.mods}</div>}
             {(d.mods||[]).length===0
-              ? <div className="p-5 bg-bg border border-dashed border-line rounded-xl text-center text-sm text-text-3">No modules yet — add your first.</div>
+              ? <Empty icon="book" title="No modules yet" body="Add your first module to start building this course."/>
               : <div className="flex flex-col gap-2.5">
                   {(d.mods||[]).map((m,i)=><div key={m.id} className="border border-line rounded-xl p-3 bg-white">
                     <div className="flex gap-2 items-center mb-2">
@@ -818,7 +818,7 @@ export function TrainingEditor(){
               <Btn kind="outline" size="sm" icon="plus" onClick={addTest}>Add question</Btn>
             </div>
             {(d.tests||[]).length===0
-              ? <div className="p-5 bg-bg border border-dashed border-line rounded-xl text-center text-sm text-text-3">No test questions yet. Add some to require certification.</div>
+              ? <Empty icon="check" title="No test questions yet" body="Add some to require a passing quiz before certification."/>
               : <>
                 <div className={`grid gap-3 mb-2.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
                   <Field label="Passing score (%)"><Input type="number" min="1" max="100" value={d.passingScore}

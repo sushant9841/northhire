@@ -79,7 +79,7 @@ export function AdmUsers(){
           <Tag tone={sus?"danger":"ok"} sm>{sus?"Suspended":"Active"}</Tag>
           <Btn kind="ghost" size="xs" icon="eye" onClick={()=>A.impersonate(u.id)}>View as</Btn>
           <Btn kind={sus?"outline":"ghost"} size="xs" onClick={()=>A.toggleSuspend(u.id)}>{sus?"Restore":"Suspend"}</Btn></div>;})}
-      {list.length===0&&<div className="p-9 text-center text-sm text-text-3">No users match that search.</div>}</Card>
+      {list.length===0&&<div className="p-5"><Empty icon="search" title="No users match that search" body="Try a different name, email, or title."/></div>}</Card>
   </Page>;
 }
 
@@ -145,7 +145,7 @@ export function AdmJobs(){
             <Btn kind="ghost" size="xs" icon="eye" title="Preview" onClick={()=>A.openJob(j.id,{preview:true})}/>
             <Btn kind="outline" size="xs" onClick={()=>A.toggleJobStatus(j.id)}>{j.status==="live"?"Pause":"Restore"}</Btn>
             <Btn kind={j.flagged?"dangerSoft":"ghost"} size="xs" onClick={()=>A.flagJob(j.id)}>{j.flagged?"Unflag":"Flag"}</Btn></div></div>;})}
-      {list.length===0&&<div className="p-9 text-center text-sm text-text-3">Nothing matches that filter.</div>}</Card>
+      {list.length===0&&<div className="p-5"><Empty icon="search" title="Nothing matches that filter" body="Try a different search term or switch tabs."/></div>}</Card>
   </Page>;
 }
 
