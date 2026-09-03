@@ -3,7 +3,7 @@ import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
-import { Page, Btn, Tag, Stat, Card, Lbl, Empty, SmartPortrait, Modal, Banner, H1, Field, Input, Sel, Area, usePagination, Pagination } from "../../design/primitives.jsx";
+import { Page, Btn, Tag, Stat, Card, Lbl, Empty, SmartPortrait, Modal, Banner, H1, Field, Input, Sel, Area, usePagination, Pagination, TH_CLASS, TD_CLASS } from "../../design/primitives.jsx";
 import { PROVS, PCODE } from "../../store/seed/constants.js";
 import { invoiceTone, timesheetTone } from "../../helpers/statusTone.js";
 
@@ -179,23 +179,23 @@ export function EmpStaffingTimesheets(){
       <div className="overflow-x-auto"><table className="w-full border-collapse min-w-160">
         <thead><tr className="border-b-2 border-line text-left">
           {["Week","Worker","Hours","Details","Status","Actions"].map(h=>
-            <th key={h} className="py-3 px-3.5 text-xs font-bold text-text-3 tracking-wide uppercase">{h}</th>)}
+            <th key={h} className={TH_CLASS}>{h}</th>)}
         </tr></thead>
         <tbody>{pg.pageItems.map(t=>{const w=A.worker(t.worker); const person=w?(A.people||[]).find(p=>p.id===w.personId):null;
           const totalHrs=A.timesheetTotal(t);
           return <tr key={t.id} className="border-b border-line-soft">
-            <td className="py-3 px-3.5 text-xs text-text-2 font-mono">{t.weekStart}</td>
-            <td className="py-3 px-3.5"><div className="flex gap-2.5 items-center">
+            <td className={`${TD_CLASS} text-xs text-text-2 font-mono`}>{t.weekStart}</td>
+            <td className={TD_CLASS}><div className="flex gap-2.5 items-center">
               <SmartPortrait seed={person?.seed||0} size={28} radius={7}/>
               <span className="text-sm text-text font-semibold">{person?.name||"—"}</span></div></td>
-            <td className="py-3 px-3.5 text-sm text-text font-bold">{totalHrs}h</td>
-            <td className="py-3 px-3.5 text-xs text-text-3">
+            <td className={`${TD_CLASS} text-sm text-text font-bold`}>{totalHrs}h</td>
+            <td className={`${TD_CLASS} text-xs text-text-3`}>
               {["mon","tue","wed","thu","fri","sat","sun"].map(k=>`${k.charAt(0).toUpperCase()}${t.hours[k]||0}`).join(" ")}
               {t.otHours>0&&<div>OT: {t.otHours}h</div>}
               {t.notes&&<div className="mt-1 italic">"{t.notes}"</div>}
             </td>
-            <td className="py-3 px-3.5"><Tag tone={timesheetTone(t.status)} sm>{t.status}</Tag></td>
-            <td className="py-3 px-3.5">
+            <td className={TD_CLASS}><Tag tone={timesheetTone(t.status)} sm>{t.status}</Tag></td>
+            <td className={TD_CLASS}>
               {t.status==="submitted"&&<div className="flex gap-1">
                 <Btn kind="dangerSoft" size="xs" onClick={()=>{setReturning(t.id);setReason("");}}>Return</Btn>
                 <Btn kind="primary" size="xs" onClick={()=>A.approveTimesheet(t.id,A.user.email)}>Approve</Btn>
@@ -235,17 +235,17 @@ export function EmpStaffingInvoices(){
       <div className="overflow-x-auto"><table className="w-full border-collapse min-w-160">
         <thead><tr className="border-b-2 border-line text-left">
           {["Number","Week","Subtotal","HST","Total","Due","Status"].map(h=>
-            <th key={h} className="py-3 px-3.5 text-xs font-bold text-text-3 tracking-wide uppercase">{h}</th>)}
+            <th key={h} className={TH_CLASS}>{h}</th>)}
         </tr></thead>
         <tbody>{pg.pageItems.map(inv=>{const daysOverdue=inv.status==="overdue"&&inv.due?Math.floor((Date.now()-new Date(inv.due).getTime())/864e5):0;
           return <tr key={inv.id} className="border-b border-line-soft">
-            <td className="py-3 px-3.5 text-xs text-text-2 font-mono">{inv.number}</td>
-            <td className="py-3 px-3.5 text-xs text-text-3">{inv.weekStart}</td>
-            <td className="py-3 px-3.5 text-sm text-text">${inv.subtotal.toLocaleString()}</td>
-            <td className="py-3 px-3.5 text-xs text-text-3">${inv.hst.toLocaleString()}</td>
-            <td className="py-3 px-3.5 text-sm text-brand font-bold">${inv.total.toLocaleString()}</td>
-            <td className="py-3 px-3.5 text-xs" style={{color:daysOverdue>0?C.danger:C.text3}}>{inv.due}{daysOverdue>0?` (+${daysOverdue}d)`:""}</td>
-            <td className="py-3 px-3.5"><Tag tone={invoiceTone(inv.status)} sm>{inv.status}</Tag></td>
+            <td className={`${TD_CLASS} text-xs text-text-2 font-mono`}>{inv.number}</td>
+            <td className={`${TD_CLASS} text-xs text-text-3`}>{inv.weekStart}</td>
+            <td className={`${TD_CLASS} text-sm text-text`}>${inv.subtotal.toLocaleString()}</td>
+            <td className={`${TD_CLASS} text-xs text-text-3`}>${inv.hst.toLocaleString()}</td>
+            <td className={`${TD_CLASS} text-sm text-brand font-bold`}>${inv.total.toLocaleString()}</td>
+            <td className={`${TD_CLASS} text-xs`} style={{color:daysOverdue>0?C.danger:C.text3}}>{inv.due}{daysOverdue>0?` (+${daysOverdue}d)`:""}</td>
+            <td className={TD_CLASS}><Tag tone={invoiceTone(inv.status)} sm>{inv.status}</Tag></td>
           </tr>;})}
           {invoices.length===0&&<tr><td colSpan={7} className="p-5"><Empty icon="file" title="No invoices yet" body="Invoices appear here once your recruiter generates the weekly billing run."/></td></tr>}
         </tbody>

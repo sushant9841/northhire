@@ -5,7 +5,7 @@ import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
 import {
   Btn, Card, Tag, Field, Input, Sel, Area, Banner, Lbl, Modal, DatePicker, SmartPortrait,
-  SmartLogo, Empty, ConfirmDialog, usePagination, Pagination,
+  SmartLogo, Empty, ConfirmDialog, usePagination, Pagination, TH_CLASS as TH_CLS, TD_CLASS as TD_CLS,
 } from "../../design/primitives.jsx";
 import { _fmtDate, _weekStart } from "../../helpers/utils.js";
 import { InlineList } from "../shared/formControls.jsx";
@@ -218,9 +218,6 @@ function _PillTabs({items,value,onChange}){
       className={`border-0 py-1.5 px-3.5 rounded-md cursor-pointer text-xs font-semibold ${value===v?"bg-white text-brand":"bg-transparent text-text-3"}`}>{l}</button>)}
   </div>;
 }
-
-const TH_CLS="py-3 px-3.5 text-xs font-bold text-text-3 tracking-wide uppercase";
-const TD_CLS="py-3 px-3.5";
 
 /* ─── Job Orders: client requests for workers ─── */
 export function AgencyJobOrders(){

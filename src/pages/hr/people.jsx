@@ -3,7 +3,7 @@ import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C, SH } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
-import { Btn, Card, Tag, Field, Input, Sel, Area, Banner, Modal, SmartPortrait, Empty, Stat, ConfirmDialog, usePagination, Pagination } from "../../design/primitives.jsx";
+import { Btn, Card, Tag, Field, Input, Sel, Area, Banner, Modal, SmartPortrait, Empty, Stat, ConfirmDialog, usePagination, Pagination, TH_CLASS, TD_CLASS } from "../../design/primitives.jsx";
 import { _fmtDate } from "../../helpers/utils.js";
 import { HR_ROLES } from "../../store/seed/hrCompanySettings.js";
 import { HR_DEPARTMENTS } from "../../store/seed/hrDepartments.js";
@@ -330,23 +330,23 @@ function HrPeople_Manage(){
       <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:820}}>
         <thead><tr className="border-b-2 border-line text-left">
           {["Name","Title","Department","Role","Reports to","Status","Actions"].map(h=>
-            <th key={h} className="py-3 px-3.5 text-xs font-bold text-text-3 tracking-wide uppercase">{h}</th>)}
+            <th key={h} className={TH_CLASS}>{h}</th>)}
         </tr></thead>
         <tbody>{pg.pageItems.map(e=>{const d=depts.find(x=>x.id===e.dept); const mgr=A.hrEmp(e.manager);
           return <tr key={e.id} className="border-b border-line-soft">
-            <td className="py-3 px-3.5"><div className="flex gap-2.5 items-center">
+            <td className={TD_CLASS}><div className="flex gap-2.5 items-center">
               <SmartPortrait seed={e.seed} size={30} radius={8}/>
               <div className="min-w-0">
                 <div className="text-sm font-semibold text-text">{e.name}</div>
                 <div className="text-xs text-text-3 mt-px">{e.email}</div>
               </div>
             </div></td>
-            <td className="py-3 px-3.5 text-sm text-text-2">{e.title}</td>
-            <td className="py-3 px-3.5">{d?<Tag sm style={{background:d.color+"22",color:d.color,border:"1px solid "+d.color+"55"}}>{d.name}</Tag>:<span className="text-xs text-text-3">—</span>}</td>
-            <td className="py-3 px-3.5 text-xs text-text-2">{A.HR_ROLES.find(r=>r.k===e.role)?.label||e.role}</td>
-            <td className="py-3 px-3.5 text-xs text-text-2">{mgr?.name||<span className="text-text-3">—</span>}</td>
-            <td className="py-3 px-3.5"><Tag tone={e.status==="active"?"ok":"neutral"} sm>{e.status}</Tag></td>
-            <td className="py-3 px-3.5"><div className="flex gap-1">
+            <td className={`${TD_CLASS} text-sm text-text-2`}>{e.title}</td>
+            <td className={TD_CLASS}>{d?<Tag sm style={{background:d.color+"22",color:d.color,border:"1px solid "+d.color+"55"}}>{d.name}</Tag>:<span className="text-xs text-text-3">—</span>}</td>
+            <td className={`${TD_CLASS} text-xs text-text-2`}>{A.HR_ROLES.find(r=>r.k===e.role)?.label||e.role}</td>
+            <td className={`${TD_CLASS} text-xs text-text-2`}>{mgr?.name||<span className="text-text-3">—</span>}</td>
+            <td className={TD_CLASS}><Tag tone={e.status==="active"?"ok":"neutral"} sm>{e.status}</Tag></td>
+            <td className={TD_CLASS}><div className="flex gap-1">
               <Btn kind="ghost" size="xs" icon="edit" onClick={()=>setEditing({...e})}>Edit</Btn>
               {e.status==="active"&&e.id!==emp.id&&<Btn kind="dangerSoft" size="xs" onClick={()=>setOffboarding(e)}>Offboard</Btn>}
             </div></td>
@@ -480,20 +480,20 @@ export function HrExpensesPage(){
       <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:720}}>
         <thead><tr className="border-b-2 border-line text-left">
           {(tab==="mine"?["Date","Category","Merchant","Amount","Status",""]:["Date","Employee","Category","Merchant","Amount","Status","Actions"]).map(h=>
-            <th key={h} className="py-3 px-3.5 text-xs font-bold text-text-3 tracking-wide uppercase">{h}</th>)}
+            <th key={h} className={TH_CLASS}>{h}</th>)}
         </tr></thead>
         <tbody>{pg.pageItems.map(x=>{const e=A.hrEmp(x.employee);
           return <tr key={x.id} className="border-b border-line-soft cursor-pointer" onClick={()=>setDetail(x)}>
-            <td className="py-3 px-3.5 text-xs text-text-2 font-mono">{x.date}</td>
-            {tab!=="mine"&&<td className="py-3 px-3.5"><div className="flex gap-2 items-center">
+            <td className={`${TD_CLASS} text-xs text-text-2 font-mono`}>{x.date}</td>
+            {tab!=="mine"&&<td className={TD_CLASS}><div className="flex gap-2 items-center">
               <SmartPortrait seed={e?.seed||0} size={24} radius={6}/>
               <span className="text-xs text-text font-semibold">{e?.name||"—"}</span>
             </div></td>}
-            <td className="py-3 px-3.5 text-xs text-text-2">{x.category}</td>
-            <td className="py-3 px-3.5 text-sm text-text">{x.merchant}</td>
-            <td className="py-3 px-3.5 text-sm font-bold text-text">${x.amount.toFixed(2)}</td>
-            <td className="py-3 px-3.5"><Tag tone={x.status==="paid"?"brand":x.status==="approved"?"ok":x.status==="rejected"?"danger":"warn"} sm>{x.status}</Tag></td>
-            <td className="py-3 px-3.5" onClick={e=>e.stopPropagation()}>
+            <td className={`${TD_CLASS} text-xs text-text-2`}>{x.category}</td>
+            <td className={`${TD_CLASS} text-sm text-text`}>{x.merchant}</td>
+            <td className={`${TD_CLASS} text-sm font-bold text-text`}>${x.amount.toFixed(2)}</td>
+            <td className={TD_CLASS}><Tag tone={x.status==="paid"?"brand":x.status==="approved"?"ok":x.status==="rejected"?"danger":"warn"} sm>{x.status}</Tag></td>
+            <td className={TD_CLASS} onClick={e=>e.stopPropagation()}>
               {isApprover&&tab==="queue"&&<div className="flex gap-1">
                 <Btn kind="dangerSoft" size="xs" onClick={()=>setDetail(x)}>Reject</Btn>
                 <Btn kind="primary" size="xs" onClick={()=>A.decideExpense(x.id,"approved",emp.id)}>Approve</Btn>
