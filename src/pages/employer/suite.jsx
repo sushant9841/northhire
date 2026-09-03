@@ -6,6 +6,7 @@ import { I } from "../../design/icons.jsx";
 import {
   Page, H1, H2, Btn, Banner, Stat, Card, Empty, Tag, Bar, Modal, Area, Field, Input, Sel,
   RichText, Switch, DatePicker, Ring, Tabs, Lbl, SmartPortrait, SmartScene, SmartLogo, Mark, MARKS, ConfirmDialog,
+  usePagination, Pagination,
 } from "../../design/primitives.jsx";
 import { pay, payShort, dlText, money, uid } from "../../helpers/utils.js";
 import { sanitizeHtml } from "../../helpers/sanitize.js";
@@ -64,6 +65,7 @@ export function EmpHome(){
 export function EmpJobs(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const jobs=A.jobs.filter(j=>j.e===A.company.id);
+  const pg=usePagination(jobs,20);
   const [showImport,setShowImport]=useState(false);
   const [csv,setCsv]=useState(""); const [importResult,setImportResult]=useState(null);
   const sampleCSV="title,city,province,type,pay_low,pay_high,pay_unit,category,mode,vacancies,experience,education,skills,perks,duties,requirements,description\nJourneyperson Electrician,Calgary,Alberta,Full Time,42,52,hr,trades,On-site,2,3+ years,Apprenticeship / trade certificate,Red Seal;WHMIS;Fall Protection,Health benefits;RRSP match,Site fit-out;Panel installation;Testing,Red Seal cert;5+ years commercial,Hiring a Red Seal electrician for commercial fit-outs in Calgary.";
@@ -86,8 +88,8 @@ export function EmpJobs(){
     </Modal>}
     {jobs.length===0?<Empty icon="briefcase" title="No listings yet" body="Create your first posting to start receiving applications."
       action={<Btn kind="primary" icon="plus" onClick={()=>A.go("empPost")}>Post a job</Btn>}/>
-      :<div className="flex flex-col gap-3">
-        {jobs.map((j,i)=>{const apps=A.applications.filter(a=>a.job===j.id);
+      :<><div className="flex flex-col gap-3">
+        {pg.pageItems.map((j,i)=>{const apps=A.applications.filter(a=>a.job===j.id);
           return <Card key={j.id} delay={Math.min(i,6)*0.04}>
             <div className="flex gap-3.5 items-start flex-wrap">
               <div className="grow shrink basis-60 min-w-0">
@@ -103,7 +105,8 @@ export function EmpJobs(){
               <div className="flex gap-2 flex-wrap items-center">
                 <Btn kind="outline" size="sm" onClick={()=>A.openJob(j.id,{preview:true})}>Preview</Btn>
                 <Btn kind="outline" size="sm" onClick={()=>A.toggleJobStatus(j.id)}>{j.status==="live"?"Pause":"Reopen"}</Btn>
-                <Btn kind="primary" size="sm" onClick={()=>{A.setPipelineJob(j.id);A.go("empPipeline");}}>Candidates ({apps.length})</Btn></div></div></Card>;})}</div>}
+                <Btn kind="primary" size="sm" onClick={()=>{A.setPipelineJob(j.id);A.go("empPipeline");}}>Candidates ({apps.length})</Btn></div></div></Card>;})}</div>
+      <Pagination {...pg}/></>}
   </Page>;
 }
 
@@ -426,6 +429,8 @@ export function EmpPipeline(){
 
   const [talentMinScore,setTalentMinScore]=useState(65);
   const reverseCandidates=A.reverseMatch(jobId,talentMinScore);
+  const talentPg=usePagination(reverseCandidates,12);
+  useEffect(()=>{talentPg.setPage(1);},[talentMinScore]);
 
   return <div className="flex flex-col min-h-full bg-bg">
     <div className={`bg-white border-b border-line ${mob?"py-3.5 px-4":"py-4 px-7"}`}>
@@ -474,8 +479,8 @@ export function EmpPipeline(){
       </Card>
       {reverseCandidates.length===0
         ? <Empty icon="target" title="No talent pool matches yet" body="Try lowering the match-score threshold, or check back as more candidates sign up in this trade."/>
-        : <div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
-            {reverseCandidates.map(({p,score})=>{const invited=A.invitedCandidates.has(`${jobId}:${p.id}`);
+        : <><div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
+            {talentPg.pageItems.map(({p,score})=>{const invited=A.invitedCandidates.has(`${jobId}:${p.id}`);
               return <Card key={p.id} style={{padding:20,borderRadius:16}}>
               <div className="flex gap-3.5 items-center">
                 <SmartPortrait seed={p.seed} size={52}/>
@@ -489,7 +494,8 @@ export function EmpPipeline(){
               {invited
                 ?<Btn kind="soft" size="sm" full icon="check" disabled style={{marginTop:14}}>Invited</Btn>
                 :<Btn kind="outline" size="sm" full icon="send" style={{marginTop:14}} onClick={()=>A.inviteToApply(p.id,jobId)}>Invite to apply</Btn>}
-            </Card>;})}</div>}
+            </Card>;})}</div>
+          <Pagination {...talentPg}/></>}
       </>}
     </div>}
 
@@ -684,6 +690,7 @@ export function ContentManager({scope,only}){
   const rawList=tab==="blogs"?blogs:trainings;
   const list=rawList.filter(x=>(statusFilter==="all"||x.status===statusFilter)&&(!q||x.title.toLowerCase().includes(q.toLowerCase())||x.cat.toLowerCase().includes(q.toLowerCase())));
   const allowed=tab==="blogs"?canBlogs:canTrainings;
+  const pg=usePagination(list,20);
   const selItems=list.filter(x=>sel.has(x.id));
   const bulkAction=fn=>{selItems.forEach(x=>fn(x.id)); setSel(new Set());};
   return <Page wide>
@@ -716,7 +723,8 @@ export function ContentManager({scope,only}){
               :"Publishing is currently disabled by an administrator."):"Try a different search term or status."}
             action={rawList.length===0&&allowed?<Btn kind="primary" icon="plus" onClick={()=>tab==="blogs"?A.editBlog("new"):A.editTraining("new")}>
               Create {tab==="blogs"?"article":"training"}</Btn>:null}/>
-        : list.map(x=><Row key={x.id} item={x} type={tab==="blogs"?"blog":"training"}/>)}</Card>
+        : pg.pageItems.map(x=><Row key={x.id} item={x} type={tab==="blogs"?"blog":"training"}/>)}</Card>
+    <Pagination {...pg}/>
   </Page>;
 }
 
