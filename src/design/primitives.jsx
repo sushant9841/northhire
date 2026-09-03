@@ -305,10 +305,16 @@ export function Btn({children,onClick,kind="primary",size="md",full,disabled,loa
   {loading?<span className="inline-block rounded-full border-2 border-current border-t-transparent animate-spin" style={{width:I_SIZE,height:I_SIZE}}/>:icon&&<I n={icon} s={I_SIZE} w={2}/>}
   {children}{!loading&&iconR&&<I n={iconR} s={I_SIZE} w={2}/>}</button>;
 }
-export function Tag({children,tone="neutral",icon,sm}){
- const T={neutral:"bg-bg text-text-2 border-line",brand:"bg-wash text-brand border-line-2",ok:"bg-ok-bg text-ok border-ok-ln",
+/* Tag and Banner both render a soft-fill/border/text tone triad for the same 5 semantic tones
+   (neutral/brand/ok/warn/danger) - previously each duplicated its own copy of those exact class
+   strings. One shared map now backs both; Tag additionally supports violet/dark/onDark, which
+   Banner has no use for. Btn keeps its own K map since interactive filled buttons need hover
+   states and solid (not soft) fills - a genuinely different shape, not the same duplication. */
+export const TONE_SOFT={neutral:"bg-bg text-text-2 border-line",brand:"bg-wash text-brand border-line-2",ok:"bg-ok-bg text-ok border-ok-ln",
   warn:"bg-warn-bg text-warn border-warn-ln",danger:"bg-red-bg text-red border-red-ln",violet:"bg-violet-bg text-violet border-violet-ln",
-  dark:"bg-ink text-white border-ink",onDark:"bg-white/12 text-white/90 border-white/20"}[tone];
+  dark:"bg-ink text-white border-ink",onDark:"bg-white/12 text-white/90 border-white/20"};
+export function Tag({children,tone="neutral",icon,sm}){
+ const T=TONE_SOFT[tone]||TONE_SOFT.neutral;
  return <span className={`inline-flex items-center gap-1.5 font-semibold border whitespace-nowrap leading-snug rounded-lg text-xs ${sm?"py-1 px-2":"py-1.5 px-2.5"} ${T}`}>
   {icon&&<I n={icon} s={sm?12:13} w={2}/>}{children}</span>;
 }
@@ -384,8 +390,7 @@ export function Empty({icon="search",title,body,action}){
   <div className="text-sm text-text-2 leading-relaxed max-w-sm mx-auto">{body}</div>
   {action&&<div className="mt-5">{action}</div>}</div>;}
 export function Banner({tone="brand",icon,title,children,action,onClose,style}){
- const T={brand:"bg-wash border-line-2 text-brand",ok:"bg-ok-bg border-ok-ln text-ok",warn:"bg-warn-bg border-warn-ln text-warn",
-  danger:"bg-red-bg border-red-ln text-red",neutral:"bg-bg border-line text-text-2"}[tone];
+ const T=TONE_SOFT[tone]||TONE_SOFT.brand;
  return <div className={`border rounded-xl py-3.5 px-4 flex gap-3 items-start ${T}`} style={{animation:"rise .3s ease both",...style}}>
   <span className="flex shrink-0 mt-px"><I n={icon||"info"} s={18}/></span>
   <div className="flex-1 min-w-0">
