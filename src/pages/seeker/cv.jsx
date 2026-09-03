@@ -8,6 +8,16 @@ import { uid } from "../../helpers/utils.js";
 import { sanitizeHtml } from "../../helpers/sanitize.js";
 import { CV_TEMPLATES } from "../../store/seed/constants.js";
 
+/* Design tab explicitly recommends fitting the CV on one page, but the rich-text fields gave no
+   feedback on how much is being written - a rough word count is enough guidance without needing
+   real pagination logic. ~120 words is a reasonable summary/bullet budget before a section alone
+   risks pushing a one-page CV to two. */
+const _wordCount=html=>(html||"").replace(/<[^>]+>/g," ").replace(/&nbsp;/g," ").trim().split(/\s+/).filter(Boolean).length;
+function _WordCountHint({html,budget=120}){
+  const n=_wordCount(html);
+  return <div className={`text-xs mt-1.5 text-right ${n>budget?"text-warn":"text-text-3"}`}>{n} word{n===1?"":"s"}{n>budget?` — consider trimming for a one-page CV`:""}</div>;
+}
+
 /* ═══════════════ CV BUILDER — multiple CVs, three templates ═══════════════
    CvPreview renders at three very different scales (full live-preview panel, a 190px-tall
    list-card thumbnail shrunk via CSS transform, and a tiny template-picker thumbnail), all
@@ -167,7 +177,8 @@ export function CvEditPage(){
               <Field label="Province"><Input value={d.prov||""} onChange={e=>set("prov",e.target.value)} placeholder={A.user.prov}/></Field></div>
             <Field label="Professional summary" hint="Two or three sentences at the top of the CV. Use bold or bullets to highlight your best qualifications.">
               <RichText value={d.summary||""} onChange={v=>set("summary",v)} rows={4}
-                placeholder="e.g. Experienced journeyperson electrician with 8 years on commercial projects across Alberta..."/></Field></div>}
+                placeholder="e.g. Experienced journeyperson electrician with 8 years on commercial projects across Alberta..."/>
+              <_WordCountHint html={d.summary} budget={60}/></Field></div>}
 
           {sec==="exp"&&<div>
             <H2 sub="Most recent first" action={<Btn kind="outline" size="sm" icon="plus" onClick={addExp}>Add role</Btn>}>Work experience</H2>
@@ -200,7 +211,8 @@ export function CvEditPage(){
                   </label>
                   <Field label="Your responsibilities and achievements" style={{marginTop:12}} hint="Describe what you were responsible for and any measurable results.">
                     <RichText value={x.detail} onChange={v=>upd("exp",x.id,"detail",v)} rows={4}
-                      placeholder="Write your roles and responsibilities. Include measurable results where you can."/></Field></div>)}</div>}</div>}
+                      placeholder="Write your roles and responsibilities. Include measurable results where you can."/>
+                    <_WordCountHint html={x.detail}/></Field></div>)}</div>}</div>}
 
           {sec==="edu"&&<div>
             <H2 sub="Include apprenticeships and trade certificates" action={<Btn kind="outline" size="sm" icon="plus" onClick={addEdu}>Add</Btn>}>Education</H2>

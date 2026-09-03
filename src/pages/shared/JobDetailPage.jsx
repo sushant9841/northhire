@@ -118,6 +118,12 @@ export function JobDetailPage(){
               <Btn kind="outline" size="sm" full onClick={()=>A.go("profile")}>Update my skills</Btn></div>;})()}
           {(()=>{const s=A.salaryInsight(job.t,job.prov);
             if(!s)return null;
+            /* salaryInsight always computes in annualized terms internally (the only way to
+               compare an hourly trades job against a salaried office job on one scale) - but
+               showing ONLY that figure for an hourly/per-mile posting, with no link back to the
+               job's own $/hr or $/mi terms, forced the reader to mentally convert. Show both. */
+            const perUnit=job.unit==="hr"?v=>v/2080:job.unit==="mi"?v=>v/110000:null;
+            const unitLabel=job.unit==="hr"?"/hr":job.unit==="mi"?"/mi":null;
             return <div className="bg-white rounded-3xl p-6 border border-line">
               <Lbl>Salary insight</Lbl>
               <p className="text-sm text-text-2 mb-3.5 leading-normal">
@@ -126,8 +132,9 @@ export function JobDetailPage(){
                 {[["Low",s.p25],["Median",s.median],["High",s.p75]].map(([l,v],i)=>
                   <div key={l} className={`text-center py-3 px-1.5 rounded-xl border ${i===1?"bg-tint border-line-2":"bg-bg border-line"}`}>
                     <div className="text-xs text-text-3 font-semibold tracking-wide uppercase">{l}</div>
-                    <div className={`text-base font-bold mt-1 tracking-tight ${i===1?"text-brand":"text-text"}`}>${Math.round(v/1000)}k</div></div>)}</div>
-              <div className="text-xs text-text-3 text-center">Estimated annualized totals</div></div>;})()}
+                    <div className={`text-base font-bold mt-1 tracking-tight ${i===1?"text-brand":"text-text"}`}>${Math.round(v/1000)}k</div>
+                    {perUnit&&<div className="text-xs text-text-3 mt-0.5">${perUnit(v).toFixed(2)}{unitLabel}</div>}</div>)}</div>
+              <div className="text-xs text-text-3 text-center">{perUnit?`Annualized (at ${job.unit==="hr"?"2,080 hrs/yr":"110,000 mi/yr"}), with this job's own ${unitLabel} rate below each figure`:"Estimated annualized totals"}</div></div>;})()}
         </div>}
       </div>
 

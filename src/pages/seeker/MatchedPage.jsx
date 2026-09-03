@@ -11,6 +11,12 @@ export function MatchedPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const list=A.jobs.filter(j=>j.status==="live").map(j=>({j,s:A.score(j)})).filter(x=>x.s>=50).sort((a,b)=>b.s-a.s);
   const strong=list.filter(x=>x.s>=75); const good=list.filter(x=>x.s>=50&&x.s<75);
+  /* "Add more skills" was generic filler copy naming nothing specific - tally which missing
+     skills show up most often across near-miss (50-74) matches, so the CTA can name the exact
+     skills that would move the needle instead of a vague suggestion. */
+  const missingTally={};
+  good.forEach(({j})=>{A.skillsGap(j).missing.forEach(s=>{missingTally[s]=(missingTally[s]||0)+1;});});
+  const topMissing=Object.entries(missingTally).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([s])=>s);
   const heroPad=mob?"py-11 px-4":"py-18 px-8";
   const G=({title,sub,items})=>items.length===0?null:<section className="mb-9">
     <div className="flex justify-between items-end mb-5 gap-3 flex-wrap">
@@ -52,7 +58,11 @@ export function MatchedPage(){
           <div className="w-13 h-13 rounded-2xl bg-wash text-brand flex items-center justify-center shrink-0"><I n="sparkle" s={24}/></div>
           <div className="flex-[1_1_260px] min-w-0">
             <div className="text-base font-bold text-text tracking-tight mb-1">{strong.length} strong matches this week</div>
-            <div className="text-sm text-text-2 leading-normal">Add more skills and tickets to widen matches across all {CATS.length} sectors.</div></div>
+            <div className="text-sm text-text-2 leading-normal">
+              {topMissing.length>0
+                ? <>Adding <strong className="text-text">{topMissing.join(", ")}</strong> would turn your closest near-misses into strong matches.</>
+                : <>Add more skills and tickets to widen matches across all {CATS.length} sectors.</>}
+            </div></div>
           <Btn kind="primary" onClick={()=>A.go("profile")}>Add skills</Btn></div>
         <G title="Strong matches" sub="You meet most of what these employers asked for" items={strong}/>
         <G title="Worth a look" sub="Close on skills, or a small stretch on experience" items={good}/>

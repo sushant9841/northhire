@@ -36,7 +36,10 @@ export function ProfilePage(){
     finance:["Excel","Reconciliation","QuickBooks","Payroll","Compliance"],
     tech:["JavaScript","React","Python","SQL","Git"],
     agri:["Tractor Operation","Irrigation","Livestock Handling","Crop Care","Packing"],
-    security:["Security Licence","CCTV Monitoring","Report Writing","De-escalation","WHMIS"]}[d.cat]||[]).filter(s=>!d.skills.includes(s));
+    security:["Security Licence","CCTV Monitoring","Report Writing","De-escalation","WHMIS"]}[d.cat]
+    /* Same gap as SignupPage's identical per-category lookup: a sector added to CATS without a
+       matching entry here silently showed no suggestions at all. */
+    ||["Communication","Time Management","Problem Solving","Teamwork"]).filter(s=>!d.skills.includes(s));
   const tabs=[{k:"about",label:"About",icon:"user"},{k:"skills",label:"Skills",icon:"sparkle"},
     {k:"prefs",label:"Preferences",icon:"target"},{k:"learning",label:"Learning",icon:"cap"},{k:"refs",label:"References",icon:"users"}];
 
