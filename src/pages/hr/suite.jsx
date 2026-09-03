@@ -9,7 +9,8 @@ import {
 } from "../../design/primitives.jsx";
 import { _fmtDate } from "../../helpers/utils.js";
 import { invoiceTone } from "../../helpers/statusTone.js";
-import { HR_ROLES, HR_COMPANY_SETTINGS_DEFAULT, PUNCH_VENDORS, PRIOR_HR_VENDORS } from "../../store/seed/hrCompanySettings.js";
+import { salesTaxRate, salesTaxLabel } from "../../helpers/salesTax.js";
+import { HR_ROLES, HR_COMPANY_SETTINGS_DEFAULT, PUNCH_VENDORS, PRIOR_HR_VENDORS, HR_MODULES } from "../../store/seed/hrCompanySettings.js";
 import { HR_DEPARTMENTS } from "../../store/seed/hrDepartments.js";
 import { InlineList } from "../shared/formControls.jsx";
 import { TrainingCard } from "../shared/cards.jsx";
@@ -500,15 +501,26 @@ export function HrAttendance(){
   const canSeeAll=emp.role==="owner"||emp.role==="admin"||emp.role==="hr";
   const [view,setView]=useState(canSeeAll?"team":"mine");
   const [empFilter,setEmpFilter]=useState("all");
+  const [fromDate,setFromDate]=useState(""); const [toDate,setToDate]=useState("");
+  const [shown,setShown]=useState(50);
   const today=_fmtDate(new Date());
   /* Same overnight-shift fix as HrDashboard: an open punch from a prior date must still surface
      the punch-out button instead of "Not clocked in". */
   const todayRecord=A.hrAttendance.find(a=>a.employee===emp.id&&!a.clockOut)||A.hrAttendance.find(a=>a.employee===emp.id&&a.date===today);
 
-  const records=view==="mine"
+  const records=(view==="mine"
     ? A.hrAttendance.filter(a=>a.employee===emp.id)
-    : A.hrAttendance.filter(a=>empFilter==="all"||a.employee===empFilter);
+    : A.hrAttendance.filter(a=>empFilter==="all"||a.employee===empFilter))
+    .filter(a=>(!fromDate||a.date>=fromDate)&&(!toDate||a.date<=toDate));
   const sorted=[...records].sort((a,b)=>b.date.localeCompare(a.date));
+  const exportCsv=()=>{
+    const who=r=>A.hrEmp(r.employee)?.name||r.employee;
+    const rows=[["Date","Employee","In","Out","Hours","Source"],
+      ...sorted.map(r=>[r.date,who(r),r.clockIn||"",r.clockOut||"",r.hours??"",r.source||""])];
+    const csv=rows.map(row=>row.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
+    const blob=new Blob([csv],{type:"text/csv"}); const url=URL.createObjectURL(blob);
+    const a=document.createElement("a"); a.href=url; a.download="attendance.csv"; a.click(); URL.revokeObjectURL(url);
+  };
 
   const settings=A.hrCompanySettings[company.id]||HR_COMPANY_SETTINGS_DEFAULT;
   const punchConn=settings.integrations.punchMachine.connected;
@@ -552,6 +564,14 @@ export function HrAttendance(){
           <option value="all">All employees</option>
           {A.hrEmpsAtCompany(company.id).map(e=><option key={e.id} value={e.id}>{e.name}</option>)}</Sel>}
       </div>
+      <div className="flex gap-2.5 items-center mb-3.5 flex-wrap">
+        <Input type="date" value={fromDate} onChange={e=>{setFromDate(e.target.value);setShown(50);}} style={{maxWidth:170}}/>
+        <span className="text-xs text-text-3">to</span>
+        <Input type="date" value={toDate} onChange={e=>{setToDate(e.target.value);setShown(50);}} style={{maxWidth:170}}/>
+        {(fromDate||toDate)&&<button onClick={()=>{setFromDate("");setToDate("");}} className="bg-transparent border-0 p-0 cursor-pointer text-sm text-brand font-semibold">Clear dates</button>}
+        <div className="flex-1"/>
+        <Btn kind="outline" size="sm" icon="download" onClick={exportCsv}>Export CSV</Btn>
+      </div>
       <div className="overflow-x-auto">
         <table className="w-full border-collapse" style={{minWidth:600}}>
           <thead><tr className="border-b-2 border-line text-left">
@@ -563,7 +583,7 @@ export function HrAttendance(){
             <th className={TH_CLS}>Source</th>
           </tr></thead>
           <tbody>
-            {sorted.slice(0,50).map(r=>{const who=A.hrEmp(r.employee);
+            {sorted.slice(0,shown).map(r=>{const who=A.hrEmp(r.employee);
               return <tr key={r.id} className="border-b border-line-soft transition-colors duration-150 hover:bg-bg">
                 <td className={`${TD_CLS} text-sm text-text`}>{r.date}</td>
                 {view==="team"&&<td className={`${TD_CLS} text-sm text-text`}>{who?.name||"—"}</td>}
@@ -576,6 +596,7 @@ export function HrAttendance(){
           </tbody>
         </table>
       </div>
+      {sorted.length>shown&&<Btn kind="outline" full style={{marginTop:14}} onClick={()=>setShown(s=>s+50)}>Show more ({sorted.length-shown} remaining)</Btn>}
     </Card>
   </div>;
 }
@@ -705,14 +726,16 @@ export function HrTasks(){
             <Tag tone="neutral" sm>{tasks.length}</Tag>
           </div>
           <div className="flex flex-col gap-2">
-            {tasks.map(t=>{const assn=A.hrEmp(t.assignee); const by=A.hrEmp(t.assignedBy);
-              return <div key={t.id} data-card className="bg-white border border-line rounded-xl p-3">
+            {[...tasks].sort((a,b)=>a.due.localeCompare(b.due)).map(t=>{const assn=A.hrEmp(t.assignee); const by=A.hrEmp(t.assignedBy);
+              const overdue=col.k!=="done"&&t.due<_fmtDate(new Date());
+              return <div key={t.id} data-card className="bg-white border border-line rounded-xl p-3" style={overdue?{borderColor:C.red}:undefined}>
                 <div className="text-sm font-semibold text-text mb-2 leading-snug">{t.title}</div>
                 <div className="flex gap-1.5 flex-wrap mb-2.5">
                   <Tag tone={t.priority==="high"?"danger":t.priority==="medium"?"warn":"neutral"} sm>{t.priority}</Tag>
+                  {overdue&&<Tag tone="danger" sm icon="alert">Overdue</Tag>}
                   {t.tags?.map(tag=><Tag key={tag} tone="neutral" sm>{tag}</Tag>)}
                 </div>
-                <div className="text-xs text-text-3 mb-2.5 flex gap-2 flex-wrap">
+                <div className={`text-xs mb-2.5 flex gap-2 flex-wrap ${overdue?"text-red font-semibold":"text-text-3"}`}>
                   <span>Due {t.due}</span>
                   {assn&&<span>• {assn.name.split(" ")[0]}</span>}
                 </div>
@@ -1028,7 +1051,7 @@ export function HrInvoices(){
   const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
   const [showAdd,setShowAdd]=useState(false);
   const [detail,setDetail]=useState(null);
-  const [nInv,setNInv]=useState({client:"",amount:0,due:"",po:"",items:[{desc:"",qty:1,unitPrice:0}]});
+  const [nInv,setNInv]=useState({client:"",prov:company?.prov||"ON",amount:0,due:"",po:"",items:[{desc:"",qty:1,unitPrice:0}]});
   const [tab,setTab]=useState("all");
   const list=tab==="all"?A.hrInvoices:A.hrInvoices.filter(i=>i.status===tab);
   const canManage=["owner","admin","finance"].includes(emp.role);
@@ -1037,13 +1060,15 @@ export function HrInvoices(){
   const addItem=()=>setNInv(p=>({...p,items:[...p.items,{desc:"",qty:1,unitPrice:0}]}));
   const removeItem=(i)=>setNInv(p=>({...p,items:p.items.filter((_,idx)=>idx!==i)}));
   const itemsTotal=nInv.items.reduce((s,it)=>s+(it.qty*it.unitPrice||0),0);
-  const hst=Math.round(itemsTotal*0.13*100)/100;
+  /* Was a hardcoded 13% (Ontario HST) on every invoice regardless of the client's real
+     jurisdiction - now derived from the client's province, same table staffing invoicing uses. */
+  const hst=Math.round(itemsTotal*salesTaxRate(nInv.prov)*100)/100;
   const invTotal=itemsTotal+hst;
 
   const submit=()=>{
     if(!nInv.client||!nInv.due||itemsTotal<=0)return;
-    A.addInvoice({...nInv,amount:invTotal,subtotal:itemsTotal,hst,items:nInv.items.filter(it=>it.desc&&it.qty*it.unitPrice>0)});
-    setNInv({client:"",amount:0,due:"",po:"",items:[{desc:"",qty:1,unitPrice:0}]});
+    A.addInvoice({...nInv,amount:invTotal,subtotal:itemsTotal,hst,taxLabel:salesTaxLabel(nInv.prov),items:nInv.items.filter(it=>it.desc&&it.qty*it.unitPrice>0)});
+    setNInv({client:"",prov:company?.prov||"ON",amount:0,due:"",po:"",items:[{desc:"",qty:1,unitPrice:0}]});
     setShowAdd(false);
   };
 
@@ -1093,6 +1118,12 @@ export function HrInvoices(){
           <Field label="Due date" required><Input type="date" value={nInv.due} onChange={e=>setNInv({...nInv,due:e.target.value})} min={_fmtDate(new Date())}/></Field>
           <Field label="PO number"><Input value={nInv.po} onChange={e=>setNInv({...nInv,po:e.target.value})} placeholder="Optional"/></Field>
         </div>
+        <Field label="Client province" hint="Determines the sales tax rate applied below.">
+          <Sel value={nInv.prov} onChange={e=>setNInv({...nInv,prov:e.target.value})}>
+            {[["ON","Ontario"],["QC","Québec"],["BC","British Columbia"],["AB","Alberta"],["MB","Manitoba"],["SK","Saskatchewan"],
+              ["NS","Nova Scotia"],["NB","New Brunswick"],["NL","Newfoundland and Labrador"],["PE","Prince Edward Island"],
+              ["NT","Northwest Territories"],["NU","Nunavut"],["YT","Yukon"]].map(([code,name])=><option key={code} value={code}>{name}</option>)}
+          </Sel></Field>
 
         <div>
           <Lbl style={{marginTop:6}}>Line items</Lbl>
@@ -1116,7 +1147,7 @@ export function HrInvoices(){
             <span>Subtotal</span><span>${itemsTotal.toLocaleString()}</span>
           </div>
           <div className="flex justify-between text-sm text-text-2 mb-1.5">
-            <span>HST (13%)</span><span>${hst.toLocaleString()}</span>
+            <span>{salesTaxLabel(nInv.prov)}</span><span>${hst.toLocaleString()}</span>
           </div>
           <div className="flex justify-between text-base text-text font-bold pt-2 border-t border-line">
             <span>Total</span><span className="text-brand">${invTotal.toLocaleString()}</span>
@@ -1184,7 +1215,7 @@ function InvoiceDetailModal({invoice:inv,company,onClose,canManage,onMarkPaid,on
             <span>Subtotal</span><span>${subtotal.toLocaleString()}</span>
           </div>
           <div className="flex justify-between text-sm text-text-2 mb-2">
-            <span>HST (13%)</span><span>${hst.toLocaleString()}</span>
+            <span>{inv.taxLabel||"HST (13%)"}</span><span>${hst.toLocaleString()}</span>
           </div>
         </>}
         <div className={`flex justify-between text-base text-text font-bold ${hst>0?"pt-2.5 border-t border-line":""}`}>
@@ -1213,6 +1244,9 @@ export function HrPayroll(){
   const [showNew,setShowNew]=useState(false);
   const [detail,setDetail]=useState(null);
   const [executing,setExecuting]=useState(null);
+  const [salQ,setSalQ]=useState(""); const [salSort,setSalSort]=useState("name");
+  const salaryRows=[...all].filter(e=>!salQ||e.name.toLowerCase().includes(salQ.toLowerCase())||e.role.toLowerCase().includes(salQ.toLowerCase()))
+    .sort((a,b)=>salSort==="salary"?(b.salary||0)-(a.salary||0):salSort==="role"?a.role.localeCompare(b.role):a.name.localeCompare(b.name));
 
   const today=new Date();
   const twoWeeksAgo=new Date(today.getTime()-14*864e5);
@@ -1275,7 +1309,14 @@ export function HrPayroll(){
     </>}
 
     <Card pad={mob?16:20} style={{borderRadius:14}}>
-      <Lbl>{isEmployee?"My salary":"All employee salaries"}</Lbl>
+      <div className="flex justify-between items-center flex-wrap gap-3 mb-3">
+        <Lbl style={{margin:0}}>{isEmployee?"My salary":"All employee salaries"}</Lbl>
+        {!isEmployee&&<div className="flex gap-2.5 flex-wrap">
+          <Input icon="search" placeholder="Search name or role" value={salQ} onChange={e=>setSalQ(e.target.value)} style={{width:200}}/>
+          <Sel value={salSort} onChange={e=>setSalSort(e.target.value)} style={{width:150}}>
+            <option value="name">Sort: Name</option><option value="salary">Sort: Salary (high-low)</option><option value="role">Sort: Role</option></Sel>
+        </div>}
+      </div>
       <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:500}}>
         <thead><tr className="border-b-2 border-line text-left">
           {(isEmployee?["Item","Amount"]:["Employee","Role","Annual","Monthly","Biweekly"]).map(h=>
@@ -1286,7 +1327,7 @@ export function HrPayroll(){
             <tr><td className="py-3 px-3 text-sm text-text">Annual salary</td><td className="py-3 px-3 text-sm text-brand font-semibold">${emp.salary?.toLocaleString()}</td></tr>
             <tr><td className="py-3 px-3 text-sm text-text">Monthly gross</td><td className="py-3 px-3 text-sm text-text">${Math.round((emp.salary||0)/12).toLocaleString()}</td></tr>
             <tr><td className="py-3 px-3 text-sm text-text">Bi-weekly gross</td><td className="py-3 px-3 text-sm text-text">${Math.round((emp.salary||0)/26).toLocaleString()}</td></tr>
-          </>:all.map(e=><tr key={e.id} className="border-b border-line-soft">
+          </>:salaryRows.map(e=><tr key={e.id} className="border-b border-line-soft">
             <td className="py-3 px-3"><div className="flex gap-2.5 items-center">
               <SmartPortrait seed={e.seed} size={28} radius={7}/>
               <span className="text-sm text-text font-semibold">{e.name}</span></div></td>
@@ -1295,6 +1336,7 @@ export function HrPayroll(){
             <td className="py-3 px-3 text-sm text-text-2">${Math.round((e.salary||0)/12).toLocaleString()}</td>
             <td className="py-3 px-3 text-sm text-text-2">${Math.round((e.salary||0)/26).toLocaleString()}</td>
           </tr>)}
+          {!isEmployee&&salaryRows.length===0&&<tr><td colSpan={5} className="p-5"><Empty icon="search" title="No matches" body="Try a different search term."/></td></tr>}
         </tbody>
       </table></div>
     </Card>
@@ -1516,12 +1558,32 @@ export function HrReports(){
   const avgTenure=all.reduce((s,e)=>{const y=(Date.now()-new Date(e.hired).getTime())/(365.25*24*60*60*1000);return s+y;},0)/(all.length||1);
   const totalSalary=all.reduce((s,e)=>s+(e.salary||0),0);
   const avgSalary=totalSalary/(all.length||1);
+  /* Turnover needs a real termination date to compute honestly - only employees terminated
+     through removeEmployee (which now stamps terminatedAt) count; older/seed terminations
+     without a stamp are excluded rather than guessed at. */
+  const yearAgo=new Date(); yearAgo.setFullYear(yearAgo.getFullYear()-1);
+  const terminatedLast12mo=A.hrEmpsAtCompany(company.id).filter(e=>e.status==="terminated"&&e.terminatedAt&&new Date(e.terminatedAt)>=yearAgo).length;
+  const turnoverRate=all.length?(terminatedLast12mo/(all.length+terminatedLast12mo))*100:0;
+  const exportReport=()=>{
+    const rows=[["Metric","Value"],
+      ["Headcount",all.length],["Avg tenure (years)",avgTenure.toFixed(1)],
+      ["Total payroll",totalSalary],["Avg salary",Math.round(avgSalary)],
+      ["Turnover, last 12mo (%)",turnoverRate.toFixed(1)],
+      ...A.HR_DEPARTMENTS.map(d=>[`Headcount — ${d.name}`,byDept[d.id]||0])];
+    const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
+    const blob=new Blob([csv],{type:"text/csv"}); const url=URL.createObjectURL(blob);
+    const a=document.createElement("a"); a.href=url; a.download="hr-report.csv"; a.click(); URL.revokeObjectURL(url);
+  };
   return <div>
+    <div className="flex justify-end mb-3.5">
+      <Btn kind="outline" size="sm" icon="download" onClick={exportReport}>Export CSV</Btn>
+    </div>
     <div className={`grid gap-3 mb-4 ${mob?"grid-cols-2":"grid-cols-4"}`}>
       {[["Headcount",all.length,C.brand],
         ["Avg tenure",avgTenure.toFixed(1)+"y",C.ok],
         ["Total payroll",`$${(totalSalary/1000).toFixed(0)}k`,C.violet],
-        ["Avg salary",`$${(avgSalary/1000).toFixed(0)}k`,C.warn]].map(([l,v,t])=>
+        ["Avg salary",`$${(avgSalary/1000).toFixed(0)}k`,C.warn],
+        ["Turnover (12mo)",turnoverRate.toFixed(1)+"%",C.danger]].map(([l,v,t])=>
         <Card key={l} pad={mob?16:20} style={{borderRadius:14}}>
           <div className={`font-bold tracking-tight ${mob?"text-xl":"text-2xl"}`} style={{color:t}}>{v}</div>
           <div className="text-xs text-text-3 mt-1.5">{l}</div>
@@ -1577,7 +1639,7 @@ export function HrSettings(){
       <div className={`grid gap-0.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
         {Object.entries(d.modules).map(([k,v])=>
           <div key={k} className="flex justify-between items-center py-3 px-3 rounded-lg transition-colors duration-150 hover:bg-bg">
-            <div className="text-sm text-text font-medium capitalize">{k}</div>
+            <div className="text-sm text-text font-medium">{k==="directory"?"Directory":HR_MODULES.find(m=>m.module===k)?.label||k}</div>
             <Switch on={v} onChange={val=>setMod(k,val)}/>
           </div>)}
       </div>

@@ -115,7 +115,7 @@ export function useHrStore(seed,mainStore){
       const leaving=l.find(e=>e.id===empId);
       const newManager=leaving?leaving.manager:null;
       return l.map(e=>{
-        if(e.id===empId)return {...e,status:"terminated"};
+        if(e.id===empId)return {...e,status:"terminated",terminatedAt:_fmtDate(new Date())};
         if(e.manager===empId)return {...e,manager:newManager};
         return e;
       });

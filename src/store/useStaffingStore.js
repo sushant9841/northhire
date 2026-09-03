@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { _fmtDate } from "../helpers/utils.js";
+import { salesTaxRate } from "../helpers/salesTax.js";
 import {
   SEED_WORKERS, SEED_STAFFING_CLIENTS, SEED_JOB_ORDERS, SEED_ASSIGNMENTS, SEED_TIMESHEETS,
   SEED_STAFFING_PAYRUNS, SEED_STAFFING_INVOICES, SEED_PLACEMENTS,
@@ -35,14 +36,7 @@ function calcStaffingEconomics(pay,bill,prov,benefitsPerHr=0){
 function round2(n){return Math.round(n*100)/100;}
 function round1(n){return Math.round(n*10)/10;}
 
-/* Combined GST/HST (+ QST where applicable) by province — public, stable rates, unlike the
-   payroll-burden table above which is a deliberately-simplified stand-in. */
-const SALES_TAX_RATE = {
-  ON:0.13, NB:0.15, NL:0.15, NS:0.14, PE:0.15, /* HST provinces */
-  QC:0.14975, /* GST 5% + QST 9.975% */
-  AB:0.05, BC:0.05, MB:0.05, SK:0.05, NT:0.05, NU:0.05, YT:0.05, /* GST only */
-};
-function salesTaxRate(prov){return SALES_TAX_RATE[prov]??0.05;}
+/* Real per-province GST/HST/QST table now lives in helpers/salesTax.js, shared with HR invoicing. */
 
 /* ─── The staffing agency itself is a tenant ─── */
 const STAFFING_AGENCY = {

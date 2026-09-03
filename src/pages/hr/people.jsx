@@ -106,6 +106,14 @@ function HrPeople_OrgChart(){
     children[mid].push(e);
   });
   const roots=children["__root__"]||[];
+  const [q,setQ]=useState("");
+  const searchActive=q.trim().length>0;
+  /* Search auto-expands only the branches leading to a match, instead of forcing the whole
+     (potentially large) tree open - a name search on a big org otherwise defeats its own purpose. */
+  const subtreeMatches=e=>{
+    if(e.name.toLowerCase().includes(q.toLowerCase()))return true;
+    return (children[e.id]||[]).some(k=>subtreeMatches(k));
+  };
 
   const Node=({e,depth=0,ancestors})=>{
     /* `ancestors` guards against a manager-reference cycle (e.g. two people accidentally set
@@ -114,17 +122,20 @@ function HrPeople_OrgChart(){
     const seen=ancestors||new Set();
     const kids=(children[e.id]||[]).filter(k=>!seen.has(k.id));
     const d=depts.find(x=>x.id===e.dept);
-    const [open,setOpen]=useState(depth<2);
+    const [manualOpen,setManualOpen]=useState(depth<2);
+    const isMatch=searchActive&&e.name.toLowerCase().includes(q.toLowerCase());
+    const open=searchActive?subtreeMatches(e):manualOpen;
+    if(searchActive&&!subtreeMatches(e))return null;
     return <div className="relative" style={{marginLeft:depth===0?0:mob?14:24,marginTop:depth===0?0:8}}>
       {depth>0&&<div className="absolute left-3.5 top-0 rounded-bl" style={{bottom:"50%",width:14,borderLeft:`2px solid ${C.line}`,borderBottom:`2px solid ${C.line}`}}/>}
-      <div className="flex gap-2.5 items-center py-2.5 px-3 bg-white border border-line rounded-xl transition-all duration-150">
-        {kids.length>0&&<button onClick={()=>setOpen(!open)} className="bg-transparent border-0 p-0.5 cursor-pointer text-text-3 flex">
+      <div className={`flex gap-2.5 items-center py-2.5 px-3 bg-white border rounded-xl transition-all duration-150 ${isMatch?"border-brand":"border-line"}`} style={isMatch?{boxShadow:`0 0 0 2px ${C.line2}`}:undefined}>
+        {kids.length>0&&<button onClick={()=>setManualOpen(!manualOpen)} className="bg-transparent border-0 p-0.5 cursor-pointer text-text-3 flex">
           <I n={open?"chevD":"chevR"} s={14}/>
         </button>}
         {kids.length===0&&<div className="w-5 h-5"/>}
         <SmartPortrait seed={e.seed} size={32} radius={8}/>
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap">{e.name}</div>
+          <div className={`text-sm font-semibold overflow-hidden text-ellipsis whitespace-nowrap ${isMatch?"text-brand":"text-text"}`}>{e.name}</div>
           <div className="text-xs text-text-3 mt-px overflow-hidden text-ellipsis whitespace-nowrap">{e.title}</div>
         </div>
         {d&&<Tag sm style={{background:d.color+"22",color:d.color,border:"1px solid "+d.color+"55",flexShrink:0}}>{d.name}</Tag>}
@@ -142,10 +153,12 @@ function HrPeople_OrgChart(){
         <div className="text-base font-semibold text-text">Reporting structure</div>
         <div className="text-xs text-text-3 mt-0.5">{all.length} people · {roots.length} report{roots.length===1?"s":""} at the top level</div>
       </div>
+      <Input icon="search" placeholder="Find a person" value={q} onChange={e=>setQ(e.target.value)} style={{width:220}}/>
     </div>
     <Card pad={mob?16:24} style={{borderRadius:14}}>
       <div className="flex flex-col gap-1.5">
         {roots.map(r=><Node key={r.id} e={r}/>)}
+        {searchActive&&roots.every(r=>!subtreeMatches(r))&&<Empty icon="search" title="No one matches that search" body="Try a different name."/>}
         {roots.length===0&&<Empty icon="users" title="No org chart yet" body="Once employees have managers assigned, the tree appears here."/>}
       </div>
     </Card>
