@@ -9,6 +9,7 @@ import {
   Page, Btn, Tag, Card, Input, Tabs, Empty, Bar, Lbl, Field, Area, SmartScene, SmartPortrait,
 } from "../../design/primitives.jsx";
 import { money, pay, payShort } from "../../helpers/utils.js";
+import { sanitizeHtml } from "../../helpers/sanitize.js";
 import { CATS } from "../../store/seed/constants.js";
 import { SEED_BLOGS } from "../../store/seed/blogs.js";
 import { JobCard, TrainingCard, BlogCard, EmpMark } from "../shared/cards.jsx";
@@ -356,7 +357,7 @@ export function BlogPage(){
           return <section key={i} className={i===b.body.length-1?"mb-0":"mb-9"}>
             {h&&<h2 className={`font-bold text-text tracking-tight mb-4 leading-tight ${mob?"text-2xl":"text-3xl"}`}>{h}</h2>}
             {isHtml
-              ? <div className={`blog-body rich-content text-text-2 leading-loose ${mob?"text-base":"text-lg"}`} dangerouslySetInnerHTML={{__html:p}}/>
+              ? <div className={`blog-body rich-content text-text-2 leading-loose ${mob?"text-base":"text-lg"}`} dangerouslySetInnerHTML={{__html:sanitizeHtml(p)}}/>
               : <p className={`text-text-2 leading-loose m-0 ${mob?"text-base":"text-lg"}`}>{p}</p>}
           </section>;})}
         <div className="mt-14 pt-9 border-t border-line-soft flex gap-4 items-center flex-wrap">

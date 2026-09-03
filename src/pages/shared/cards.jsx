@@ -68,7 +68,10 @@ export function JobCard({job,delay=0}){
 
 export function BlogCard({b,delay=0,compact}){
   const A=use();
-  return <div onClick={()=>A.openBlog(b.id)} className="bg-white rounded-3xl overflow-hidden border border-line cursor-pointer transition duration-200 hover:border-line-2 hover:-translate-y-1">
+  const openBlog=()=>A.openBlog(b.id);
+  return <div onClick={openBlog} role="button" tabIndex={0}
+    onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openBlog();}}}
+    className="bg-white rounded-3xl overflow-hidden border border-line cursor-pointer transition duration-200 hover:border-line-2 hover:-translate-y-1">
     <div className="aspect-[16/10] bg-bg"><SmartScene kind={b.scene} tone={b.tone} w="100%" h="100%" seed={b.id.length}/></div>
     <div className="p-6">
       <Tag tone="brand" sm>{b.cat}</Tag>
@@ -81,7 +84,10 @@ export function BlogCard({b,delay=0,compact}){
 }
 export function TrainingCard({t,delay=0}){
   const A=use(); const enrolled=A.enrolled.has(t.id);
-  return <div onClick={()=>A.openTraining(t.id)} className="bg-white rounded-3xl overflow-hidden border border-line cursor-pointer transition duration-200 hover:border-line-2 hover:-translate-y-1">
+  const openTraining=()=>A.openTraining(t.id);
+  return <div onClick={openTraining} role="button" tabIndex={0}
+    onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openTraining();}}}
+    className="bg-white rounded-3xl overflow-hidden border border-line cursor-pointer transition duration-200 hover:border-line-2 hover:-translate-y-1">
     <div className="relative aspect-[16/10] bg-bg">
       <SmartScene kind={t.scene} tone={t.tone} w="100%" h="100%" seed={t.id.length}/>
       <div className="absolute top-3.5 left-3.5">

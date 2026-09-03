@@ -313,8 +313,15 @@ export function Tag({children,tone="neutral",icon,sm}){
  return <span className={`inline-flex items-center gap-1.5 font-semibold border whitespace-nowrap leading-snug rounded-lg text-xs ${sm?"py-1 px-2":"py-1.5 px-2.5"} ${T}`}>
   {icon&&<I n={icon} s={sm?12:13} w={2}/>}{children}</span>;
 }
+/* Applied to any div that acts as a click target so it's also keyboard/screen-reader operable
+   without changing it to a real <button> — several callers (JobCard, Stat) nest real buttons
+   inside, which a <button> wrapper can't legally contain. */
+function clickableA11y(onClick){
+ if(!onClick)return{};
+ return{role:"button",tabIndex:0,onKeyDown:e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();onClick(e);}}};
+}
 export function Card({children,style,onClick,hover,pad=24,delay=0}){
- return <div onClick={onClick}
+ return <div onClick={onClick} {...clickableA11y(onClick)}
   className={`bg-white border rounded-2xl transition-[border-color,box-shadow,transform] duration-200 ${onClick?"cursor-pointer":"cursor-default"} ${hover?"border-line hover:border-line-2 hover:shadow-md hover:-translate-y-1":"border-line"}`}
   style={{padding:pad,...style}}>{children}</div>;
 }
@@ -344,16 +351,17 @@ export function Field({label,hint,error,required,children,style}){
   {error?<div className="text-xs text-red mt-1.5 flex gap-1.5 items-center" style={{animation:"shake .3s"}}>
    <I n="alert" s={13}/>{error}</div>:hint?<div className="text-xs text-text-3 mt-1.5">{hint}</div>:null}</div>;}
 export function Switch({on,onChange,disabled}){
- return <div onClick={()=>!disabled&&onChange(!on)}
-  className={`w-12 h-7 rounded-full flex items-center p-1 shrink-0 transition-colors duration-200 ${disabled?"cursor-not-allowed opacity-50":"cursor-pointer"} ${on?"bg-brand justify-end":"bg-line justify-start"}`}>
-  <div className="w-5 h-5 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.25)] transition-all duration-200"/></div>;}
+ return <button type="button" role="switch" aria-checked={on} disabled={disabled}
+  onClick={()=>onChange(!on)}
+  className={`w-12 h-7 rounded-full flex items-center p-1 shrink-0 border-0 transition-colors duration-200 ${disabled?"cursor-not-allowed opacity-50":"cursor-pointer"} ${on?"bg-brand justify-end":"bg-line justify-start"}`}>
+  <div className="w-5 h-5 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.25)] transition-all duration-200"/></button>;}
 export function CheckRow({on,onChange,label,sub}){
- return <div onClick={()=>onChange(!on)}
-  className={`flex gap-3 items-start cursor-pointer py-3 px-3.5 border rounded-xl transition-all duration-150 ${on?"border-brand bg-tint":"border-line bg-white"}`}>
+ return <button type="button" role="checkbox" aria-checked={on} onClick={()=>onChange(!on)}
+  className={`flex gap-3 items-start cursor-pointer py-3 px-3.5 border rounded-xl transition-all duration-150 w-full text-left ${on?"border-brand bg-tint":"border-line bg-white"}`}>
   <span className={`w-5 h-5 rounded-md shrink-0 mt-px border-2 flex items-center justify-center transition-all duration-150 ${on?"border-brand bg-brand":"border-line bg-white"}`}>
    {on&&<I n="check" s={13} c="#fff" w={3}/>}</span>
   <span className="min-w-0"><span className="block text-sm font-semibold text-text">{label}</span>
-   {sub&&<span className="block text-xs text-text-3 mt-0.5">{sub}</span>}</span></div>;}
+   {sub&&<span className="block text-xs text-text-3 mt-0.5">{sub}</span>}</span></button>;}
 export function Bar({v,tone=C.brand,h=6}){return <div className="bg-line-soft rounded-full overflow-hidden" style={{height:h}}>
  <div className="h-full rounded-full" style={{width:`${Math.min(100,Math.max(0,v))}%`,background:tone,transition:"width .7s cubic-bezier(.22,.68,.35,1)"}}/></div>;}
 export function Ring({v,size=46,label}){
@@ -383,7 +391,7 @@ export function Banner({tone="brand",icon,title,children,action,onClose,style}){
   {onClose&&<button onClick={onClose} className="border-0 cursor-pointer flex p-0 shrink-0"><I n="x" s={16}/></button>}</div>;}
 export function H1({children,sub,action,style}){
  return <div className="flex items-end justify-between gap-5 flex-wrap mb-8" style={style}>
-  <div><h1 className="text-4xl font-extrabold tracking-tighter text-text m-0 leading-none">{children}</h1>
+  <div><h1 className="text-4xl font-bold tracking-tight text-text m-0 leading-none">{children}</h1>
    {sub&&<div className="text-base text-text-2 mt-2.5 leading-normal max-w-xl">{sub}</div>}</div>{action}</div>;}
 export function H2({children,sub,action,style}){
  return <div className="flex items-end justify-between gap-3.5 flex-wrap mb-6" style={style}>
@@ -391,7 +399,7 @@ export function H2({children,sub,action,style}){
    {sub&&<div className="text-sm text-text-2 mt-1.5">{sub}</div>}</div>{action}</div>;}
 export function Lbl({children,style}){return <div className="text-xs font-bold text-text-3 uppercase tracking-widest mb-2.5" style={style}>{children}</div>;}
 export function Stat({label,value,tone=C.text,icon,delta,onClick}){
- return <div onClick={onClick}
+ return <div onClick={onClick} {...clickableA11y(onClick)}
   className={`bg-white border rounded-2xl py-6 px-6 transition-[border-color,transform] duration-150 ${onClick?"cursor-pointer border-line hover:border-line-2 hover:-translate-y-0.5":"cursor-default border-line"}`}>
   <div className="flex items-center gap-2.5 mb-3.5 text-text-3">
    {icon&&<I n={icon} s={16}/>}<span className="text-sm text-text-2 font-semibold">{label}</span></div>
@@ -399,13 +407,30 @@ export function Stat({label,value,tone=C.text,icon,delta,onClick}){
   {delta&&<div className="text-xs text-ok mt-2.5 font-semibold">{delta}</div>}</div>;}
 export function Modal({open=true,onClose,title,sub,children,footer,width=520}){
  const mob=useMedia("(max-width: 820px)");
+ const boxRef=useRef(null);
  useEffect(()=>{if(!open||typeof document==="undefined")return;const p=document.body.style.overflow;
   document.body.style.overflow="hidden";return()=>{document.body.style.overflow=p;};},[open]);
+ useEffect(()=>{
+  if(!open)return;
+  boxRef.current?.focus();
+  const onKey=e=>{
+   if(e.key==="Escape"){onClose?.();return;}
+   if(e.key==="Tab"&&boxRef.current){
+    const focusables=boxRef.current.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    if(!focusables.length)return;
+    const first=focusables[0],last=focusables[focusables.length-1];
+    if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+    else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+   }
+  };
+  document.addEventListener("keydown",onKey);
+  return()=>document.removeEventListener("keydown",onKey);
+ },[open,onClose]);
  if(!open)return null;
  return <div onClick={onClose} className={`fixed inset-0 bg-ink/50 z-[700] flex justify-center ${mob?"items-end p-0":"items-center p-6"}`}
   style={{animation:"fadeIn .16s ease"}}>
-  <div onClick={e=>e.stopPropagation()}
-   className={`bg-white w-full shadow-lg flex flex-col ${mob?"rounded-t-3xl max-h-[92vh]":"rounded-2xl max-h-[86vh]"}`}
+  <div onClick={e=>e.stopPropagation()} ref={boxRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={title}
+   className={`bg-white w-full shadow-lg flex flex-col outline-none ${mob?"rounded-t-3xl max-h-[92vh]":"rounded-2xl max-h-[86vh]"}`}
    style={{maxWidth:mob?undefined:width, animation:mob?"up .26s cubic-bezier(.22,.68,.35,1)":"pop .2s cubic-bezier(.22,.68,.35,1)"}}>
    {mob&&<div className="w-10 h-1 bg-line rounded-full mt-2.5 mx-auto mb-0.5 shrink-0"/>}
    <div className="py-5 px-6 border-b border-line-soft flex justify-between gap-3.5 items-start shrink-0">

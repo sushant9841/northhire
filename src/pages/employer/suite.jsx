@@ -8,6 +8,7 @@ import {
   RichText, Switch, DatePicker, Ring, Tabs, Lbl, SmartPortrait, SmartScene, SmartLogo, Mark, MARKS,
 } from "../../design/primitives.jsx";
 import { pay, payShort, dlText, money, uid } from "../../helpers/utils.js";
+import { sanitizeHtml } from "../../helpers/sanitize.js";
 import { STAGES, PROVS, PCODE, CATS, CATM } from "../../store/seed/constants.js";
 import { LocationInput, InlineList, QuestionBuilder, aiSuggestJD } from "../shared/formControls.jsx";
 
@@ -315,7 +316,7 @@ export function EmpPost(){
             {f.urgent&&<Tag tone="warn" sm>Urgent</Tag>}
             <Tag sm>{f.vac} {f.vac==1?"opening":"openings"}</Tag>
             <Tag sm>Closes {f.dlDate||"—"}</Tag></div>
-          {f.desc&&<div className="rich-content text-sm text-text-2 leading-relaxed" dangerouslySetInnerHTML={{__html:f.desc}}/>}
+          {f.desc&&<div className="rich-content text-sm text-text-2 leading-relaxed" dangerouslySetInnerHTML={{__html:sanitizeHtml(f.desc)}}/>}
           {f.mustHave.length>0&&<div className="mt-3.5">
             <div className="text-xs font-bold text-brand tracking-wide uppercase mb-1.5">Must-have</div>
             <div className="flex flex-wrap gap-1.5">
