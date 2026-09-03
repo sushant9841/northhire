@@ -239,11 +239,10 @@ export function scenePhotoUrl(kind, seed = 0, w = 640) {
   return `https://images.unsplash.com/${id}?w=${w}&auto=format&fit=crop&q=80`;
 }
 export function SmartScene({ kind = "office", tone = C.brand, w = "100%", h = 180, radius = 0, style, seed = 0 }) {
-  return (
-    <img src={scenePhotoUrl(kind, seed, 1200)} alt=""
-      className="block object-cover"
-      style={{ width: w, height: h, borderRadius: radius, background: C.bg, ...style }}/>
-  );
+  /* Was a bare <img> with no onError handler — silently broken (no fallback) despite the PHOTOS
+     comment above claiming a graceful SVG fallback. Delegates to Scene, which actually has one
+     via SmartImg, instead of maintaining a second parallel (and broken) image path. */
+  return <Scene kind={kind} tone={tone} w={w} h={h} radius={radius} style={style} seed={seed}/>;
 }
 
 /* --- Company logo URLs via Clearbit's free logo API. Falls back to Mark SVG on error
@@ -277,12 +276,10 @@ export const PORTRAIT_SEEDS = {
   0: "https://randomuser.me/api/portraits/men/1.jpg",
 };
 export function SmartPortrait({ seed = 0, size = 48, radius = 999, bg }) {
-  const url = PORTRAIT_SEEDS[seed] || PORTRAIT_SEEDS[(seed % 8) + 1] || PORTRAIT_SEEDS[0];
-  return (
-    <img src={url} alt=""
-      className="block object-cover shrink-0"
-      style={{ width: size, height: size, borderRadius: radius, background: bg || C.bg }}/>
-  );
+  /* Was a bare <img> with no onError handler — silently broken (no fallback) despite this
+     file's own comment claiming one. Delegates to Portrait, which actually has one via
+     SmartImg, instead of maintaining a second parallel (and broken) image path. */
+  return <Portrait seed={seed} size={size} radius={radius} bg={bg}/>;
 }
 
 /* ═══════════════ CORE UI ATOMS ═══════════════ */
@@ -482,9 +479,11 @@ export function Tabs({items,value,onChange,style}){
     {it.n>0&&<span className={`text-xs font-bold min-w-5 h-5 rounded-full flex items-center justify-center px-1.5 ${on?"bg-brand text-white":"bg-line-soft text-text-2"}`}>{it.n}</span>}
    </button>;})}</div>;}
 
-export function DatePicker({value,onChange,min,max,placeholder="Select date"}){
+export function DatePicker({value,onChange,min,max}){
+  /* Native <input type="date"> ignores the placeholder attribute in every major browser —
+     don't forward one, it silently does nothing. */
   return <Input type="date" value={value||""} min={min} max={max}
-    onChange={e=>onChange(e.target.value)} placeholder={placeholder} icon="calendar"/>;
+    onChange={e=>onChange(e.target.value)} icon="calendar"/>;
 }
 
 /* ═══════════════ PAGE LAYOUT WRAPPER ═══════════════ */
@@ -556,7 +555,7 @@ export function RichText({value,onChange,placeholder,rows=6,minHeight}){
     {linkOpen&&<Modal onClose={()=>setLinkOpen(false)} title="Add a link" width={420}>
       <div className="flex flex-col gap-3">
         <Field label="URL" hint="Applies to the currently selected text.">
-          <Input autoFocus icon="link" value={linkUrl} onChange={e=>setLinkUrl(e.target.value)}
+          <Input autoFocus icon="externalLink" value={linkUrl} onChange={e=>setLinkUrl(e.target.value)}
             placeholder="https://example.com" onKeyDown={e=>{if(e.key==="Enter")confirmLink();}}/>
         </Field>
         <div className="flex gap-2.5 justify-end">

@@ -67,6 +67,7 @@ export const IP = {
   archive:["M3.6 8.6h16.8V19a2 2 0 0 1-2 2H5.6a2 2 0 0 1-2-2z","M9.6 12.6h4.8"], archiveR:[[2.6,3.6,18.8,5,1.6]],
 };
 export function I({ n, s=20, c="currentColor", w=1.7, fill, style }) {
+  if(import.meta.env.DEV&&n&&!IP[n]) console.warn(`<I n="${n}"> — no such icon key in IP; it will render empty.`);
   const p=IP[n]||[], cc=IP[n+"C"]||[], rr=IP[n+"R"]||[];
   return <svg width={s} height={s} viewBox="0 0 24 24" fill={fill||"none"} stroke={c} strokeWidth={w}
     strokeLinecap="round" strokeLinejoin="round" className="shrink-0 block" style={style}>

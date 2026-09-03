@@ -48,7 +48,7 @@ export function HrLoginPage(){
   return <div className="min-h-screen flex flex-col text-white" style={{background:`linear-gradient(135deg,#0A1929 0%,${C.ink} 60%,#152538 100%)`}}>
     <div className={`flex items-center justify-between ${mob?"py-6 px-5":"py-8 px-10"}`}>
       <button onClick={()=>A.go("home")} className="flex items-center gap-2.5 bg-transparent border-0 text-white cursor-pointer">
-        <div className="w-9 h-9 rounded-lg bg-white/10 border border-white/15 flex items-center justify-center"><I n="hex" s={18} c="#fff"/></div>
+        <div className="w-9 h-9 rounded-lg bg-white/10 border border-white/15 flex items-center justify-center"><I n="sparkle" s={18} c="#fff"/></div>
         <span className="font-bold tracking-tight" style={{fontSize:16.5}}>NorthHire <span className="text-accent font-semibold">HR Suite</span></span>
       </button>
       <button onClick={()=>A.go("home")} className="bg-transparent border border-white/20 text-white py-1.5 px-3.5 rounded-lg cursor-pointer text-sm font-semibold">← Back to NorthHire</button>
@@ -107,7 +107,7 @@ export function HrLoginPage(){
 
 
 /* Placeholder for each HR module — Round C/D will replace with real content */
-function _HrPlaceholder({title,body,icon="hex"}){
+function _HrPlaceholder({title,body,icon="sparkle"}){
   return <Card pad={40} style={{borderRadius:20,textAlign:"center",maxWidth:600,margin:"0 auto"}}>
     <div className="w-16 h-16 rounded-2xl bg-wash text-brand flex items-center justify-center mx-auto mb-5">
       <I n={icon} s={32}/></div>

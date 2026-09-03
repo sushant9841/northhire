@@ -28,7 +28,7 @@ export function HrShell({children}){
   const sidebar=<div className={`w-64 bg-ink text-white flex flex-col border-r border-white/8 h-screen ${mob?"fixed":"sticky"} top-0 left-0 ${mob?"z-900":"z-10"} transition-transform duration-300 ${navOpen?"translate-x-0":"-translate-x-full"}`}>
     <div className="py-5 px-6 border-b border-white/8">
       <button onClick={()=>A.go("home")} className="flex items-center gap-2.5 bg-transparent border-0 text-white cursor-pointer p-0">
-        <div className="w-8 h-8 rounded-lg bg-accent/20 border border-accent/35 flex items-center justify-center"><I n="hex" s={16} c="#6AACFF"/></div>
+        <div className="w-8 h-8 rounded-lg bg-accent/20 border border-accent/35 flex items-center justify-center"><I n="sparkle" s={16} c="#6AACFF"/></div>
         <div><div className="text-sm font-bold tracking-tight">NorthHire</div>
           <div className="text-xs text-accent font-semibold mt-px">HR Suite</div></div>
       </button>

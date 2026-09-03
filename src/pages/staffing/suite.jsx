@@ -39,7 +39,7 @@ export function AgencyLoginPage(){
     <div className="w-full max-w-110">
       <div className="mb-6 text-center">
         <button onClick={()=>A.go("home")} className="bg-transparent border-0 cursor-pointer inline-flex items-center gap-2.5 text-white/75 p-0 mb-4">
-          <div className="w-9 h-9 rounded-xl bg-[rgba(245,165,36,.18)] border border-[rgba(245,165,36,.4)] flex items-center justify-center"><I n="hex" s={18} c="#F5A524"/></div>
+          <div className="w-9 h-9 rounded-xl bg-[rgba(245,165,36,.18)] border border-[rgba(245,165,36,.4)] flex items-center justify-center"><I n="sparkle" s={18} c="#F5A524"/></div>
           <div className="text-left">
             <div className="text-sm font-bold text-white tracking-tight">NorthHire</div>
             <div className="text-xs text-[#F5A524] font-semibold mt-px tracking-wide">STAFFING · Agency Console</div>
