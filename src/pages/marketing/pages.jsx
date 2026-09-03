@@ -7,7 +7,7 @@ import { C, SH } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
 import {
   Page, Btn, Tag, Card, Input, Tabs, Empty, Bar, Lbl, Field, Area, SmartScene, SmartPortrait, ConfirmDialog,
-  usePagination, Pagination,
+  usePagination, Pagination, HERO_WIDE, HERO_WRAP, HERO_QUIET, SECTION_CLS,
 } from "../../design/primitives.jsx";
 import { money, pay, payShort, matchesQuery } from "../../helpers/utils.js";
 import { sanitizeHtml } from "../../helpers/sanitize.js";
@@ -46,7 +46,7 @@ export function HomePage(){
 
   const H=(title,sub,tag,action)=><div className={`flex justify-between items-end gap-5 flex-wrap ${mob?"mb-6":"mb-8"}`}>
     <div className="max-w-160">{tag&&<Tag tone="brand">{tag}</Tag>}
-      <h2 className={`font-bold tracking-tight text-text leading-tight ${tag?"mt-2.5 mb-2":"mt-0 mb-2"} ${mob?"text-2xl":"text-3xl"}`}>{title}</h2>
+      <h2 className={`${SECTION_CLS} leading-tight ${tag?"mt-2.5 mb-2":"mt-0 mb-2"} ${mob?"text-2xl":"text-3xl"}`}>{title}</h2>
       {sub&&<p className={`text-text-2 leading-snug m-0 ${mob?"text-sm":"text-base"}`}>{sub}</p>}</div>
     {action}</div>;
 
@@ -142,7 +142,7 @@ export function HomePage(){
       <div className={`${wrapCls} grid items-center ${mob?"grid-cols-1 gap-8":"gap-14"}`} style={{gridTemplateColumns:mob?undefined:"1.05fr .95fr"}}>
         <div>
           <Tag tone="brand" icon="pin">Hiring across every province and territory</Tag>
-          <h1 className={`font-extrabold tracking-tight leading-none text-text my-6 ${mob?"text-4xl":"text-6xl"}`}>
+          <h1 className={`${HERO_WIDE} my-6 ${mob?"text-4xl":"text-6xl"}`}>
             Real Canadian jobs.<br/><span className="text-brand">Wages published upfront.</span></h1>
           <p className={`text-text-2 leading-snug mb-8 max-w-140 ${mob?"text-lg":"text-lg"}`}>
             NorthHire is built for the trades, healthcare, transport, kitchens, warehouses and offices that keep Canada running. Every listing shows the wage, the shift schedule and the certification you need to apply.</p>
@@ -294,7 +294,7 @@ export function BlogsPage(){
     <section className={`bg-white ${pad}`}>
       <div className="max-w-240 mx-auto text-center">
         <Tag tone="brand" icon="book">Career resources</Tag>
-        <h1 className={`font-extrabold tracking-tight leading-none my-6 text-text ${mob?"text-4xl":"text-7xl"}`}>
+        <h1 className={`${HERO_WIDE} my-6 ${mob?"text-4xl":"text-7xl"}`}>
           Career resources for Canadian workers</h1>
         <p className={`text-text-2 leading-snug mx-auto max-w-155 ${mob?"text-lg":"text-xl"}`}>
           Practical guides on Red Seal certification, provincial trades registration, résumé standards Canadian employers look for, wage data from Statistics Canada, and how to interview well. Every article is written by people with direct experience in Canadian workplaces.</p>
@@ -342,7 +342,7 @@ export function BlogPage(){
       <div className="max-w-190 mx-auto text-center">
         {!mob&&<button onClick={A.back} className="inline-flex items-center gap-1.5 bg-transparent border-0 p-0 cursor-pointer text-sm text-text-2 mb-7"><I n="arrowL" s={17}/>All articles</button>}
         <Tag tone="brand" sm>{b.cat}</Tag>
-        <h1 className={`font-extrabold tracking-tight text-text my-5 leading-tight ${mob?"text-3xl":"text-5xl"}`}>{b.title}</h1>
+        <h1 className={`${HERO_WRAP} my-5 ${mob?"text-3xl":"text-5xl"}`}>{b.title}</h1>
         <p className={`text-text-2 leading-snug mx-auto mb-7 max-w-160 ${mob?"text-base":"text-xl"}`}>{b.excerpt}</p>
         <div className="inline-flex items-center gap-3 flex-wrap justify-center">
           <SmartPortrait seed={b.authorSeed} size={44}/>
@@ -361,7 +361,7 @@ export function BlogPage(){
         {b.body.map(([h,p],i)=>{
           const isHtml=/<[a-z][^>]*>/i.test(p);
           return <section key={i} className={i===b.body.length-1?"mb-0":"mb-9"}>
-            {h&&<h2 className={`font-bold text-text tracking-tight mb-4 leading-tight ${mob?"text-2xl":"text-3xl"}`}>{h}</h2>}
+            {h&&<h2 className={`${SECTION_CLS} mb-4 leading-tight ${mob?"text-2xl":"text-3xl"}`}>{h}</h2>}
             {isHtml
               ? <div className={`blog-body rich-content text-text-2 leading-loose ${mob?"text-base":"text-lg"}`} dangerouslySetInnerHTML={{__html:sanitizeHtml(p)}}/>
               : <p className={`text-text-2 leading-loose m-0 ${mob?"text-base":"text-lg"}`}>{p}</p>}
@@ -380,7 +380,7 @@ export function BlogPage(){
       <div className="max-w-280 mx-auto">
         <div className="mb-9">
           <Tag tone="brand">Keep reading</Tag>
-          <h2 className={`font-bold text-text tracking-tight leading-tight mt-3.5 ${mob?"text-2xl":"text-4xl"}`}>More from the careers desk.</h2></div>
+          <h2 className={`${SECTION_CLS} leading-tight mt-3.5 ${mob?"text-2xl":"text-4xl"}`}>More from the careers desk.</h2></div>
         <div className={`grid ${mob?"grid-cols-1 gap-3.5":"grid-cols-3 gap-5"}`}>
           {more.map(x=><BlogCard key={x.id} b={x}/>)}</div>
       </div>
@@ -404,7 +404,7 @@ export function TrainingsPage(){
     <section className={`bg-white ${pad}`}>
       <div className="max-w-240 mx-auto text-center">
         <Tag tone="brand" icon="cap">Trainings and certifications</Tag>
-        <h1 className={`font-extrabold tracking-tight leading-none my-6 text-text ${mob?"text-4xl":"text-7xl"}`}>
+        <h1 className={`${HERO_WIDE} my-6 ${mob?"text-4xl":"text-7xl"}`}>
           Get the ticket the job asks for.</h1>
         <p className={`text-text-2 leading-snug mx-auto mb-11 max-w-155 ${mob?"text-lg":"text-xl"}`}>
           WHMIS, food handling, forklift, working at heights and exam prep. Certificates attach straight to your NorthHire profile.</p>
@@ -456,7 +456,7 @@ export function TrainingPage(){
             <div className="flex gap-2 flex-wrap mb-5">
               <Tag tone="brand">{t.cat}</Tag><Tag>{t.level}</Tag><Tag icon="clock">{t.hours} hours</Tag>
               {t.price===0&&<Tag tone="ok">Free</Tag>}</div>
-            <h1 className={`font-extrabold tracking-tight text-text mb-5 leading-tight ${mob?"text-3xl":"text-5xl"}`}>{t.title}</h1>
+            <h1 className={`${HERO_WRAP} mb-5 ${mob?"text-3xl":"text-5xl"}`}>{t.title}</h1>
             <p className={`text-text-2 leading-snug mb-6 ${mob?"text-base":"text-lg"}`}>{t.about}</p>
             <div className="flex items-center gap-4 flex-wrap text-sm text-text-2 pt-6 border-t border-line-soft">
               <span className="flex items-center gap-2"><SmartPortrait seed={t.providerSeed} size={34}/><strong className="text-text font-semibold">{t.provider}</strong></span>
@@ -573,7 +573,7 @@ export function AboutPage(){
   const padTight = mob ? "py-11 px-4" : "py-18 px-8";
   const H = (title,sub,tag)=><div className="text-center max-w-180 mx-auto mb-12">
     {tag&&<Tag tone="brand">{tag}</Tag>}
-    <h2 className={`font-bold text-text tracking-tight my-3.5 leading-snug ${mob?"text-3xl":"text-4xl"}`}>{title}</h2>
+    <h2 className={`${SECTION_CLS} my-3.5 leading-snug ${mob?"text-3xl":"text-4xl"}`}>{title}</h2>
     {sub&&<p className={`text-text-2 leading-snug m-0 ${mob?"text-base":"text-lg"}`}>{sub}</p>}</div>;
 
   return <div className="bg-white min-h-full">
@@ -581,7 +581,7 @@ export function AboutPage(){
     <section className={`bg-white ${pad}`}>
       <div className="max-w-280 mx-auto text-center">
         <Tag tone="brand">About NorthHire</Tag>
-        <h1 className={`font-extrabold tracking-tight leading-none my-6 mx-auto max-w-225 text-text ${mob?"text-4xl":"text-8xl"}`}>
+        <h1 className={`${HERO_WIDE} my-6 mx-auto max-w-225 ${mob?"text-4xl":"text-8xl"}`}>
           The job platform Canada has been waiting for</h1>
         <p className={`text-text-2 leading-snug mx-auto mb-10 max-w-160 ${mob?"text-lg":"text-2xl"}`}>
           NorthHire was founded by a registered nurse, a Red Seal electrician and a long-haul driver who were tired of watching Canadian workers navigate job platforms built somewhere else, for someone else. We built NorthHire for the trades, the care workers, the drivers, the cooks and the warehouse crews who make this country run.</p>
@@ -608,7 +608,7 @@ export function AboutPage(){
         <div className={`grid items-center ${mob?"grid-cols-1 gap-9":"gap-16"}`} style={{gridTemplateColumns:mob?undefined:"1fr 1.15fr"}}>
           <div>
             <Tag tone="brand">Our mission</Tag>
-            <h2 className={`font-bold text-text tracking-tight my-3.5 leading-snug ${mob?"text-3xl":"text-4xl"}`}>
+            <h2 className={`${SECTION_CLS} my-3.5 leading-snug ${mob?"text-3xl":"text-4xl"}`}>
               Every job posting should tell you what it pays.</h2>
             <p className={`text-text-2 leading-loose mb-4 ${mob?"text-base":"text-lg"}`}>
               For decades, Canadians have applied to jobs blind. No wage. No requirements clearly stated. No idea whether they even qualified.</p>
@@ -738,7 +738,7 @@ export function AboutPage(){
           <SmartScene kind="office" seed={2} w="100%" h="100%"/></div>
         <div>
           <Tag tone="brand">We're hiring</Tag>
-          <h2 className={`font-bold text-text tracking-tight my-3.5 leading-snug ${mob?"text-3xl":"text-4xl"}`}>
+          <h2 className={`${SECTION_CLS} my-3.5 leading-snug ${mob?"text-3xl":"text-4xl"}`}>
             Come build with us.</h2>
           <p className={`text-text-2 leading-loose mb-7 ${mob?"text-base":"text-lg"}`}>
             Engineers, designers, employer partnerships, support. Remote across Canada. Real ownership from day one.</p>
@@ -801,7 +801,7 @@ export function ContactPage(){
     <div className="max-w-140 mx-auto text-center">
       <div className="w-22 h-22 rounded-full bg-ok-bg border-2 border-ok-ln flex items-center justify-center mx-auto mb-8">
         <I n="check" s={44} c={C.ok} w={2.6}/></div>
-      <h1 className={`font-bold tracking-tight text-text mb-5 leading-snug ${mob?"text-3xl":"text-4xl"}`}>Message received.</h1>
+      <h1 className={`${HERO_QUIET} mb-5 leading-snug ${mob?"text-3xl":"text-4xl"}`}>Message received.</h1>
       <p className={`text-text-2 leading-snug mx-auto mb-9 max-w-110 ${mob?"text-base":"text-lg"}`}>
         Thanks {f.name.split(" ")[0]}. We'll reply to <strong className="text-text">{f.email}</strong> by end of the next business day.</p>
       <Btn kind="primary" size="lg" onClick={()=>A.go("home")}>Back to home</Btn></div></div>;
@@ -817,7 +817,7 @@ export function ContactPage(){
     <section className={`bg-white ${pad}`}>
       <div className="max-w-230 mx-auto text-center">
         <Tag tone="brand">Contact us</Tag>
-        <h1 className={`font-extrabold tracking-tight leading-none my-6 text-text ${mob?"text-4xl":"text-7xl"}`}>
+        <h1 className={`${HERO_WIDE} my-6 ${mob?"text-4xl":"text-7xl"}`}>
           Talk to a real person</h1>
         <p className={`text-text-2 leading-snug mx-auto max-w-140 ${mob?"text-lg":"text-xl"}`}>
           Our support team is based in Canada and responds to every message within one business day. Most people hear back the same day.</p>
@@ -872,7 +872,7 @@ export function ContactPage(){
       <div className="max-w-280 mx-auto">
         <div className="text-center max-w-160 mx-auto mb-12">
           <Tag tone="brand">Our offices</Tag>
-          <h2 className={`font-bold text-text tracking-tight my-3.5 leading-snug ${mob?"text-3xl":"text-4xl"}`}>
+          <h2 className={`${SECTION_CLS} my-3.5 leading-snug ${mob?"text-3xl":"text-4xl"}`}>
             Or visit us in person.</h2>
           <p className={`text-text-2 leading-snug m-0 ${mob?"text-base":"text-lg"}`}>Four cities. Coffee on us.</p></div>
         <div className={`grid ${mob?"grid-cols-1 gap-3.5":"grid-cols-2 gap-5"}`}>
@@ -910,7 +910,7 @@ export function LegalPage({kind}){
     <div className="bg-white border-b border-line">
       <div className={`max-w-200 mx-auto ${mob?"pt-5 px-4 pb-6":"pt-9 px-6 pb-8"}`}>
         <Tag tone="brand" sm icon={kind==="privacy"?"lock":"file"}>{kind==="privacy"?"Privacy":"Legal"}</Tag>
-        <h1 className={`font-bold tracking-tight text-text mt-3.5 mb-2.5 ${mob?"text-3xl":"text-4xl"}`}>
+        <h1 className={`${HERO_QUIET} mt-3.5 mb-2.5 ${mob?"text-3xl":"text-4xl"}`}>
           {kind==="privacy"?"Privacy policy":"Terms of service"}</h1>
         <p className="text-sm text-text-2 m-0">Last updated 1 August 2026 • Effective for all users in Canada</p></div></div>
     <div className={`max-w-200 mx-auto ${mob?"pt-4 px-4 pb-8":"pt-7 px-6 pb-12"}`}>
@@ -955,7 +955,7 @@ export function PricingPage(){
     <section className={`bg-white ${pad}`}>
       <div className="max-w-240 mx-auto text-center">
         <Tag tone="brand">Employer pricing</Tag>
-        <h1 className={`font-extrabold tracking-tight leading-none my-6 mx-auto max-w-narrow text-text ${mob?"text-4xl":"text-7xl"}`}>
+        <h1 className={`${HERO_WIDE} my-6 mx-auto max-w-narrow ${mob?"text-4xl":"text-7xl"}`}>
           Simple pricing. No per-applicant fees.</h1>
         <p className={`text-text-2 leading-snug mx-auto max-w-150 ${mob?"text-lg":"text-xl"}`}>
           From your first hire to running an entire workforce. All prices in CAD. Cancel any time.</p>
@@ -991,7 +991,7 @@ export function PricingPage(){
     <section className={`bg-bg border-t border-line ${mob?"pt-8 px-4 pb-14":"pt-12 px-8 pb-24"}`}>
       <div className="max-w-280 mx-auto">
         <div className={`text-center ${mob?"mb-7":"mb-11"}`}>
-          <h2 className={`font-bold text-text tracking-tight mb-3.5 leading-snug ${mob?"text-2xl":"text-4xl"}`}>
+          <h2 className={`${SECTION_CLS} mb-3.5 leading-snug ${mob?"text-2xl":"text-4xl"}`}>
             Compare features in detail</h2>
           <p className={`text-text-2 leading-snug m-0 ${mob?"text-base":"text-lg"}`}>Everything in one table so you can pick the right fit.</p></div>
         <div className="bg-white rounded-2xl border border-line overflow-hidden">
@@ -1041,7 +1041,7 @@ export function PricingPage(){
       <div className={`max-w-narrow mx-auto bg-white rounded-3xl text-center border border-line ${mob?"py-10 px-7":"py-14 px-15"}`}>
         <div className="w-16 h-16 rounded-full bg-ok-bg text-ok flex items-center justify-center mx-auto mb-6">
           <I n="heart" s={30}/></div>
-        <h2 className={`font-bold text-text tracking-tight mb-3.5 leading-snug ${mob?"text-2xl":"text-4xl"}`}>
+        <h2 className={`${SECTION_CLS} mb-3.5 leading-snug ${mob?"text-2xl":"text-4xl"}`}>
           Job seekers pay nothing. Ever.</h2>
         <p className={`text-text-2 leading-relaxed mx-auto mb-8 max-w-120 ${mob?"text-base":"text-lg"}`}>
           Full profile, unlimited applications, CV builder, free trainings and direct employer messaging. No premium tier.</p>
@@ -1053,7 +1053,7 @@ export function PricingPage(){
       <div className="max-w-narrow mx-auto">
         <div className="text-center mb-9">
           <Tag tone="brand">Questions</Tag>
-          <h2 className={`font-bold text-text tracking-tight mt-3.5 leading-snug ${mob?"text-2xl":"text-4xl"}`}>
+          <h2 className={`${SECTION_CLS} mt-3.5 leading-snug ${mob?"text-2xl":"text-4xl"}`}>
             Common questions.</h2></div>
         <div className="bg-white rounded-2xl border border-line overflow-hidden">
           {faq.map(([q,a],i)=><div key={q} className={i<faq.length-1?"border-b border-line-soft":""}>
@@ -1081,7 +1081,7 @@ export function AccessibilityPage(){
   return <Page>
     <div className="max-w-narrow mx-auto">
       <Tag tone="brand" icon="shield">Accessibility</Tag>
-      <h1 className={`font-bold tracking-tight mt-5 mb-3 text-text ${mob?"text-3xl":"text-4xl"}`}>Accessibility statement (AODA)</h1>
+      <h1 className={`${HERO_QUIET} mt-5 mb-3 ${mob?"text-3xl":"text-4xl"}`}>Accessibility statement (AODA)</h1>
       <p className="text-base text-text-3 mb-9">Last reviewed: August 2026</p>
       {secs.map(([h,b])=><div key={h} className="mb-7">
         <h2 className="text-xl font-bold text-text tracking-tight mb-2.5">{h}</h2>
@@ -1105,7 +1105,7 @@ export function PipedaPage(){
   return <Page>
     <div className="max-w-narrow mx-auto">
       <Tag tone="brand" icon="lock">Privacy law</Tag>
-      <h1 className={`font-bold tracking-tight mt-5 mb-3 text-text ${mob?"text-3xl":"text-4xl"}`}>PIPEDA compliance</h1>
+      <h1 className={`${HERO_QUIET} mt-5 mb-3 ${mob?"text-3xl":"text-4xl"}`}>PIPEDA compliance</h1>
       <p className="text-base text-text-3 mb-9">Last reviewed: August 2026</p>
       {secs.map(([h,b])=><div key={h} className="mb-7">
         <h2 className="text-xl font-bold text-text tracking-tight mb-2.5">{h}</h2>

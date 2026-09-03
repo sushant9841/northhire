@@ -1,7 +1,7 @@
 import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
-import { Btn, Tag, Switch, Empty } from "../../design/primitives.jsx";
+import { Btn, Tag, Switch, Empty, HERO_TIGHT } from "../../design/primitives.jsx";
 import { CATM } from "../../store/seed/constants.js";
 import { matchJobsToFilters } from "../../helpers/jobSearch.js";
 
@@ -18,7 +18,7 @@ export function SavedSearchesPage(){
     <section className={`${heroPad} bg-white border-b border-line-soft`}>
       <div className="max-w-6xl mx-auto">
         <Tag tone="brand" icon="bookmark">Saved searches</Tag>
-        <h1 className={`font-extrabold tracking-tighter text-text mt-5 mb-3 leading-none ${mob?"text-3xl":"text-5xl"}`}>
+        <h1 className={`${HERO_TIGHT} mt-5 mb-3 ${mob?"text-3xl":"text-5xl"}`}>
           Alerts on your searches.</h1>
         <p className={`text-text-2 leading-normal max-w-xl ${mob?"text-base":"text-lg"}`}>
           Save any search and we'll notify you the moment a matching job posts.</p></div>

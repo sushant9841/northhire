@@ -3,7 +3,7 @@ import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C, FONT, SH } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
-import { Btn, Tag, Card, Input, Field, Banner, H2, Empty, Tabs, SmartPortrait, RichText, Page, ConfirmDialog } from "../../design/primitives.jsx";
+import { Btn, Tag, Card, Input, Field, Banner, H2, Empty, Tabs, SmartPortrait, RichText, Page, ConfirmDialog, HERO_TIGHT } from "../../design/primitives.jsx";
 import { uid } from "../../helpers/utils.js";
 import { sanitizeHtml } from "../../helpers/sanitize.js";
 import { CV_TEMPLATES } from "../../store/seed/constants.js";
@@ -92,7 +92,7 @@ export function CvsPage(){
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-end gap-5 flex-wrap">
           <div><Tag tone="brand" icon="file">CV builder</Tag>
-            <h1 className={`font-extrabold tracking-tighter text-text mt-5 mb-3 leading-none ${mob?"text-3xl":"text-5xl"}`}>My CVs.</h1>
+            <h1 className={`${HERO_TIGHT} mt-5 mb-3 ${mob?"text-3xl":"text-5xl"}`}>My CVs.</h1>
             <p className={`text-text-2 leading-normal max-w-xl ${mob?"text-base":"text-lg"}`}>Build as many versions as you need. Pick which one employers receive.</p></div>
           <Btn kind="primary" size="lg" icon="plus" onClick={()=>A.newCv()}>New CV</Btn></div>
       </div>

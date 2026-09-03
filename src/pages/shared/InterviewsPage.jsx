@@ -2,7 +2,7 @@ import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
-import { Btn, Card, Tag, Empty, H2, Page } from "../../design/primitives.jsx";
+import { Btn, Card, Tag, Empty, H2, Page, HERO_TIGHT } from "../../design/primitives.jsx";
 
 export function InterviewsPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
@@ -32,7 +32,7 @@ export function InterviewsPage(){
     {!inShell&&<section className={`${heroPad} bg-white border-b border-line-soft`}>
       <div className="max-w-6xl mx-auto">
         <Tag tone="brand" icon="calendar">Interviews</Tag>
-        <h1 className={`font-extrabold tracking-tighter text-text mt-5 mb-3 leading-none ${mob?"text-3xl":"text-5xl"}`}>Your schedule.</h1>
+        <h1 className={`${HERO_TIGHT} mt-5 mb-3 ${mob?"text-3xl":"text-5xl"}`}>Your schedule.</h1>
         <p className={`text-text-2 leading-normal ${mob?"text-base":"text-lg"}`}>{upcoming.length} upcoming, {past.length} past.</p></div>
     </section>}
     <section className={`bg-bg min-h-100 ${inShell?(mob?"py-5 px-4":"py-6 px-8"):(mob?"pt-8 px-4 pb-14":"pt-12 px-8 pb-24")}`}>

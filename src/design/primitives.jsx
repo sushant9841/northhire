@@ -423,6 +423,20 @@ export function H2({children,sub,action,style}){
   <div><div className="text-2xl font-bold tracking-tight text-text leading-tight">{children}</div>
    {sub&&<div className="text-sm text-text-2 mt-1.5">{sub}</div>}</div>{action}</div>;}
 export function Lbl({children,style}){return <div className="text-xs font-bold text-text-3 uppercase tracking-widest mb-2.5" style={style}>{children}</div>;}
+
+/* ═══════════════ MARKETING/PUBLIC-PAGE HEADING SCALE ═══════════════
+   H1/H2 above are for internal dashboard pages (title + optional action button in a flex
+   row). Public-facing pages (marketing, seeker, shared, auth) render centered/hero-style
+   headings with no consistent shared source, each hand-picking font-weight/tracking/leading -
+   the actual font-SIZE tier (mobile/desktop text-*xl pair) legitimately varies by context
+   (a homepage hero vs. a job-detail-page title vs. a section header aren't the same size),
+   so that stays a literal ternary at each call site for Tailwind's static scanner to see -
+   only the weight/tracking/leading/color identity is shared here. */
+export const HERO_TIGHT="font-extrabold tracking-tighter leading-none text-text"; /* standard + detail-page hero titles */
+export const HERO_WIDE="font-extrabold tracking-tight leading-none text-text"; /* top-of-funnel "mega" hero titles (home, blogs, trainings) */
+export const HERO_WRAP="font-extrabold tracking-tight text-text leading-tight"; /* hero titles holding dynamic content that may wrap to 2+ lines (article/training titles) - leading-tight not leading-none */
+export const HERO_QUIET="font-bold tracking-tight text-text"; /* de-emphasized utility-page h1s (legal docs, confirmation screens) - no forced leading, callers keep their own */
+export const SECTION_CLS="font-bold text-text tracking-tight"; /* in-page section headers on public pages - callers add their own leading-tight/-snug/-none */
 export function Stat({label,value,tone=C.text,icon,delta,onClick}){
  return <div onClick={onClick} {...clickableA11y(onClick)}
   className={`bg-white border rounded-2xl py-6 px-6 transition-[border-color,transform] duration-150 ${onClick?"cursor-pointer border-line hover:border-line-2 hover:-translate-y-0.5":"cursor-default border-line"}`}>

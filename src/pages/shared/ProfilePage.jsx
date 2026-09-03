@@ -3,7 +3,7 @@ import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
-import { Btn, Tag, Card, Input, Sel, Field, Area, Bar, Tabs, H2, Lbl, Empty, Modal, SmartPortrait, SmartScene, Page, H1 } from "../../design/primitives.jsx";
+import { Btn, Tag, Card, Input, Sel, Field, Area, Bar, Tabs, H2, Lbl, Empty, Modal, SmartPortrait, SmartScene, Page, H1, HERO_TIGHT } from "../../design/primitives.jsx";
 import { CATS, CATM, PROVS, PCODE } from "../../store/seed/constants.js";
 import { EmpMark } from "./cards.jsx";
 
@@ -49,7 +49,7 @@ export function ProfilePage(){
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-end gap-5 flex-wrap">
           <div><Tag tone="brand" icon="user">Profile</Tag>
-            <h1 className={`font-extrabold tracking-tighter text-text mt-5 mb-3 leading-none ${mob?"text-3xl":"text-5xl"}`}>Hi, {u.name.split(" ")[0]}.</h1>
+            <h1 className={`${HERO_TIGHT} mt-5 mb-3 ${mob?"text-3xl":"text-5xl"}`}>Hi, {u.name.split(" ")[0]}.</h1>
             <p className={`text-text-2 leading-normal max-w-lg ${mob?"text-base":"text-lg"}`}>This is what employers see when you apply.</p></div>
           <div className="flex gap-2.5 flex-wrap">
             <Btn kind="outline" icon="file" onClick={()=>A.go("cvs")}>My CVs ({A.cvs.length})</Btn>

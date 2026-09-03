@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
-import { Btn, Card, Tag, Input, Empty, SmartPortrait, Page } from "../../design/primitives.jsx";
+import { Btn, Card, Tag, Input, Empty, SmartPortrait, Page, HERO_TIGHT } from "../../design/primitives.jsx";
 
 export function MessagesPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
@@ -38,7 +38,7 @@ export function MessagesPage(){
     {!inShell&&<section className={`bg-white border-b border-line-soft ${mob?"pt-9 px-4 pb-5":"pt-14 px-8 pb-8"}`}>
       <div className="max-w-6xl mx-auto">
         <Tag tone="brand" icon="mail">Messages</Tag>
-        <h1 className={`font-extrabold tracking-tighter text-text mt-3.5 mb-2.5 leading-none ${mob?"text-3xl":"text-5xl"}`}>Inbox.</h1>
+        <h1 className={`${HERO_TIGHT} mt-3.5 mb-2.5 ${mob?"text-3xl":"text-5xl"}`}>Inbox.</h1>
         <p className={`text-text-2 ${mob?"text-base":"text-lg"}`}>Messages between you and {A.user.role==="seeker"?"employers":"candidates"}.</p></div>
     </section>}
     <section className={`bg-bg min-h-100 ${inShell?(mob?"py-5 px-4":"py-6 px-8"):(mob?"py-8 px-4":"py-12 px-8")}`}>

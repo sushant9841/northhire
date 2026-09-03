@@ -2,7 +2,7 @@ import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
-import { Btn, Tag, Ring, Empty, usePagination, Pagination } from "../../design/primitives.jsx";
+import { Btn, Tag, Ring, Empty, usePagination, Pagination, HERO_TIGHT } from "../../design/primitives.jsx";
 import { pay, payUnit } from "../../helpers/utils.js";
 import { CATS } from "../../store/seed/constants.js";
 import { EmpMark } from "../shared/cards.jsx";
@@ -48,7 +48,7 @@ export function MatchedPage(){
         <div className="flex justify-between items-end gap-5 flex-wrap">
           <div>
             <Tag tone="brand" icon="target">Matched for you</Tag>
-            <h1 className={`font-extrabold tracking-tighter text-text mt-5 mb-3 leading-none ${mob?"text-3xl":"text-5xl"}`}>
+            <h1 className={`${HERO_TIGHT} mt-5 mb-3 ${mob?"text-3xl":"text-5xl"}`}>
               Scored against your profile.</h1>
             <p className={`text-text-2 leading-normal max-w-xl ${mob?"text-base":"text-lg"}`}>
               Ranked by skills, tickets, location and pay expectation.</p></div>
