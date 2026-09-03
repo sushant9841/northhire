@@ -78,6 +78,7 @@ export function useStore(){
   const [trainingProgress,setTrainingProgress]=useState(seed?.trainingProgress||{});
   const [suspended,setSuspended]=useState(new Set(seed?.suspended||[]));
   const [suspensionInfo,setSuspensionInfo]=useState(seed?.suspensionInfo||{}); /* {[userId]: {reason, at}} */
+  const [invitedCandidates,setInvitedCandidates]=useState(new Set(seed?.invitedCandidates||[])); /* `${jobId}:${candidateId}` */
   const [notifications,setNotifications]=useState(seed?.notifications||[
     {id:"n1",icon:"calendar",title:"Interview booked — PCL Construction",body:"Site interview Thursday at 9:00 AM. Bring your Red Seal certificate.",at:"2 hours ago",read:false,for:"u2",link:"status"},
     {id:"n2",icon:"target",title:"6 new jobs match your profile",body:"New trades roles in Alberta paying $42–$52 per hour.",at:"5 hours ago",read:false,for:"u2",link:"matched"},
@@ -379,7 +380,7 @@ export function useStore(){
     try{
       const snap={user,passwords,resetCodes,employers,jobs,people,applications,blogs,trainings,cvs,
         saved:[...saved],following:[...following],enrolled:[...enrolled],trainingProgress,paymentMethods,twoFactor,references,
-        suspended:[...suspended],suspensionInfo,notifications,activity,settings,userSettings,
+        suspended:[...suspended],suspensionInfo,invitedCandidates:[...invitedCandidates],notifications,activity,settings,userSettings,
         savedSearches,messages,interviews,reviews,outbox,
         hrEmployees:HR.hrEmployees,hrAttendance:HR.hrAttendance,hrLeave:HR.hrLeave,
         hrTasks:HR.hrTasks,hrEvents:HR.hrEvents,hrInvoices:HR.hrInvoices,
@@ -392,7 +393,7 @@ export function useStore(){
       localStorage.setItem(LS_KEY,JSON.stringify(snap));
     }catch(e){/* quota exceeded or private mode — silently drop */}
   },[user,passwords,resetCodes,employers,jobs,people,applications,blogs,trainings,cvs,saved,following,
-    enrolled,trainingProgress,suspended,suspensionInfo,notifications,activity,settings,userSettings,paymentMethods,twoFactor,references,
+    enrolled,trainingProgress,suspended,suspensionInfo,invitedCandidates,notifications,activity,settings,userSettings,paymentMethods,twoFactor,references,
     savedSearches,messages,interviews,reviews,outbox,
     HR.hrEmployees,HR.hrAttendance,HR.hrLeave,HR.hrTasks,HR.hrEvents,HR.hrInvoices,HR.hrChats,HR.hrChatMsgs,HR.hrPayruns,HR.hrCompanySettings,HR.hrSession]);
 
@@ -483,12 +484,16 @@ export function useStore(){
   };
 
   /* --- reverse match: candidates who match an employer's job but haven't applied --- */
-  const reverseMatch=jobId=>{
+  /* minScore was a hardcoded 65 with no way to widen or narrow the pool - now a caller-supplied
+     threshold, defaulting to 65 so existing call sites are unaffected. The top-10 cap stays
+     (a genuine UI-scale limit, not a data restriction) since this is a display slice, not a
+     filter that would hide a strong match from a recruiter who asks to see more. */
+  const reverseMatch=(jobId,minScore=65)=>{
     const j=job(jobId); if(!j)return [];
     const already=new Set(applications.filter(a=>a.job===jobId).map(a=>a.user));
     return people.filter(p=>!already.has(p.id))
       .map(p=>({p,score:scoreCandidate(p,j)}))
-      .filter(x=>x.score>=65)
+      .filter(x=>x.score>=minScore)
       .sort((a,b)=>b.score-a.score)
       .slice(0,10);
   };
@@ -497,6 +502,7 @@ export function useStore(){
     notify({icon:"target",title:`${e.name} invited you to apply`,
       body:`Your profile matches ${j.t} — ${pay(j)}${payShort(j)}`,for:candidateId,link:"job"});
     log("talent.invite",`Invited ${person(candidateId).name} to apply for ${j.t}`,"send");
+    setInvitedCandidates(s=>new Set(s).add(`${jobId}:${candidateId}`));
   };
 
   /* --- CSV bulk job import (parses a minimal CSV; validates & creates draft jobs) --- */
@@ -883,7 +889,42 @@ export function useStore(){
     w.document.write(html); w.document.close();
     log("training.cert",`Downloaded certificate for "${t.title}"`,"award");
   };
-  const printInvoice=(id,date,amt)=>downloadText(`${id}.txt`,`NorthHire invoice ${id}\nDate: ${date}\nAmount: $${amt}.00 CAD\nStatus: Paid`);
+  /* Was a bare 3-line .txt file labelled "PDF" - real letterhead + tax breakdown via the same
+     print-a-formatted-page pattern printCv/printCert already use (no PDF-generation lib exists,
+     so the browser's own print-to-PDF is the honest ceiling here, same as those two). */
+  const printInvoice=(id,date,amt,planName)=>{
+    if(typeof window==="undefined")return;
+    const gst=Math.round(amt*0.05*100)/100; const total=Math.round((amt+gst)*100)/100;
+    const html=`<!DOCTYPE html><html><head><title>${id}</title>
+      <style>body{font-family:Arial,Helvetica,sans-serif;max-width:680px;margin:40px auto;padding:0 30px;color:#111;line-height:1.5}
+        .brand{font-size:20pt;font-weight:700;color:#005CCC;margin-bottom:2px}.sub{font-size:9pt;color:#888;margin-bottom:30px}
+        h1{font-size:16pt;margin:0 0 4px}table{width:100%;border-collapse:collapse;margin-top:24px}
+        th{text-align:left;font-size:9pt;text-transform:uppercase;letter-spacing:.05em;color:#888;border-bottom:2px solid #ddd;padding:8px 0}
+        td{padding:10px 0;border-bottom:1px solid #eee;font-size:11pt}.right{text-align:right}
+        .totals{margin-top:10px;margin-left:auto;width:260px}.totals div{display:flex;justify-content:space-between;padding:4px 0;font-size:11pt}
+        .totals .grand{font-weight:700;font-size:13pt;border-top:2px solid #111;padding-top:8px;margin-top:4px}
+        .meta{display:flex;justify-content:space-between;margin:24px 0;font-size:10pt;color:#555}
+        @media print{@page{margin:1.5cm}}</style></head><body>
+      <div class="brand">NorthHire</div><div class="sub">250 Front St W, Toronto, ON M5V 3G6 · billing@northhire.ca</div>
+      <h1>Invoice ${id}</h1>
+      <div class="meta"><div>Billed to<br><strong>${(company?.name||"Your company").replace(/[<>]/g,"")}</strong></div>
+        <div style="text-align:right">Date: ${date}<br>Status: <strong>Paid</strong></div></div>
+      <table><thead><tr><th>Description</th><th class="right">Amount</th></tr></thead>
+        <tbody><tr><td>NorthHire ${planName||"subscription"} plan — monthly</td><td class="right">$${amt.toFixed(2)}</td></tr></tbody></table>
+      <div class="totals"><div><span>Subtotal</span><span>$${amt.toFixed(2)}</span></div>
+        <div><span>GST (5%)</span><span>$${gst.toFixed(2)}</span></div>
+        <div class="grand"><span>Total (CAD)</span><span>$${total.toFixed(2)}</span></div></div>
+      <script>window.onload=()=>setTimeout(()=>window.print(),400);</script>
+      </body></html>`;
+    const w=window.open("","_blank");
+    if(!w){
+      downloadText(`${id}.txt`,`NorthHire invoice ${id}\nBilled to: ${company?.name||""}\nDate: ${date}\nSubtotal: $${amt.toFixed(2)}\nGST (5%): $${gst.toFixed(2)}\nTotal: $${total.toFixed(2)} CAD\nStatus: Paid`);
+      toast("Enable pop-ups to print a formatted invoice — a text version was downloaded instead.","warn");
+      return;
+    }
+    w.document.write(html); w.document.close();
+    log("billing.invoice_download",`Downloaded invoice ${id}`,"file");
+  };
   const exportApplicants=jid=>{const j=job(jid);
     const rows=[["Name","Email","Stage","Applied","Fit"],...applications.filter(a=>a.job===jid)
       .map(a=>{const u=person(a.user);return [u.name,u.email,a.stage,a.at,scoreCandidate(u,j)];})];
@@ -939,7 +980,7 @@ export function useStore(){
     twoFactor,enable2FA,disable2FA,
     references,addReference,removeReference,
     addReview,deleteReview,
-    saved,following,enrolled,trainingProgress,suspended,suspensionInfo,notifications,activity,settings,userSettings,search,setSearch,
+    saved,following,enrolled,trainingProgress,suspended,suspensionInfo,invitedCandidates,notifications,activity,settings,userSettings,search,setSearch,
     toasts,toast,dismissToast,
     jobId,empId,blogId,trainingId,cvId,editId,candidateId,pipelineJob,applyDraft,setApplyDraft,
     contactPrefill,setContactPrefill,pendingPlan,setPendingPlan,employersPrefill,setEmployersPrefill,

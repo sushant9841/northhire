@@ -424,7 +424,8 @@ export function EmpPipeline(){
     clear(); setBulkMenu(false);
   };
 
-  const reverseCandidates=A.reverseMatch(jobId);
+  const [talentMinScore,setTalentMinScore]=useState(65);
+  const reverseCandidates=A.reverseMatch(jobId,talentMinScore);
 
   return <div className="flex flex-col min-h-full bg-bg">
     <div className={`bg-white border-b border-line ${mob?"py-3.5 px-4":"py-4 px-7"}`}>
@@ -463,15 +464,19 @@ export function EmpPipeline(){
         <p className="text-sm text-text-2 leading-relaxed mx-auto mb-6 max-w-110"><br/>See top-matched candidates across NorthHire who haven't applied yet, and invite them directly. Available on the Growth and Enterprise plans.</p>
         <Btn kind="primary" onClick={()=>A.go("pricing")}>Upgrade to Growth</Btn>
       </Card>:<><Card style={{padding:mob?20:26,borderRadius:16,marginBottom:16}}>
-        <div className="flex gap-3 items-center mb-3">
-          <div className="w-11 h-11 rounded-xl bg-wash text-brand flex items-center justify-center"><I n="target" s={22}/></div>
-          <div><div className="text-base font-semibold text-text">Talent pool matches</div>
-            <div className="text-sm text-text-2 mt-0.5">Candidates on NorthHire who match this posting but haven't applied yet.</div></div></div>
+        <div className="flex gap-3 items-center mb-3 flex-wrap">
+          <div className="w-11 h-11 rounded-xl bg-wash text-brand flex items-center justify-center shrink-0"><I n="target" s={22}/></div>
+          <div className="flex-1 min-w-45"><div className="text-base font-semibold text-text">Talent pool matches</div>
+            <div className="text-sm text-text-2 mt-0.5">Candidates on NorthHire who match this posting but haven't applied yet.</div></div>
+          <Sel value={talentMinScore} onChange={e=>setTalentMinScore(Number(e.target.value))} style={{width:170}}>
+            {[50,60,65,70,80,90].map(v=><option key={v} value={v}>{v}+ match score</option>)}</Sel>
+        </div>
       </Card>
       {reverseCandidates.length===0
-        ? <Empty icon="target" title="No talent pool matches yet" body="As more candidates sign up in this trade, we'll surface strong fits here."/>
+        ? <Empty icon="target" title="No talent pool matches yet" body="Try lowering the match-score threshold, or check back as more candidates sign up in this trade."/>
         : <div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
-            {reverseCandidates.map(({p,score})=><Card key={p.id} style={{padding:20,borderRadius:16}}>
+            {reverseCandidates.map(({p,score})=>{const invited=A.invitedCandidates.has(`${jobId}:${p.id}`);
+              return <Card key={p.id} style={{padding:20,borderRadius:16}}>
               <div className="flex gap-3.5 items-center">
                 <SmartPortrait seed={p.seed} size={52}/>
                 <div className="flex-1 min-w-0">
@@ -481,8 +486,10 @@ export function EmpPipeline(){
               <div className="flex flex-wrap gap-1.5 mt-3.5">
                 {(p.skills||[]).slice(0,4).map(s=><Tag key={s} sm>{s}</Tag>)}
                 {(p.skills||[]).length>4&&<Tag sm>+{p.skills.length-4}</Tag>}</div>
-              <Btn kind="outline" size="sm" full icon="send" style={{marginTop:14}} onClick={()=>A.inviteToApply(p.id,jobId)}>Invite to apply</Btn>
-            </Card>)}</div>}
+              {invited
+                ?<Btn kind="soft" size="sm" full icon="check" disabled style={{marginTop:14}}>Invited</Btn>
+                :<Btn kind="outline" size="sm" full icon="send" style={{marginTop:14}} onClick={()=>A.inviteToApply(p.id,jobId)}>Invite to apply</Btn>}
+            </Card>;})}</div>}
       </>}
     </div>}
 
@@ -944,7 +951,8 @@ export function EmpCompany(){
   const dirty=JSON.stringify(d)!==JSON.stringify(A.company);
   const set=(k,v)=>setD(p=>({...p,[k]:v}));
   return <Page narrow>
-    <H1 sub="What candidates see on your company page">Company profile</H1>
+    <H1 sub="What candidates see on your company page"
+      action={<Btn kind="outline" size="sm" iconR="chevR" onClick={()=>A.openEmployer(A.company.id)}>View public page</Btn>}>Company profile</H1>
     <Card pad={mob?20:26}>
       <div className="flex gap-4 items-center mb-6 flex-wrap">
         <SmartLogo e={d} size={72} radius={18}/>
@@ -1062,7 +1070,7 @@ export function EmpBilling(){
             <div className="text-xs text-text-3 mt-0.5">{date}</div></div>
           <div className="text-sm font-semibold text-text">${amt}.00</div>
           <Tag tone="ok" sm icon="check">Paid</Tag>
-          <Btn kind="ghost" size="xs" icon="download" onClick={()=>A.printInvoice(id,date,amt)}>PDF</Btn></div>)}</Card>}
+          <Btn kind="ghost" size="xs" icon="download" onClick={()=>A.printInvoice(id,date,amt,plan)}>Print / Save as PDF</Btn></div>)}</Card>}
   </Page>;
 }
 
