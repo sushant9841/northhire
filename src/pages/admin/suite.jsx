@@ -141,7 +141,7 @@ export function AdmJobs(){
           {!mob&&<div className="w-22 text-sm text-text-2">{n} applicant{n===1?"":"s"}</div>}
           <Tag tone={j.status==="live"?"ok":j.status==="review"?"violet":"warn"} sm>{j.status==="live"?"Live":j.status==="paused"?"Paused":j.status==="review"?"Pending review":"Closed"}</Tag>
           <div className="flex gap-2 flex-wrap">
-            <Btn kind="ghost" size="xs" icon="eye" title="Preview" onClick={()=>A.openJob(j.id)}/>
+            <Btn kind="ghost" size="xs" icon="eye" title="Preview" onClick={()=>A.openJob(j.id,{preview:true})}/>
             <Btn kind="outline" size="xs" onClick={()=>A.toggleJobStatus(j.id)}>{j.status==="live"?"Pause":"Restore"}</Btn>
             <Btn kind={j.flagged?"dangerSoft":"ghost"} size="xs" onClick={()=>A.flagJob(j.id)}>{j.flagged?"Unflag":"Flag"}</Btn></div></div>;})}
       {list.length===0&&<div className="p-9 text-center text-sm text-text-3">Nothing matches that filter.</div>}</Card>

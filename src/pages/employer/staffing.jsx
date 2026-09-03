@@ -3,7 +3,8 @@ import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
-import { Page, Btn, Tag, Stat, Card, Lbl, Empty, SmartPortrait, Modal, Banner, H1 } from "../../design/primitives.jsx";
+import { Page, Btn, Tag, Stat, Card, Lbl, Empty, SmartPortrait, Modal, Banner, H1, Field, Input, Sel } from "../../design/primitives.jsx";
+import { PROVS, PCODE } from "../../store/seed/constants.js";
 
 /* Quick-action tile tones — kept as a literal lookup (not string-interpolated into a
    className) so Tailwind's static scanner can see every possible class it needs to generate. */
@@ -42,6 +43,18 @@ export function EmpStaffing(){
   const invoices=A.staffingInvoices.filter(i=>i.client===client.id);
   const openInvTotal=invoices.filter(i=>i.status==="pending"||i.status==="overdue").reduce((s,i)=>s+i.total,0);
   const [showReq,setShowReq]=useState(false);
+  const [req,setReq]=useState({title:"",positions:1,location:"",province:"Alberta",mustHave:"",urgency:"medium"});
+  const submitReq=()=>{
+    if(!req.title.trim()||!req.location.trim())return;
+    A.createJobOrder({client:client.id,title:req.title.trim(),positions:Math.max(1,Number(req.positions)||1),
+      location:req.location.trim(),province:PCODE[req.province]||req.province,urgency:req.urgency,
+      mustHave:req.mustHave.split(",").map(s=>s.trim()).filter(Boolean),niceToHave:[],
+      startDate:"",endDate:null,ongoing:true,shiftPattern:"",overtimeAvailable:false,payRate:0,billRate:0,
+      supervisor:A.user?.name||"",supervisorEmail:A.user?.email||"",supervisorPhone:"",ppe:"",
+      notes:"Submitted via employer self-service request form."});
+    setShowReq(false);
+    setReq({title:"",positions:1,location:"",province:"Alberta",mustHave:"",urgency:"medium"});
+  };
 
   return <Page wide>
     <div className="mb-5">
@@ -124,16 +137,23 @@ export function EmpStaffing(){
     </div>
 
     {showReq&&<Modal onClose={()=>setShowReq(false)} title="Request workers">
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3.5">
         <Banner tone="brand" icon="info">
-          Fill out the details below and we'll respond within 4 hours with matched candidates.
+          This creates a real job order in your recruiter's queue — they'll respond within 4 hours with matched candidates.
         </Banner>
-        <div className="text-sm text-text-2 p-3.5 bg-bg rounded-xl leading-relaxed">
-          For a prototype demo, this button would open the same New Job Order form the agency recruiters use — pre-filled with your company info as the client.
+        <Field label="Role / job title" required><Input value={req.title} onChange={e=>setReq({...req,title:e.target.value})} placeholder="e.g. Forklift Operators"/></Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Positions needed" required><Input type="number" min="1" value={req.positions} onChange={e=>setReq({...req,positions:e.target.value})}/></Field>
+          <Field label="Urgency"><Sel value={req.urgency} onChange={e=>setReq({...req,urgency:e.target.value})}>
+            <option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></Sel></Field>
         </div>
-        <div className="flex gap-2.5 justify-end">
+        <Field label="Site location" required><Input value={req.location} onChange={e=>setReq({...req,location:e.target.value})} placeholder="e.g. Calgary AB — Main warehouse"/></Field>
+        <Field label="Province"><Sel value={req.province} onChange={e=>setReq({...req,province:e.target.value})}>
+          {PROVS.map(p=><option key={p}>{p}</option>)}</Sel></Field>
+        <Field label="Must-have tickets / skills" hint="Comma-separated"><Input value={req.mustHave} onChange={e=>setReq({...req,mustHave:e.target.value})} placeholder="e.g. Forklift Certified, WHMIS"/></Field>
+        <div className="flex gap-2.5 justify-end mt-1">
           <Btn kind="ghost" onClick={()=>setShowReq(false)}>Cancel</Btn>
-          <Btn kind="primary" onClick={()=>{setShowReq(false); alert("Job order submitted. Recruiter will contact you within 4 hours.");}}>Submit request</Btn>
+          <Btn kind="primary" onClick={submitReq} disabled={!req.title.trim()||!req.location.trim()}>Submit request</Btn>
         </div>
       </div>
     </Modal>}

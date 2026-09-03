@@ -100,7 +100,7 @@ export function EmpJobs(){
                     <div key={k}><div className="text-xs text-text-3">{k}</div>
                       <div className="text-base font-bold text-text mt-0.5">{v}</div></div>)}</div></div>
               <div className="flex gap-2 flex-wrap items-center">
-                <Btn kind="outline" size="sm" onClick={()=>A.openJob(j.id)}>Preview</Btn>
+                <Btn kind="outline" size="sm" onClick={()=>A.openJob(j.id,{preview:true})}>Preview</Btn>
                 <Btn kind="outline" size="sm" onClick={()=>A.toggleJobStatus(j.id)}>{j.status==="live"?"Pause":"Reopen"}</Btn>
                 <Btn kind="primary" size="sm" onClick={()=>{A.setPipelineJob(j.id);A.go("empPipeline");}}>Candidates ({apps.length})</Btn></div></div></Card>;})}</div>}
   </Page>;
@@ -116,7 +116,7 @@ export function EmpPost(){
     lo:"",hi:"",fixed:"",contractAmt:"",
     vac:1,exp:"Entry level welcome",yearsExp:0,edu:"No formal education required",
     dlDate:"", /* absolute date, replaces days */
-    perks:[],duties:"",reqs:"",how:"",urgent:false,
+    perks:[],duties:"",reqs:"",how:"",urgent:false,featured:false,
     questions:[]});
 
   const set=(k,v)=>{setF(p=>({...p,[k]:v}));setErr(e=>({...e,[k]:undefined}));};
@@ -148,6 +148,10 @@ export function EmpPost(){
     }
     setErr(e); return !Object.keys(e).length;};
 
+  const featuredUsed=A.jobs.filter(j=>j.e===A.company.id&&j.featured&&j.status==="live").length;
+  const featuredLimit=A.limitOf("featured");
+  const canFeature=A.can("featured")&&featuredUsed<featuredLimit;
+
   const [postErr,setPostErr]=useState("");
   const next=()=>{if(!validate())return;
     if(step<3){setStep(step+1);return;}
@@ -159,7 +163,7 @@ export function EmpPost(){
       unit:f.payPeriod,
       perks:(f.perks||[]).join(","),
       dl:f.dlDate?Math.max(1,Math.ceil((new Date(f.dlDate)-new Date())/(1000*60*60*24))):14,
-      featured:false};
+      featured:f.featured};
     const r=A.publishJob(payload);
     if(r&&!r.ok)setPostErr(r.msg);
   };
@@ -295,8 +299,17 @@ export function EmpPost(){
 
         <div className="flex items-center justify-between gap-3.5 py-3.5 border-t border-line-soft mt-2">
           <div><div className="text-sm font-semibold text-text">Mark as urgent hire</div>
-            <div className="text-xs text-text-2 mt-0.5">Adds a badge. The system sorts featured listings automatically based on performance.</div></div>
+            <div className="text-xs text-text-2 mt-0.5">Adds an "Urgent" badge candidates see on the listing.</div></div>
           <Switch on={f.urgent} onChange={v=>set("urgent",v)}/></div>
+        <div className="flex items-center justify-between gap-3.5 py-3.5 border-t border-line-soft">
+          <div><div className="text-sm font-semibold text-text">Feature this listing</div>
+            <div className="text-xs text-text-2 mt-0.5">
+              {A.can("featured")
+                ?`Pins it above regular results in search. ${featuredUsed}/${featuredLimit===Infinity?"unlimited":featuredLimit} used this month.`
+                :"Available on Growth and above."}
+              {!A.can("featured")&&<button type="button" onClick={()=>A.go("pricing")} className="bg-transparent border-0 p-0 ml-1 cursor-pointer text-brand font-semibold underline">See plans</button>}
+            </div></div>
+          <Switch on={f.featured} onChange={v=>set("featured",v)} disabled={!canFeature&&!f.featured}/></div>
       </div>}
 
       {step===3&&<div>
@@ -314,6 +327,7 @@ export function EmpPost(){
             <Tag sm>{f.type}</Tag><Tag sm>{CATM[f.cat].label}</Tag>
             {f.mode!=="On-site"&&<Tag tone="ok" sm>{f.mode}</Tag>}
             {f.urgent&&<Tag tone="warn" sm>Urgent</Tag>}
+            {f.featured&&<Tag tone="violet" sm>Featured</Tag>}
             <Tag sm>{f.vac} {f.vac==1?"opening":"openings"}</Tag>
             <Tag sm>Closes {f.dlDate||"—"}</Tag></div>
           {f.desc&&<div className="rich-content text-sm text-text-2 leading-relaxed" dangerouslySetInnerHTML={{__html:sanitizeHtml(f.desc)}}/>}
@@ -440,7 +454,7 @@ export function EmpPipeline(){
     </div>}
 
     {tab==="pipeline"&&<>
-      {sel.size>0&&<div className={`bg-brand text-white flex gap-3 items-center flex-wrap ${mob?"py-3 px-4":"py-3 px-7"}`}>
+      {sel.size>0&&A.can("bulkActions")&&<div className={`bg-brand text-white flex gap-3 items-center flex-wrap ${mob?"py-3 px-4":"py-3 px-7"}`}>
         <span className="text-sm font-semibold">{sel.size} selected</span>
         <div className="flex-1"/>
         <div className="relative">
@@ -458,7 +472,7 @@ export function EmpPipeline(){
               <div className="flex items-center justify-between px-1">
                 <span className="text-xs font-bold text-text-2 uppercase tracking-wide">{stage}</span>
                 <div className="flex gap-1.5 items-center">
-                  {items.length>0&&<button onClick={()=>selectStage(stage)} className="bg-transparent border-0 text-xs font-semibold cursor-pointer" style={{color:allSelected?C.brand:C.text3}}>{allSelected?"clear":"all"}</button>}
+                  {items.length>0&&A.can("bulkActions")&&<button onClick={()=>selectStage(stage)} className="bg-transparent border-0 text-xs font-semibold cursor-pointer" style={{color:allSelected?C.brand:C.text3}}>{allSelected?"clear":"all"}</button>}
                   <span className="bg-wash text-brand border border-line-2 text-xs font-bold rounded-full flex items-center justify-center px-1.5" style={{minWidth:22,height:22}}>{items.length}</span></div></div>
               {items.map((a,i)=>{const u=A.person(a.user); const s=A.scoreCandidate(u,job); const idx=STAGES.indexOf(stage);
                 const selected=sel.has(a.id);
@@ -468,9 +482,9 @@ export function EmpPipeline(){
                   onMouseEnter={e=>{if(!selected){e.currentTarget.style.borderColor=C.line2;e.currentTarget.style.transform="translateY(-2px)";}}}
                   onMouseLeave={e=>{if(!selected){e.currentTarget.style.borderColor=C.line;e.currentTarget.style.transform="none";}}}>
                   <div className="flex gap-2.5 items-center mb-2.5">
-                    <div data-nc onClick={()=>tog(a.id)} className="w-5 h-5 rounded-md cursor-pointer flex items-center justify-center shrink-0"
+                    {A.can("bulkActions")&&<div data-nc onClick={()=>tog(a.id)} className="w-5 h-5 rounded-md cursor-pointer flex items-center justify-center shrink-0"
                       style={{border:`1.5px solid ${selected?C.brand:C.line}`,background:selected?C.brand:"#fff"}}>
-                      {selected&&<I n="check" s={12} c="#fff" w={3}/>}</div>
+                      {selected&&<I n="check" s={12} c="#fff" w={3}/>}</div>}
                     <SmartPortrait seed={u.seed} size={32}/>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap">{u.name}</div>
@@ -902,6 +916,13 @@ export function EmpBilling(){
   const live=A.jobs.filter(j=>j.e===A.company.id&&j.status==="live").length;
   const plan=A.company.plan||"Free";
   const limit=A.PLANS[plan]?.jobs??1;
+  const price=A.PLANS[plan]?.price||0;
+  const nextRenewal=(()=>{const d=new Date();d.setMonth(d.getMonth()+1,1);return d.toLocaleDateString("en-CA",{day:"numeric",month:"long",year:"numeric"});})();
+  const invoices=price>0?Array.from({length:4},(_,i)=>{
+    const d=new Date();d.setMonth(d.getMonth()-i,1);
+    return {id:`INV-${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`,
+      date:d.toLocaleDateString("en-CA",{day:"numeric",month:"short",year:"numeric"}),amt:price};
+  }):[];
   const [showCard,setShowCard]=useState(false);
   const [card,setCard]=useState({name:"",number:"",exp:"",cvc:""});
   const [cardErr,setCardErr]=useState({});
@@ -927,7 +948,7 @@ export function EmpBilling(){
         <div className="grow shrink basis-60">
           <Tag tone="onDark">Current plan</Tag>
           <div className="text-2xl font-bold tracking-tight my-3">{plan} — {A.PLANS[plan]?.price===0?"Free forever":`$${A.PLANS[plan]?.price}/month`}</div>
-          <div className="text-sm text-white/55">Renews 1 September 2026 • {live} of {limit===Infinity?"unlimited":limit} job slots in use</div>
+          <div className="text-sm text-white/55">{price>0?`Renews ${nextRenewal} • `:""}{live} of {limit===Infinity?"unlimited":limit} job slots in use</div>
           <div className="mt-4 max-w-75"><Bar v={limit===Infinity?100:(live/limit)*100} tone="#4ADE80"/></div></div>
         <div className="flex gap-2.5 flex-wrap items-start">
           <Btn kind="onDark" onClick={()=>A.go("pricing")}>Change plan</Btn></div></div></Card>
@@ -963,15 +984,15 @@ export function EmpBilling(){
           <Btn kind="ghost" onClick={()=>{setShowCard(false);setCardErr({});}}>Cancel</Btn>
           <Btn kind="primary" icon="check" onClick={submitCard}>Add card</Btn></div></div></Modal>}
 
-    <Card style={{borderRadius:20}}><H2>Invoices</H2>
-      {[["INV-2026-08","1 Aug 2026",149],["INV-2026-07","1 Jul 2026",149],["INV-2026-06","1 Jun 2026",149],["INV-2026-05","1 May 2026",49]].map(([id,date,amt])=>
+    {invoices.length>0&&<Card style={{borderRadius:20}}><H2>Invoices</H2>
+      {invoices.map(({id,date,amt})=>
         <div key={id} className="flex items-center gap-3.5 py-3 border-b border-line-soft flex-wrap">
           <div className="grow shrink basis-35 min-w-0">
             <div className="text-sm font-semibold text-text">{id}</div>
             <div className="text-xs text-text-3 mt-0.5">{date}</div></div>
           <div className="text-sm font-semibold text-text">${amt}.00</div>
           <Tag tone="ok" sm icon="check">Paid</Tag>
-          <Btn kind="ghost" size="xs" icon="download" onClick={()=>A.printInvoice(id,date,amt)}>PDF</Btn></div>)}</Card>
+          <Btn kind="ghost" size="xs" icon="download" onClick={()=>A.printInvoice(id,date,amt)}>PDF</Btn></div>)}</Card>}
   </Page>;
 }
 

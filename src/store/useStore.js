@@ -12,6 +12,23 @@ import { SEED_TRAININGS } from "./seed/trainings.js";
 import { useHrStore } from "./useHrStore.js";
 import { useStaffingStore } from "./useStaffingStore.js";
 
+/* Real CSV field parsing (quoted fields, embedded commas, "" escaping) — a plain row.split(",")
+   silently shifts every column after the first comma inside a free-text field like Description. */
+function parseCsvLine(line){
+  const cells=[]; let cur=""; let inQuotes=false;
+  for(let i=0;i<line.length;i++){
+    const c=line[i];
+    if(inQuotes){
+      if(c==='"'){ if(line[i+1]==='"'){cur+='"';i++;} else inQuotes=false; }
+      else cur+=c;
+    } else if(c==='"') inQuotes=true;
+    else if(c===','){cells.push(cur);cur="";}
+    else cur+=c;
+  }
+  cells.push(cur);
+  return cells.map(c=>c.trim());
+}
+
 export function useStore(){
   const [pg,setPg]=useState(()=>{
     /* Minimal hash entry point so "open HR Suite in a new tab" lands somewhere real —
@@ -455,14 +472,14 @@ export function useStore(){
     if(!can("csvImport"))return {ok:false,msg:"CSV import is a Growth and Enterprise feature — upgrade to unlock."};
     const lines=csvText.split(/\r?\n/).filter(l=>l.trim());
     if(lines.length<2)return {ok:false,msg:"CSV must include a header row and at least one job"};
-    const header=lines[0].split(",").map(h=>h.trim().toLowerCase());
+    const header=parseCsvLine(lines[0]).map(h=>h.trim().toLowerCase());
     const required=["title","city","province","type","pay_low","pay_high","pay_unit","category"];
     const missing=required.filter(r=>!header.includes(r));
     if(missing.length)return {ok:false,msg:`Missing columns: ${missing.join(", ")}`};
     const idx=Object.fromEntries(header.map((h,i)=>[h,i]));
     const imported=[]; const errors=[];
     lines.slice(1).forEach((row,i)=>{
-      const cells=row.split(",").map(c=>c.trim());
+      const cells=parseCsvLine(row);
       const t=cells[idx.title]; if(!t){errors.push(`Row ${i+2}: missing title`);return;}
       const lo=Number(cells[idx.pay_low])||0, hi=Number(cells[idx.pay_high])||0;
       if(settings.payTransparency&&lo<=0&&hi<=0){errors.push(`Row ${i+2}: pay_low or pay_high is required`);return;}
@@ -554,7 +571,7 @@ export function useStore(){
   const followEmployer=id=>{if(!user)return go("login");
     setFollowing(p=>{const n=new Set(p); n.has(id)?n.delete(id):n.add(id); return n;});};
 
-  const openJob=id=>{setJobId(id);setJobs(js=>js.map(j=>j.id===id?{...j,views:j.views+1}:j));
+  const openJob=(id,opts)=>{setJobId(id);if(!opts?.preview)setJobs(js=>js.map(j=>j.id===id?{...j,views:j.views+1}:j));
     const j=job(id); go("job",j?j.t:"Job details");};
   const openEmployer=id=>{setEmpId(id);const e=emp(id);go("employer",e?e.name:"Employer");};
   const openBlog=id=>{setBlogId(id);const b=blogs.find(x=>x.id===id);go("blog",b?"Article":"Article");};
@@ -603,6 +620,13 @@ export function useStore(){
       stage==="Reviewed"?"Employer reviewed your profile":stage==="Shortlisted"?"Shortlisted by the employer"
       :stage==="Interview"?"Interview stage — expect scheduling details":stage==="Offer"?"Offer extended — check your notifications"
       :stage==="Hired"?"Welcome to the team! Onboarding details coming.":"Waiting for employer review"}:x));
+    /* Filling the last opening closes the listing instead of leaving it live (and collecting
+       applicants) forever — vac previously was only ever set at posting time, never decremented. */
+    if(stage==="Hired"){
+      setJobs(js=>js.map(x=>{if(x.id!==j.id)return x;
+        const vac=Math.max(0,(x.vac||1)-1);
+        return {...x,vac,status:vac===0?"closed":x.status};}));
+    }
     notify({icon:stage==="Hired"?"award":stage==="Offer"?"award":"activity",title:`${stage} — ${e.name}`,
       body:stage==="Hired"?`You've been hired for ${j.t}. Congratulations!`:`Your application for ${j.t} moved to ${stage}.`,for:a.user,link:"status"});
     log("pipeline.move",`Moved ${person(a.user).name} to ${stage} on ${j.t}`,"users");
@@ -613,7 +637,7 @@ export function useStore(){
     }
   };
   const rejectApp=id=>{const a=applications.find(x=>x.id===id);
-    setApplications(l=>l.map(x=>x.id===id?{...x,stage:"Withdrawn",note:"This position has been filled"}:x));
+    setApplications(l=>l.map(x=>x.id===id?{...x,stage:"Withdrawn",note:"The employer has decided not to move forward with your application at this time."}:x));
     log("pipeline.reject",`Rejected ${person(a.user).name}`,"x");};
 
   const publishJob=f=>{
@@ -821,6 +845,11 @@ export function useStore(){
   const planName=()=>company?.plan||"Free";
   const can=(feature)=>{const p=currentPlan(); if(!p)return false;
     if(feature==="jobs")return jobs.filter(j=>j.e===company.id&&j.status==="live").length<p.jobs;
+    /* messages is the one PLANS field that's sometimes a descriptive string ("limited") rather
+       than a boolean — !!p.messages treated that truthy string as access-granted on Free. Every
+       other feature (including numeric ones like `featured`, where 0/Infinity are meaningful) is
+       correctly gated by plain truthiness. */
+    if(feature==="messages")return p.messages===true;
     return !!p[feature];
   };
   const limitOf=(feature)=>{const p=currentPlan(); if(!p)return 0; return p[feature];};
