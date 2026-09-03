@@ -3,7 +3,7 @@ import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
-import { Btn, Card, Tag, Field, Input, Sel, Banner, Empty, H1, Lbl, Stat, SmartLogo, Page } from "../../design/primitives.jsx";
+import { Btn, Card, Tag, Field, Input, Sel, Banner, Empty, H1, Lbl, Stat, SmartLogo, Page, HERO_QUIET } from "../../design/primitives.jsx";
 import { _weekStart } from "../../helpers/utils.js";
 
 /* ─── Worker dashboard ─── */
@@ -15,7 +15,7 @@ export function WorkerDashboard(){
     return <Page>
       <Card pad={mob?24:34} style={{textAlign:"center",borderRadius:18,maxWidth:520,margin:"0 auto"}}>
         <div className="w-16 h-16 rounded-2xl bg-tint text-brand flex items-center justify-center mx-auto mb-5"><I n="users" s={30}/></div>
-        <h2 className="text-2xl font-bold text-text mb-2.5 tracking-tight">Join NorthHire Staffing</h2>
+        <h2 className={`${HERO_QUIET} text-2xl mb-2.5`}>Join NorthHire Staffing</h2>
         <p className="text-sm text-text-2 leading-relaxed mb-5">
           When you opt in, we can match you to short-term and long-term contract placements at Canadian workplaces.
           You stay on <strong>our payroll</strong> and get direct deposit every 2 weeks, T4 at year end, and vacation pay accrued at 4%.

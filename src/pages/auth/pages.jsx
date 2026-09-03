@@ -3,7 +3,7 @@ import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
-import { Page, Card, Btn, Bar, Field, Input, Banner, Sel, Area, CheckRow, Lbl, Ring, Tag } from "../../design/primitives.jsx";
+import { Page, Card, Btn, Bar, Field, Input, Banner, Sel, Area, CheckRow, Lbl, Ring, Tag, HERO_QUIET } from "../../design/primitives.jsx";
 import { CATS, CATM, PROVS, PLANS } from "../../store/seed/constants.js";
 
 /* ═══════════════ SIGN UP · SIGN IN · FORGOT PASSWORD ═══════════════ */
@@ -88,7 +88,7 @@ export function SignupPage(){
   if(!A.settings.publicSignup) return <Page narrow>
     <Card pad={34} style={{textAlign:"center"}}>
       <div className="w-16 h-16 rounded-full bg-warn-bg border-2 border-warn-ln flex items-center justify-center mx-auto mb-5"><I n="lock" s={28} c={C.warn}/></div>
-      <h1 className="text-2xl font-bold text-text mb-2.5 tracking-tight">Registration is temporarily closed</h1>
+      <h1 className={`${HERO_QUIET} text-2xl mb-2.5`}>Registration is temporarily closed</h1>
       <p className="text-base text-text-2 leading-relaxed mx-auto mb-6 max-w-sm">
         New sign-ups have been paused by an administrator. You can still browse every job on the platform.</p>
       <Btn kind="primary" onClick={()=>A.go("search")}>Browse jobs</Btn></Card></Page>;
@@ -118,7 +118,7 @@ export function SignupPage(){
       <Card pad={mob?22:30} style={{borderRadius:20}}>
         <div key={step.k}>
           <div className="mb-6">
-            <h1 className={`font-bold tracking-tight text-text ${mob?"text-2xl":"text-3xl"}`}>{step.t}</h1>
+            <h1 className={`${HERO_QUIET} ${mob?"text-2xl":"text-3xl"}`}>{step.t}</h1>
             <p className="text-base text-text-2 mt-2">{step.d}</p></div>
 
           {step.k==="role"&&<div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
@@ -257,7 +257,7 @@ export function LoginPage(){
         <button onClick={()=>A.go("signup")} className="bg-transparent border-0 cursor-pointer p-0 text-brand text-sm font-semibold">Create account</button>
       </div>
       <Card pad={mob?24:34} style={{borderRadius:20}}>
-        <h1 className="text-3xl font-bold tracking-tight text-text mb-2">Welcome back</h1>
+        <h1 className={`${HERO_QUIET} text-3xl mb-2`}>Welcome back</h1>
         <p className="text-base text-text-2 mb-6">Sign in to continue.</p>
         <div className="flex flex-col gap-3.5">
           <Field label="Email address">
@@ -309,7 +309,7 @@ export function ForgotPasswordPage(){
       </div>
       <Card pad={mob?24:34} style={{borderRadius:20}}>
         {stage==="request"&&<>
-          <h1 className="text-2xl font-bold tracking-tight text-text mb-2">Reset your password</h1>
+          <h1 className={`${HERO_QUIET} text-2xl mb-2`}>Reset your password</h1>
           <p className="text-sm text-text-2 mb-6 leading-normal">Enter your email and we'll send a 6-digit code.</p>
           <Field label="Email address"><Input icon="mail" type="email" value={email} onChange={e=>{setEmail(e.target.value);setErr("");}}
             placeholder="you@example.ca" onKeyDown={e=>e.key==="Enter"&&request()}/></Field>
@@ -317,7 +317,7 @@ export function ForgotPasswordPage(){
           <Btn kind="primary" size="lg" full icon="send" onClick={request} style={{marginTop:18}}>Send reset code</Btn>
         </>}
         {stage==="verify"&&<>
-          <h1 className="text-2xl font-bold tracking-tight text-text mb-2">Enter your code</h1>
+          <h1 className={`${HERO_QUIET} text-2xl mb-2`}>Enter your code</h1>
           <p className="text-sm text-text-2 mb-5 leading-normal">
             We sent a 6-digit code to <strong className="text-text">{email}</strong>. Check your inbox.</p>
           <Banner tone="brand" icon="sparkle" title="Demo mode" style={{marginBottom:18}}>
@@ -334,7 +334,7 @@ export function ForgotPasswordPage(){
         </>}
         {stage==="done"&&<div className="text-center">
           <div className="w-18 h-18 rounded-full bg-ok-bg border-2 border-ok-ln flex items-center justify-center mx-auto mb-5"><I n="check" s={36} c={C.ok} w={2.6}/></div>
-          <h1 className="text-2xl font-bold tracking-tight text-text mb-2.5">Password reset</h1>
+          <h1 className={`${HERO_QUIET} text-2xl mb-2.5`}>Password reset</h1>
           <p className="text-sm text-text-2 mx-auto mb-6 leading-relaxed max-w-xs">Your new password is active. Sign in to continue.</p>
           <Btn kind="primary" size="lg" full onClick={()=>A.go("login")}>Sign in</Btn>
         </div>}

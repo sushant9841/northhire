@@ -2,7 +2,7 @@ import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
-import { Btn, Tag, Ring, Empty, Lbl, Banner, Page } from "../../design/primitives.jsx";
+import { Btn, Tag, Ring, Empty, Lbl, Banner, Page, HERO_TIGHT } from "../../design/primitives.jsx";
 import { pay, payUnit, annual, dlText, money } from "../../helpers/utils.js";
 import { EmpMark, HiringTypeBadge } from "./cards.jsx";
 
@@ -31,7 +31,7 @@ export function JobDetailPage(){
         <div className={`grid ${mob?"grid-cols-1 gap-5 items-start":"grid-cols-[auto_1fr_auto] gap-6 items-center"}`}>
           <EmpMark e={e} size={mob?64:84} radius={18}/>
           <div className="min-w-0">
-            <h1 className={`font-extrabold tracking-tighter text-text m-0 leading-none ${mob?"text-2xl":"text-4xl"}`}>{job.t}</h1>
+            <h1 className={`${HERO_TIGHT} m-0 ${mob?"text-2xl":"text-4xl"}`}>{job.t}</h1>
             <div className="flex items-center gap-2.5 mt-2.5 flex-wrap text-base text-text-2">
               <button onClick={()=>A.openEmployer(e.id)} className="bg-transparent border-0 p-0 cursor-pointer text-base font-bold text-brand">{e.name}</button>
               {e.verified&&<Tag tone="brand" sm icon="checkC2">Verified</Tag>}

@@ -3,7 +3,7 @@ import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C, SH } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
-import { Btn, Tag, Input, Sel, Empty, Lbl, Modal, usePagination, Pagination } from "../../design/primitives.jsx";
+import { Btn, Tag, Input, Sel, Empty, Lbl, Modal, usePagination, Pagination, HERO_TIGHT } from "../../design/primitives.jsx";
 import { annual } from "../../helpers/utils.js";
 import { CATS, CATM, PCODE, PROVS } from "../../store/seed/constants.js";
 import { JobCard } from "../shared/cards.jsx";
@@ -79,7 +79,7 @@ export function SearchPage(){
     <section className={`bg-white border-b border-line-soft ${mob?"pt-10 px-4 pb-8":"pt-18 px-8 pb-12"}`}>
       <div className="max-w-6xl mx-auto text-center">
         <Tag tone="brand" icon="search">Search jobs</Tag>
-        <h1 className={`font-extrabold tracking-tighter leading-none mt-5 mx-auto mb-5 max-w-3xl text-text ${mob?"text-3xl":"text-6xl"}`}>
+        <h1 className={`${HERO_TIGHT} mt-5 mx-auto mb-5 max-w-3xl ${mob?"text-3xl":"text-6xl"}`}>
           Find your next role.</h1>
         <p className={`text-text-2 leading-normal mx-auto mb-8 max-w-lg ${mob?"text-base":"text-lg"}`}>
           {A.jobs.filter(j=>j.status==="live").length.toLocaleString()} live openings across Canada. Every one shows the wage.</p>

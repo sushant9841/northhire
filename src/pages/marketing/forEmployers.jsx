@@ -3,7 +3,7 @@ import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C, SH } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
-import { Btn, Card } from "../../design/primitives.jsx";
+import { Btn, Card, HERO_WIDE, SECTION_CLS } from "../../design/primitives.jsx";
 
 const STAFFING_AMBER = "#D97706";
 
@@ -54,7 +54,7 @@ export function ForEmployersPage(){
       <div className="max-w-225 mx-auto">
         <div className="inline-block py-1.5 px-3.5 bg-white rounded-full text-xs font-semibold text-brand tracking-wide uppercase border border-line-2 mb-5">
           Three ways to hire in Canada</div>
-        <h1 className={`font-bold text-text tracking-tight leading-none mb-5 ${mob?"text-4xl":"text-6xl"}`}>
+        <h1 className={`${HERO_WIDE} mb-5 ${mob?"text-4xl":"text-6xl"}`}>
           Post a job. Run your team.<br/>Or let us send you workers.</h1>
         <p className={`text-text-2 leading-snug max-w-160 mx-auto mb-8 ${mob?"text-base":"text-lg"}`}>
           NorthHire is three products under one roof. Pick the one that matches how you actually hire — or use all three together.</p>
@@ -70,7 +70,7 @@ export function ForEmployersPage(){
     <section className={`bg-white ${mob?"py-10 px-4":"py-16 px-6"}`}>
       <div className="max-w-290 mx-auto">
         <div className="text-center mb-10">
-          <h2 className={`font-bold text-text tracking-tight mb-3 ${mob?"text-2xl":"text-4xl"}`}>Which one do you actually need?</h2>
+          <h2 className={`${SECTION_CLS} mb-3 ${mob?"text-2xl":"text-4xl"}`}>Which one do you actually need?</h2>
           <p className="text-text-3 max-w-150 mx-auto leading-snug" style={{fontSize:15.5}}>Read the honest description. Pick the door that fits — or start with the platform and add the others as you grow.</p>
         </div>
         <div className={`grid gap-4 ${mob?"grid-cols-1":"grid-cols-3"}`}>
@@ -293,7 +293,7 @@ export function ForEmployersPage(){
     <section className={`bg-bg ${mob?"py-14 px-4":"py-24 px-6"}`}>
       <div className="max-w-290 mx-auto">
         <div className="text-center mb-10">
-          <h2 className={`font-bold text-text tracking-tight mb-3 ${mob?"text-2xl":"text-4xl"}`}>Side by side.</h2>
+          <h2 className={`${SECTION_CLS} mb-3 ${mob?"text-2xl":"text-4xl"}`}>Side by side.</h2>
           <p className="text-sm text-text-3">Same brand, three products. Different fits. Sometimes all three make sense.</p>
         </div>
 
@@ -327,7 +327,7 @@ export function ForEmployersPage(){
     <section className={`bg-white ${mob?"py-14 px-4":"py-24 px-6"}`}>
       <div className="max-w-205 mx-auto">
         <div className="text-center mb-10">
-          <h2 className={`font-bold text-text tracking-tight mb-3 ${mob?"text-2xl":"text-4xl"}`}>Straight answers.</h2>
+          <h2 className={`${SECTION_CLS} mb-3 ${mob?"text-2xl":"text-4xl"}`}>Straight answers.</h2>
         </div>
         {[
           ["Do I have to pick one product?","No. Most Enterprise clients use the Job Platform and HR Suite together. Staffing is a separate business relationship — you can use it as a client without changing anything about your job platform subscription."],
@@ -367,7 +367,7 @@ function _ProductHeader({color,kicker,title,body}){
   const mob=useMedia("(max-width: 900px)");
   return <div className="mb-10">
     <div className="text-xs font-bold tracking-wide uppercase mb-3.5" style={{color}}>{kicker}</div>
-    <h2 className={`font-bold text-text tracking-tight leading-tight mb-4 max-w-180 ${mob?"text-3xl":"text-5xl"}`}>{title}</h2>
+    <h2 className={`${SECTION_CLS} leading-tight mb-4 max-w-180 ${mob?"text-3xl":"text-5xl"}`}>{title}</h2>
     <p className={`text-text-2 leading-snug max-w-160 ${mob?"text-sm":"text-lg"}`}>{body}</p>
   </div>;
 }
@@ -456,7 +456,7 @@ export function HowItWorksPage(){
       <div className="max-w-205 mx-auto">
         <div className="inline-block py-1.5 px-3.5 bg-white rounded-full text-xs font-semibold text-brand tracking-wide uppercase border border-line-2 mb-5">
           How it works</div>
-        <h1 className={`font-bold text-text tracking-tight leading-none mb-5 ${mob?"text-4xl":"text-6xl"}`}>
+        <h1 className={`${HERO_WIDE} mb-5 ${mob?"text-4xl":"text-6xl"}`}>
           Pick your role. See the flow.</h1>
         <p className={`text-text-2 leading-snug max-w-150 mx-auto mb-8 ${mob?"text-base":"text-lg"}`}>
           NorthHire connects three different journeys. Choose yours below to see exactly what happens, step by step.</p>

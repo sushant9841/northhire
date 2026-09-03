@@ -3,7 +3,7 @@ import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
-import { Page, Btn, Tag, Stat, Card, Lbl, Empty, SmartPortrait, Modal, Banner, H1, Field, Input, Sel, Area, usePagination, Pagination, TH_CLASS, TD_CLASS } from "../../design/primitives.jsx";
+import { Page, Btn, Tag, Stat, Card, Lbl, Empty, SmartPortrait, Modal, Banner, H1, Field, Input, Sel, Area, usePagination, Pagination, TH_CLASS, TD_CLASS, HERO_QUIET } from "../../design/primitives.jsx";
 import { PROVS, PCODE } from "../../store/seed/constants.js";
 import { invoiceTone, timesheetTone } from "../../helpers/statusTone.js";
 
@@ -25,7 +25,7 @@ export function EmpStaffing(){
       <div className={`max-w-3xl mx-auto text-center ${mob?"py-8":"py-14"}`}>
         <div className="inline-block py-1.5 px-3.5 bg-[#FEF3E2] text-[#D97706] rounded-full text-xs font-semibold tracking-wide uppercase border border-[#FCD9A8] mb-5">
           Staffing services · Not yet enrolled</div>
-        <h1 className={`font-bold text-text tracking-tight mb-3.5 ${mob?"text-2xl":"text-4xl"}`}>Need workers fast?</h1>
+        <h1 className={`${HERO_QUIET} mb-3.5 ${mob?"text-2xl":"text-4xl"}`}>Need workers fast?</h1>
         <p className={`text-text-2 leading-normal mb-7 max-w-xl mx-auto ${mob?"text-base":"text-lg"}`}>
           NorthHire Staffing is a separate licensed agency service. We employ contract workers on our payroll, deploy them to your site, and invoice you weekly. Perm placement also available (fee on hire, 90-day guarantee).</p>
         <div className="flex gap-2.5 justify-center flex-wrap mb-8">

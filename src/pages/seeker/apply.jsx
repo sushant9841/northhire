@@ -3,7 +3,7 @@ import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
-import { Btn, Tag, Card, Input, Area, Sel, Field, Banner, H2, Lbl, Modal, Page, SmartPortrait } from "../../design/primitives.jsx";
+import { Btn, Tag, Card, Input, Area, Sel, Field, Banner, H2, Lbl, Modal, Page, SmartPortrait, HERO_QUIET } from "../../design/primitives.jsx";
 import { pay, payUnit, payShort } from "../../helpers/utils.js";
 import { CV_TEMPLATES } from "../../store/seed/constants.js";
 import { JobCard, EmpMark } from "../shared/cards.jsx";
@@ -187,7 +187,7 @@ export function ApplyDone(){
     <div className="text-center pt-5 pb-2" style={{animation:"rise .4s ease both"}}>
       <div className="w-19 h-19 rounded-full bg-ok-bg border-2 border-ok-ln flex items-center justify-center mx-auto mb-5" style={{animation:"pop .45s cubic-bezier(.22,.68,.35,1) both"}}>
         <I n="check" s={38} c={C.ok} w={2.6}/></div>
-      <h1 className="text-2xl font-bold tracking-tight text-text mb-2.5">Application sent</h1>
+      <h1 className={`${HERO_QUIET} text-2xl mb-2.5`}>Application sent</h1>
       <p className="text-base text-text-2 leading-relaxed mx-auto mb-7 max-w-md">
         {e?<>Your application for <strong className="text-text">{job.t}</strong> is now with {e.name}. You will be notified the moment they review it.</>:"Your application has been submitted."}</p>
       <div className="flex gap-2.5 justify-center flex-wrap mb-8">

@@ -3,7 +3,7 @@ import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
-import { Btn, Tag, Input, Empty, Lbl, Modal, Field, Area, CheckRow, Page, SmartPortrait } from "../../design/primitives.jsx";
+import { Btn, Tag, Input, Empty, Lbl, Modal, Field, Area, CheckRow, Page, SmartPortrait, HERO_WIDE, HERO_TIGHT, SECTION_CLS } from "../../design/primitives.jsx";
 import { EmpMark, JobCard } from "./cards.jsx";
 
 export function EmployersPage(){
@@ -16,7 +16,7 @@ export function EmployersPage(){
     <section className={`${heroPad} bg-white`}>
       <div className="max-w-5xl mx-auto text-center">
         <Tag tone="brand" icon="building">Employers</Tag>
-        <h1 className={`font-extrabold tracking-tighter leading-none mt-6 mb-7 text-text mx-auto ${mob?"text-4xl":"text-7xl"}`}>
+        <h1 className={`${HERO_TIGHT} mt-6 mb-7 mx-auto ${mob?"text-4xl":"text-7xl"}`}>
           Companies actively hiring across Canada</h1>
         <p className={`text-text-2 leading-normal mx-auto mb-8 max-w-xl ${mob?"text-lg":"text-xl"}`}>
           Every employer on NorthHire is verified, and every listing shows the wage. Browse by sector, size, or the province where you want to work.</p>
@@ -67,7 +67,7 @@ export function EmployerPublicPage(){
           <EmpMark e={e} size={mob?72:96} radius={20}/>
           <div>
             <div className="flex items-center gap-2.5 flex-wrap mb-2.5">
-              <h1 className={`font-extrabold tracking-tighter m-0 text-text leading-none ${mob?"text-2xl":"text-4xl"}`}>{e.name}</h1>
+              <h1 className={`${HERO_TIGHT} m-0 ${mob?"text-2xl":"text-4xl"}`}>{e.name}</h1>
               {e.verified&&<Tag tone="brand" icon="checkC2">Verified employer</Tag>}</div>
             <div className={`text-text-2 mb-2 ${mob?"text-sm":"text-base"}`}>
               {e.industry} • {e.city}, {e.prov} • {e.size} employees</div>
@@ -133,7 +133,7 @@ export function EmployerPublicPage(){
             </div></Modal>}
 
           <div className="mb-5">
-            <h2 className={`font-bold tracking-tight text-text mb-1.5 leading-tight ${mob?"text-2xl":"text-3xl"}`}>Current openings</h2>
+            <h2 className={`${SECTION_CLS} mb-1.5 leading-tight ${mob?"text-2xl":"text-3xl"}`}>Current openings</h2>
             <p className="text-sm text-text-2">{jobs.length} open {jobs.length===1?"position":"positions"}</p></div>
           {jobs.length===0?<Empty icon="briefcase" title="No open roles right now" body={`Follow ${e.name} and we will alert you when they post.`}/>
             :<div className="grid gap-4" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:290}px,1fr))`}}>
