@@ -7,6 +7,7 @@ import { C, SH } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
 import {
   Page, Btn, Tag, Card, Input, Tabs, Empty, Bar, Lbl, Field, Area, SmartScene, SmartPortrait, ConfirmDialog,
+  usePagination, Pagination,
 } from "../../design/primitives.jsx";
 import { money, pay, payShort, matchesQuery } from "../../helpers/utils.js";
 import { sanitizeHtml } from "../../helpers/sanitize.js";
@@ -284,6 +285,9 @@ export function BlogsPage(){
   const cats=["all",...Array.from(new Set(pub.map(b=>b.cat)))];
   const list=pub.filter(b=>(cat==="all"||b.cat===cat)&&matchesQuery(q,b.title,b.excerpt));
   const lead=list[0];
+  const gridList=lead&&!q&&cat==="all"?list.slice(1):list;
+  const pg=usePagination(gridList,18);
+  useEffect(()=>{pg.setPage(1);},[cat,q]);
   const pad=mob?"py-14 px-4":"py-24 px-8";
   return <div className="bg-white min-h-full">
 
@@ -317,7 +321,8 @@ export function BlogsPage(){
                   <div><div className="text-sm font-bold text-text">{lead.author}</div>
                     <div className="text-xs text-text-3 mt-0.5">{lead.date} • {lead.mins} min read</div></div></div></div></div></div>}
           <div className="grid gap-4" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:340}px,1fr))`}}>
-            {(lead&&!q&&cat==="all"?list.slice(1):list).map(b=><BlogCard key={b.id} b={b}/>)}</div></>}
+            {pg.pageItems.map(b=><BlogCard key={b.id} b={b}/>)}</div>
+          <Pagination {...pg}/></>}
       </div>
     </section>
 
@@ -391,6 +396,8 @@ export function TrainingsPage(){
   const cats=["all",...Array.from(new Set(pub.map(t=>t.cat)))];
   const list=pub.filter(t=>(cat==="all"||t.cat===cat)&&(price==="all"||(price==="free"?t.price===0:t.price>0))
     &&matchesQuery(q,t.title));
+  const pg=usePagination(list,18);
+  useEffect(()=>{pg.setPage(1);},[cat,price,q]);
   const pad=mob?"py-14 px-4":"py-24 px-8";
   return <div className="bg-white min-h-full">
 
@@ -417,8 +424,9 @@ export function TrainingsPage(){
         <Tabs items={cats.map(c=>({k:c,label:c==="all"?"All categories":c}))} value={cat} onChange={setCat} style={{marginBottom:36}}/>
         {list.length===0?<Empty icon="cap" title="No trainings found" body="Try another category or clear the filters."
           action={<Btn kind="primary" onClick={()=>{setQ("");setCat("all");setPrice("all");}}>Reset</Btn>}/>
-          :<div className="grid gap-4" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:280}px,1fr))`}}>
-            {list.map(t=><TrainingCard key={t.id} t={t}/>)}</div>}
+          :<><div className="grid gap-4" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:280}px,1fr))`}}>
+            {pg.pageItems.map(t=><TrainingCard key={t.id} t={t}/>)}</div>
+            <Pagination {...pg}/></>}
       </div>
     </section>
 
