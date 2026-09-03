@@ -578,3 +578,47 @@ export function RichText({value,onChange,placeholder,rows=6,minHeight}){
     </Modal>}
   </div>;
 }
+
+/* ═══════════════ PAGINATION — the #1 repeated systemic finding (every list in every
+   domain rendered unbounded). One hook computes the visible slice + page math; one
+   component renders the standard "Showing X–Y of Z" + prev/next control. Adopting this
+   in a list means: const pg=usePagination(filteredList); render pg.pageItems instead of
+   filteredList; render <Pagination {...pg}/> once at the bottom. ═══════════════ */
+export function usePagination(items,pageSize=20){
+  const [page,setPage]=useState(1);
+  const totalPages=Math.max(1,Math.ceil(items.length/pageSize));
+  const safePage=Math.min(page,totalPages);
+  if(safePage!==page)setPage(safePage); /* clamp during render if the filtered set shrank - React supports adjusting state mid-render when the value actually changes */
+  const start=(safePage-1)*pageSize;
+  return {page:safePage,setPage,totalPages,pageSize,total:items.length,pageItems:items.slice(start,start+pageSize)};
+}
+export function Pagination({page,setPage,totalPages,total,pageSize}){
+  if(totalPages<=1)return null;
+  const from=total===0?0:(page-1)*pageSize+1; const to=Math.min(page*pageSize,total);
+  const navBtn="w-8 h-8 rounded-lg border border-line bg-white text-text-2 flex items-center justify-center cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed hover:bg-bg";
+  return <div className="flex items-center justify-between flex-wrap gap-3 pt-4 mt-1">
+    <div className="text-sm text-text-3">Showing {from}–{to} of {total}</div>
+    <div className="flex items-center gap-1.5">
+      <button className={navBtn} disabled={page===1} onClick={()=>setPage(1)} aria-label="First page"><I n="arrowL" s={13} w={2.4}/><I n="arrowL" s={13} w={2.4} style={{marginLeft:-8}}/></button>
+      <button className={navBtn} disabled={page===1} onClick={()=>setPage(page-1)} aria-label="Previous page"><I n="arrowL" s={14} w={2.4}/></button>
+      <span className="text-sm text-text-2 px-2 font-medium">Page {page} of {totalPages}</span>
+      <button className={navBtn} disabled={page===totalPages} onClick={()=>setPage(page+1)} aria-label="Next page"><I n="arrowR" s={14} w={2.4}/></button>
+      <button className={navBtn} disabled={page===totalPages} onClick={()=>setPage(totalPages)} aria-label="Last page"><I n="arrowR" s={13} w={2.4}/><I n="arrowR" s={13} w={2.4} style={{marginLeft:-8}}/></button>
+    </div>
+  </div>;
+}
+
+/* ═══════════════ TABLE — shared header/cell classes so every hand-rolled <table> stops
+   redefining slightly-different padding. Import TH_CLASS/TD_CLASS directly for tables with
+   irregular structure (colSpan empty-states, mixed cell types); use <Table> for the common
+   case of a plain columns-array + <tbody> body. ═══════════════ */
+export const TH_CLASS="py-2.5 px-3 text-xs font-bold text-text-3 tracking-wide uppercase text-left";
+export const TD_CLASS="py-3 px-3";
+export function Table({columns,minWidth=640,children}){
+  return <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth}}>
+    <thead><tr className="border-b-2 border-line text-left">
+      {columns.map(c=><th key={c} className={TH_CLASS}>{c}</th>)}
+    </tr></thead>
+    <tbody>{children}</tbody>
+  </table></div>;
+}

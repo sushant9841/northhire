@@ -3,7 +3,7 @@ import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
-import { Page, Btn, Banner, Stat, Card, Switch, Input, Sel, SmartPortrait, Tag, Tabs, Empty, Bar, H1, H2, Modal, Field, Area } from "../../design/primitives.jsx";
+import { Page, Btn, Banner, Stat, Card, Switch, Input, Sel, SmartPortrait, Tag, Tabs, Empty, Bar, H1, H2, Modal, Field, Area, usePagination, Pagination } from "../../design/primitives.jsx";
 import { pay, payShort } from "../../helpers/utils.js";
 import { CATS, STAGES } from "../../store/seed/constants.js";
 import { jobTone, jobStatusLabel } from "../../helpers/statusTone.js";
@@ -69,6 +69,7 @@ export function AdmUsers(){
     &&(status==="all"||(status==="suspended"?u._sus:!u._sus)));
   const list=[...filtered].sort((a,b)=>
     sort==="apps"?b._apps-a._apps:sort==="city"?a.city.localeCompare(b.city):sort==="joined"?(b.joined||"").localeCompare(a.joined||""):a.name.localeCompare(b.name));
+  const pg=usePagination(list,20);
   return <Page wide>
     <H1 sub={`${A.people.length} registered job seekers`}>Users</H1>
     <div className="flex gap-3 mb-4 flex-wrap items-center">
@@ -79,8 +80,8 @@ export function AdmUsers(){
         <option value="name">Sort: Name</option><option value="apps">Sort: Most applications</option><option value="city">Sort: City</option><option value="joined">Sort: Newest</option></Sel>
     </div>
     <Card pad={0} style={{overflow:"hidden"}}>
-      {list.map((u,i)=>{const apps=u._apps; const sus=u._sus; const susInfo=A.suspensionInfo?.[u.id];
-        return <div key={u.id} className={`flex items-center gap-3.5 py-3.5 px-5 flex-wrap ${i<list.length-1?"border-b border-line-soft":""} ${sus?"bg-red-bg":"bg-white"}`}>
+      {pg.pageItems.map((u,i)=>{const apps=u._apps; const sus=u._sus; const susInfo=A.suspensionInfo?.[u.id];
+        return <div key={u.id} className={`flex items-center gap-3.5 py-3.5 px-5 flex-wrap ${i<pg.pageItems.length-1?"border-b border-line-soft":""} ${sus?"bg-red-bg":"bg-white"}`}>
           <SmartPortrait seed={u.seed} size={40}/>
           <div className="grow shrink basis-43 min-w-0">
             <div className="text-sm font-semibold text-text">{u.name}</div>
@@ -97,6 +98,7 @@ export function AdmUsers(){
             else{setSuspending(u);setReason("");}
           }}>{sus?"Restore":"Suspend"}</Btn></div>;})}
       {list.length===0&&<div className="p-5"><Empty icon="search" title="No users match that search" body="Try a different name, email, or title."/></div>}</Card>
+    <Pagination {...pg}/>
     {suspending&&<Modal onClose={()=>setSuspending(null)} title={`Suspend ${suspending.name}?`}>
       <div className="flex flex-col gap-3.5">
         <Field label="Reason" required hint="Recorded on their account and in the activity log.">
@@ -160,8 +162,9 @@ export function AdmJobs(){
   const [tab,setTab]=useState("all"); const [q,setQ]=useState(""); const [sel,setSel]=useState(new Set());
   const base=tab==="flagged"?A.jobs.filter(j=>j.flagged):tab==="review"?A.jobs.filter(j=>j.status==="review"):tab==="paused"?A.jobs.filter(j=>j.status==="paused"):A.jobs;
   const list=base.filter(j=>!q||j.t.toLowerCase().includes(q.toLowerCase())||A.emp(j.e).name.toLowerCase().includes(q.toLowerCase()));
+  const pg=usePagination(list,20);
   const toggleSel=id=>setSel(s=>{const n=new Set(s); n.has(id)?n.delete(id):n.add(id); return n;});
-  const allSelected=list.length>0&&list.every(j=>sel.has(j.id));
+  const allSelected=pg.pageItems.length>0&&pg.pageItems.every(j=>sel.has(j.id));
   const selJobs=list.filter(j=>sel.has(j.id));
   const bulkFlag=on=>{selJobs.forEach(j=>{if(!!j.flagged!==on)A.flagJob(j.id);}); A.toast(`${selJobs.length} listing${selJobs.length===1?"":"s"} ${on?"flagged":"unflagged"}`); setSel(new Set());};
   const bulkPause=()=>{selJobs.filter(j=>j.status==="live").forEach(j=>A.toggleJobStatus(j.id)); A.toast(`${selJobs.length} listing${selJobs.length===1?"":"s"} paused`); setSel(new Set());};
@@ -181,11 +184,11 @@ export function AdmJobs(){
         <Btn kind="ghost" size="xs" onClick={()=>bulkFlag(false)}>Unflag</Btn></div>}>
       {sel.size} listing{sel.size===1?"":"s"} selected</Banner>}
     <Card pad={0} style={{overflow:"hidden"}}>
-      {list.length>0&&<div className="flex items-center gap-3 py-2.5 px-5 border-b border-line-soft bg-bg">
-        <input type="checkbox" checked={allSelected} onChange={e=>setSel(e.target.checked?new Set(list.map(j=>j.id)):new Set())}/>
-        <span className="text-xs font-semibold text-text-3 uppercase tracking-wide">Select all</span></div>}
-      {list.map((j,i)=>{const e=A.emp(j.e); const n=A.applications.filter(a=>a.job===j.id).length;
-        return <div key={j.id} className={`flex items-center gap-3 py-3.5 px-5 flex-wrap ${i<list.length-1?"border-b border-line-soft":""} ${j.flagged?"bg-warn-bg":"bg-white"}`}>
+      {pg.pageItems.length>0&&<div className="flex items-center gap-3 py-2.5 px-5 border-b border-line-soft bg-bg">
+        <input type="checkbox" checked={allSelected} onChange={e=>setSel(e.target.checked?new Set(pg.pageItems.map(j=>j.id)):new Set())}/>
+        <span className="text-xs font-semibold text-text-3 uppercase tracking-wide">Select all on page</span></div>}
+      {pg.pageItems.map((j,i)=>{const e=A.emp(j.e); const n=A.applications.filter(a=>a.job===j.id).length;
+        return <div key={j.id} className={`flex items-center gap-3 py-3.5 px-5 flex-wrap ${i<pg.pageItems.length-1?"border-b border-line-soft":""} ${j.flagged?"bg-warn-bg":"bg-white"}`}>
           <input type="checkbox" checked={sel.has(j.id)} onChange={()=>toggleSel(j.id)}/>
           <EmpMark e={e} size={38} radius={10}/>
           <div className="grow shrink basis-50 min-w-0">
@@ -198,6 +201,7 @@ export function AdmJobs(){
             <Btn kind="outline" size="xs" onClick={()=>{const label=j.status==="live"?"paused":j.status==="review"?"approved":"restored";A.toggleJobStatus(j.id);A.toast(`"${j.t}" ${label}`,label==="paused"?"warn":"ok");}}>{j.status==="live"?"Pause":j.status==="review"?"Approve":"Restore"}</Btn>
             <Btn kind={j.flagged?"dangerSoft":"ghost"} size="xs" onClick={()=>{const willFlag=!j.flagged;A.flagJob(j.id);A.toast(`"${j.t}" ${willFlag?"flagged":"unflagged"}`,willFlag?"danger":"brand");}}>{j.flagged?"Unflag":"Flag"}</Btn></div></div>;})}
       {list.length===0&&<div className="p-5"><Empty icon="search" title="Nothing matches that filter" body="Try a different search term or switch tabs."/></div>}</Card>
+    <Pagination {...pg}/>
   </Page>;
 }
 
