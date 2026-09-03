@@ -3,7 +3,7 @@ import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
-import { Page, Btn, Tag, Stat, Card, Lbl, Empty, SmartPortrait, Modal, Banner, H1, Field, Input, Sel } from "../../design/primitives.jsx";
+import { Page, Btn, Tag, Stat, Card, Lbl, Empty, SmartPortrait, Modal, Banner, H1, Field, Input, Sel, Area } from "../../design/primitives.jsx";
 import { PROVS, PCODE } from "../../store/seed/constants.js";
 import { invoiceTone, timesheetTone } from "../../helpers/statusTone.js";
 
@@ -164,6 +164,7 @@ export function EmpStaffing(){
 /* ─── Client: Approve timesheets ─── */
 export function EmpStaffingTimesheets(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
+  const [returning,setReturning]=useState(null); const [reason,setReason]=useState("");
   const client=A.staffingClientByEmployerId(A.company?.id);
   if(!client)return <Page><Empty icon="clock" title="Not a staffing client" body="Contact us to set up staffing services."/></Page>;
   const asns=A.clientAssignments(client.id).map(a=>a.id);
@@ -195,7 +196,7 @@ export function EmpStaffingTimesheets(){
             <td className="py-3 px-3.5"><Tag tone={timesheetTone(t.status)} sm>{t.status}</Tag></td>
             <td className="py-3 px-3.5">
               {t.status==="submitted"&&<div className="flex gap-1">
-                <Btn kind="dangerSoft" size="xs" onClick={()=>{const reason=prompt("Reason for returning?"); if(reason)A.rejectTimesheet(t.id,reason);}}>Return</Btn>
+                <Btn kind="dangerSoft" size="xs" onClick={()=>{setReturning(t.id);setReason("");}}>Return</Btn>
                 <Btn kind="primary" size="xs" onClick={()=>A.approveTimesheet(t.id,A.user.email)}>Approve</Btn>
               </div>}
             </td>
@@ -204,6 +205,16 @@ export function EmpStaffingTimesheets(){
         </tbody>
       </table></div>
     </Card>
+    {returning&&<Modal onClose={()=>setReturning(null)} title="Return timesheet">
+      <div className="flex flex-col gap-3.5">
+        <Field label="Reason for the worker / agency" required>
+          <Area rows={3} value={reason} onChange={e=>setReason(e.target.value)} placeholder="e.g. Hours don't match the site sign-in sheet for Thursday — please confirm and resubmit."/></Field>
+        <div className="flex gap-2.5 justify-end">
+          <Btn kind="ghost" onClick={()=>setReturning(null)}>Cancel</Btn>
+          <Btn kind="dangerSoft" disabled={!reason.trim()} onClick={()=>{A.rejectTimesheet(returning,reason.trim());setReturning(null);}}>Return timesheet</Btn>
+        </div>
+      </div>
+    </Modal>}
   </Page>;
 }
 

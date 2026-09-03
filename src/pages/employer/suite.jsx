@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C, SH } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
 import {
   Page, H1, H2, Btn, Banner, Stat, Card, Empty, Tag, Bar, Modal, Area, Field, Input, Sel,
-  RichText, Switch, DatePicker, Ring, Tabs, Lbl, SmartPortrait, SmartScene, SmartLogo, Mark, MARKS,
+  RichText, Switch, DatePicker, Ring, Tabs, Lbl, SmartPortrait, SmartScene, SmartLogo, Mark, MARKS, ConfirmDialog,
 } from "../../design/primitives.jsx";
 import { pay, payShort, dlText, money, uid } from "../../helpers/utils.js";
 import { sanitizeHtml } from "../../helpers/sanitize.js";
@@ -107,10 +107,8 @@ export function EmpJobs(){
   </Page>;
 }
 
-export function EmpPost(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
-  const [step,setStep]=useState(1); const [err,setErr]=useState({});
-  const [f,setF]=useState({t:"",cat:"trades",type:"Full Time",mode:"On-site",desc:"",
+const JOBPOST_DRAFT_KEY="northhire.jobPostDraft";
+const _defaultJobPostData=()=>({t:"",cat:"trades",type:"Full Time",mode:"On-site",desc:"",
     skills:[],mustHave:[],location:"",city:"",prov:"Ontario",
     payType:"range",  /* range | fixed */
     payPeriod:"hr",   /* hr | yr | contract */
@@ -119,6 +117,18 @@ export function EmpPost(){
     dlDate:"", /* absolute date, replaces days */
     perks:[],duties:"",reqs:"",how:"",urgent:false,featured:false,
     questions:[]});
+const _loadJobPostDraft=()=>{try{return JSON.parse(sessionStorage.getItem(JOBPOST_DRAFT_KEY)||"null");}catch{return null;}};
+
+export function EmpPost(){
+  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const draft=_loadJobPostDraft();
+  const [resumed]=useState(!!draft&&draft.step>1);
+  const [step,setStep]=useState(draft?.step||1); const [err,setErr]=useState({});
+  const [f,setF]=useState(draft?.f||_defaultJobPostData());
+  /* A refresh mid-wizard used to lose every field with no warning - persist the draft the same
+     way SignupPage does, since it's the same class of bug. */
+  useEffect(()=>{try{sessionStorage.setItem(JOBPOST_DRAFT_KEY,JSON.stringify({step,f}));}catch{}},[step,f]);
+  const discardDraft=()=>{try{sessionStorage.removeItem(JOBPOST_DRAFT_KEY);}catch{} setStep(1); setF(_defaultJobPostData()); setErr({});};
 
   const set=(k,v)=>{setF(p=>({...p,[k]:v}));setErr(e=>({...e,[k]:undefined}));};
   const setLocation=loc=>{const parts=loc.split(",").map(s=>s.trim());
@@ -139,11 +149,19 @@ export function EmpPost(){
     }
     if(step===2){
       if(!f.location.trim())e.location="Choose a location";
+      /* Presence + hi>lo alone let $1/hr or $1,000,000/hr both through - add sane per-period
+         bounds so an obvious fat-finger (missing a digit, an extra zero) gets caught here
+         instead of publishing a listing no one would believe. */
+      const bounds={hr:[15,500],yr:[20000,500000],contract:[100,10000000]}[f.payPeriod]||[0,Infinity];
+      const [minV,maxV]=bounds;
       if(f.payType==="range"){
         if(!f.lo)e.lo="Required"; if(!f.hi)e.hi="Required";
         if(f.lo&&f.hi&&Number(f.hi)<Number(f.lo))e.hi="Maximum must be above the minimum";
+        if(f.lo&&(Number(f.lo)<minV||Number(f.lo)>maxV))e.lo=`Enter a realistic ${f.payPeriod==="hr"?"hourly":f.payPeriod==="yr"?"yearly":"contract"} amount ($${minV.toLocaleString()}–$${maxV.toLocaleString()})`;
+        if(f.hi&&(Number(f.hi)<minV||Number(f.hi)>maxV)&&!e.lo)e.hi=`Enter a realistic ${f.payPeriod==="hr"?"hourly":f.payPeriod==="yr"?"yearly":"contract"} amount ($${minV.toLocaleString()}–$${maxV.toLocaleString()})`;
       } else {
         if(!f.fixed)e.fixed="Required";
+        else if(Number(f.fixed)<minV||Number(f.fixed)>maxV)e.fixed=`Enter a realistic amount ($${minV.toLocaleString()}–$${maxV.toLocaleString()})`;
       }
       if(!f.dlDate)e.dlDate="Choose a closing date";
     }
@@ -167,6 +185,7 @@ export function EmpPost(){
       featured:f.featured};
     const r=A.publishJob(payload);
     if(r&&!r.ok)setPostErr(r.msg);
+    else try{sessionStorage.removeItem(JOBPOST_DRAFT_KEY);}catch{}
   };
 
   const steps=["Role details","Pay & location","Application"];
@@ -176,6 +195,9 @@ export function EmpPost(){
   return <Page narrow>
     <H1 sub="About five minutes. Listings go live immediately.">Post a job</H1>
 
+    {resumed&&<Banner tone="brand" icon="clock" style={{marginBottom:16}}
+      action={<button onClick={discardDraft} className="bg-transparent border-0 p-0 cursor-pointer text-sm font-semibold text-brand">Start over</button>}>
+      Picked up where you left off.</Banner>}
     {postErr&&<Banner tone="danger" icon="alert" title="Cannot publish" style={{marginBottom:16}}
       action={<Btn kind="primary" size="sm" onClick={()=>A.go("pricing")}>See plans</Btn>}>{postErr}</Banner>}
 
@@ -370,6 +392,16 @@ export function EmpPipeline(){
   const [sel,setSel]=useState(new Set());
   const [f,setF]=useState({minScore:0,prov:"",skill:""});
   const [bulkMenu,setBulkMenu]=useState(false);
+  const [confirmRejectAll,setConfirmRejectAll]=useState(false);
+  const bulkMenuRef=useRef(null);
+  /* The "Move to..." dropdown previously had no click-outside or Escape handling at all. */
+  useEffect(()=>{
+    if(!bulkMenu)return;
+    const onDocClick=e=>{if(bulkMenuRef.current&&!bulkMenuRef.current.contains(e.target))setBulkMenu(false);};
+    const onKey=e=>{if(e.key==="Escape")setBulkMenu(false);};
+    document.addEventListener("mousedown",onDocClick); document.addEventListener("keydown",onKey);
+    return ()=>{document.removeEventListener("mousedown",onDocClick); document.removeEventListener("keydown",onKey);};
+  },[bulkMenu]);
 
   if(!job) return <Page><Empty icon="users" title="No listings to review" body="Post a job and applicants land here automatically."
     action={<Btn kind="primary" icon="plus" onClick={()=>A.go("empPost")}>Post a job</Btn>}/></Page>;
@@ -399,7 +431,7 @@ export function EmpPipeline(){
       <div className="max-w-site mx-auto flex gap-3.5 items-end flex-wrap">
         <div className="grow shrink basis-60 min-w-0">
           <Lbl style={{marginBottom:6}}>Pipeline for</Lbl>
-          <Sel value={jobId} onChange={e=>{A.setPipelineJob(e.target.value);clear();}} style={{fontWeight:640}}>
+          <Sel value={jobId} onChange={e=>{A.setPipelineJob(e.target.value);clear();setF({minScore:0,prov:"",skill:""});}} style={{fontWeight:640}}>
             {myJobs.map(j=><option key={j.id} value={j.id}>{j.t} ({A.applications.filter(a=>a.job===j.id).length})</option>)}</Sel></div>
         <Btn kind="outline" size="sm" icon="download" onClick={()=>A.exportApplicants(jobId)}>Export CSV</Btn></div>
       <div className="max-w-site mx-auto mt-3.5">
@@ -458,12 +490,12 @@ export function EmpPipeline(){
       {sel.size>0&&A.can("bulkActions")&&<div className={`bg-brand text-white flex gap-3 items-center flex-wrap ${mob?"py-3 px-4":"py-3 px-7"}`}>
         <span className="text-sm font-semibold">{sel.size} selected</span>
         <div className="flex-1"/>
-        <div className="relative">
-          <Btn kind="onDark" size="sm" iconR="chevD" onClick={()=>setBulkMenu(!bulkMenu)}>Move to…</Btn>
-          {bulkMenu&&<div className="absolute top-full right-0 mt-1.5 bg-white border border-line rounded-xl shadow-lg p-1.5 z-20" style={{minWidth:180}}>
-            {STAGES.map(s=><button key={s} onClick={()=>runBulk("move",s)} className="block w-full text-left py-2.5 px-3 bg-transparent border-0 cursor-pointer text-sm text-text rounded-lg hover:bg-bg transition-colors duration-150">{s}</button>)}</div>}
+        <div className="relative" ref={bulkMenuRef}>
+          <Btn kind="onDark" size="sm" iconR="chevD" aria-expanded={bulkMenu} onClick={()=>setBulkMenu(!bulkMenu)}>Move to…</Btn>
+          {bulkMenu&&<div role="menu" className="absolute top-full right-0 mt-1.5 bg-white border border-line rounded-xl shadow-lg p-1.5 z-20" style={{minWidth:180}}>
+            {STAGES.map(s=><button key={s} role="menuitem" onClick={()=>runBulk("move",s)} className="block w-full text-left py-2.5 px-3 bg-transparent border-0 cursor-pointer text-sm text-text rounded-lg hover:bg-bg transition-colors duration-150">{s}</button>)}</div>}
         </div>
-        <Btn kind="onDark" size="sm" icon="x" onClick={()=>runBulk("reject")}>Reject all</Btn>
+        <Btn kind="onDark" size="sm" icon="x" onClick={()=>setConfirmRejectAll(true)}>Reject all</Btn>
         <Btn kind="onDark" size="sm" onClick={clear}>Clear</Btn></div>}
       <div className={`flex-1 overflow-x-auto ${mob?"p-3.5":"p-5"}`}>
         <div className="flex gap-3 items-start" style={{minWidth:"max-content"}}>
@@ -477,13 +509,17 @@ export function EmpPipeline(){
                   <span className="bg-wash text-brand border border-line-2 text-xs font-bold rounded-full flex items-center justify-center px-1.5" style={{minWidth:22,height:22}}>{items.length}</span></div></div>
               {items.map((a,i)=>{const u=A.person(a.user); const s=A.scoreCandidate(u,job); const idx=STAGES.indexOf(stage);
                 const selected=sel.has(a.id);
-                return <div key={a.id} className="bg-white rounded-2xl cursor-pointer shadow-xs transition-all duration-150"
+                return <div key={a.id} role="button" tabIndex={0} aria-label={`Open ${u.name}'s application`}
+                  className="bg-white rounded-2xl cursor-pointer shadow-xs transition-all duration-150"
                   style={{border:`${selected?2:1}px solid ${selected?C.brand:C.line}`,padding:selected?12:13}}
                   onClick={e=>{if(e.target.closest("[data-nc]"))return; A.openCandidate(a.id);}}
+                  onKeyDown={e=>{if((e.key==="Enter"||e.key===" ")&&!e.target.closest("[data-nc]")){e.preventDefault();A.openCandidate(a.id);}}}
                   onMouseEnter={e=>{if(!selected){e.currentTarget.style.borderColor=C.line2;e.currentTarget.style.transform="translateY(-2px)";}}}
                   onMouseLeave={e=>{if(!selected){e.currentTarget.style.borderColor=C.line;e.currentTarget.style.transform="none";}}}>
                   <div className="flex gap-2.5 items-center mb-2.5">
-                    {A.can("bulkActions")&&<div data-nc onClick={()=>tog(a.id)} className="w-5 h-5 rounded-md cursor-pointer flex items-center justify-center shrink-0"
+                    {A.can("bulkActions")&&<div data-nc role="checkbox" aria-checked={selected} aria-label={`Select ${u.name}`} tabIndex={0}
+                      onClick={()=>tog(a.id)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();tog(a.id);}}}
+                      className="w-5 h-5 rounded-md cursor-pointer flex items-center justify-center shrink-0"
                       style={{border:`1.5px solid ${selected?C.brand:C.line}`,background:selected?C.brand:"#fff"}}>
                       {selected&&<I n="check" s={12} c="#fff" w={3}/>}</div>}
                     <SmartPortrait seed={u.seed} size={32}/>
@@ -497,6 +533,10 @@ export function EmpPipeline(){
               {items.length===0&&<div className="rounded-2xl text-center text-xs text-text-3 py-6 px-3" style={{border:`1.5px dashed ${C.line}`}}>Empty</div>}
             </div>;})}</div></div>
     </>}
+    <ConfirmDialog open={confirmRejectAll} onClose={()=>setConfirmRejectAll(false)} confirmLabel="Reject all"
+      title={`Reject ${sel.size} candidate${sel.size===1?"":"s"}?`} onConfirm={()=>runBulk("reject")}>
+      This withdraws their application{sel.size===1?"":"s"}. This can't be undone from here.
+    </ConfirmDialog>
   </div>;
 }
 
@@ -506,6 +546,7 @@ export function EmpCandidate(){
   const [showMsg,setShowMsg]=useState(false); const [msgText,setMsgText]=useState("");
   const [showSched,setShowSched]=useState(false);
   const [ivDate,setIvDate]=useState(""); const [ivTime,setIvTime]=useState(""); const [ivMode,setIvMode]=useState("video"); const [ivNotes,setIvNotes]=useState("");
+  const [confirmReject,setConfirmReject]=useState(false);
   const a=A.applications.find(x=>x.id===A.candidateId);
   if(!a) return <Page><Empty icon="users" title="Candidate not found" body="This application may have been withdrawn."
     action={<Btn kind="primary" onClick={()=>A.go("empPipeline")}>Back to pipeline</Btn>}/></Page>;
@@ -542,8 +583,12 @@ export function EmpCandidate(){
         {idx<STAGES.length-1&&<Btn kind="primary" iconR="arrowR" onClick={()=>A.moveApp(a.id,STAGES[idx+1])}>Advance to {STAGES[idx+1]}</Btn>}
         {A.can("messages")?<Btn kind="outline" icon="mail" onClick={()=>setShowMsg(true)}>Message</Btn>:<Btn kind="ghost" icon="lock" onClick={()=>A.go("pricing")}>Message (Growth+)</Btn>}
         {A.can("interviews")?<Btn kind="outline" icon="calendar" onClick={()=>setShowSched(true)}>Schedule interview</Btn>:<Btn kind="ghost" icon="lock" onClick={()=>A.go("pricing")}>Schedule (Growth+)</Btn>}
-        <Btn kind="dangerSoft" onClick={()=>{A.rejectApp(a.id);A.go("empPipeline");}}>Not a fit</Btn>
+        <Btn kind="dangerSoft" onClick={()=>setConfirmReject(true)}>Not a fit</Btn>
         <Btn kind="ghost" onClick={()=>A.go("empPipeline")}>Back to pipeline</Btn></div></Card>
+    <ConfirmDialog open={confirmReject} onClose={()=>setConfirmReject(false)} confirmLabel="Reject"
+      title={`Reject ${u.name}?`} onConfirm={()=>{A.rejectApp(a.id);A.go("empPipeline");}}>
+      This withdraws their application. This can't be undone from here.
+    </ConfirmDialog>
 
     {threadMessages.length>0&&<Card style={{marginBottom:16}}><Lbl>Message history</Lbl>
       <div className="flex flex-col gap-2.5 overflow-y-auto" style={{maxHeight:280}}>
@@ -602,9 +647,13 @@ export function ContentManager({scope,only}){
   const blogs=isAdmin?A.blogs:A.blogs.filter(b=>b.owner===owner);
   const trainings=isAdmin?A.trainings:A.trainings.filter(t=>t.owner===owner);
   const [tab,setTab]=useState(only==="trainings"?"trainings":"blogs");
+  const [q,setQ]=useState(""); const [statusFilter,setStatusFilter]=useState("all");
+  const [sel,setSel]=useState(new Set());
   const Row=({item,type})=>{
     const editable=isAdmin||item.owner===owner;
+    const selected=sel.has(item.id);
     return <div className="flex gap-3.5 items-center py-3.5 border-b border-line-soft flex-wrap">
+      {editable&&<input type="checkbox" checked={selected} onChange={()=>setSel(s=>{const n=new Set(s); n.has(item.id)?n.delete(item.id):n.add(item.id); return n;})}/>}
       <div className="w-19 h-13 rounded-lg overflow-hidden shrink-0">
         <SmartScene kind={item.scene} tone={item.tone} h={52} seed={item.id.charCodeAt(1)||0}/></div>
       <div className="grow shrink basis-50 min-w-0">
@@ -625,8 +674,11 @@ export function ContentManager({scope,only}){
           <Btn kind="ghost" size="xs" icon="trash" title="Delete"
             onClick={()=>type==="blog"?A.deleteBlog(item.id):A.deleteTraining(item.id)}/></>}</div></div>;
   };
-  const list=tab==="blogs"?blogs:trainings;
+  const rawList=tab==="blogs"?blogs:trainings;
+  const list=rawList.filter(x=>(statusFilter==="all"||x.status===statusFilter)&&(!q||x.title.toLowerCase().includes(q.toLowerCase())||x.cat.toLowerCase().includes(q.toLowerCase())));
   const allowed=tab==="blogs"?canBlogs:canTrainings;
+  const selItems=list.filter(x=>sel.has(x.id));
+  const bulkAction=fn=>{selItems.forEach(x=>fn(x.id)); setSel(new Set());};
   return <Page wide>
     <H1 sub={isAdmin?"Every article and training on the platform":"Articles and trainings published by your company"}
       action={allowed?<Btn kind="primary" icon="plus"
@@ -637,13 +689,25 @@ export function ContentManager({scope,only}){
       An administrator has disabled employer {!canBlogs&&!canTrainings?"articles and trainings":!canBlogs?"articles":"trainings"} platform-wide.
       Anything you already published stays visible, but you cannot create or edit it right now.</Banner>}
     {!only&&<Tabs items={[{k:"blogs",label:"Articles",n:blogs.length},{k:"trainings",label:"Trainings",n:trainings.length}]}
-      value={tab} onChange={setTab} style={{marginBottom:18}}/>}
+      value={tab} onChange={t=>{setTab(t);setSel(new Set());}} style={{marginBottom:18}}/>}
+    <div className="flex gap-3 mb-4 flex-wrap items-center">
+      <div className="grow shrink basis-60 max-w-90"><Input icon="search" placeholder="Search title or category" value={q} onChange={e=>setQ(e.target.value)}/></div>
+      <Sel value={statusFilter} onChange={e=>setStatusFilter(e.target.value)} style={{width:160}}>
+        <option value="all">All statuses</option><option value="published">Published</option>
+        <option value="draft">Draft</option><option value="hidden">Hidden</option></Sel>
+    </div>
+    {sel.size>0&&<Banner tone="brand" icon="check" style={{marginBottom:14}}
+      action={<div className="flex gap-2 flex-wrap">
+        <Btn kind="ok" size="xs" onClick={()=>bulkAction(id=>{const item=list.find(x=>x.id===id); if(item.status!=="published")(tab==="blogs"?A.toggleBlogStatus:A.toggleTrainingStatus)(id);})}>Publish</Btn>
+        <Btn kind="outline" size="xs" onClick={()=>bulkAction(id=>{const item=list.find(x=>x.id===id); if(item.status==="published")(tab==="blogs"?A.toggleBlogStatus:A.toggleTrainingStatus)(id);})}>Unpublish</Btn>
+        <Btn kind="dangerSoft" size="xs" onClick={()=>bulkAction(tab==="blogs"?A.deleteBlog:A.deleteTraining)}>Delete</Btn></div>}>
+      {sel.size} item{sel.size===1?"":"s"} selected</Banner>}
     <Card pad={mob?16:22}>
       {list.length===0
-        ? <Empty icon={tab==="blogs"?"book":"cap"} title={`No ${tab==="blogs"?"articles":"trainings"} yet`}
-            body={allowed?`Publish your first ${tab==="blogs"?"article":"training"} — it appears on the home page and in the public library.`
-              :"Publishing is currently disabled by an administrator."}
-            action={allowed?<Btn kind="primary" icon="plus" onClick={()=>tab==="blogs"?A.editBlog("new"):A.editTraining("new")}>
+        ? <Empty icon={tab==="blogs"?"book":"cap"} title={rawList.length===0?`No ${tab==="blogs"?"articles":"trainings"} yet`:"Nothing matches that filter"}
+            body={rawList.length===0?(allowed?`Publish your first ${tab==="blogs"?"article":"training"} — it appears on the home page and in the public library.`
+              :"Publishing is currently disabled by an administrator."):"Try a different search term or status."}
+            action={rawList.length===0&&allowed?<Btn kind="primary" icon="plus" onClick={()=>tab==="blogs"?A.editBlog("new"):A.editTraining("new")}>
               Create {tab==="blogs"?"article":"training"}</Btn>:null}/>
         : list.map(x=><Row key={x.id} item={x} type={tab==="blogs"?"blog":"training"}/>)}</Card>
   </Page>;
@@ -875,6 +939,7 @@ export function TrainingEditor(){
 export function EmpCompany(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [d,setD]=useState({...A.company});
+  const [confirmDiscard,setConfirmDiscard]=useState(false);
   useEffect(()=>setD({...A.company}),[A.company]);
   const dirty=JSON.stringify(d)!==JSON.stringify(A.company);
   const set=(k,v)=>setD(p=>({...p,[k]:v}));
@@ -907,8 +972,12 @@ export function EmpCompany(){
         <Field label="About the company" style={{gridColumn:mob?"auto":"span 2"}} hint="Two or three sentences shown on your public page and on every listing.">
           <Area rows={5} value={d.about} onChange={e=>set("about",e.target.value)}/></Field></div>
       <div className="flex gap-2.5 justify-end mt-6 pt-5 border-t border-line-soft">
-        {dirty&&<Btn kind="ghost" onClick={()=>setD({...A.company})}>Discard</Btn>}
+        {dirty&&<Btn kind="ghost" onClick={()=>setConfirmDiscard(true)}>Discard</Btn>}
         <Btn kind="primary" icon="check" disabled={!dirty} onClick={()=>A.saveCompany(d)}>{dirty?"Save changes":"Saved"}</Btn></div></Card>
+    <ConfirmDialog open={confirmDiscard} onClose={()=>setConfirmDiscard(false)} confirmLabel="Discard changes"
+      title="Discard unsaved changes?" onConfirm={()=>setD({...A.company})}>
+      This will revert every field on this page back to what's currently saved.
+    </ConfirmDialog>
   </Page>;
 }
 

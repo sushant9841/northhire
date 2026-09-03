@@ -7,16 +7,24 @@ import { Btn, Card, Tag, Input, Empty, SmartPortrait, Page } from "../../design/
 export function MessagesPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [reply,setReply]=useState({}); // keyed by other party's id
+  const [q,setQ]=useState(""); const [unreadOnly,setUnreadOnly]=useState(false);
   if(!A.user) return <Page><Empty icon="mail" title="Sign in to see messages" body="Your inbox lives on your account."/></Page>;
   const myMessages=A.messages.filter(m=>m.from===A.user.id||m.to===A.user.id);
   const threads={};
   myMessages.forEach(m=>{const other=m.from===A.user.id?m.to:m.from;
     if(!threads[other])threads[other]=[]; threads[other].push(m);});
-  const threadList=Object.entries(threads).map(([otherId,msgs])=>{
+  const allThreadList=Object.entries(threads).map(([otherId,msgs])=>{
     const sorted=msgs.slice().sort((a,b)=>b.at-a.at);
     return {otherId,msgs:sorted.reverse(),last:sorted[0],unread:msgs.filter(m=>m.to===A.user.id&&!m.read).length};
   }).sort((a,b)=>b.last.at-a.last.at);
-  const [openThread,setOpenThread]=useState(threadList[0]?.otherId||null);
+  const threadList=allThreadList.filter(t=>{
+    if(unreadOnly&&t.unread===0)return false;
+    if(q){const p=A.person(t.otherId)||A.people.find(x=>x.id===t.otherId);
+      const s=q.toLowerCase();
+      if(!((p?.name||"").toLowerCase().includes(s)||t.last.text.toLowerCase().includes(s)))return false;}
+    return true;
+  });
+  const [openThread,setOpenThread]=useState(allThreadList[0]?.otherId||null);
   const other=A.person(openThread)||A.people.find(p=>p.id===openThread);
   const thread=threads[openThread]?.slice().sort((a,b)=>a.at-b.at)||[];
   const send=()=>{const t=(reply[openThread]||"").trim(); if(!t)return;
@@ -39,8 +47,16 @@ export function MessagesPage(){
           <div className="text-2xl font-bold text-text tracking-tight mb-1">Messages</div>
           <div className="text-sm text-text-3">{threadList.length} {threadList.length===1?"conversation":"conversations"}{threadList.reduce((s,t)=>s+t.unread,0)>0?` · ${threadList.reduce((s,t)=>s+t.unread,0)} unread`:""}</div>
         </div>}
-        {threadList.length===0
+        {allThreadList.length>0&&<div className="flex gap-3 mb-4 flex-wrap items-center">
+          <div className="grow shrink basis-60 max-w-90"><Input icon="search" placeholder="Search by name or message" value={q} onChange={e=>setQ(e.target.value)}/></div>
+          <button onClick={()=>setUnreadOnly(v=>!v)}
+            className={`text-sm font-semibold py-2.5 px-4 rounded-xl border cursor-pointer transition-colors duration-150 ${unreadOnly?"bg-brand text-white border-brand":"bg-white text-text-2 border-line"}`}>
+            Unread only</button>
+        </div>}
+        {allThreadList.length===0
           ? <Empty icon="mail" title="No messages yet" body={A.user.role==="seeker"?"When an employer messages you about an application, it lands here.":"When you message a candidate from their profile, the conversation appears here."}/>
+          : threadList.length===0
+          ? <Empty icon="search" title="No conversations match" body="Try a different search term or turn off the unread filter."/>
           : <div className={`grid gap-4 items-start ${mob?"grid-cols-1":"grid-cols-[320px_1fr]"}`}>
               <Card pad={0} style={{borderRadius:16,overflow:"hidden"}}>
                 {threadList.map((t,i)=>{const p=A.person(t.otherId)||A.people.find(x=>x.id===t.otherId)||{name:"Unknown",seed:0};

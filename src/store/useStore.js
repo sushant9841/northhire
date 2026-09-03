@@ -538,7 +538,9 @@ export function useStore(){
     const myApps=applications.filter(a=>myAppIds.includes(a.job));
     const totalViews=myJobs.reduce((s,j)=>s+j.views,0);
     const totalApps=myApps.length;
-    const conversion=totalViews?Math.round((totalApps/totalViews)*100):0;
+    /* A CSV-imported job can start with 0 views but nonzero applicants (views only start
+       accruing after publish), which produced a nonsensical >100% conversion rate. */
+    const conversion=totalViews?Math.min(100,Math.round((totalApps/totalViews)*100)):0;
     const byStage=STAGES.map(s=>({stage:s,count:myApps.filter(a=>a.stage===s).length}));
     const topJob=myJobs.map(j=>({j,apps:applications.filter(a=>a.job===j.id).length})).sort((a,b)=>b.apps-a.apps)[0];
     const avgScore=myApps.length?Math.round(myApps.map(a=>scoreCandidate(person(a.user),job(a.job)||myJobs[0])).reduce((s,x)=>s+x,0)/myApps.length):0;
