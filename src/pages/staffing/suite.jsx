@@ -5,7 +5,7 @@ import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
 import {
   Btn, Card, Tag, Field, Input, Sel, Area, Banner, Lbl, Modal, DatePicker, SmartPortrait,
-  SmartLogo, Empty,
+  SmartLogo, Empty, ConfirmDialog,
 } from "../../design/primitives.jsx";
 import { _fmtDate, _weekStart } from "../../helpers/utils.js";
 import { InlineList } from "../shared/formControls.jsx";
@@ -293,9 +293,12 @@ function _JobOrderDetail({id,onClose}){
   const filled=A.assignments.filter(a=>a.jobOrder===jo.id);
   const [showPlace,setShowPlace]=useState(false);
   const availableWorkers=A.workers.filter(w=>w.status==="active"&&w.availability==="available");
-  /* Simple match: check if worker has all must-have tickets */
+  /* Match: a worker "has" a must-have ticket if either string contains the other in full,
+     not just a first-word substring check (was matching "Red Seal Electrician" against any
+     ticket containing "red", e.g. false-positiving on an unrelated "Red River Safety" cert). */
   const matched=availableWorkers.map(w=>{
-    const has=jo.mustHave.filter(mh=>(w.tickets||[]).some(t=>t.toLowerCase().includes(mh.toLowerCase().split(" ")[0])));
+    const has=jo.mustHave.filter(mh=>{const mhL=mh.toLowerCase();
+      return (w.tickets||[]).some(t=>{const tL=t.toLowerCase(); return tL.includes(mhL)||mhL.includes(tL);});});
     const score=jo.mustHave.length?Math.round((has.length/jo.mustHave.length)*100):50;
     return {w,score,hasAll:has.length===jo.mustHave.length};
   }).sort((a,b)=>b.score-a.score);
@@ -384,9 +387,10 @@ function _PlaceWorkerModal({jobOrder,onClose,onPlace}){
   const person=selectedW?(A.people||[]).find(p=>p.id===selectedW.personId):null;
   const econ=A.calcStaffingEconomics(Number(payRate)||0,Number(billRate)||0,selectedW?.province||"ON",0);
   const marginOk=econ.markupPct>=A.STAFFING_AGENCY.markupFloor;
+  const rateInvalid=Number(billRate)>0&&Number(payRate)>0&&Number(billRate)<Number(payRate);
 
   const place=()=>{
-    if(!workerId)return;
+    if(!workerId||rateInvalid)return;
     A.createAssignment({worker:workerId,client:jobOrder.client,jobOrder:jobOrder.id,
       payRate:Number(payRate),billRate:Number(billRate),
       startDate:jobOrder.startDate,endDate:jobOrder.endDate,ongoing:jobOrder.ongoing,
@@ -414,13 +418,18 @@ function _PlaceWorkerModal({jobOrder,onClose,onPlace}){
         </div>
       </div>}
       <div className="grid grid-cols-2 gap-2.5">
-        <Field label="Pay rate ($/hr)" required><Input type="number" step="0.5" value={payRate} onChange={e=>setPayRate(e.target.value)}/></Field>
-        <Field label="Bill rate ($/hr)" required><Input type="number" step="0.5" value={billRate} onChange={e=>setBillRate(e.target.value)}/></Field>
+        <Field label="Pay rate ($/hr)" required><Input type="number" min="0" step="0.5" value={payRate} onChange={e=>setPayRate(e.target.value)}/></Field>
+        <Field label="Bill rate ($/hr)" required><Input type="number" min="0" step="0.5" value={billRate} onChange={e=>setBillRate(e.target.value)}/></Field>
       </div>
+      {rateInvalid&&<Banner tone="danger" icon="alert">Bill rate can't be below pay rate — that's a guaranteed loss before burden is even added.</Banner>}
       {selectedW&&<Card pad={14} style={{borderRadius:11,background:marginOk?C.okBg:C.warnBg,border:`1px solid ${marginOk?C.okLn:C.warnLn}`}}>
         <div className="flex justify-between text-xs mb-1.5">
           <span className="text-text-3 font-semibold">MARKUP</span>
           <span className="font-bold" style={{color:marginOk?C.ok:C.warn}}>{econ.markupPct}%</span>
+        </div>
+        <div className="flex justify-between text-xs mb-1.5">
+          <span className="text-text-3 font-semibold">BURDEN/HR ({selectedW.province})</span>
+          <span className="font-bold text-text">${econ.burden}</span>
         </div>
         <div className="flex justify-between text-xs mb-1.5">
           <span className="text-text-3 font-semibold">TRUE COST/HR (after burden)</span>
@@ -430,12 +439,75 @@ function _PlaceWorkerModal({jobOrder,onClose,onPlace}){
           <span className="text-text-3 font-semibold">MARGIN/HR</span>
           <span className="font-bold" style={{color:econ.margin>0?C.ok:C.danger}}>${econ.margin}</span>
         </div>
+        <div className="text-xs text-text-3 mt-2 pt-2 border-t border-line-soft">
+          Burden rates are province-specific — the same pay/bill rate can carry a different margin in another province.</div>
         {!marginOk&&<div className="text-xs text-warn mt-2 pt-2 border-t border-warn-ln">
           Below {A.STAFFING_AGENCY.markupFloor}% markup floor. Reconsider rates or you're losing money on WSIB claims.</div>}
       </Card>}
       <div className="flex gap-2.5 justify-end">
         <Btn kind="ghost" onClick={onClose}>Cancel</Btn>
-        <Btn kind="primary" onClick={place} disabled={!workerId||!payRate||!billRate}>Confirm placement</Btn>
+        <Btn kind="primary" onClick={place} disabled={!workerId||!payRate||!billRate||rateInvalid}>Confirm placement</Btn>
+      </div>
+    </div>
+  </Modal>;
+}
+
+/* Placing a worker was only reachable via Job Orders -> detail -> Place modal (which picks a
+   worker for a fixed order). This is the inverse: pick an open order for a fixed worker, so a
+   recruiter scanning the bench can place someone directly from that row. */
+function _PlaceFromBenchModal({worker:w,onClose,onPlace}){
+  const A=use();
+  const person=(A.people||[]).find(p=>p.id===w.personId);
+  const openOrders=A.jobOrders.filter(j=>j.status==="open");
+  const [orderId,setOrderId]=useState("");
+  const jobOrder=openOrders.find(j=>j.id===orderId);
+  const [payRate,setPayRate]=useState(w.payRateTarget||0);
+  const [billRate,setBillRate]=useState(jobOrder?.billRate||0);
+  const econ=A.calcStaffingEconomics(Number(payRate)||0,Number(billRate)||0,w.province,0);
+  const marginOk=econ.markupPct>=A.STAFFING_AGENCY.markupFloor;
+  const rateInvalid=Number(billRate)>0&&Number(payRate)>0&&Number(billRate)<Number(payRate);
+
+  const place=()=>{
+    if(!jobOrder||rateInvalid)return;
+    A.createAssignment({worker:w.id,client:jobOrder.client,jobOrder:jobOrder.id,
+      payRate:Number(payRate),billRate:Number(billRate),
+      startDate:jobOrder.startDate,endDate:jobOrder.endDate,ongoing:jobOrder.ongoing,
+      supervisor:jobOrder.supervisor,supervisorEmail:jobOrder.supervisorEmail,
+      site:jobOrder.location,shiftPattern:jobOrder.shiftPattern,notes:""});
+    onPlace();
+  };
+
+  return <Modal onClose={onClose} title={`Place ${person?.name||"worker"}`}>
+    <div className="flex flex-col gap-3.5">
+      <Field label="Job order" required>
+        <Sel value={orderId} onChange={e=>{setOrderId(e.target.value); const j=openOrders.find(x=>x.id===e.target.value); if(j)setBillRate(j.billRate);}}>
+          <option value="">Select an open job order…</option>
+          {openOrders.map(j=>{const c=A.staffingClient(j.client); const emp=A.employers.find(e=>e.id===c?.employerId);
+            return <option key={j.id} value={j.id}>{j.title} — {emp?.name||c?.id}</option>;})}
+        </Sel>
+      </Field>
+      {jobOrder&&<div className="grid grid-cols-2 gap-2.5">
+        <Field label="Pay rate ($/hr)" required><Input type="number" min="0" step="0.5" value={payRate} onChange={e=>setPayRate(e.target.value)}/></Field>
+        <Field label="Bill rate ($/hr)" required><Input type="number" min="0" step="0.5" value={billRate} onChange={e=>setBillRate(e.target.value)}/></Field>
+      </div>}
+      {rateInvalid&&<Banner tone="danger" icon="alert">Bill rate can't be below pay rate.</Banner>}
+      {jobOrder&&<Card pad={14} style={{borderRadius:11,background:marginOk?C.okBg:C.warnBg,border:`1px solid ${marginOk?C.okLn:C.warnLn}`}}>
+        <div className="flex justify-between text-xs mb-1.5">
+          <span className="text-text-3 font-semibold">MARKUP</span>
+          <span className="font-bold" style={{color:marginOk?C.ok:C.warn}}>{econ.markupPct}%</span>
+        </div>
+        <div className="flex justify-between text-xs mb-1.5">
+          <span className="text-text-3 font-semibold">BURDEN/HR ({w.province})</span>
+          <span className="font-bold text-text">${econ.burden}</span>
+        </div>
+        <div className="flex justify-between text-xs">
+          <span className="text-text-3 font-semibold">MARGIN/HR</span>
+          <span className="font-bold" style={{color:econ.margin>0?C.ok:C.danger}}>${econ.margin}</span>
+        </div>
+      </Card>}
+      <div className="flex gap-2.5 justify-end">
+        <Btn kind="ghost" onClick={onClose}>Cancel</Btn>
+        <Btn kind="primary" onClick={place} disabled={!jobOrder||!payRate||!billRate||rateInvalid}>Confirm placement</Btn>
       </div>
     </div>
   </Modal>;
@@ -451,9 +523,10 @@ function _NewJobOrderModal({onClose}){
     urgency:"medium",ppe:"",notes:""});
   const set=(k,v)=>setD(p=>({...p,[k]:v}));
   const client=A.staffingClient(d.client);
+  const rateInvalid=d.billRate>0&&d.payRate>0&&d.billRate<d.payRate;
   useEffect(()=>{if(client){set("supervisor",client.notes?.split(" ")[0]||""); set("supervisorEmail",client.defaultSupervisorEmail||"");}},[d.client]);
   const submit=()=>{
-    if(!d.title||!d.client)return;
+    if(!d.title||!d.client||rateInvalid)return;
     A.createJobOrder(d); onClose();
   };
   return <Modal onClose={onClose} title="New job order" wide>
@@ -471,9 +544,10 @@ function _NewJobOrderModal({onClose}){
       <Field label="Job title" required><Input value={d.title} onChange={e=>set("title",e.target.value)} placeholder="e.g. Journeyperson Electricians — Commercial Site"/></Field>
       <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-3"}`}>
         <Field label="Positions"><Input type="number" min="1" value={d.positions} onChange={e=>set("positions",Number(e.target.value)||1)}/></Field>
-        <Field label="Pay rate ($/hr)" required><Input type="number" step="0.5" value={d.payRate} onChange={e=>set("payRate",Number(e.target.value)||0)}/></Field>
-        <Field label="Bill rate ($/hr)" required><Input type="number" step="0.5" value={d.billRate} onChange={e=>set("billRate",Number(e.target.value)||0)}/></Field>
+        <Field label="Pay rate ($/hr)" required><Input type="number" min="0" step="0.5" value={d.payRate} onChange={e=>set("payRate",Number(e.target.value)||0)}/></Field>
+        <Field label="Bill rate ($/hr)" required><Input type="number" min="0" step="0.5" value={d.billRate} onChange={e=>set("billRate",Number(e.target.value)||0)}/></Field>
       </div>
+      {rateInvalid&&<Banner tone="danger" icon="alert">Bill rate can't be below pay rate.</Banner>}
       <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
         <Field label="Location"><Input icon="pin" value={d.location} onChange={e=>set("location",e.target.value)} placeholder="Calgary AB — Foothills Hospital"/></Field>
         <Field label="Province"><Sel value={d.province} onChange={e=>set("province",e.target.value)}>
@@ -495,7 +569,7 @@ function _NewJobOrderModal({onClose}){
       <Field label="Notes"><Area rows={3} value={d.notes} onChange={e=>set("notes",e.target.value)}/></Field>
       <div className="flex gap-2.5 justify-end">
         <Btn kind="ghost" onClick={onClose}>Cancel</Btn>
-        <Btn kind="primary" onClick={submit} disabled={!d.title||!d.client||!d.payRate||!d.billRate}>Create order</Btn>
+        <Btn kind="primary" onClick={submit} disabled={!d.title||!d.client||!d.payRate||!d.billRate||rateInvalid}>Create order</Btn>
       </div>
     </div>
   </Modal>;
@@ -505,6 +579,7 @@ function _NewJobOrderModal({onClose}){
 export function AgencyBench(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [q,setQ]=useState(""); const [prov,setProv]=useState("all"); const [avail,setAvail]=useState("all");
+  const [placing,setPlacing]=useState(null);
   const list=A.workers.filter(w=>{
     if(w.status!=="active")return false;
     if(avail!=="all"&&w.availability!==avail)return false;
@@ -538,7 +613,7 @@ export function AgencyBench(){
     <Card pad={0} style={{borderRadius:14,overflow:"hidden"}}>
       <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:720}}>
         <thead><tr className="border-b-2 border-line text-left">
-          {["Worker","Location","Availability","Rate target","Tickets","Vac accrued"].map(h=>
+          {["Worker","Location","Availability","Rate target","Tickets","Vac accrued",""].map(h=>
             <th key={h} className={TH_CLS}>{h}</th>)}
         </tr></thead>
         <tbody>{list.map(w=>{const person=(A.people||[]).find(p=>p.id===w.personId);
@@ -562,11 +637,15 @@ export function AgencyBench(){
               </div>
             </td>
             <td className={`${TD_CLS} text-xs text-brand font-semibold`}>${w.vacBalance.toFixed(2)}</td>
+            <td className={TD_CLS}>
+              {w.availability==="available"&&<Btn kind="outline" size="xs" onClick={e=>{e.stopPropagation();setPlacing(w);}}>Place</Btn>}
+            </td>
           </tr>;})}
-          {list.length===0&&<tr><td colSpan={6} className="p-5"><Empty icon="users" title="No matching workers" body="Try a different filter or ticket search."/></td></tr>}
+          {list.length===0&&<tr><td colSpan={7} className="p-5"><Empty icon="users" title="No matching workers" body="Try a different filter or ticket search."/></td></tr>}
         </tbody>
       </table></div>
     </Card>
+    {placing&&<_PlaceFromBenchModal worker={placing} onClose={()=>setPlacing(null)} onPlace={()=>{A.toast(`Placement created`,"ok");setPlacing(null);}}/>}
   </div>;
 }
 
@@ -680,6 +759,7 @@ export function AgencyTimesheets(){
 export function AgencyPayroll(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [showRun,setShowRun]=useState(false);
+  const [finalizing,setFinalizing]=useState(null);
   /* The run only ever sweeps a rolling 14-day window — the "ready" count has to use the same
      window, or an approved timesheet older than that shows as ready forever but never actually
      gets paid. */
@@ -719,7 +799,7 @@ export function AgencyPayroll(){
           <td className={`${TD_CLS} text-sm text-text`}>${p.totalGross.toLocaleString()}</td>
           <td className={`${TD_CLS} text-sm text-brand font-semibold`}>${p.totalNet.toLocaleString()}</td>
           <td className={TD_CLS}><Tag tone={p.status==="paid"?"ok":"warn"} sm>{p.status}</Tag></td>
-          <td className={TD_CLS}>{p.status==="pending"&&<Btn kind="primary" size="xs" onClick={()=>A.finalizeStaffingPayrun(p.id)}>Finalize</Btn>}</td>
+          <td className={TD_CLS}>{p.status==="pending"&&<Btn kind="primary" size="xs" onClick={()=>setFinalizing(p)}>Finalize</Btn>}</td>
         </tr>)}
         {A.staffingPayruns.length===0&&<tr><td colSpan={8} className="p-5"><Empty icon="wallet" title="No payroll runs yet" body="Run payroll once approved timesheets are ready."/></td></tr>}
         </tbody>
@@ -735,6 +815,16 @@ export function AgencyPayroll(){
           <div className="text-sm text-text-2">Ready timesheets: <strong>{readyToPay}</strong></div>
           <div className="text-sm text-text-2 mt-1">Total gross: <strong className="text-brand">${readyGross.toFixed(2)}</strong></div>
         </div>
+        <div>
+          <Lbl style={{margin:"0 0 8px"}}>Workers included in this run</Lbl>
+          <div className="flex flex-col gap-1.5" style={{maxHeight:220,overflowY:"auto"}}>
+            {readyTs.map(t=>{const w=A.worker(t.worker); const person=w?(A.people||[]).find(p=>p.id===w.personId):null;
+              return <div key={t.id} className="flex justify-between items-center py-2 px-3 bg-bg rounded-lg text-sm">
+                <span className="text-text font-medium">{person?.name||"—"}</span>
+                <span className="text-text-3 text-xs">{t.weekStart} · {A.timesheetTotal(t)}h · ${A.timesheetGross(t).toFixed(2)}</span>
+              </div>;})}
+          </div>
+        </div>
         <div className="flex gap-2.5 justify-end">
           <Btn kind="ghost" onClick={()=>setShowRun(false)}>Cancel</Btn>
           <Btn kind="primary" onClick={()=>{
@@ -744,6 +834,11 @@ export function AgencyPayroll(){
         </div>
       </div>
     </Modal>}
+    <ConfirmDialog open={!!finalizing} onClose={()=>setFinalizing(null)} kind="primary" confirmLabel="Finalize run"
+      title={`Finalize the ${finalizing?.periodStart} → ${finalizing?.periodEnd} run?`}
+      onConfirm={()=>A.finalizeStaffingPayrun(finalizing.id)}>
+      This marks the run and its {finalizing?.workers} worker payment{finalizing?.workers===1?"":"s"} as paid. This can't be undone from here.
+    </ConfirmDialog>
   </div>;
 }
 
@@ -995,7 +1090,16 @@ export function AgencyWorkers(){
             <td className={TD_CLS}><Tag tone={docsComplete?"ok":"warn"} sm icon={docsComplete?"check":"alert"}>{docsComplete?"Complete":"Missing"}</Tag></td>
             <td className={`${TD_CLS} text-sm text-brand font-semibold`}>${w.vacBalance.toFixed(2)}</td>
             <td className={TD_CLS}>
-              <Sel value={w.status} onChange={e=>{e.stopPropagation();A.updateWorker(w.id,{status:e.target.value});}} style={{fontSize:12,padding:"5px 8px"}} onClick={e=>e.stopPropagation()}>
+              <Sel value={w.status} onChange={e=>{e.stopPropagation();
+                const next=e.target.value;
+                if(next==="inactive"&&w.availability==="on-assignment"){
+                  A.toast("This worker is on an active assignment — end the assignment before marking them inactive.","danger");
+                  return;
+                }
+                /* Status and availability were two independent fields that could silently drift
+                   apart - going inactive always means "not available for new work" too. */
+                A.updateWorker(w.id,{status:next,availability:next==="inactive"?"unavailable":(w.availability==="unavailable"?"available":w.availability)});
+              }} style={{fontSize:12,padding:"5px 8px"}} onClick={e=>e.stopPropagation()}>
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
               </Sel>
@@ -1113,16 +1217,26 @@ export function AgencyMargins(){
 /* ─── Compliance dashboard ─── */
 export function AgencyCompliance(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
+  const [drill,setDrill]=useState(null);
   const workersMissingDocs=A.workers.filter(w=>w.status==="active"&&(!w.tdOnFile||!w.directDepositOnFile||!w.workEligibility));
   const workersExpiringWE=A.workers.filter(w=>w.weExpiry&&new Date(w.weExpiry)<Date.now()+90*864e5);
   const clientsMissingMsa=A.staffingClients.filter(c=>c.status==="active"&&!c.signedMsa);
   const overdueInvoices=A.staffingInvoices.filter(i=>i.status==="overdue");
 
   const items=[
-    {ok:workersMissingDocs.length===0, title:"Worker files complete", body:workersMissingDocs.length===0?"All active workers have TD1s, direct deposit, and work eligibility on file.":`${workersMissingDocs.length} workers missing documents.`, count:workersMissingDocs.length},
-    {ok:workersExpiringWE.length===0, title:"Work permits current", body:workersExpiringWE.length===0?"No permits expiring in the next 90 days.":`${workersExpiringWE.length} permits expiring within 90 days.`, count:workersExpiringWE.length},
-    {ok:clientsMissingMsa.length===0, title:"MSAs signed for all active clients", body:clientsMissingMsa.length===0?"Every active client has a signed Master Services Agreement.":`${clientsMissingMsa.length} clients billing without signed MSA.`, count:clientsMissingMsa.length},
-    {ok:overdueInvoices.length===0, title:"Aging under control", body:overdueInvoices.length===0?"No overdue invoices past terms.":`${overdueInvoices.length} invoices overdue. Chase or refer to collections.`, count:overdueInvoices.length},
+    {ok:workersMissingDocs.length===0, title:"Worker files complete", body:workersMissingDocs.length===0?"All active workers have TD1s, direct deposit, and work eligibility on file.":`${workersMissingDocs.length} workers missing documents.`, count:workersMissingDocs.length,
+      drillRows:workersMissingDocs.map(w=>{const p=(A.people||[]).find(pp=>pp.id===w.personId);
+        const missing=[!w.tdOnFile&&"TD1",!w.directDepositOnFile&&"Direct deposit",!w.workEligibility&&"Work eligibility"].filter(Boolean);
+        return {name:p?.name||w.id,detail:`Missing: ${missing.join(", ")}`};})},
+    {ok:workersExpiringWE.length===0, title:"Work permits current", body:workersExpiringWE.length===0?"No permits expiring in the next 90 days.":`${workersExpiringWE.length} permits expiring within 90 days.`, count:workersExpiringWE.length,
+      drillRows:workersExpiringWE.map(w=>{const p=(A.people||[]).find(pp=>pp.id===w.personId);
+        return {name:p?.name||w.id,detail:`${w.workEligibility} expires ${w.weExpiry}`};})},
+    {ok:clientsMissingMsa.length===0, title:"MSAs signed for all active clients", body:clientsMissingMsa.length===0?"Every active client has a signed Master Services Agreement.":`${clientsMissingMsa.length} clients billing without signed MSA.`, count:clientsMissingMsa.length,
+      drillRows:clientsMissingMsa.map(c=>{const emp=A.employers.find(e=>e.id===c.employerId);
+        return {name:emp?.name||c.id,detail:`${A.jobOrders.filter(j=>j.client===c.id&&j.status==="open").length} open order(s)`};})},
+    {ok:overdueInvoices.length===0, title:"Aging under control", body:overdueInvoices.length===0?"No overdue invoices past terms.":`${overdueInvoices.length} invoices overdue. Chase or refer to collections.`, count:overdueInvoices.length,
+      drillRows:overdueInvoices.map(i=>{const c=A.staffingClients.find(x=>x.id===i.client); const emp=c?A.employers.find(e=>e.id===c.employerId):null;
+        return {name:emp?.name||i.client,detail:`$${i.total?.toLocaleString?.()||i.total} · due ${i.dueDate}`};})},
     {ok:true, title:"Ontario THA license active", body:`License ${SEED_AGENCY_LICENSE} valid through 2027-01-01. $25,000 LOC on file.`, count:0},
     {ok:true, title:"WSIB coverage", body:"Registered in ON, AB, BC. Rate group 3 (Staffing).", count:0},
   ];
@@ -1134,7 +1248,8 @@ export function AgencyCompliance(){
     </div>
 
     <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
-      {items.map(item=><Card key={item.title} pad={mob?18:22} style={{borderRadius:14,borderLeft:`4px solid ${item.ok?C.ok:C.warn}`}}>
+      {items.map(item=><Card key={item.title} pad={mob?18:22} style={{borderRadius:14,borderLeft:`4px solid ${item.ok?C.ok:C.warn}`,cursor:item.count>0?"pointer":"default"}}
+        onClick={()=>item.count>0&&setDrill(item)}>
         <div className="flex gap-3 items-start">
           <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{background:item.ok?C.okBg:C.warnBg,color:item.ok?C.ok:C.warn}}><I n={item.ok?"check":"alert"} s={18}/></div>
           <div className="flex-1 min-w-0">
@@ -1145,6 +1260,14 @@ export function AgencyCompliance(){
         </div>
       </Card>)}
     </div>
+
+    {drill&&<Modal onClose={()=>setDrill(null)} title={drill.title}>
+      <div className="flex flex-col gap-2">
+        {drill.drillRows.map((r,i)=><div key={i} className="py-2.5 px-3 bg-bg rounded-lg border border-line flex justify-between items-center gap-3">
+          <span className="text-sm font-semibold text-text">{r.name}</span>
+          <span className="text-xs text-text-3">{r.detail}</span></div>)}
+      </div>
+    </Modal>}
 
     <Card pad={mob?18:22} style={{marginTop:16,borderRadius:14,background:C.bg}}>
       <Lbl>Statutory reminders</Lbl>
