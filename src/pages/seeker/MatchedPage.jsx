@@ -2,7 +2,7 @@ import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
-import { Btn, Tag, Ring, Empty } from "../../design/primitives.jsx";
+import { Btn, Tag, Ring, Empty, usePagination, Pagination } from "../../design/primitives.jsx";
 import { pay, payUnit } from "../../helpers/utils.js";
 import { CATS } from "../../store/seed/constants.js";
 import { EmpMark } from "../shared/cards.jsx";
@@ -18,13 +18,16 @@ export function MatchedPage(){
   good.forEach(({j})=>{A.skillsGap(j).missing.forEach(s=>{missingTally[s]=(missingTally[s]||0)+1;});});
   const topMissing=Object.entries(missingTally).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([s])=>s);
   const heroPad=mob?"py-11 px-4":"py-18 px-8";
-  const G=({title,sub,items})=>items.length===0?null:<section className="mb-9">
+  const G=({title,sub,items})=>{
+    const pg=usePagination(items,10);
+    if(items.length===0)return null;
+    return <section className="mb-9">
     <div className="flex justify-between items-end mb-5 gap-3 flex-wrap">
       <div><h2 className="text-2xl font-bold tracking-tight text-text mb-1 leading-tight">{title}</h2>
         <p className="text-sm text-text-2">{sub}</p></div>
       <Tag tone="brand">{items.length} {items.length===1?"job":"jobs"}</Tag></div>
     <div className={`grid gap-4 ${mob?"grid-cols-1":"grid-cols-2"}`}>
-      {items.map(({j,s})=>{const e=A.emp(j.e);
+      {pg.pageItems.map(({j,s})=>{const e=A.emp(j.e);
         return <div key={j.id} onClick={()=>A.openJob(j.id)} className={`bg-white rounded-3xl border border-line cursor-pointer transition duration-200 hover:border-line-2 hover:-translate-y-1 ${mob?"p-5":"p-7"}`}>
           <div className="flex gap-4 items-start">
             <EmpMark e={e} size={52}/>
@@ -36,7 +39,8 @@ export function MatchedPage(){
                 <span className="text-sm text-text-2">{payUnit(j)}</span></div>
               <div className="flex flex-wrap gap-2 mt-3.5">
                 {A.matchReasons(j).map(r=><Tag key={r} tone="ok" sm icon="check">{r}</Tag>)}</div></div>
-            <Ring v={s} size={mob?48:60} label="Match"/></div></div>;})}</div></section>;
+            <Ring v={s} size={mob?48:60} label="Match"/></div></div>;})}</div>
+    <Pagination {...pg}/></section>;};
 
   return <div className="bg-white min-h-full">
     <section className={`${heroPad} bg-white border-b border-line-soft`}>

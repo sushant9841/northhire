@@ -3,7 +3,7 @@ import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C, SH } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
-import { Btn, Tag, Input, Sel, Empty, Lbl, Modal } from "../../design/primitives.jsx";
+import { Btn, Tag, Input, Sel, Empty, Lbl, Modal, usePagination, Pagination } from "../../design/primitives.jsx";
 import { annual } from "../../helpers/utils.js";
 import { CATS, CATM, PCODE, PROVS } from "../../store/seed/constants.js";
 import { JobCard } from "../shared/cards.jsx";
@@ -71,6 +71,8 @@ export function SearchPage(){
     if(sort==="closing")c.sort((a,b)=>a.dl-b.dl);
     return c;
   },[q,where,f,sort,A.jobs,A.user]);
+  const pg=usePagination(res,20);
+  useEffect(()=>{pg.setPage(1);},[q,where,f,sort]);
 
   return <div className="bg-white min-h-full">
 
@@ -113,8 +115,9 @@ export function SearchPage(){
           {res.length===0?<Empty icon="search" title="No jobs match those filters"
             body="Try removing a filter, searching a nearby city, or broadening the sector."
             action={<Btn kind="primary" onClick={()=>{clear();setQ("");setWhere("");}}>Reset search</Btn>}/>
-            :<div className="grid gap-4" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:320}px,1fr))`}}>
-              {res.map(j=><JobCard key={j.id} job={j}/>)}</div>}
+            :<><div className="grid gap-4" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:320}px,1fr))`}}>
+              {pg.pageItems.map(j=><JobCard key={j.id} job={j}/>)}</div>
+              <Pagination {...pg}/></>}
         </div>
       </div>
     </section>

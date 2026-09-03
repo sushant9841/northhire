@@ -118,6 +118,7 @@ export function AdmEmployers(){
   const match=e=>!q||e.name.toLowerCase().includes(q.toLowerCase())||e.industry.toLowerCase().includes(q.toLowerCase())||(e.owner||"").toLowerCase().includes(q.toLowerCase());
   const pending=A.employers.filter(e=>!e.verified&&!e.hold&&match(e)), held=A.employers.filter(e=>!e.verified&&e.hold&&match(e)), verified=A.employers.filter(e=>e.verified&&match(e));
   const list=tab==="pending"?pending:tab==="held"?held:verified;
+  const pg=usePagination(list,24);
   return <Page wide>
     <H1 sub="Approve companies before their listings carry a verified badge">Employers</H1>
     <div className="max-w-105 mb-4"><Input icon="search" placeholder="Search by name, industry or contact" value={q} onChange={e=>setQ(e.target.value)}/></div>
@@ -125,7 +126,7 @@ export function AdmEmployers(){
       value={tab} onChange={setTab} style={{marginBottom:18}}/>
     {list.length===0?<Empty icon="checkC2" title="Nothing to review" body="All employer accounts in this bucket are handled."/>
       :<div className="grid gap-3.5" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:320}px,1fr))`}}>
-        {list.map((e,i)=>{const jobs=A.jobs.filter(j=>j.e===e.id).length;
+        {pg.pageItems.map((e,i)=>{const jobs=A.jobs.filter(j=>j.e===e.id).length;
           const apps=A.applications.filter(a=>A.jobs.find(j=>j.id===a.job)?.e===e.id).length;
           return <Card key={e.id} delay={Math.min(i,6)*0.04}>
             <div className="flex gap-3 items-center mb-3.5">
@@ -154,6 +155,7 @@ export function AdmEmployers(){
                   <Btn kind="outline" size="sm" onClick={()=>{A.holdEmployer(e.id);A.toast(`${e.name}'s hold released`);}}>Release hold</Btn></>
                 :<><Btn kind="ok" size="sm" icon="check" onClick={()=>{A.verifyEmployer(e.id,true);A.toast(`${e.name} approved`,"ok");}}>Approve</Btn>
                   <Btn kind="dangerSoft" size="sm" onClick={()=>{A.holdEmployer(e.id);A.toast(`${e.name} put on hold`);}}>Hold</Btn></>}</div></Card>;})}</div>}
+    <Pagination {...pg}/>
   </Page>;
 }
 
@@ -261,6 +263,7 @@ export function AdmLog(){
     if(q&&!(e.text.toLowerCase().includes(q.toLowerCase())||e.actor.toLowerCase().includes(q.toLowerCase())))return false;
     return true;
   });
+  const pg=usePagination(list,30);
   return <Page narrow>
     <H1 sub={`${A.activity.length} recorded event${A.activity.length===1?"":"s"} in this session`}
       action={<Btn kind="outline" size="sm" icon="download" onClick={()=>A.exportLog(list)}>Export {list.length<A.activity.length?`filtered (${list.length})`:"CSV"}</Btn>}>Activity log</H1>
@@ -277,13 +280,14 @@ export function AdmLog(){
       </div>}
     </Card>
     {list.length===0?<Empty icon="file" title={A.activity.length===0?"No activity yet":"Nothing matches"} body="Every publish, approval, moderation action and setting change is recorded here."/>
-      :<Card pad={0} style={{overflow:"hidden",borderRadius:16}}>
-        {list.map((e,i)=><div key={e.id} className={`flex gap-3.5 py-3.5 px-5 ${i<list.length-1?"border-b border-line-soft":""}`}>
+      :<><Card pad={0} style={{overflow:"hidden",borderRadius:16}}>
+        {pg.pageItems.map((e,i)=><div key={e.id} className={`flex gap-3.5 py-3.5 px-5 ${i<pg.pageItems.length-1?"border-b border-line-soft":""}`}>
           <div className="w-9 h-9 rounded-lg bg-bg text-text-2 flex items-center justify-center shrink-0">
             <I n={e.icon||"file"} s={16}/></div>
           <div className="flex-1 min-w-0">
             <div className="text-sm font-semibold text-text">{e.text}</div>
-            <div className="text-xs text-text-3 mt-1">{e.actor} • {e.action} • {e.at}</div></div></div>)}</Card>}
+            <div className="text-xs text-text-3 mt-1">{e.actor} • {e.action} • {e.at}</div></div></div>)}</Card>
+      <Pagination {...pg}/></>}
   </Page>;
 }
 

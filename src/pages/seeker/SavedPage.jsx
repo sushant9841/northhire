@@ -1,12 +1,13 @@
 import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
-import { Btn, Tag, Empty } from "../../design/primitives.jsx";
+import { Btn, Tag, Empty, usePagination, Pagination } from "../../design/primitives.jsx";
 import { JobCard } from "../shared/cards.jsx";
 
 export function SavedPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const list=A.jobs.filter(j=>A.saved.has(j.id));
+  const pg=usePagination(list,20);
   const heroPad=mob?"py-11 px-4":"py-18 px-8";
   return <div className="bg-white min-h-full">
     <section className={`${heroPad} bg-white border-b border-line-soft`}>
@@ -25,8 +26,9 @@ export function SavedPage(){
         {list.length===0?<Empty icon="bookmark" title="Nothing saved yet"
           body="Tap the bookmark on any listing and it is kept here."
           action={<Btn kind="primary" onClick={()=>A.go("search")}>Browse jobs</Btn>}/>
-          :<div className="grid gap-4" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:320}px,1fr))`}}>
-            {list.map(j=><JobCard key={j.id} job={j}/>)}</div>}
+          :<><div className="grid gap-4" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:320}px,1fr))`}}>
+            {pg.pageItems.map(j=><JobCard key={j.id} job={j}/>)}</div>
+            <Pagination {...pg}/></>}
       </div>
     </section>
   </div>;
