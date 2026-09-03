@@ -3,7 +3,7 @@ import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
-import { Page, Btn, Banner, Stat, Card, Switch, Input, Sel, SmartPortrait, Tag, Tabs, Empty, Bar, H1, H2 } from "../../design/primitives.jsx";
+import { Page, Btn, Banner, Stat, Card, Switch, Input, Sel, SmartPortrait, Tag, Tabs, Empty, Bar, H1, H2, Modal, Field, Area } from "../../design/primitives.jsx";
 import { pay, payShort } from "../../helpers/utils.js";
 import { CATS, STAGES } from "../../store/seed/constants.js";
 import { jobTone, jobStatusLabel } from "../../helpers/statusTone.js";
@@ -50,7 +50,7 @@ export function AdmHome(){
           <div className="mt-3.5 pt-3.5 border-t border-line-soft">
             <div className="flex justify-between text-sm text-text-2">
               <span>Content drafts awaiting review</span><strong className="text-text">{drafts.length}</strong></div></div></Card>
-        <Card><H2>Feature switches</H2>
+        <Card><H2 sub="Shortcuts to 3 of the switches in Platform settings — changing one changes the other.">Feature switches</H2>
           {[["employerBlogs","Employer articles"],["employerTrainings","Employer trainings"],["publicSignup","Public sign-up"]].map(([k,l])=>
             <div key={k} className="flex items-center justify-between gap-3 py-3 border-b border-line-soft">
               <span className="text-sm text-text">{l}</span>
@@ -62,12 +62,13 @@ export function AdmHome(){
 export function AdmUsers(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [q,setQ]=useState(""); const [status,setStatus]=useState("all"); const [sort,setSort]=useState("name");
+  const [suspending,setSuspending]=useState(null); const [reason,setReason]=useState("");
   const withApps=A.people.map(u=>({...u,_apps:A.applications.filter(a=>a.user===u.id).length,_sus:A.suspended.has(u.id)}));
   const filtered=withApps.filter(u=>
     (!q||u.name.toLowerCase().includes(q.toLowerCase())||u.email.toLowerCase().includes(q.toLowerCase())||u.title.toLowerCase().includes(q.toLowerCase()))
     &&(status==="all"||(status==="suspended"?u._sus:!u._sus)));
   const list=[...filtered].sort((a,b)=>
-    sort==="apps"?b._apps-a._apps:sort==="city"?a.city.localeCompare(b.city):a.name.localeCompare(b.name));
+    sort==="apps"?b._apps-a._apps:sort==="city"?a.city.localeCompare(b.city):sort==="joined"?(b.joined||"").localeCompare(a.joined||""):a.name.localeCompare(b.name));
   return <Page wide>
     <H1 sub={`${A.people.length} registered job seekers`}>Users</H1>
     <div className="flex gap-3 mb-4 flex-wrap items-center">
@@ -75,22 +76,37 @@ export function AdmUsers(){
       <Sel value={status} onChange={e=>setStatus(e.target.value)} style={{width:150}}>
         <option value="all">All statuses</option><option value="active">Active only</option><option value="suspended">Suspended only</option></Sel>
       <Sel value={sort} onChange={e=>setSort(e.target.value)} style={{width:170}}>
-        <option value="name">Sort: Name</option><option value="apps">Sort: Most applications</option><option value="city">Sort: City</option></Sel>
+        <option value="name">Sort: Name</option><option value="apps">Sort: Most applications</option><option value="city">Sort: City</option><option value="joined">Sort: Newest</option></Sel>
     </div>
     <Card pad={0} style={{overflow:"hidden"}}>
-      {list.map((u,i)=>{const apps=u._apps; const sus=u._sus;
+      {list.map((u,i)=>{const apps=u._apps; const sus=u._sus; const susInfo=A.suspensionInfo?.[u.id];
         return <div key={u.id} className={`flex items-center gap-3.5 py-3.5 px-5 flex-wrap ${i<list.length-1?"border-b border-line-soft":""} ${sus?"bg-red-bg":"bg-white"}`}>
           <SmartPortrait seed={u.seed} size={40}/>
           <div className="grow shrink basis-43 min-w-0">
             <div className="text-sm font-semibold text-text">{u.name}</div>
-            <div className="text-xs text-text-3 mt-0.5 overflow-hidden text-ellipsis whitespace-nowrap">{u.email}</div></div>
+            <div className="text-xs text-text-3 mt-0.5 overflow-hidden text-ellipsis whitespace-nowrap">{u.email}</div>
+            {sus&&susInfo&&<div className="text-xs text-red mt-0.5">Suspended {susInfo.at}: {susInfo.reason}</div>}</div>
           {!mob&&<div className="w-40 text-sm text-text-2">{u.title}</div>}
           {!mob&&<div className="w-28 text-sm text-text-2">{u.city}, {u.prov}</div>}
+          {!mob&&<div className="w-24 text-xs text-text-3">{u.joined?`Joined ${u.joined}`:"—"}</div>}
           <div className="w-20 text-sm text-text-2">{apps} apps</div>
           <Tag tone={sus?"danger":"ok"} sm>{sus?"Suspended":"Active"}</Tag>
           <Btn kind="ghost" size="xs" icon="eye" onClick={()=>A.impersonate(u.id)}>View as</Btn>
-          <Btn kind={sus?"outline":"ghost"} size="xs" onClick={()=>{A.toggleSuspend(u.id);A.toast(sus?`${u.name} restored`:`${u.name} suspended`,sus?"ok":"danger");}}>{sus?"Restore":"Suspend"}</Btn></div>;})}
+          <Btn kind={sus?"outline":"ghost"} size="xs" onClick={()=>{
+            if(sus){A.toggleSuspend(u.id);A.toast(`${u.name} restored`,"ok");}
+            else{setSuspending(u);setReason("");}
+          }}>{sus?"Restore":"Suspend"}</Btn></div>;})}
       {list.length===0&&<div className="p-5"><Empty icon="search" title="No users match that search" body="Try a different name, email, or title."/></div>}</Card>
+    {suspending&&<Modal onClose={()=>setSuspending(null)} title={`Suspend ${suspending.name}?`}>
+      <div className="flex flex-col gap-3.5">
+        <Field label="Reason" required hint="Recorded on their account and in the activity log.">
+          <Area rows={3} value={reason} onChange={e=>setReason(e.target.value)} placeholder="e.g. Reported for fraudulent job applications"/></Field>
+        <div className="flex gap-2.5 justify-end">
+          <Btn kind="ghost" onClick={()=>setSuspending(null)}>Cancel</Btn>
+          <Btn kind="danger" disabled={!reason.trim()} onClick={()=>{A.toggleSuspend(suspending.id,reason.trim());A.toast(`${suspending.name} suspended`,"danger");setSuspending(null);}}>Suspend</Btn>
+        </div>
+      </div>
+    </Modal>}
   </Page>;
 }
 
@@ -121,6 +137,13 @@ export function AdmEmployers(){
                 <div key={k} className="bg-bg rounded-xl py-2.5 px-3 min-w-0">
                   <div className="text-xs text-text-3">{k}</div>
                   <div className="text-sm font-semibold text-text mt-0.5 overflow-hidden text-ellipsis whitespace-nowrap">{v}</div></div>)}</div>
+            {!e.verified&&<div className="bg-bg rounded-xl py-2.5 px-3 mb-3.5">
+              <div className="text-xs text-text-3 mb-1.5">Verification evidence</div>
+              <div className="text-xs text-text-2 leading-relaxed">
+                <div>Website: {e.site?<a href={`https://${e.site}`} target="_blank" rel="noreferrer" className="text-brand font-semibold">{e.site}</a>:<span className="text-text-3">Not provided</span>}</div>
+                <div>Founded: {e.founded||"—"}</div>
+                {e.about&&<div className="mt-1 italic">"{e.about}"</div>}
+              </div></div>}
             <div className="flex gap-2 pt-3 border-t border-line-soft flex-wrap">
               <Btn kind="ghost" size="sm" onClick={()=>A.openEmployer(e.id)}>View page</Btn>
               <div className="flex-1"/>
@@ -224,11 +247,13 @@ export function AdmSettings(){
 
 export function AdmLog(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
-  const [q,setQ]=useState(""); const [cat,setCat]=useState("all");
+  const [q,setQ]=useState(""); const [cat,setCat]=useState("all"); const [actor,setActor]=useState("all");
   const categories=[["all","All actions"],["auth","Auth"],["job","Jobs"],["application","Applications"],["pipeline","Pipeline"],
     ["employer","Employers"],["blog","Content"],["training","Content"],["billing","Billing"],["settings","Settings"],["admin","Admin"]];
+  const actors=[...new Set(A.activity.map(e=>e.actor))].sort();
   const list=A.activity.filter(e=>{
     if(cat!=="all"&&!e.action.startsWith(cat))return false;
+    if(actor!=="all"&&e.actor!==actor)return false;
     if(q&&!(e.text.toLowerCase().includes(q.toLowerCase())||e.actor.toLowerCase().includes(q.toLowerCase())))return false;
     return true;
   });
@@ -236,13 +261,15 @@ export function AdmLog(){
     <H1 sub={`${A.activity.length} recorded event${A.activity.length===1?"":"s"} in this session`}
       action={<Btn kind="outline" size="sm" icon="download" onClick={()=>A.exportLog(list)}>Export {list.length<A.activity.length?`filtered (${list.length})`:"CSV"}</Btn>}>Activity log</H1>
     <Card pad={mob?16:20} style={{marginBottom:14,borderRadius:16}}>
-      <div className="grid gap-3" style={{gridTemplateColumns:"2fr 1fr"}}>
+      <div className={`grid gap-3 ${mob?"grid-cols-1":""}`} style={{gridTemplateColumns:mob?undefined:"2fr 1fr 1fr"}}>
         <Input icon="search" placeholder="Search text or actor" value={q} onChange={e=>setQ(e.target.value)}/>
         <Sel value={cat} onChange={e=>setCat(e.target.value)}>{[...new Map(categories.map(c=>[c[0],c])).values()].map(([k,l])=><option key={k} value={k}>{l}</option>)}</Sel>
+        <Sel value={actor} onChange={e=>setActor(e.target.value)}>
+          <option value="all">All actors</option>{actors.map(a=><option key={a} value={a}>{a}</option>)}</Sel>
       </div>
-      {(q||cat!=="all")&&<div className="mt-3 text-sm text-text-2">
+      {(q||cat!=="all"||actor!=="all")&&<div className="mt-3 text-sm text-text-2">
         Showing <strong className="text-text">{list.length}</strong> of {A.activity.length} entries
-        <button onClick={()=>{setQ("");setCat("all");}} className="bg-transparent border-0 p-0 ml-2.5 cursor-pointer text-sm text-brand font-semibold">Clear</button>
+        <button onClick={()=>{setQ("");setCat("all");setActor("all");}} className="bg-transparent border-0 p-0 ml-2.5 cursor-pointer text-sm text-brand font-semibold">Clear</button>
       </div>}
     </Card>
     {list.length===0?<Empty icon="file" title={A.activity.length===0?"No activity yet":"Nothing matches"} body="Every publish, approval, moderation action and setting change is recorded here."/>
@@ -263,10 +290,10 @@ export function AdmStats(){
   const byStage=STAGES.map(s=>[s,A.applications.filter(a=>a.stage===s).length]);
   const byPlan=A.PLAN_ORDER.map(p=>({name:p,n:A.employers.filter(e=>e.plan===p).length,revenue:A.employers.filter(e=>e.plan===p).length*(A.PLANS[p]?.price||0)}));
   const totalRevenue=byPlan.reduce((s,p)=>s+p.revenue,0);
-  const BarRow=({label,value,max,tone=C.brand})=><div className="flex items-center gap-3 mb-3">
+  const BarRow=({label,value,max,tone=C.brand,total})=><div className="flex items-center gap-3 mb-3">
     <div className={`${mob?"w-28":"w-43"} text-sm text-text font-medium shrink-0 overflow-hidden text-ellipsis whitespace-nowrap`}>{label}</div>
     <div className="flex-1 min-w-8"><Bar v={max?(value/max)*100:0} tone={tone} h={9}/></div>
-    <div className="w-10 text-right text-sm font-bold text-text shrink-0">{value}</div></div>;
+    <div className={`text-right text-sm font-bold text-text shrink-0 ${total?"w-20":"w-10"}`}>{value}{total?<span className="text-xs text-text-3 font-medium ml-1">({total?Math.round((value/total)*100):0}%)</span>:null}</div></div>;
   return <Page wide>
     <H1 sub="Marketplace health across the whole platform">Platform statistics</H1>
     <div className="grid gap-3 mb-5" style={{gridTemplateColumns:`repeat(auto-fit,minmax(${mob?140:170}px,1fr))`}}>
@@ -275,9 +302,9 @@ export function AdmStats(){
       <Stat icon="book" label="Published content" value={A.blogs.filter(b=>b.status==="published").length+A.trainings.filter(t=>t.status==="published").length}/>
       <Stat icon="award" label="Offers extended" value={A.applications.filter(a=>a.stage==="Offer").length} tone={C.ok}/></div>
     <div className={`grid ${mob?"grid-cols-1":"grid-cols-2"} gap-4 mb-4`}>
-      <Card><H2>Listings by sector</H2>{byCat.map(c=><BarRow key={c.id} label={c.label} value={c.n} max={max}/>)}</Card>
+      <Card><H2>Listings by sector</H2>{byCat.map(c=><BarRow key={c.id} label={c.label} value={c.n} max={max} total={A.jobs.length}/>)}</Card>
       <Card><H2>Applications by stage</H2>
-        {byStage.map(([s,n])=><BarRow key={s} label={s} value={n} max={Math.max(1,A.applications.length)} tone={C.violet}/>)}
+        {byStage.map(([s,n])=><BarRow key={s} label={s} value={n} max={Math.max(1,A.applications.length)} tone={C.violet} total={A.applications.length}/>)}
         <div className="mt-5 pt-4 border-t border-line-soft grid grid-cols-2 gap-3">
           {[["Verified employers",A.employers.filter(e=>e.verified).length],["Flagged listings",A.jobs.filter(j=>j.flagged).length],
             ["Suspended users",A.suspended.size],["Training enrolments",A.trainings.reduce((s,t)=>s+t.enrolled,0).toLocaleString()]].map(([k,v])=>
@@ -285,7 +312,7 @@ export function AdmStats(){
               <div className="text-xs text-text-3">{k}</div>
               <div className="text-xl font-bold text-text mt-1 tracking-tight">{v}</div></div>)}</div></Card></div>
     <Card><H2 sub={`$${totalRevenue.toLocaleString()}/mo across ${A.employers.length} employer accounts`}>Revenue by plan</H2>
-      {byPlan.map(p=><BarRow key={p.name} label={`${p.name} (${p.n})`} value={p.revenue} max={Math.max(1,totalRevenue)} tone={p.name==="Enterprise"?C.violet:p.name==="Growth"?C.brand:C.text3}/>)}
+      {byPlan.map(p=><BarRow key={p.name} label={`${p.name} (${p.n})`} value={p.revenue} max={Math.max(1,totalRevenue)} tone={p.name==="Enterprise"?C.violet:p.name==="Growth"?C.brand:C.text3} total={totalRevenue}/>)}
     </Card>
   </Page>;
 }

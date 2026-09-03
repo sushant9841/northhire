@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { ROUTES } from "../routes.js";
 import { C } from "../design/tokens.js";
-import { uid, money, pay, payUnit, payShort, annual, nowStamp } from "../helpers/utils.js";
+import { uid, money, pay, payUnit, payShort, annual, nowStamp, _fmtDate } from "../helpers/utils.js";
 import { CATM, PCODE, STAGES, PLANS, PLAN_REQUIRES, PLAN_ORDER } from "./seed/constants.js";
 import { SEED_EMPLOYERS } from "./seed/employers.js";
 import { SEED_JOBS } from "./seed/jobs.js";
@@ -77,6 +77,7 @@ export function useStore(){
   const [paidTrainings,setPaidTrainings]=useState(()=>new Set());
   const [trainingProgress,setTrainingProgress]=useState(seed?.trainingProgress||{});
   const [suspended,setSuspended]=useState(new Set(seed?.suspended||[]));
+  const [suspensionInfo,setSuspensionInfo]=useState(seed?.suspensionInfo||{}); /* {[userId]: {reason, at}} */
   const [notifications,setNotifications]=useState(seed?.notifications||[
     {id:"n1",icon:"calendar",title:"Interview booked — PCL Construction",body:"Site interview Thursday at 9:00 AM. Bring your Red Seal certificate.",at:"2 hours ago",read:false,for:"u2",link:"status"},
     {id:"n2",icon:"target",title:"6 new jobs match your profile",body:"New trades roles in Alberta paying $42–$52 per hour.",at:"5 hours ago",read:false,for:"u2",link:"matched"},
@@ -259,7 +260,7 @@ export function useStore(){
     const u={id:uid("u"),role:"seeker",name:`${d.first} ${d.last}`.trim(),seed:Math.floor(Math.random()*8),
       title:d.title,cat:d.cat,city:d.city,prov:PCODE[d.prov],years:yearsMap[d.years]??2,email,phone:d.phone,
       skills:d.skills,edu:d.edu,eligible:d.eligible,payMin:Number(d.payMin)||0,payUnit:d.payUnit,
-      types:d.types,modes:d.modes,startWhen:d.startWhen,summary:"",defaultCv:null};
+      types:d.types,modes:d.modes,startWhen:d.startWhen,summary:"",defaultCv:null,joined:_fmtDate(new Date())};
     setPasswords(p=>({...p,[email]:d.password}));
     setUser(u); setPeople(p=>[u,...p]); setStack([]); setPg("welcome");
     notify({icon:"sparkle",title:"Welcome to NorthHire",body:"Your profile is live. Check Matched jobs to see what fits your skills.",for:u.id,link:"matched"});
@@ -374,7 +375,7 @@ export function useStore(){
     try{
       const snap={user,passwords,resetCodes,employers,jobs,people,applications,blogs,trainings,cvs,
         saved:[...saved],following:[...following],enrolled:[...enrolled],trainingProgress,paymentMethods,twoFactor,references,
-        suspended:[...suspended],notifications,activity,settings,userSettings,
+        suspended:[...suspended],suspensionInfo,notifications,activity,settings,userSettings,
         savedSearches,messages,interviews,reviews,outbox,
         hrEmployees:HR.hrEmployees,hrAttendance:HR.hrAttendance,hrLeave:HR.hrLeave,
         hrTasks:HR.hrTasks,hrEvents:HR.hrEvents,hrInvoices:HR.hrInvoices,
@@ -387,7 +388,7 @@ export function useStore(){
       localStorage.setItem(LS_KEY,JSON.stringify(snap));
     }catch(e){/* quota exceeded or private mode — silently drop */}
   },[user,passwords,resetCodes,employers,jobs,people,applications,blogs,trainings,cvs,saved,following,
-    enrolled,trainingProgress,suspended,notifications,activity,settings,userSettings,paymentMethods,twoFactor,references,
+    enrolled,trainingProgress,suspended,suspensionInfo,notifications,activity,settings,userSettings,paymentMethods,twoFactor,references,
     savedSearches,messages,interviews,reviews,outbox,
     HR.hrEmployees,HR.hrAttendance,HR.hrLeave,HR.hrTasks,HR.hrEvents,HR.hrInvoices,HR.hrChats,HR.hrChatMsgs,HR.hrPayruns,HR.hrCompanySettings,HR.hrSession]);
 
@@ -727,8 +728,12 @@ export function useStore(){
   const holdEmployer=id=>{const wasHeld=!!emp(id)?.hold;
     setEmployers(l=>l.map(e=>e.id===id?{...e,hold:!e.hold}:e));
     log("employer.hold",`${wasHeld?"Released":"Placed"} ${emp(id).name} ${wasHeld?"from":"on"} hold`,"clock");};
-  const toggleSuspend=id=>{setSuspended(p=>{const n=new Set(p);n.has(id)?n.delete(id):n.add(id);return n;});
-    log("user.suspend",`${suspended.has(id)?"Restored":"Suspended"} ${person(id).name}`,"users");};
+  const toggleSuspend=(id,reason)=>{const wasSuspended=suspended.has(id);
+    setSuspended(p=>{const n=new Set(p);n.has(id)?n.delete(id):n.add(id);return n;});
+    setSuspensionInfo(p=>{const n={...p};
+      if(wasSuspended)delete n[id]; else n[id]={reason:reason||"No reason given",at:nowStamp()};
+      return n;});
+    log("user.suspend",`${wasSuspended?"Restored":"Suspended"} ${person(id).name}${!wasSuspended&&reason?` — ${reason}`:""}`,"users");};
 
   /* content */
   const editBlog=id=>{setEditId(id);go("empBlogEdit",id==="new"?"New article":"Edit article");};
@@ -930,7 +935,7 @@ export function useStore(){
     twoFactor,enable2FA,disable2FA,
     references,addReference,removeReference,
     addReview,deleteReview,
-    saved,following,enrolled,trainingProgress,suspended,notifications,activity,settings,userSettings,search,setSearch,
+    saved,following,enrolled,trainingProgress,suspended,suspensionInfo,notifications,activity,settings,userSettings,search,setSearch,
     toasts,toast,dismissToast,
     jobId,empId,blogId,trainingId,cvId,editId,candidateId,pipelineJob,applyDraft,setApplyDraft,
     contactPrefill,setContactPrefill,pendingPlan,setPendingPlan,
