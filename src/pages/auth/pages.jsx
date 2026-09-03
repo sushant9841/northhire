@@ -323,7 +323,8 @@ export function WelcomeTourPage({kind}){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [step,setStep]=useState(0);
   const u=A.user;
-  if(!u){useEffect(()=>A.go("home"),[]); return null;}
+  useEffect(()=>{if(!u)A.go("home");},[u]);
+  if(!u)return null;
   const first=u.name?.split(" ")[0]||"there";
 
   const seekerSteps=[
@@ -376,7 +377,7 @@ export function WelcomeTourPage({kind}){
      ic:"search",
      visual:"pool"},
     {t:"Your plan and add-ons",
-     s:"You're on the Free plan (1 job). Upgrade to Growth ($149/mo, 10 jobs, all features) or Enterprise ($499/mo, unlimited + HR Suite) when you're ready.",
+     s:"You're on the Free plan (1 job). Upgrade to Growth ($149/mo, 10 jobs, all features) or Enterprise ($599/mo, unlimited + HR Suite) when you're ready.",
      ic:"wallet",
      visual:"plan",
      cta:{label:"See plans",go:"pricing"}},
@@ -398,7 +399,9 @@ export function WelcomeTourPage({kind}){
 
       <div className="flex justify-between items-center mb-6">
         <div className="flex gap-1.5">
-          {steps.map((_,i)=><div key={i} className={`h-2 rounded-full transition-all duration-300 ${i===step?"w-6":"w-2"} ${i<=step?"bg-brand":"bg-line"}`}/>)}
+          {steps.map((_,i)=><button key={i} type="button" aria-label={`Go to step ${i+1}`} disabled={i>step}
+            onClick={()=>i<=step&&setStep(i)}
+            className={`h-2 rounded-full border-0 p-0 transition-all duration-300 ${i===step?"w-6":"w-2"} ${i<=step?"bg-brand cursor-pointer":"bg-line cursor-not-allowed"}`}/>)}
         </div>
         <Btn kind="ghost" size="sm" onClick={skip}>Skip tour</Btn>
       </div>
@@ -410,6 +413,8 @@ export function WelcomeTourPage({kind}){
           </div>
           <h1 className={`font-extrabold tracking-tight text-text mb-3.5 leading-tight ${mob?"text-2xl":"text-3xl"}`}>{cur.t}</h1>
           <p className="text-base text-text-2 leading-relaxed mb-7">{cur.s}</p>
+
+          {cur.cta&&!isLast&&<Btn kind="outline" size="sm" icon={cur.ic} style={{marginBottom:20}} onClick={()=>A.go(cur.cta.go)}>{cur.cta.label}</Btn>}
 
           {cur.visual==="cv"&&<div className="p-4 bg-bg border border-line rounded-xl mb-5 flex gap-3 items-center">
             <div className="w-11 h-11 rounded-xl bg-wash text-brand flex items-center justify-center"><I n="file" s={22}/></div>

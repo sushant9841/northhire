@@ -107,8 +107,12 @@ function HrPeople_OrgChart(){
   });
   const roots=children["__root__"]||[];
 
-  const Node=({e,depth=0})=>{
-    const kids=children[e.id]||[];
+  const Node=({e,depth=0,ancestors})=>{
+    /* `ancestors` guards against a manager-reference cycle (e.g. two people accidentally set
+       as each other's manager) recursing forever and crashing the tab — a bad cycle just stops
+       rendering deeper instead of looping. */
+    const seen=ancestors||new Set();
+    const kids=(children[e.id]||[]).filter(k=>!seen.has(k.id));
     const d=depts.find(x=>x.id===e.dept);
     const [open,setOpen]=useState(depth<2);
     return <div className="relative" style={{marginLeft:depth===0?0:mob?14:24,marginTop:depth===0?0:8}}>
@@ -127,7 +131,7 @@ function HrPeople_OrgChart(){
         {kids.length>0&&<span className="text-xs font-semibold text-text-3 ml-1 py-0.5 px-2 bg-bg rounded-full shrink-0">{kids.length}</span>}
       </div>
       {open&&kids.length>0&&<div className="mt-1.5 border-l-2 border-line" style={{paddingLeft:mob?4:14}}>
-        {kids.map(k=><Node key={k.id} e={k} depth={depth+1}/>)}
+        {kids.map(k=><Node key={k.id} e={k} depth={depth+1} ancestors={new Set([...seen,e.id])}/>)}
       </div>}
     </div>;
   };
@@ -251,6 +255,15 @@ function HrPeople_Departments(){
   </div>;
 }
 
+/* All transitive reports of `id` — used to stop the "Reports to" picker from letting
+   someone assign their own subordinate as their manager, which would create a cycle. */
+function descendantIds(id,all,seen=new Set()){
+  for(const e of all){
+    if(e.manager===id&&!seen.has(e.id)){seen.add(e.id);descendantIds(e.id,all,seen);}
+  }
+  return seen;
+}
+
 /* ─── Manage: add/edit/offboard employees ─── */
 function HrPeople_Manage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
@@ -348,7 +361,7 @@ function HrPeople_Manage(){
             {depts.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}</Sel></Field>
           <Field label="Reports to"><Sel value={editing.manager||""} onChange={e=>setEditing({...editing,manager:e.target.value||null})}>
             <option value="">— No manager —</option>
-            {active.filter(e=>e.id!==editing.id).map(e=><option key={e.id} value={e.id}>{e.name}</option>)}
+            {active.filter(e=>e.id!==editing.id&&!descendantIds(editing.id,all).has(e.id)).map(e=><option key={e.id} value={e.id}>{e.name}</option>)}
           </Sel></Field>
           <Field label="Phone"><Input value={editing.phone||""} onChange={e=>setEditing({...editing,phone:e.target.value})}/></Field>
           <Field label="Annual salary (CAD)"><Input type="number" value={editing.salary||0} onChange={e=>setEditing({...editing,salary:Number(e.target.value)||0})}/></Field>

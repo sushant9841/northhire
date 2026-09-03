@@ -108,7 +108,18 @@ export function useHrStore(seed,mainStore){
     return emp;
   };
   const removeEmployee=(empId)=>{
-    setHrEmployees(l=>l.map(e=>e.id===empId?{...e,status:"terminated"}:e));
+    /* Reassign the departing employee's direct reports up to their own manager instead of
+       leaving a dangling `manager` reference — otherwise those reports silently vanish from
+       the org chart and directory (both only render active employees). */
+    setHrEmployees(l=>{
+      const leaving=l.find(e=>e.id===empId);
+      const newManager=leaving?leaving.manager:null;
+      return l.map(e=>{
+        if(e.id===empId)return {...e,status:"terminated"};
+        if(e.manager===empId)return {...e,manager:newManager};
+        return e;
+      });
+    });
   };
 
   /* --- Attendance --- */
