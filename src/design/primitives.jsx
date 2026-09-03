@@ -283,25 +283,27 @@ export function SmartPortrait({ seed = 0, size = 48, radius = 999, bg }) {
 }
 
 /* ═══════════════ CORE UI ATOMS ═══════════════ */
-export function Btn({children,onClick,kind="primary",size="md",full,disabled,icon,iconR,style,title,type,"aria-label":ariaLabel}){
+export function Btn({children,onClick,kind="primary",size="md",full,disabled,loading,icon,iconR,style,title,type,"aria-label":ariaLabel}){
  const S={xs:"text-xs py-2 px-3 rounded-lg gap-1.5",sm:"text-sm py-2.5 px-4 rounded-xl gap-2",
    md:"text-sm py-3 px-5 rounded-xl gap-2",lg:"text-base py-4 px-7 rounded-xl gap-2.5"}[size];
  const I_SIZE={xs:14,sm:16,md:18,lg:19}[size];
  const K={primary:"bg-brand hover:bg-brand-dark text-white border border-transparent",
   dark:"bg-ink hover:bg-ink-2 text-white border border-transparent",
-  soft:"bg-wash text-brand border border-line-2",
+  soft:"bg-wash hover:bg-line-2 text-brand border border-line-2",
   outline:"bg-white hover:bg-bg text-text border border-line",
   ghost:"bg-transparent hover:bg-bg text-text-2 border border-transparent",
   ok:"bg-ok hover:bg-[#065C40] text-white border border-transparent",
   danger:"bg-red hover:bg-[#8E1A13] text-white border border-transparent",
-  dangerSoft:"bg-red-bg text-red border border-red-ln",
+  dangerSoft:"bg-red-bg hover:bg-red-ln text-red border border-red-ln",
   onDark:"bg-white/12 hover:bg-white/20 text-white border border-white/22"}[kind];
- return <button type={type||"button"} title={title} aria-label={ariaLabel||(!children&&(icon||iconR)?title:undefined)} disabled={disabled} onClick={disabled?undefined:onClick}
+ const isDisabled=disabled||loading;
+ return <button type={type||"button"} title={title} aria-label={ariaLabel||(!children&&(icon||iconR)?title:undefined)} aria-busy={loading||undefined} disabled={isDisabled} onClick={isDisabled?undefined:onClick}
   className={`inline-flex items-center justify-center font-semibold leading-tight whitespace-nowrap cursor-pointer
    transition duration-150 hover:-translate-y-px active:scale-95 disabled:opacity-45 disabled:cursor-not-allowed disabled:pointer-events-none
    ${full?"w-full":""} ${S} ${K}`}
   style={style}>
-  {icon&&<I n={icon} s={I_SIZE} w={2}/>}{children}{iconR&&<I n={iconR} s={I_SIZE} w={2}/>}</button>;
+  {loading?<span className="inline-block rounded-full border-2 border-current border-t-transparent animate-spin" style={{width:I_SIZE,height:I_SIZE}}/>:icon&&<I n={icon} s={I_SIZE} w={2}/>}
+  {children}{!loading&&iconR&&<I n={iconR} s={I_SIZE} w={2}/>}</button>;
 }
 export function Tag({children,tone="neutral",icon,sm}){
  const T={neutral:"bg-bg text-text-2 border-line",brand:"bg-wash text-brand border-line-2",ok:"bg-ok-bg text-ok border-ok-ln",
@@ -322,7 +324,7 @@ export function Card({children,style,onClick,hover,pad=24,delay=0}){
   className={`bg-white border rounded-2xl transition-[border-color,box-shadow,transform] duration-200 ${onClick?"cursor-pointer":"cursor-default"} ${hover?"border-line hover:border-line-2 hover:shadow-md hover:-translate-y-1":"border-line"}`}
   style={{padding:pad,...style}}>{children}</div>;
 }
-export const inp = "w-full bg-white border border-line rounded-xl py-3.5 px-4 text-base text-text outline-none transition-[border-color,box-shadow] duration-150";
+export const inp = "w-full bg-white border border-line rounded-xl py-3.5 px-4 text-base text-text outline-none transition-[border-color,box-shadow] duration-150 disabled:bg-bg disabled:text-text-3 disabled:cursor-not-allowed disabled:opacity-70";
 export function Input({icon,suffix,invalid,style,...r}){
  return <div className="relative flex items-center">
   {icon&&<span className="absolute left-3.5 text-text-3 pointer-events-none flex"><I n={icon} s={17}/></span>}
@@ -335,7 +337,7 @@ export function Area({style,invalid,...r}){
   className={`${inp} resize-none leading-relaxed ${invalid?"border-red":"focus:border-brand focus:ring-4 focus:ring-wash"}`}
   style={style}/>;}
 export function Sel({children,style,invalid,...r}){
- return <select {...r} className={`${inp} appearance-none cursor-pointer ${invalid?"border-red":""}`}
+ return <select {...r} className={`${inp} appearance-none cursor-pointer ${invalid?"border-red ring-4 ring-red-bg":"focus:border-brand focus:ring-4 focus:ring-wash"}`}
   style={{paddingRight:38,
    backgroundImage:"linear-gradient(45deg,transparent 50%,#8493A9 50%),linear-gradient(135deg,#8493A9 50%,transparent 50%)",
    backgroundPosition:"calc(100% - 18px) center, calc(100% - 13px) center",backgroundSize:"5px 5px,5px 5px",
@@ -352,9 +354,9 @@ export function Switch({on,onChange,disabled}){
   onClick={()=>onChange(!on)}
   className={`w-12 h-7 rounded-full flex items-center p-1 shrink-0 border-0 transition-colors duration-200 ${disabled?"cursor-not-allowed opacity-50":"cursor-pointer"} ${on?"bg-brand justify-end":"bg-line justify-start"}`}>
   <div className="w-5 h-5 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.25)] transition-all duration-200"/></button>;}
-export function CheckRow({on,onChange,label,sub}){
- return <button type="button" role="checkbox" aria-checked={on} onClick={()=>onChange(!on)}
-  className={`flex gap-3 items-start cursor-pointer py-3 px-3.5 border rounded-xl transition-all duration-150 w-full text-left ${on?"border-brand bg-tint":"border-line bg-white"}`}>
+export function CheckRow({on,onChange,label,sub,disabled}){
+ return <button type="button" role="checkbox" aria-checked={on} disabled={disabled} onClick={disabled?undefined:()=>onChange(!on)}
+  className={`flex gap-3 items-start py-3 px-3.5 border rounded-xl transition-all duration-150 w-full text-left ${disabled?"cursor-not-allowed opacity-50":"cursor-pointer"} ${on?"border-brand bg-tint":"border-line bg-white"}`}>
   <span className={`w-5 h-5 rounded-md shrink-0 mt-px border-2 flex items-center justify-center transition-all duration-150 ${on?"border-brand bg-brand":"border-line bg-white"}`}>
    {on&&<I n="check" s={13} c="#fff" w={3}/>}</span>
   <span className="min-w-0"><span className="block text-sm font-semibold text-text">{label}</span>

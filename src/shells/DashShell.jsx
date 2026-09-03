@@ -139,6 +139,12 @@ export function DashShell({modules,children,brandKind}){
   const [accountMenu,setAccountMenu]=useState(false);
   const [lockHover,setLockHover]=useState(null); /* {key, top, left} of currently-hovered locked item, for the portaled tooltip */
   useEffect(()=>{setNavOpen(!mob);},[mob]);
+  useEffect(()=>{
+    if(!accountMenu)return;
+    const onKey=e=>{if(e.key==="Escape")setAccountMenu(false);};
+    document.addEventListener("keydown",onKey);
+    return ()=>document.removeEventListener("keydown",onKey);
+  },[accountMenu]);
 
   const user=A.user; const company=A.company;
   const currentModule=modules.find(m=>m.k===A.pg);

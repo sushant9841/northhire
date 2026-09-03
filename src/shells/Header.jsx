@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { use } from "../store/context.js";
 import { useMedia } from "../helpers/hooks.js";
 import { C, SH } from "../design/tokens.js";
@@ -19,6 +19,14 @@ export function Header(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [menu,setMenu]=useState(false);
   const [browseOpen,setBrowseOpen]=useState(false);
+  /* Both dropdowns previously closed only via a click-catcher (menu) or a fragile
+     onBlur+setTimeout hack (browseOpen) - neither responded to Escape. */
+  useEffect(()=>{
+    if(!menu&&!browseOpen)return;
+    const onKey=e=>{if(e.key==="Escape"){setMenu(false);setBrowseOpen(false);}};
+    document.addEventListener("keydown",onKey);
+    return ()=>document.removeEventListener("keydown",onKey);
+  },[menu,browseOpen]);
   const r=ROUTES[A.pg]||ROUTES.home;
   const unread=A.notifications.filter(n=>!n.read&&(!n.for||n.for===A.user?.id||n.for===A.user?.role)).length;
   const isRoot=!!r.root;
@@ -51,15 +59,18 @@ export function Header(){
           const [p,l,kind]=item;
           const on=A.pg===p||(kind==="browse"&&A.pg==="search");
           if(kind==="browse")return <div key={p} className="relative">
-            <button onClick={()=>setBrowseOpen(v=>!v)} onBlur={()=>setTimeout(()=>setBrowseOpen(false),200)}
+            <button onClick={()=>setBrowseOpen(v=>!v)}
               className={`border-0 cursor-pointer text-sm py-2.5 pr-3 pl-3.5 rounded-xl transition-all duration-150 flex items-center gap-1 ${on?"font-semibold":"font-medium"} ${on||browseOpen?"bg-wash text-brand":"bg-transparent text-text-2"}`}>{l}
               <I n="chevD" s={14} w={2}/></button>
-            {browseOpen&&<div className="absolute top-11 left-0 min-w-130 bg-white border border-line rounded-2xl shadow-md p-4 grid grid-cols-3 gap-3.5 z-600" style={{animation:"pop .18s ease"}} onMouseDown={e=>e.preventDefault()}>
-              {browseCats.map(col=><div key={col.h}>
-                <div className="text-xs font-bold text-text-3 tracking-wider uppercase mb-2 px-2">{col.h}</div>
-                {col.items.map(([lab,fn],i)=><button key={i} onClick={fn} className="w-full text-left bg-transparent border-0 py-1.5 px-2 text-sm text-text cursor-pointer rounded-md transition-colors duration-100 hover:bg-bg">{lab}</button>)}
-              </div>)}
-            </div>}
+            {browseOpen&&<>
+              <div onClick={()=>setBrowseOpen(false)} className="fixed inset-0 z-590"/>
+              <div className="absolute top-11 left-0 min-w-130 bg-white border border-line rounded-2xl shadow-md p-4 grid grid-cols-3 gap-3.5 z-600" style={{animation:"pop .18s ease"}}>
+                {browseCats.map(col=><div key={col.h}>
+                  <div className="text-xs font-bold text-text-3 tracking-wider uppercase mb-2 px-2">{col.h}</div>
+                  {col.items.map(([lab,fn],i)=><button key={i} onClick={fn} className="w-full text-left bg-transparent border-0 py-1.5 px-2 text-sm text-text cursor-pointer rounded-md transition-colors duration-100 hover:bg-bg">{lab}</button>)}
+                </div>)}
+              </div>
+            </>}
           </div>;
           return <button key={p} onClick={()=>A.go(p)} className={`border-0 cursor-pointer text-sm py-2.5 px-3.5 rounded-xl transition-all duration-150 ${on?"bg-wash text-brand font-semibold":"bg-transparent text-text-2 font-medium"}`}>{l}</button>;})}
       </nav>}
