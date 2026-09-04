@@ -243,10 +243,41 @@ export function LoginPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [email,setEmail]=useState(""); const [pw,setPw]=useState("");
   const [err,setErr]=useState(""); const [busy,setBusy]=useState(false);
+  const [mfa,setMfa]=useState(null); const [code,setCode]=useState("");
   const submit=async()=>{setErr("");setBusy(true);
-    const r=await A.loginWithPassword(email,pw); if(!r.ok)setErr(r.msg); setBusy(false);};
+    const r=await A.loginWithPassword(email,pw); setBusy(false);
+    if(!r.ok&&r.mfaRequired){setMfa(r);setCode("");return;}
+    if(!r.ok)setErr(r.msg);
+  };
   const demoAs=async(e,p)=>{setEmail(e);setPw(p);setErr("");setBusy(true);
-    const r=await A.loginWithPassword(e,p); if(!r.ok)setErr(r.msg); setBusy(false);};
+    const r=await A.loginWithPassword(e,p); setBusy(false);
+    if(!r.ok&&r.mfaRequired){setMfa(r);setCode("");return;}
+    if(!r.ok)setErr(r.msg);
+  };
+  const verify=async()=>{setErr("");setBusy(true);
+    const r=await A.verifyLogin2FA(mfa.email,code); setBusy(false);
+    if(!r.ok)setErr(r.msg);
+  };
+  if(mfa){
+    return <div className={`bg-bg min-h-full flex justify-center ${mob?"pt-6 px-4 pb-10":"pt-12 px-6 pb-20"}`}>
+      <div className="w-full max-w-md">
+        <div className="flex items-center mb-5">
+          <button onClick={()=>setMfa(null)} className="flex items-center gap-2 bg-transparent border-0 cursor-pointer p-0 text-text-2 text-sm font-semibold hover:text-text">
+            <I n="chevL" s={16} w={2}/> Back to sign in</button>
+        </div>
+        <Card pad={mob?24:34} style={{borderRadius:20}}>
+          <h1 className={`${HERO_QUIET} text-3xl mb-2`}>Two-factor verification</h1>
+          <p className="text-base text-text-2 mb-6">Enter the 6-digit code for {mfa.email}.</p>
+          <div className="flex flex-col gap-3.5">
+            <Field label="Verification code" hint={mfa.code?`Demo mode — your code is ${mfa.code}`:undefined}>
+              <Input icon="shield" value={code} onChange={e=>{setCode(e.target.value);setErr("");}} placeholder="123456" maxLength={6}
+                onKeyDown={e=>e.key==="Enter"&&verify()}/></Field>
+            {err&&<Banner tone="danger" icon="alert" title="Verification failed">{err}</Banner>}
+            <Btn kind="primary" size="lg" full iconR="arrowR" onClick={verify} disabled={busy||code.length<6}>{busy?"Verifying…":"Verify & sign in"}</Btn>
+          </div>
+        </Card>
+      </div></div>;
+  }
   return <div className={`bg-bg min-h-full flex justify-center ${mob?"pt-6 px-4 pb-10":"pt-12 px-6 pb-20"}`}>
     <div className="w-full max-w-md">
       <div className="flex items-center justify-between mb-5">

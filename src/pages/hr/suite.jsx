@@ -1326,7 +1326,8 @@ export function HrPayroll(){
             <tr><td className="py-3 px-3 text-sm text-text">Annual salary</td><td className="py-3 px-3 text-sm text-brand font-semibold">${emp.salary?.toLocaleString()}</td></tr>
             <tr><td className="py-3 px-3 text-sm text-text">Monthly gross</td><td className="py-3 px-3 text-sm text-text">${Math.round((emp.salary||0)/12).toLocaleString()}</td></tr>
             <tr><td className="py-3 px-3 text-sm text-text">Bi-weekly gross</td><td className="py-3 px-3 text-sm text-text">${Math.round((emp.salary||0)/26).toLocaleString()}</td></tr>
-          </>:salaryRows.map(e=><tr key={e.id} className="border-b border-line-soft">
+          </>:null}
+          {!isEmployee&&salaryRows.map(e=><tr key={e.id} className="border-b border-line-soft">
             <td className="py-3 px-3"><div className="flex gap-2.5 items-center">
               <SmartPortrait seed={e.seed} size={28} radius={7}/>
               <span className="text-sm text-text font-semibold">{e.name}</span></div></td>
@@ -1339,6 +1340,25 @@ export function HrPayroll(){
         </tbody>
       </table></div>
     </Card>
+
+    {isEmployee&&<Card pad={mob?16:20} style={{borderRadius:14,marginTop:16}}>
+      <Lbl>My payslips</Lbl>
+      {(()=>{const slips=A.myPayslips();
+        if(slips.length===0)return <Empty icon="wallet" title="No payslips yet" body="A payslip appears here after your first executed payroll run."/>;
+        return <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:460}}>
+          <thead><tr className="border-b-2 border-line text-left">
+            {["Period","Pay date","Gross","Net","Action"].map(h=><th key={h} className={TH_CLS}>{h}</th>)}
+          </tr></thead>
+          <tbody>{slips.map(({run,line})=><tr key={run.id} className="border-b border-line-soft">
+            <td className="py-3 px-3 text-sm text-text font-semibold">{run.period}</td>
+            <td className="py-3 px-3 text-xs text-text-3">{run.runDate}</td>
+            <td className="py-3 px-3 text-sm text-text">${line.gross.toLocaleString()}</td>
+            <td className="py-3 px-3 text-sm text-brand font-semibold">${line.net.toLocaleString()}</td>
+            <td className="py-3 px-3"><Btn kind="outline" size="xs" icon="download" onClick={()=>A.printPayslip(run,line,emp,company)}>Payslip</Btn></td>
+          </tr>)}</tbody>
+        </table></div>;
+      })()}
+    </Card>}
 
     {showNew&&<Modal onClose={()=>setShowNew(false)} title="Create payroll run">
       <div className="flex flex-col gap-3.5">
@@ -1371,6 +1391,13 @@ export function HrPayroll(){
 
 function PayrollDetailModal({run,onClose,canApprove,onApprove,onExecute}){
   const A=use(); const mob=useMedia("(max-width: 900px)");
+  const exportRegister=()=>{
+    const rows=[["Employee","Gross","CPP","EI","Federal tax","Provincial tax","Reimbursement","Net"],
+      ...run.lines.map(l=>[l.name,l.gross,l.cpp,l.ei,l.fedTax,l.provTax,l.reimb||0,l.net])];
+    const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
+    const blob=new Blob([csv],{type:"text/csv"}); const url=URL.createObjectURL(blob);
+    const a=document.createElement("a"); a.href=url; a.download=`payroll-register-${run.period.replace(/[^\w-]/g,"_")}.csv`; a.click(); URL.revokeObjectURL(url);
+  };
   return <Modal onClose={onClose} title={`Payroll · ${run.period}`} wide>
     <div className="flex flex-col gap-3.5">
       <div className={`grid gap-2.5 ${mob?"grid-cols-2":"grid-cols-4"}`}>
@@ -1405,6 +1432,7 @@ function PayrollDetailModal({run,onClose,canApprove,onApprove,onExecute}){
       </div>
 
       <div className="flex gap-2.5 justify-end pt-2 border-t border-line">
+        <Btn kind="outline" icon="download" onClick={exportRegister}>Export register</Btn>
         <Btn kind="ghost" onClick={onClose}>Close</Btn>
         {canApprove&&run.status==="draft"&&<Btn kind="primary" onClick={onApprove}>Approve run</Btn>}
         {canApprove&&run.status==="approved"&&<Btn kind="primary" icon="check" onClick={onExecute}>Execute payroll</Btn>}
@@ -1616,6 +1644,18 @@ export function HrReports(){
           </div>;})}
       </Card>
     </div>
+    <Card pad={mob?20:24} style={{borderRadius:14,marginTop:16}}>
+      <Lbl>Audit log — salary, role, payroll &amp; badge changes</Lbl>
+      {A.hrAuditLog.length===0?<Empty icon="shield" title="No audited changes yet" body="Salary changes, role changes, payroll runs, and badge grants/removals are recorded here as they happen."/>
+      :<div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:480}}>
+        <thead><tr className="border-b-2 border-line text-left">{["When","Actor","Detail"].map(h=><th key={h} className={TH_CLS}>{h}</th>)}</tr></thead>
+        <tbody>{A.hrAuditLog.slice(0,50).map(e=><tr key={e.id} className="border-b border-line-soft">
+          <td className="py-2.5 px-2.5 text-xs text-text-3 whitespace-nowrap">{new Date(e.at).toLocaleString("en-CA")}</td>
+          <td className="py-2.5 px-2.5 text-xs text-text font-semibold whitespace-nowrap">{e.actorName}</td>
+          <td className="py-2.5 px-2.5 text-sm text-text-2">{e.detail}</td>
+        </tr>)}</tbody>
+      </table></div>}
+    </Card>
   </div>;
 }
 

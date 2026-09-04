@@ -64,6 +64,7 @@ export function useStaffingStore(user){
   const [staffingPayruns,setStaffingPayruns]=useState([]);
   const [staffingInvoices,setStaffingInvoices]=useState([]);
   const [placements,setPlacements]=useState([]);
+  const [staffingAuditLog,setStaffingAuditLog]=useState([]);
 
   useEffect(()=>{
     let cancelled=false;
@@ -80,15 +81,15 @@ export function useStaffingStore(user){
     let cancelled=false;
     (async()=>{
       try{
-        const [w,c,jo,a,t,pr,inv,pl]=await Promise.all([
+        const [w,c,jo,a,t,pr,inv,pl,al]=await Promise.all([
           api.get("/staffing/workers"),api.get("/staffing/clients"),api.get("/staffing/job-orders"),
           api.get("/staffing/assignments"),api.get("/staffing/timesheets"),api.get("/staffing/payruns"),
-          api.get("/staffing/invoices"),api.get("/staffing/placements"),
+          api.get("/staffing/invoices"),api.get("/staffing/placements"),api.get("/staffing/audit-log"),
         ]);
         if(cancelled)return;
         setWorkers(w.workers);setStaffingClients(c.clients);setJobOrders(jo.jobOrders);
         setAssignments(a.assignments);setTimesheets(t.timesheets);setStaffingPayruns(pr.payruns);
-        setStaffingInvoices(inv.invoices);setPlacements(pl.placements);
+        setStaffingInvoices(inv.invoices);setPlacements(pl.placements);setStaffingAuditLog(al.auditLog);
       }catch(e){
         if(typeof console!=="undefined")console.warn(`[NorthHire] Agency data sync failed: ${e.message}`);
       }
@@ -265,15 +266,20 @@ export function useStaffingStore(user){
     setTimesheets(l=>l.map(t=>t.status==="approved"&&t.weekStart>=periodStart&&t.weekStart<periodEnd?{...t,status:"paid"}:t));
     return payrun;
   };
+  const refreshStaffingAuditLog=async()=>{
+    try{const {auditLog}=await api.get("/staffing/audit-log");setStaffingAuditLog(auditLog);}catch{/* best-effort */}
+  };
   const finalizeStaffingPayrun=async(id)=>{
     await api.patch(`/staffing/payruns/${id}/finalize`);
     setStaffingPayruns(p=>p.map(x=>x.id===id?{...x,status:"paid"}:x));
+    refreshStaffingAuditLog();
   };
 
   /* ─── Invoicing (agency-only) ─── */
   const generateStaffingInvoices=async(weekStart)=>{
     const {invoices}=await api.post("/staffing/invoices/generate",{weekStart});
     setStaffingInvoices(l=>[...invoices,...l]);
+    refreshStaffingAuditLog();
     return invoices;
   };
   const markStaffingInvoicePaid=async(id)=>{
@@ -310,6 +316,7 @@ export function useStaffingStore(user){
   const signMsa=async(clientId)=>{
     await api.patch(`/staffing/clients/${clientId}/sign-msa`);
     setStaffingClients(l=>l.map(c=>c.id===clientId?{...c,status:"active",signedMsa:_fmtDate(new Date())}:c));
+    refreshStaffingAuditLog();
   };
 
   /* ─── Analytics (pure, derived from already-fetched state) ─── */
@@ -341,7 +348,7 @@ export function useStaffingStore(user){
     return calcStaffingEconomics(a.payRate,a.billRate,w?.province||"ON",0);
   };
 
-  return {workers,staffingClients,jobOrders,assignments,timesheets,staffingPayruns,staffingInvoices,placements,
+  return {workers,staffingClients,jobOrders,assignments,timesheets,staffingPayruns,staffingInvoices,placements,staffingAuditLog,
     worker,workerByPersonId,staffingClient,staffingClientByEmployerId,jobOrder,assignment,timesheet,
     workerAssignments,activeAssignments,clientAssignments,clientTimesheets,workerTimesheets,openJobOrders,
     agencyLogin,agencyLogout,agencyCurrentStaff,STAFFING_AGENCY,STAFFING_RATES,

@@ -1104,6 +1104,21 @@ export function EmpAnalyticsPage(){
           <Stat label="Applications" value={stats.totalApps} icon="send"/>
           <Stat label="View → apply" value={`${stats.conversion}%`} icon="target" tone={C.brand}/>
         </div>
+        <Card pad={mob?24:32} style={{borderRadius:20,marginBottom:16}}>
+          <Lbl>Applications, last 30 days</Lbl>
+          {(()=>{const trend=stats.applicationTrend||[]; const max=Math.max(...trend.map(t=>t.count),1);
+            const total=trend.reduce((s,t)=>s+t.count,0);
+            if(total===0)return <div className="text-sm text-text-3 py-4">No applications in the last 30 days yet.</div>;
+            return <div className="flex items-end gap-0.5" style={{height:100}}>
+              {trend.map(t=>{const h=Math.max(2,Math.round((t.count/max)*90));
+                return <div key={t.date} className="flex-1 min-w-0 group relative" style={{height:"100%"}} title={`${t.date}: ${t.count} application${t.count===1?"":"s"}`}>
+                  <div className="absolute bottom-0 left-0 right-0 rounded-t transition-[height] duration-300" style={{height:h,background:t.count>0?C.brand:C.line}}/>
+                </div>;})}
+            </div>;})()}
+          <div className="flex justify-between text-xs text-text-3 mt-2">
+            <span>{stats.applicationTrend?.[0]?.date}</span><span>{stats.applicationTrend?.[stats.applicationTrend.length-1]?.date}</span>
+          </div>
+        </Card>
         <div className="grid gap-4" style={{gridTemplateColumns:mob?"1fr":"1.2fr 1fr"}}>
           <Card pad={mob?24:32} style={{borderRadius:20}}>
             <Lbl>Pipeline breakdown</Lbl>

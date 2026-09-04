@@ -202,6 +202,9 @@ CREATE TABLE IF NOT EXISTS outbox (
 CREATE TABLE IF NOT EXISTS reset_codes (
   email TEXT PRIMARY KEY, code TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+CREATE TABLE IF NOT EXISTS login_2fa_codes (
+  email TEXT PRIMARY KEY, code TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 CREATE TABLE IF NOT EXISTS activity_log (
   id TEXT PRIMARY KEY, action TEXT, text TEXT, icon TEXT, actor TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -309,6 +312,14 @@ CREATE TABLE IF NOT EXISTS hr_company_settings (
   company_id TEXT PRIMARY KEY REFERENCES employers(id),
   settings_json TEXT NOT NULL DEFAULT '{}'
 );
+CREATE TABLE IF NOT EXISTS hr_audit_log (
+  id TEXT PRIMARY KEY,
+  company_id TEXT NOT NULL REFERENCES employers(id),
+  actor_employee_id TEXT REFERENCES hr_employees(id),
+  action TEXT NOT NULL,
+  detail TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 
 /* ═══════════════ STAFFING AGENCY ═══════════════ */
 CREATE TABLE IF NOT EXISTS agency_staff (
@@ -383,6 +394,13 @@ CREATE TABLE IF NOT EXISTS staffing_invoices (
   lines_json TEXT DEFAULT '[]', subtotal REAL, gst REAL DEFAULT 0, hst REAL, total REAL, po TEXT
 );
 
+CREATE TABLE IF NOT EXISTS staffing_audit_log (
+  id TEXT PRIMARY KEY,
+  actor_staff_id TEXT REFERENCES agency_staff(id),
+  action TEXT NOT NULL,
+  detail TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 CREATE TABLE IF NOT EXISTS staffing_placements (
   id TEXT PRIMARY KEY,
   client_id TEXT NOT NULL REFERENCES staffing_clients(id),

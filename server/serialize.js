@@ -52,6 +52,7 @@ export function serializeJob(row) {
     dlDate: row.deadline_date,
     daysLeft: daysUntil(row.deadline_date),
     posted: relativeDaysAgo(row.created_at),
+    createdAt: new Date(row.created_at).getTime(),
     views: row.views,
     urgent: !!row.urgent,
     featured: !!row.featured,
@@ -100,6 +101,7 @@ export function serializeApplication(row) {
     stage: row.stage,
     note: row.note,
     at: relativeDaysAgo(row.created_at),
+    createdAt: new Date(row.created_at).getTime(),
     avail: row.availability,
     expect: row.pay_expectation,
     letter: row.cover_letter,
@@ -257,6 +259,10 @@ export function serializeHrChatMessage(row) {
   if (!row) return null;
   return { id: row.id, chat: row.chat_id, from: row.from_employee, text: row.text, at: new Date(row.created_at).getTime() };
 }
+export function serializeHrAuditEntry(row) {
+  if (!row) return null;
+  return { id: row.id, actor: row.actor_employee_id, action: row.action, detail: row.detail, at: new Date(row.created_at).getTime() };
+}
 
 /* ═══════════════ STAFFING AGENCY ═══════════════ */
 export function serializeWorker(row) {
@@ -312,6 +318,10 @@ export function serializeStaffingInvoice(row) {
   return { id: row.id, number: row.number, client: row.client_id, weekStart: row.week_start, issued: row.issued,
     due: row.due, status: row.status, paidOn: row.paid_on, lines: JSON.parse(row.lines_json || "[]"),
     subtotal: row.subtotal, gst: row.gst, hst: row.hst, total: row.total, po: row.po };
+}
+export function serializeStaffingAuditEntry(row) {
+  if (!row) return null;
+  return { id: row.id, actor: row.actor_staff_id, action: row.action, detail: row.detail, at: new Date(row.created_at).getTime() };
 }
 export function serializePlacement(row) {
   if (!row) return null;

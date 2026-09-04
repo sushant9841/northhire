@@ -56,6 +56,14 @@ function HrPeople_Directory(){
     return e.name.toLowerCase().includes(s)||e.title?.toLowerCase().includes(s)||e.email.toLowerCase().includes(s);
   }).sort((a,b)=>a.name.localeCompare(b.name));
   const pg=usePagination(filtered,24);
+  const exportDirectory=()=>{
+    const rows=[["Name","Title","Department","Email","Phone","City","Province","Role","Manager","Hired"],
+      ...filtered.map(e=>{const d=depts.find(x=>x.id===e.dept); const mgr=A.hrEmp(e.manager);
+        return [e.name,e.title||"",d?.name||"",e.email,e.phone||"",e.city||"",e.prov||"",e.role,mgr?.name||"",e.hired||""];})];
+    const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
+    const blob=new Blob([csv],{type:"text/csv"}); const url=URL.createObjectURL(blob);
+    const a=document.createElement("a"); a.href=url; a.download="hr-directory.csv"; a.click(); URL.revokeObjectURL(url);
+  };
   return <div>
     <div className="flex gap-2.5 mb-4 flex-wrap">
       <Input icon="search" placeholder="Search by name, title, or email" value={q} onChange={e=>setQ(e.target.value)} style={{flex:"1 1 260px"}}/>
@@ -63,6 +71,7 @@ function HrPeople_Directory(){
         <option value="all">All departments</option>
         {depts.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}
       </Sel>
+      <Btn kind="outline" size="sm" icon="download" onClick={exportDirectory}>Export {filtered.length<all.length?`filtered (${filtered.length})`:"CSV"}</Btn>
     </div>
     <div className="grid gap-3" style={{gridTemplateColumns:mob?"1fr":"repeat(auto-fill,minmax(280px,1fr))"}}>
       {pg.pageItems.map(e=>{const d=depts.find(x=>x.id===e.dept);

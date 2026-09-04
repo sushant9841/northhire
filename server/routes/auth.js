@@ -53,6 +53,31 @@ authRouter.post("/login", (req, res) => {
   if (user.suspended) {
     return res.status(403).json({ error: "This account has been suspended. Contact support for help." });
   }
+  const tf = db.prepare("SELECT * FROM two_factor WHERE user_id = ?").get(user.id);
+  if (tf?.enabled) {
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    db.prepare("INSERT INTO login_2fa_codes (email, code) VALUES (?, ?) ON CONFLICT(email) DO UPDATE SET code = excluded.code, created_at = datetime('now')")
+      .run(user.email, code);
+    return res.json({ mfaRequired: true, email: user.email, code }); // dev returns code for demo visibility, same as password reset
+  }
+  createSessionCookie(res, "session", "main", user.id);
+  res.json({ user: publicUser(user) });
+});
+
+authRouter.post("/login/verify-2fa", (req, res) => {
+  const email = (req.body?.email || "").toLowerCase().trim();
+  const { code } = req.body || {};
+  const rec = db.prepare("SELECT * FROM login_2fa_codes WHERE email = ?").get(email);
+  if (!rec) return res.status(400).json({ error: "No pending sign-in for this account." });
+  if (Date.now() - new Date(rec.created_at).getTime() > 15 * 60 * 1000) return res.status(400).json({ error: "Code expired — sign in again." });
+  const user = db.prepare("SELECT * FROM users WHERE email = ?").get(email);
+  const tf = user ? db.prepare("SELECT * FROM two_factor WHERE user_id = ?").get(user.id) : null;
+  const backupCodes = tf ? JSON.parse(tf.backup_codes_json || "[]") : [];
+  if (rec.code !== code && !backupCodes.includes(code)) return res.status(400).json({ error: "Code does not match." });
+  db.prepare("DELETE FROM login_2fa_codes WHERE email = ?").run(email);
+  if (backupCodes.includes(code)) {
+    db.prepare("UPDATE two_factor SET backup_codes_json = ? WHERE user_id = ?").run(JSON.stringify(backupCodes.filter(c => c !== code)), user.id);
+  }
   createSessionCookie(res, "session", "main", user.id);
   res.json({ user: publicUser(user) });
 });

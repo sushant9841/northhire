@@ -4,9 +4,15 @@ import { hashPassword, verifyPassword, createSessionCookie, clearSessionCookie, 
 import {
   serializeHrEmployee, serializeHrAttendance, serializeHrLeave, serializeHrTask, serializeHrEvent,
   serializeHrInvoice, serializeHrDepartment, serializeHrExpense, serializeHrPayrun, serializeHrChat, serializeHrChatMessage,
+  serializeHrAuditEntry,
 } from "../serialize.js";
 
 export const hrRouter = Router();
+
+function logHrAudit(companyId, actorEmployeeId, action, detail) {
+  db.prepare("INSERT INTO hr_audit_log (id, company_id, actor_employee_id, action, detail) VALUES (?, ?, ?, ?, ?)")
+    .run(nextId("al", "hr_audit_log"), companyId, actorEmployeeId, action, detail);
+}
 
 /* ─── Auth ─── */
 hrRouter.post("/login", (req, res) => {
@@ -69,6 +75,12 @@ hrRouter.patch("/employees/:id", requireHrAuth, requireHrPriv, (req, res) => {
   const setCols = []; const params = [];
   for (const [key, col] of Object.entries(fields)) if (d[key] !== undefined) { setCols.push(`${col} = ?`); params.push(d[key]); }
   if (setCols.length) db.prepare(`UPDATE hr_employees SET ${setCols.join(", ")} WHERE id = ?`).run(...params, req.params.id);
+  if (d.salary !== undefined && d.salary !== row.salary) {
+    logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "salary_change", `${row.name}'s salary changed from $${row.salary?.toLocaleString() ?? "—"} to $${d.salary.toLocaleString()}`);
+  }
+  if (d.role !== undefined && d.role !== row.role) {
+    logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "role_change", `${row.name}'s role changed from ${row.role} to ${d.role}`);
+  }
   res.json({ employee: serializeHrEmployee(db.prepare("SELECT * FROM hr_employees WHERE id = ?").get(req.params.id)) });
 });
 hrRouter.patch("/employees/:id/visibility", requireHrAuth, (req, res) => {
@@ -92,6 +104,7 @@ hrRouter.patch("/employees/:id/badges", requireHrAuth, requireHrPriv, (req, res)
   const badges = JSON.parse(row.badges_json || "[]").filter(b => b !== badge);
   if (!remove) badges.push(badge);
   db.prepare("UPDATE hr_employees SET badges_json = ? WHERE id = ?").run(JSON.stringify(badges), req.params.id);
+  logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, remove ? "badge_removed" : "badge_awarded", `${remove ? "Removed" : "Awarded"} "${badge}" ${remove ? "from" : "to"} ${row.name}`);
   res.json({ employee: serializeHrEmployee(db.prepare("SELECT * FROM hr_employees WHERE id = ?").get(req.params.id)) });
 });
 
@@ -278,6 +291,16 @@ hrRouter.get("/payruns", requireHrAuth, requireHrPriv, (req, res) => {
   const rows = db.prepare("SELECT * FROM hr_payruns WHERE company_id = ? ORDER BY run_date DESC").all(req.hrEmployee.company_id);
   res.json({ payruns: rows.map(serializeHrPayrun) });
 });
+/* Every employee (not just owner/admin/hr) can see their own payslips - this returns only
+   their own line from each paid run, never the full lines_json (which holds every colleague's
+   salary breakdown too). */
+hrRouter.get("/payslips/mine", requireHrAuth, (req, res) => {
+  const rows = db.prepare("SELECT * FROM hr_payruns WHERE company_id = ? AND status = 'paid' ORDER BY run_date DESC").all(req.hrEmployee.company_id);
+  const slips = rows
+    .map(r => { const run = serializeHrPayrun(r); const line = run.lines.find(l => l.employee === req.hrEmployee.id); return line ? { run: { ...run, lines: undefined }, line } : null; })
+    .filter(Boolean);
+  res.json({ payslips: slips });
+});
 hrRouter.post("/payruns", requireHrAuth, requireHrPriv, (req, res) => {
   const { periodStart, periodEnd } = req.body || {};
   const emps = db.prepare("SELECT * FROM hr_employees WHERE company_id = ? AND status = 'active'").all(req.hrEmployee.company_id);
@@ -320,7 +343,13 @@ hrRouter.patch("/payruns/:id/execute", requireHrAuth, requireHrPriv, (req, res) 
       ).run(line.employee);
     }
   }
+  logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "payroll_executed", `Executed payroll for ${run.period_start} → ${run.period_end} (${lines.length} employees, $${run.total_net?.toLocaleString()} net)`);
   res.json({ ok: true });
+});
+hrRouter.get("/audit-log", requireHrAuth, (req, res) => {
+  if (!isPriv(req.hrEmployee) && req.hrEmployee.role !== "finance") return res.status(403).json({ error: "Not allowed for your role." });
+  const rows = db.prepare("SELECT hr_audit_log.*, hr_employees.name AS actor_name FROM hr_audit_log LEFT JOIN hr_employees ON hr_employees.id = hr_audit_log.actor_employee_id WHERE hr_audit_log.company_id = ? ORDER BY hr_audit_log.created_at DESC LIMIT 500").all(req.hrEmployee.company_id);
+  res.json({ auditLog: rows.map(r => ({ ...serializeHrAuditEntry(r), actorName: r.actor_name || "—" })) });
 });
 
 /* ─── Chat ─── */

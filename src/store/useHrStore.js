@@ -28,6 +28,7 @@ export function useHrStore(){
   const [hrCompanySettings,setHrCompanySettingsMap]=useState({}); /* {[companyId]: settings} */
   const [hrDepartments,setHrDepartments]=useState([]);
   const [hrExpenses,setHrExpenses]=useState([]);
+  const [hrAuditLog,setHrAuditLog]=useState([]);
 
   useEffect(()=>{
     let cancelled=false;
@@ -44,11 +45,12 @@ export function useHrStore(){
     if(!hrEmployee||!hrCompany){
       setHrEmployees([]);setHrAttendance([]);setHrLeave([]);setHrTasks([]);setHrEvents([]);
       setHrInvoices([]);setHrChats([]);setHrChatMsgs([]);setHrPayruns([]);setHrCompanySettingsMap({});
-      setHrDepartments([]);setHrExpenses([]);
+      setHrDepartments([]);setHrExpenses([]);setHrAuditLog([]);
       return;
     }
     let cancelled=false;
     const isPriv=["owner","admin","hr"].includes(hrEmployee.role);
+    const canSeeAudit=isPriv||hrEmployee.role==="finance";
     (async()=>{
       try{
         const [emps,att,leave,tasks,events,invoices,depts,chats,settings,expenses]=await Promise.all([
@@ -70,6 +72,10 @@ export function useHrStore(){
         if(isPriv){
           const {payruns}=await api.get("/hr/payruns");
           if(!cancelled)setHrPayruns(payruns);
+        }
+        if(canSeeAudit){
+          const {auditLog}=await api.get("/hr/audit-log");
+          if(!cancelled)setHrAuditLog(auditLog);
         }
         const msgLists=await Promise.all(chats.chats.map(c=>api.get(`/hr/chats/${c.id}/messages`)));
         if(!cancelled)setHrChatMsgs(msgLists.flatMap(r=>r.messages));
@@ -136,10 +142,14 @@ export function useHrStore(){
       setHrEmployees(l=>l.map(e=>e.id===empId?employee:e));
     }catch(e){/* best-effort - visibility toggles aren't safety-critical */}
   };
+  const refreshAuditLog=async()=>{
+    try{const {auditLog}=await api.get("/hr/audit-log");setHrAuditLog(auditLog);}catch{/* best-effort */}
+  };
   const updateEmp=async(empId,patch)=>{
     try{
       const {employee}=await api.patch(`/hr/employees/${empId}`,patch);
       setHrEmployees(l=>l.map(e=>e.id===empId?employee:e));
+      if(patch.salary!==undefined||patch.role!==undefined)refreshAuditLog();
     }catch(e){/* surfaced via the calling page's own error handling, if any */}
   };
   const addEmployee=async(data)=>{
@@ -233,6 +243,60 @@ export function useHrStore(){
     }
   };
 
+  /* --- Payslips ---
+     Fetched fresh (not derived from hrPayruns, which only ever holds data for privileged
+     roles) so every employee - not just owner/admin/hr - can see their own payslips without
+     being handed the full payroll run their colleagues' salaries live in. */
+  const [myPayslipsList,setMyPayslipsList]=useState([]);
+  useEffect(()=>{
+    if(!hrEmployee){setMyPayslipsList([]);return;}
+    let cancelled=false;
+    api.get("/hr/payslips/mine").then(({payslips})=>{if(!cancelled)setMyPayslipsList(payslips);}).catch(()=>{});
+    return ()=>{cancelled=true;};
+  },[hrEmployee?.id]);
+  const myPayslips=()=>myPayslipsList;
+  const printPayslip=(run,line,employee,company)=>{
+    if(typeof window==="undefined")return;
+    const html=`<!DOCTYPE html><html><head><title>Payslip — ${line.name} — ${run.period}</title>
+      <style>body{font-family:Arial,Helvetica,sans-serif;max-width:680px;margin:40px auto;padding:0 30px;color:#111;line-height:1.5}
+        .brand{font-size:20pt;font-weight:700;color:#B45309;margin-bottom:2px}.sub{font-size:9pt;color:#888;margin-bottom:24px}
+        h1{font-size:15pt;margin:0 0 4px}table{width:100%;border-collapse:collapse;margin-top:18px}
+        th{text-align:left;font-size:9pt;text-transform:uppercase;letter-spacing:.05em;color:#888;border-bottom:2px solid #ddd;padding:8px 0}
+        td{padding:9px 0;border-bottom:1px solid #eee;font-size:11pt}.right{text-align:right}
+        .totals{margin-top:10px;margin-left:auto;width:280px}.totals div{display:flex;justify-content:space-between;padding:4px 0;font-size:11pt}
+        .totals .grand{font-weight:700;font-size:13pt;border-top:2px solid #111;padding-top:8px;margin-top:4px}
+        .meta{display:flex;justify-content:space-between;margin:20px 0;font-size:10pt;color:#555}
+        @media print{@page{margin:1.5cm}}</style></head><body>
+      <div class="brand">${(company?.name||"Your company").replace(/[<>]/g,"")}</div><div class="sub">Statement of earnings and deductions</div>
+      <h1>Payslip — ${line.name}</h1>
+      <div class="meta"><div>Employee<br><strong>${line.name}</strong><br>${(employee?.title||"")}</div>
+        <div style="text-align:right">Pay period<br><strong>${run.period}</strong><br>Pay date: ${run.runDate}</div></div>
+      <table><thead><tr><th>Earnings / Deductions</th><th class="right">Amount</th></tr></thead>
+        <tbody>
+          <tr><td>Gross pay</td><td class="right">$${line.gross.toLocaleString()}</td></tr>
+          <tr><td>CPP contribution</td><td class="right">-$${line.cpp.toLocaleString()}</td></tr>
+          <tr><td>EI premium</td><td class="right">-$${line.ei.toLocaleString()}</td></tr>
+          <tr><td>Federal tax</td><td class="right">-$${line.fedTax.toLocaleString()}</td></tr>
+          <tr><td>Provincial tax</td><td class="right">-$${line.provTax.toLocaleString()}</td></tr>
+          ${line.reimb>0?`<tr><td>Expense reimbursement</td><td class="right">+$${line.reimb.toLocaleString()}</td></tr>`:""}
+        </tbody></table>
+      <div class="totals"><div><span>Gross pay</span><span>$${line.gross.toLocaleString()}</span></div>
+        <div><span>Total deductions</span><span>-$${(line.cpp+line.ei+line.fedTax+line.provTax).toLocaleString()}</span></div>
+        <div class="grand"><span>Net pay</span><span>$${line.net.toLocaleString()} CAD</span></div></div>
+      <div style="margin-top:30px;font-size:8.5pt;color:#999">CPP/EI/tax shown are estimated at flat statutory rates, not full CRA brackets and credits — not a substitute for an official T4.</div>
+      <script>window.onload=()=>setTimeout(()=>window.print(),300);</script>
+      </body></html>`;
+    const w=window.open("","_blank");
+    if(!w){
+      if(typeof document!=="undefined"){
+        const blob=new Blob([`Payslip — ${line.name} — ${run.period}\nGross: $${line.gross}\nCPP: -$${line.cpp}\nEI: -$${line.ei}\nFed tax: -$${line.fedTax}\nProv tax: -$${line.provTax}\nNet: $${line.net} CAD`],{type:"text/plain"});
+        const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=`payslip-${run.period}.txt`; a.click(); URL.revokeObjectURL(url);
+      }
+      return;
+    }
+    w.document.write(html); w.document.close();
+  };
+
   /* --- Departments --- */
   const hrDeptsAtCompany=cid=>hrDepartments.filter(d=>d.companyId===cid);
   const addDepartment=async(data)=>{
@@ -285,16 +349,19 @@ export function useHrStore(){
     const isPriv=hrEmployee&&["owner","admin","hr"].includes(hrEmployee.role);
     const {expenses}=isPriv?await api.get("/hr/expenses/company"):await api.get("/hr/expenses/mine");
     setHrExpenses(expenses);
+    refreshAuditLog();
   };
 
   /* --- Badges --- */
   const awardBadge=async(empId,badge)=>{
     const {employee}=await api.patch(`/hr/employees/${empId}/badges`,{badge});
     setHrEmployees(l=>l.map(e=>e.id===empId?employee:e));
+    refreshAuditLog();
   };
   const removeBadge=async(empId,badge)=>{
     const {employee}=await api.patch(`/hr/employees/${empId}/badges`,{badge,remove:true});
     setHrEmployees(l=>l.map(e=>e.id===empId?employee:e));
+    refreshAuditLog();
   };
 
   /* --- Chat --- */
@@ -347,12 +414,13 @@ export function useHrStore(){
   return {
     hrBridging,
     hrEmployees,hrAttendance,hrLeave,hrTasks,hrEvents,hrInvoices,hrChats,hrChatMsgs,
-    hrPayruns,hrCompanySettings,hrDepartments,hrExpenses,
+    hrPayruns,hrCompanySettings,hrDepartments,hrExpenses,hrAuditLog,
     hrEmp,hrEmpsAtCompany,hrCurrentEmp,hrCurrentCompany,hrLogin,hrLogout,hrAutoLogin,
     hrPublicProfile,updateEmpVisibility,updateEmp,addEmployee,removeEmployee,
     punchIn,punchOut,requestLeave,decideLeave,
     addTask,updateTaskStatus,deleteTask,addEvent,deleteEvent,
     addInvoice,markInvoicePaid,sendInvoice,printHrInvoice,
+    myPayslips,printPayslip,
     hrDeptsAtCompany,addDepartment,updateDepartment,removeDepartment,
     empExpenses,companyExpenses,submitExpense,decideExpense,payExpense,
     runPayroll,approvePayroll,executePayroll,

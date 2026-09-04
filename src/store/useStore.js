@@ -376,7 +376,20 @@ export function useStore(){
   const upsertPassword=(email,pw)=>setPasswords(p=>({...p,[email.toLowerCase().trim()]:pw}));
   const loginWithPassword=async(email,pw)=>{
     try{
-      const {user:apiUser}=await api.post("/auth/login",{email:(email||"").trim(),password:pw});
+      const r=await api.post("/auth/login",{email:(email||"").trim(),password:pw});
+      if(r.mfaRequired)return {ok:false,mfaRequired:true,email:r.email,code:r.code};
+      const mapped=mapApiUser(r.user);
+      setUser(mapped);
+      setStack([]); setPg(mapped.role==="employer"?"empHome":mapped.role==="admin"?"admHome":"home");
+      log("auth.login",`Signed in as ${mapped.name}`,"logout");
+      return {ok:true};
+    }catch(e){
+      return {ok:false,msg:e.message};
+    }
+  };
+  const verifyLogin2FA=async(email,code)=>{
+    try{
+      const {user:apiUser}=await api.post("/auth/login/verify-2fa",{email,code});
       const mapped=mapApiUser(apiUser);
       setUser(mapped);
       setStack([]); setPg(mapped.role==="employer"?"empHome":mapped.role==="admin"?"admHome":"home");
@@ -754,7 +767,17 @@ export function useStore(){
     const byStage=STAGES.map(s=>({stage:s,count:myApps.filter(a=>a.stage===s).length}));
     const topJob=myJobs.map(j=>({j,apps:applications.filter(a=>a.job===j.id).length})).sort((a,b)=>b.apps-a.apps)[0];
     const avgScore=myApps.length?Math.round(myApps.map(a=>scoreCandidate(person(a.user),job(a.job)||myJobs[0])).reduce((s,x)=>s+x,0)/myApps.length):0;
-    return {totalJobs:myJobs.length,liveJobs:myJobs.filter(j=>j.status==="live").length,totalViews,totalApps,conversion,byStage,topJob,avgScore};
+    /* Real day-by-day application volume over the trailing 30 days, bucketed from each
+       application's actual created_at timestamp (added specifically for this chart - the
+       old `at` field was only ever a frozen "3 days ago" display string, not real enough to
+       bucket by day). */
+    const days=30;
+    const dayKey=ms=>new Date(ms).toISOString().slice(0,10);
+    const byDay={};
+    for(let i=days-1;i>=0;i--){const d=new Date(Date.now()-i*86400000);byDay[dayKey(d.getTime())]=0;}
+    myApps.forEach(a=>{if(a.createdAt){const k=dayKey(a.createdAt);if(k in byDay)byDay[k]++;}});
+    const applicationTrend=Object.entries(byDay).map(([date,count])=>({date,count}));
+    return {totalJobs:myJobs.length,liveJobs:myJobs.filter(j=>j.status==="live").length,totalViews,totalApps,conversion,byStage,topJob,avgScore,applicationTrend};
   };
 
   /* --- fuzzy / synonym expansion for search queries --- */
@@ -1295,7 +1318,7 @@ export function useStore(){
   };
 
   const A={pg,go,back,pageTitle,homePg,history:stack,user,company,employers,jobs,people,applications,blogs,trainings,cvs,passwords,outbox,savedSearches,messages,interviews,reviews,impersonating,setImpersonating,hireOnboarding,setHireOnboarding,
-    hasAccount,checkPassword,upsertPassword,loginWithPassword,resetPasswordRequest,resetPasswordConfirm,completeEmployerSignup,
+    hasAccount,checkPassword,upsertPassword,loginWithPassword,verifyLogin2FA,resetPasswordRequest,resetPasswordConfirm,completeEmployerSignup,
     saveSearch,deleteSavedSearch,toggleSearchAlert,salaryInsight,skillsGap,expandQuery,restoreApp,notifyFollowers,
     sendMessage,markMessageRead,scheduleInterview,cancelInterview,bulkMove,bulkReject,reverseMatch,inviteToApply,importJobsCSV,employerAnalytics,
     impersonate,stopImpersonating,

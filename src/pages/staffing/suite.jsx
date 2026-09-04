@@ -1348,5 +1348,18 @@ export function AgencyCompliance(){
         </div>
       </div>
     </Card>
+
+    <Card pad={mob?18:22} style={{marginTop:16,borderRadius:14}}>
+      <Lbl>Audit log — payroll, invoicing &amp; MSA changes</Lbl>
+      {A.staffingAuditLog.length===0?<Empty icon="shield" title="No audited changes yet" body="Payroll finalization, invoice generation, and MSA signing are recorded here as they happen."/>
+      :<div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:480}}>
+        <thead><tr className="border-b-2 border-line text-left">{["When","Staff","Detail"].map(h=><th key={h} className={TH_CLS}>{h}</th>)}</tr></thead>
+        <tbody>{A.staffingAuditLog.slice(0,50).map(e=><tr key={e.id} className="border-b border-line-soft">
+          <td className="py-2.5 px-2.5 text-xs text-text-3 whitespace-nowrap">{new Date(e.at).toLocaleString("en-CA")}</td>
+          <td className="py-2.5 px-2.5 text-xs text-text font-semibold whitespace-nowrap">{e.actorName}</td>
+          <td className="py-2.5 px-2.5 text-sm text-text-2">{e.detail}</td>
+        </tr>)}</tbody>
+      </table></div>}
+    </Card>
   </div>;
 }

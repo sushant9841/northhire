@@ -5,9 +5,15 @@ import { salesTaxRate } from "../../src/helpers/salesTax.js";
 import {
   serializeWorker, serializeStaffingClient, serializeJobOrder, serializeAssignment,
   serializeStaffingTimesheet, serializeStaffingPayrun, serializeStaffingInvoice, serializePlacement,
+  serializeStaffingAuditEntry,
 } from "../serialize.js";
 
 export const staffingRouter = Router();
+
+function logStaffingAudit(actorStaffId, action, detail) {
+  db.prepare("INSERT INTO staffing_audit_log (id, actor_staff_id, action, detail) VALUES (?, ?, ?, ?)")
+    .run(nextId("al", "staffing_audit_log"), actorStaffId, action, detail);
+}
 
 function round2(n) { return Math.round(n * 100) / 100; }
 function round1(n) { return Math.round(n * 10) / 10; }
@@ -146,7 +152,10 @@ staffingRouter.post("/clients", requireAgencyAuth, (req, res) => {
 });
 staffingRouter.patch("/clients/:id/sign-msa", requireAgencyAuth, (req, res) => {
   db.prepare("UPDATE staffing_clients SET status = 'active', signed_msa = date('now') WHERE id = ?").run(req.params.id);
-  res.json({ client: serializeStaffingClient(db.prepare("SELECT * FROM staffing_clients WHERE id = ?").get(req.params.id)) });
+  const client = db.prepare("SELECT * FROM staffing_clients WHERE id = ?").get(req.params.id);
+  const employer = db.prepare("SELECT name FROM employers WHERE id = ?").get(client.employer_id);
+  logStaffingAudit(req.agencyStaff.id, "msa_signed", `MSA signed with ${employer?.name || client.id}`);
+  res.json({ client: serializeStaffingClient(client) });
 });
 
 /* ─── Job orders ─── */
@@ -317,6 +326,8 @@ staffingRouter.get("/payruns", requireAgencyAuth, (req, res) => {
 });
 staffingRouter.patch("/payruns/:id/finalize", requireAgencyAuth, (req, res) => {
   db.prepare("UPDATE staffing_payruns SET status = 'paid' WHERE id = ?").run(req.params.id);
+  const run = db.prepare("SELECT * FROM staffing_payruns WHERE id = ?").get(req.params.id);
+  logStaffingAudit(req.agencyStaff.id, "payroll_finalized", `Finalized staffing payroll ${run.period_start} → ${run.period_end} (${run.workers} workers, $${run.total_net?.toLocaleString()} net)`);
   res.json({ ok: true });
 });
 
@@ -354,6 +365,7 @@ staffingRouter.post("/invoices/generate", requireAgencyAuth, (req, res) => {
     ).run(id, nextNumber(), cid, weekStart, due.toISOString().slice(0, 10), JSON.stringify(d.lines), subtotal, hst, total, client?.po_number || "—");
     created.push(serializeStaffingInvoice(db.prepare("SELECT * FROM staffing_invoices WHERE id = ?").get(id)));
   }
+  if (created.length) logStaffingAudit(req.agencyStaff.id, "invoices_generated", `Generated ${created.length} invoice${created.length === 1 ? "" : "s"} for week of ${weekStart}`);
   res.status(201).json({ invoices: created });
 });
 staffingRouter.get("/invoices", requireAgencyAuth, (req, res) => {
@@ -505,6 +517,13 @@ staffingRouter.patch("/my/timesheets/:id/submit", requireAuth, requireRole("seek
   if (t.status !== "draft") return res.status(409).json({ error: "Already submitted" });
   db.prepare("UPDATE staffing_timesheets SET status = 'submitted', submitted_at = datetime('now') WHERE id = ?").run(req.params.id);
   res.json({ ok: true });
+});
+
+staffingRouter.get("/audit-log", requireAgencyAuth, (req, res) => {
+  const rows = db.prepare(
+    "SELECT staffing_audit_log.*, agency_staff.name AS actor_name FROM staffing_audit_log LEFT JOIN agency_staff ON agency_staff.id = staffing_audit_log.actor_staff_id ORDER BY staffing_audit_log.created_at DESC LIMIT 500"
+  ).all();
+  res.json({ auditLog: rows.map(r => ({ ...serializeStaffingAuditEntry(r), actorName: r.actor_name || "—" })) });
 });
 
 staffingRouter.get("/kpis", requireAgencyAuth, (req, res) => {
