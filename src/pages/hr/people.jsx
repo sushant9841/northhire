@@ -301,6 +301,9 @@ function HrPeople_Manage(){
   const [showAdd,setShowAdd]=useState(false);
   const [editing,setEditing]=useState(null);
   const [offboarding,setOffboarding]=useState(null);
+  const OFFBOARD_ITEMS=[["equipment","Equipment returned (laptop, badge, tools, PPE)"],["access","System and building access revoked"],["finalPay","Final pay and any outstanding expenses processed"],["exitInterview","Exit interview completed"]];
+  const [offboardChecked,setOffboardChecked]=useState({});
+  const startOffboarding=e=>{setOffboarding(e);setOffboardChecked({});};
   const [ne,setNe]=useState({name:"",email:"",role:"employee",dept:"d1",title:"",city:"",prov:"AB",phone:"",salary:60000,manager:""});
   const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
   if(!emp||!company)return null;
@@ -357,7 +360,7 @@ function HrPeople_Manage(){
             <td className={TD_CLASS}><Tag tone={e.status==="active"?"ok":"neutral"} sm>{e.status}</Tag></td>
             <td className={TD_CLASS}><div className="flex gap-1">
               <Btn kind="ghost" size="xs" icon="edit" onClick={()=>setEditing({...e})}>Edit</Btn>
-              {e.status==="active"&&e.id!==emp.id&&<Btn kind="dangerSoft" size="xs" onClick={()=>setOffboarding(e)}>Offboard</Btn>}
+              {e.status==="active"&&e.id!==emp.id&&<Btn kind="dangerSoft" size="xs" onClick={()=>startOffboarding(e)}>Offboard</Btn>}
             </div></td>
           </tr>;})}</tbody>
       </table></div>
@@ -417,10 +420,23 @@ function HrPeople_Manage(){
       </div>
     </Modal>}
 
-    <ConfirmDialog open={!!offboarding} onClose={()=>setOffboarding(null)} confirmLabel="Offboard"
-      title={`Offboard ${offboarding?.name}?`} onConfirm={()=>A.removeEmployee(offboarding.id)}>
-      Their direct reports will be reassigned up to their own manager. This can't be undone from here.
-    </ConfirmDialog>
+    {offboarding&&<Modal onClose={()=>setOffboarding(null)} title={`Offboard ${offboarding.name}`}>
+      <div className="flex flex-col gap-3.5">
+        <p className="text-sm text-text-2 leading-snug m-0">Confirm each step before finalizing — their direct reports will be reassigned up to their own manager once complete. This can't be undone from here.</p>
+        <div className="flex flex-col gap-2">
+          {OFFBOARD_ITEMS.map(([key,label])=>{const on=!!offboardChecked[key];
+            return <button key={key} type="button" onClick={()=>setOffboardChecked(p=>({...p,[key]:!p[key]}))}
+              className={`flex items-center gap-3 py-3 px-3.5 rounded-xl cursor-pointer text-left border-2 transition duration-150 ${on?"border-brand bg-tint":"border-line bg-white"}`}>
+              <span className={`w-5 h-5 rounded-md shrink-0 border-2 flex items-center justify-center ${on?"border-brand bg-brand":"border-line"}`}>{on&&<I n="check" s={12} c="#fff" w={3}/>}</span>
+              <span className={`text-sm ${on?"font-semibold text-brand":"font-medium text-text"}`}>{label}</span></button>;})}
+        </div>
+        <div className="flex gap-2.5 justify-end pt-1">
+          <Btn kind="ghost" onClick={()=>setOffboarding(null)}>Cancel</Btn>
+          <Btn kind="dangerSoft" disabled={!OFFBOARD_ITEMS.every(([key])=>offboardChecked[key])}
+            onClick={()=>{A.removeEmployee(offboarding.id);setOffboarding(null);}}>Complete offboarding</Btn>
+        </div>
+      </div>
+    </Modal>}
   </div>;
 }
 
