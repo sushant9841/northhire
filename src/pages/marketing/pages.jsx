@@ -281,13 +281,15 @@ export function HomePage(){
 export function BlogsPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [cat,setCat]=useState("all"); const [q,setQ]=useState("");
+  const [author,setAuthor]=useState(null);
+  useEffect(()=>{if(A.blogAuthorFilter){setAuthor(A.blogAuthorFilter);A.setBlogAuthorFilter(null);}},[]);
   const pub=A.blogs.filter(b=>b.status==="published");
   const cats=["all",...Array.from(new Set(pub.map(b=>b.cat)))];
-  const list=pub.filter(b=>(cat==="all"||b.cat===cat)&&matchesQuery(q,b.title,b.excerpt));
-  const lead=list[0];
+  const list=pub.filter(b=>(cat==="all"||b.cat===cat)&&(!author||b.author===author)&&matchesQuery(q,b.title,b.excerpt));
+  const lead=author?null:list[0];
   const gridList=lead&&!q&&cat==="all"?list.slice(1):list;
   const pg=usePagination(gridList,18);
-  useEffect(()=>{pg.setPage(1);},[cat,q]);
+  useEffect(()=>{pg.setPage(1);},[cat,q,author]);
   const pad=mob?"py-14 px-4":"py-24 px-8";
   return <div className="bg-white min-h-full">
 
@@ -303,13 +305,19 @@ export function BlogsPage(){
 
     <section className={`bg-white ${mob?"px-4 pb-14":"px-8 pb-24"}`}>
       <div className="max-w-280 mx-auto">
-        <div className="flex gap-3.5 mb-9 flex-wrap items-center">
+        <div className="flex gap-3.5 mb-3.5 flex-wrap items-center">
           <div className="grow shrink basis-65 max-w-100"><Input icon="search" placeholder="Search articles" value={q} onChange={e=>setQ(e.target.value)}/></div>
-          <Tabs items={cats.map(c=>({k:c,label:c==="all"?"All topics":c}))} value={cat} onChange={setCat}/></div>
+          <Tabs items={cats.map(c=>({k:c,label:c==="all"?"All topics":c}))} value={cat} onChange={setCat}/>
+          <a href="/api/content/blogs/rss.xml" target="_blank" rel="noreferrer"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-text-2 hover:text-brand ml-auto">
+            <I n="pulse" s={15}/>RSS feed</a></div>
+        {author&&<div className="flex items-center gap-2 mb-9">
+          <Tag tone="brand" icon="user">By {author}</Tag>
+          <button onClick={()=>setAuthor(null)} className="bg-transparent border-0 p-0 cursor-pointer text-sm text-text-2 hover:text-text underline">Clear</button></div>}
         {list.length===0?<Empty icon="book" title="No articles found" body="Try a different topic or search term."
-          action={<Btn kind="primary" onClick={()=>{setQ("");setCat("all");}}>Reset</Btn>}/>:<>
-          {lead&&!q&&cat==="all"&&<div onClick={()=>A.openBlog(lead.id)} className="bg-white rounded-3xl overflow-hidden border border-line cursor-pointer mb-8 shadow-md transition-transform duration-200 hover:-translate-y-1">
-            <div className={`grid ${mob?"grid-cols-1":""}`} style={{gridTemplateColumns:mob?undefined:"1.1fr 1fr"}}>
+          action={<Btn kind="primary" onClick={()=>{setQ("");setCat("all");setAuthor(null);}}>Reset</Btn>}/>:<>
+          {lead&&!q&&cat==="all"&&<div className="bg-white rounded-3xl overflow-hidden border border-line mb-8 shadow-md">
+            <div onClick={()=>A.openBlog(lead.id)} className={`grid cursor-pointer transition-transform duration-200 hover:-translate-y-1 ${mob?"grid-cols-1":""}`} style={{gridTemplateColumns:mob?undefined:"1.1fr 1fr"}}>
               <div className={mob?"bg-bg":"bg-bg"} style={{aspectRatio:mob?"16/10":"auto",minHeight:mob?undefined:320}}>
                 <SmartScene kind={lead.scene} tone={lead.tone} w="100%" h={mob?"100%":"100%"} seed={lead.id.length}/></div>
               <div className={`flex flex-col justify-center ${mob?"p-7":"p-11"}`}>
@@ -317,9 +325,11 @@ export function BlogsPage(){
                 <div className={`font-bold text-text tracking-tight leading-tight mb-4 ${mob?"text-2xl":"text-3xl"}`}>{lead.title}</div>
                 <p className={`text-text-2 leading-relaxed mb-6 ${mob?"text-base":"text-lg"}`}>{lead.excerpt}</p>
                 <div className="flex items-center gap-3">
-                  <SmartPortrait seed={lead.authorSeed} size={40}/>
-                  <div><div className="text-sm font-bold text-text">{lead.author}</div>
-                    <div className="text-xs text-text-3 mt-0.5">{lead.date} • {lead.mins} min read</div></div></div></div></div></div>}
+                  <button onClick={e=>{e.stopPropagation();A.filterBlogsByAuthor(lead.author);}}
+                    className="flex items-center gap-3 bg-transparent border-0 p-0 cursor-pointer text-left hover:underline">
+                    <SmartPortrait seed={lead.authorSeed} size={40}/>
+                    <div><div className="text-sm font-bold text-text">{lead.author}</div>
+                      <div className="text-xs text-text-3 mt-0.5 no-underline">{lead.date} • {lead.mins} min read</div></div></button></div></div></div></div>}
           <div className="grid gap-4" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:340}px,1fr))`}}>
             {pg.pageItems.map(b=><BlogCard key={b.id} b={b}/>)}</div>
           <Pagination {...pg}/></>}
@@ -345,9 +355,11 @@ export function BlogPage(){
         <h1 className={`${HERO_WRAP} my-5 ${mob?"text-3xl":"text-5xl"}`}>{b.title}</h1>
         <p className={`text-text-2 leading-snug mx-auto mb-7 max-w-160 ${mob?"text-base":"text-xl"}`}>{b.excerpt}</p>
         <div className="inline-flex items-center gap-3 flex-wrap justify-center">
-          <SmartPortrait seed={b.authorSeed} size={44}/>
-          <div className="text-left"><div className="text-sm font-bold text-text">{b.author}</div>
-            <div className="text-xs text-text-3 mt-0.5">{b.date} • {b.mins} min read</div></div></div>
+          <button onClick={()=>A.filterBlogsByAuthor(b.author)}
+            className="inline-flex items-center gap-3 bg-transparent border-0 p-0 cursor-pointer hover:underline">
+            <SmartPortrait seed={b.authorSeed} size={44}/>
+            <div className="text-left"><div className="text-sm font-bold text-text">{b.author}</div>
+              <div className="text-xs text-text-3 mt-0.5 no-underline">{b.date} • {b.mins} min read</div></div></button></div>
       </div>
     </section>
 

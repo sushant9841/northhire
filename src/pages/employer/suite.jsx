@@ -1039,6 +1039,7 @@ export function EmpCompany(){
           {["1-50","51-200","201-1,000","1,000-5,000","5,000+","10,000+"].map(o=><option key={o}>{o}</option>)}</Sel></Field>
         <Field label="Founded"><Input type="number" value={d.founded} onChange={e=>set("founded",Number(e.target.value)||2000)}/></Field>
         <Field label="Website" style={{gridColumn:mob?"auto":"span 2"}}><Input icon="globe" value={d.site} onChange={e=>set("site",e.target.value)}/></Field>
+        <Field label="CRA business number" hint="9 digits — checked during admin verification."><Input icon="file" value={d.businessNumber||""} onChange={e=>set("businessNumber",e.target.value.replace(/\s/g,""))}/></Field>
         <Field label="About the company" style={{gridColumn:mob?"auto":"span 2"}} hint="Two or three sentences shown on your public page and on every listing.">
           <Area rows={5} value={d.about} onChange={e=>set("about",e.target.value)}/></Field></div>
       <div className="flex gap-2.5 justify-end mt-6 pt-5 border-t border-line-soft">

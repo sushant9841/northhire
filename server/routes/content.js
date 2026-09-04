@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, nextId } from "../db.js";
+import { db, nextId, sqlTime } from "../db.js";
 import { requireAuth, requireRole } from "../auth.js";
 import { serializeBlog, serializeTraining } from "../serialize.js";
 
@@ -17,6 +17,33 @@ contentRouter.get("/blogs", (req, res) => {
   if (status) { clauses.push("status = ?"); params.push(status); } else { clauses.push("status = 'published'"); }
   const rows = db.prepare(`SELECT * FROM blogs${clauses.length ? " WHERE " + clauses.join(" AND ") : ""} ORDER BY created_at DESC`).all(...params);
   res.json({ blogs: rows.map(serializeBlog) });
+});
+// Real RSS 2.0 feed of published articles - a career-resources reader can subscribe in any
+// feed app, rather than the "no RSS at all" gap this closes. XML-escaped by hand since these
+// are the only 5 characters RSS/XML care about and pulling in a dependency for that is overkill.
+function xmlEscape(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" }[c]));
+}
+contentRouter.get("/blogs/rss.xml", (req, res) => {
+  const rows = db.prepare("SELECT * FROM blogs WHERE status = 'published' ORDER BY created_at DESC LIMIT 50").all();
+  const siteUrl = `${req.protocol}://${req.get("host")}`;
+  const items = rows.map(r => `
+    <item>
+      <title>${xmlEscape(r.title)}</title>
+      <link>${siteUrl}/#blog/${xmlEscape(r.id)}</link>
+      <guid isPermaLink="false">${xmlEscape(r.id)}</guid>
+      <category>${xmlEscape(r.cat)}</category>
+      <author>${xmlEscape(r.author)}</author>
+      <pubDate>${sqlTime(r.created_at).toUTCString()}</pubDate>
+      <description>${xmlEscape(r.excerpt)}</description>
+    </item>`).join("");
+  res.type("application/rss+xml").send(`<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel>
+  <title>NorthHire Career Resources</title>
+  <link>${siteUrl}/#blogs</link>
+  <description>Guides on Canadian trades certification, résumé standards, wages, and interviewing.</description>
+  <language>en-ca</language>${items}
+</channel></rss>`);
 });
 contentRouter.get("/blogs/mine", requireAuth, requireRole("employer", "admin"), (req, res) => {
   const { clause, params } = ownerFilter(req);

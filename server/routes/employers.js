@@ -69,7 +69,7 @@ employersRouter.patch("/:id", requireAuth, (req, res) => {
     if (!isOwner && !isAdmin) return res.status(403).json({ error: "Not your company." });
     db.prepare("UPDATE employers SET plan = ? WHERE id = ?").run(plan, req.params.id);
   }
-  const fieldMap = { name: "name", industry: "industry", city: "city", prov: "prov", size: "size", about: "about", site: "site" };
+  const fieldMap = { name: "name", industry: "industry", city: "city", prov: "prov", size: "size", about: "about", site: "site", businessNumber: "business_number" };
   const setCols = Object.keys(profileFields).filter(k => fieldMap[k]);
   if (setCols.length) {
     if (!isOwner && !isAdmin) return res.status(403).json({ error: "Not your company." });

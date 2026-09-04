@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS employers (
   industry TEXT, city TEXT, prov TEXT, size TEXT,
   rating REAL DEFAULT 0, verified INTEGER DEFAULT 0, hold INTEGER DEFAULT 0,
   about TEXT, founded INTEGER, site TEXT, plan TEXT DEFAULT 'Free',
+  business_number TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

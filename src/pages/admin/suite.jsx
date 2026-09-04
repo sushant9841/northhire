@@ -193,6 +193,7 @@ export function AdmEmployers(){
               <div className="text-xs text-text-3 mb-1.5">Verification evidence</div>
               <div className="text-xs text-text-2 leading-relaxed">
                 <div>Website: {e.site?<a href={`https://${e.site}`} target="_blank" rel="noreferrer" className="text-brand font-semibold">{e.site}</a>:<span className="text-text-3">Not provided</span>}</div>
+                <div>Business number: {e.businessNumber||<span className="text-text-3">Not provided</span>}</div>
                 <div>Founded: {e.founded||"—"}</div>
                 {e.about&&<div className="mt-1 italic">"{e.about}"</div>}
               </div></div>}

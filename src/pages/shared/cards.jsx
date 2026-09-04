@@ -78,8 +78,10 @@ export function BlogCard({b,delay=0,compact}){
       <div className="text-lg font-bold text-text leading-snug tracking-tight mt-3 mb-2.5">{b.title}</div>
       {!compact&&<p className="text-sm text-text-2 leading-relaxed mb-4">{b.excerpt}</p>}
       <div className="flex items-center gap-2.5 pt-3.5 border-t border-line-soft">
-        <SmartPortrait seed={b.authorSeed} size={30}/>
-        <span className="text-sm text-text-2 font-medium">{b.author}</span>
+        <button onClick={e=>{e.stopPropagation();A.filterBlogsByAuthor(b.author);}}
+          className="flex items-center gap-2.5 bg-transparent border-0 p-0 cursor-pointer text-left hover:underline">
+          <SmartPortrait seed={b.authorSeed} size={30}/>
+          <span className="text-sm text-text-2 font-medium">{b.author}</span></button>
         <span className="ml-auto text-sm text-text-3">{b.mins} min read</span></div></div></div>;
 }
 export function TrainingCard({t,delay=0}){

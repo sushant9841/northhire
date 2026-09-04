@@ -88,6 +88,10 @@ export function useStore(){
      this is the same pattern as applyDraft: a small piece of shared state a page reads and
      clears on mount. Used so "I'm interested in [role]" style links actually carry context. */
   const [contactPrefill,setContactPrefill]=useState(null);
+  /* Clicking an author's name/avatar on a blog card or article previously did nothing - same
+     carry pattern, BlogsPage reads and clears this on mount. */
+  const [blogAuthorFilter,setBlogAuthorFilter]=useState(null);
+  const filterBlogsByAuthor=name=>{setBlogAuthorFilter(name);go("blogs");};
   /* Same idea for the pricing-page CTAs: which tier a prospect picked before signing up,
      previously discarded entirely — every signup landed on Free regardless of the button clicked. */
   const [pendingPlan,setPendingPlan]=useState(null);
@@ -453,7 +457,8 @@ export function useStore(){
          returned user as employer_id) - patch in the extra profile fields the wizard collected
          that /auth/signup doesn't take. */
       const patch={industry:d.industry||"Other",city:d.city||"Toronto",prov:PCODE[d.prov||"Ontario"],
-        size:d.size||"1-50",site:domain,about:d.about||`${d.company.trim()} is hiring on NorthHire.`};
+        size:d.size||"1-50",site:domain,about:d.about||`${d.company.trim()} is hiring on NorthHire.`,
+        businessNumber:(d.businessNumber||"").replace(/\s/g,"")||undefined};
       const {employer}=await api.patch(`/employers/${apiUser.employer_id}`,patch);
       if(pendingPlan&&PLANS[pendingPlan])await api.patch(`/employers/${apiUser.employer_id}`,{plan:pendingPlan});
       const e=mapApiEmployer({...employer,plan:(pendingPlan&&PLANS[pendingPlan])?pendingPlan:employer.plan});
@@ -1016,7 +1021,7 @@ export function useStore(){
 
   const saveCompany=async d=>{
     try{
-      const {employer}=await api.patch(`/employers/${d.id}`,{name:d.name,industry:d.industry,city:d.city,prov:d.prov,size:d.size,about:d.about,site:d.site});
+      const {employer}=await api.patch(`/employers/${d.id}`,{name:d.name,industry:d.industry,city:d.city,prov:d.prov,size:d.size,about:d.about,site:d.site,businessNumber:d.businessNumber});
       setEmployers(l=>l.map(e=>e.id===d.id?{...d,...mapApiEmployer(employer)}:e));
       log("company.update",`Updated ${d.name} profile`,"building");
     }catch(err){toast(err.message,"danger");}};
@@ -1416,6 +1421,7 @@ export function useStore(){
     toasts,toast,dismissToast,
     jobId,empId,blogId,trainingId,cvId,editId,candidateId,pipelineJob,applyDraft,setApplyDraft,
     contactPrefill,setContactPrefill,pendingPlan,setPendingPlan,employersPrefill,setEmployersPrefill,
+    blogAuthorFilter,setBlogAuthorFilter,filterBlogsByAuthor,
     emp,job,person,score,scoreCandidate,matchReasons,myApps,appliedJobIds,myNotifications,defaultCv,
     jobHiringType,jobHiringLabel,
     completeness,completenessHint,tabBadges,

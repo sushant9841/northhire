@@ -21,7 +21,7 @@ const SIGNUP_DRAFT_KEY="northhire.signupDraft";
 const _defaultSignupData=()=>({role:"",email:"",password:"",phone:"",first:"",last:"",city:"",prov:"Ontario",eligible:"",
     cat:"",title:"",years:"",edu:"",skills:[],draft:"",payMin:"",payUnit:"hr",types:["Full Time"],modes:["On-site"],
     startWhen:"Within 2 weeks",alerts:true,
-    company:"",industry:"",size:"1-50",about:"",name:""});
+    company:"",industry:"",size:"1-50",about:"",name:"",businessNumber:""});
 const _loadSignupDraft=()=>{try{return JSON.parse(sessionStorage.getItem(SIGNUP_DRAFT_KEY)||"null");}catch{return null;}};
 
 export function SignupPage(){
@@ -70,7 +70,8 @@ export function SignupPage(){
     if(step.k==="skills"&&d.skills.length<3)e.skills="Add at least three so we can match you properly";
     if(step.k==="prefs"&&!d.payMin)e.payMin="Tell us the minimum you would accept";
     if(step.k==="company"){if(!d.company.trim())e.company="Company name required";
-      if(!d.name.trim())e.name="Your name required";}
+      if(!d.name.trim())e.name="Your name required";
+      if(d.businessNumber.trim()&&!/^\d{9}$/.test(d.businessNumber.replace(/\s/g,"")))e.businessNumber="Enter the 9-digit CRA business number, or leave blank";}
     setErr(e); return !Object.keys(e).length;};
 
   const [submitting,setSubmitting]=useState(false);
@@ -155,6 +156,8 @@ export function SignupPage(){
               <Field label="Province"><Sel value={d.prov} onChange={e=>set("prov",e.target.value)}>{PROVS.map(p=><option key={p}>{p}</option>)}</Sel></Field></div>
             <Field label="About your company (optional)" hint="A sentence or two candidates see on your profile.">
               <Area rows={3} value={d.about} onChange={e=>set("about",e.target.value)} placeholder="What you do, and why someone would want to work with you."/></Field>
+            <Field label="CRA business number (optional)" error={err.businessNumber} hint="9 digits, e.g. 123456789. Speeds up verification — you can add this later from Company settings instead.">
+              <Input icon="file" value={d.businessNumber} onChange={e=>set("businessNumber",e.target.value)} placeholder="123456789" invalid={!!err.businessNumber}/></Field>
             <Banner tone="brand" icon="shield" title="Verification usually takes 1 business day">
               Our Toronto team checks your business number and incorporation. Your listings go live immediately, with the verified badge added once approved.</Banner></div>}
 
