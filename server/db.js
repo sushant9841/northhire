@@ -19,11 +19,11 @@ CREATE TABLE IF NOT EXISTS users (
   password_salt TEXT NOT NULL,
   employer_id TEXT REFERENCES employers(id),
   seed INTEGER DEFAULT 0,
-  title TEXT, city TEXT, prov TEXT, years INTEGER, phone TEXT,
+  title TEXT, cat TEXT, city TEXT, prov TEXT, years INTEGER, phone TEXT,
   skills_json TEXT DEFAULT '[]',
   edu TEXT, eligible TEXT, pay_min REAL, pay_unit TEXT,
   types_json TEXT DEFAULT '[]', modes_json TEXT DEFAULT '[]',
-  complete INTEGER DEFAULT 0,
+  complete INTEGER DEFAULT 0, summary TEXT,
   suspended INTEGER DEFAULT 0, suspension_reason TEXT, suspended_at TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );

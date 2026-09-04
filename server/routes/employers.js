@@ -5,13 +5,22 @@ import { serializeEmployer } from "../serialize.js";
 
 export const employersRouter = Router();
 
+// Employer contact/owner is a real relation (users.employer_id), not a denormalized field on
+// employers - joined in here so the frontend's existing `e.owner`/`e.ownerName` reads keep working.
+const WITH_OWNER = `
+  SELECT employers.*, owner.email AS owner, owner.name AS ownerName
+  FROM employers
+  LEFT JOIN users AS owner ON owner.employer_id = employers.id AND owner.role = 'employer'
+    AND owner.id = (SELECT id FROM users WHERE employer_id = employers.id AND role = 'employer' ORDER BY created_at ASC LIMIT 1)
+`;
+
 employersRouter.get("/", (req, res) => {
-  const rows = db.prepare("SELECT * FROM employers ORDER BY name").all();
+  const rows = db.prepare(`${WITH_OWNER} ORDER BY employers.name`).all();
   res.json({ employers: rows.map(serializeEmployer) });
 });
 
 employersRouter.get("/:id", (req, res) => {
-  const row = db.prepare("SELECT * FROM employers WHERE id = ?").get(req.params.id);
+  const row = db.prepare(`${WITH_OWNER} WHERE employers.id = ?`).get(req.params.id);
   if (!row) return res.status(404).json({ error: "Employer not found." });
   res.json({ employer: serializeEmployer(row) });
 });
@@ -45,6 +54,6 @@ employersRouter.patch("/:id", requireAuth, (req, res) => {
     stmt.run(...setCols.map(k => profileFields[k]), req.params.id);
   }
 
-  const updated = db.prepare("SELECT * FROM employers WHERE id = ?").get(req.params.id);
+  const updated = db.prepare(`${WITH_OWNER} WHERE employers.id = ?`).get(req.params.id);
   res.json({ employer: serializeEmployer(updated) });
 });

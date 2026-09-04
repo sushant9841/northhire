@@ -32,7 +32,7 @@ const insertEmployerUser = db.prepare(
   `INSERT INTO users (id, role, name, email, password_hash, password_salt, employer_id)
    VALUES (@id,'employer',@name,@email,@password_hash,@password_salt,@employer_id)`
 );
-const DEMO_PASSWORD_EMPLOYER = "employer2026";
+const DEMO_PASSWORD_EMPLOYER = "Employer123"; // matches the demo credentials LoginPage already advertises
 let employerUserCount = 0;
 for (const e of SEED_EMPLOYERS) {
   if (!e.owner) continue;
@@ -77,17 +77,17 @@ for (const j of SEED_JOBS) {
 console.log(`Seeded ${SEED_JOBS.length} jobs.`);
 
 const insertUser = db.prepare(
-  `INSERT INTO users (id, role, name, email, password_hash, password_salt, seed, title, city, prov, years,
+  `INSERT INTO users (id, role, name, email, password_hash, password_salt, seed, title, cat, city, prov, years,
      phone, skills_json, edu, eligible, pay_min, pay_unit, types_json, modes_json, complete)
-   VALUES (@id,'seeker',@name,@email,@password_hash,@password_salt,@seed,@title,@city,@prov,@years,
+   VALUES (@id,'seeker',@name,@email,@password_hash,@password_salt,@seed,@title,@cat,@city,@prov,@years,
      @phone,@skills_json,@edu,@eligible,@pay_min,@pay_unit,@types_json,@modes_json,@complete)`
 );
-const DEMO_PASSWORD = "northhire2026";
+const DEMO_PASSWORD = "Password123"; // matches the demo credentials LoginPage already advertises
 for (const p of SEED_PEOPLE) {
   const { hash, salt } = hashPassword(DEMO_PASSWORD);
   insertUser.run({
     id: p.id, name: p.name, email: p.email, password_hash: hash, password_salt: salt, seed: p.seed || 0,
-    title: p.title || null, city: p.city || null, prov: p.prov || null, years: p.years || 0, phone: p.phone || null,
+    title: p.title || null, cat: p.cat || null, city: p.city || null, prov: p.prov || null, years: p.years || 0, phone: p.phone || null,
     skills_json: JSON.stringify(p.skills || []), edu: p.edu || null, eligible: p.eligible || null,
     pay_min: p.payMin ?? null, pay_unit: p.payUnit || null, types_json: JSON.stringify(p.types || []),
     modes_json: JSON.stringify(p.modes || []), complete: p.complete || 0,
@@ -96,14 +96,15 @@ for (const p of SEED_PEOPLE) {
 console.log(`Seeded ${SEED_PEOPLE.length} seeker accounts (demo password for all: "${DEMO_PASSWORD}").`);
 
 const insertApp = db.prepare(
-  `INSERT INTO applications (id, job_id, user_id, stage, note, availability, pay_expectation, cover_letter, created_at)
-   VALUES (@id,@job_id,@user_id,@stage,@note,@availability,@pay_expectation,@cover_letter,@created_at)`
+  `INSERT INTO applications (id, job_id, user_id, stage, note, availability, pay_expectation, cover_letter, history_json, created_at)
+   VALUES (@id,@job_id,@user_id,@stage,@note,@availability,@pay_expectation,@cover_letter,@history_json,@created_at)`
 );
 for (const a of SEED_APPS) {
   const createdAt = new Date(Date.now() - parseDaysAgo(a.at) * 86400000).toISOString();
   insertApp.run({
     id: a.id, job_id: a.job, user_id: a.user, stage: a.stage, note: a.note || null,
     availability: a.avail || null, pay_expectation: a.expect || null, cover_letter: a.letter || null,
+    history_json: JSON.stringify([{ stage: a.stage, note: a.note || "", at: createdAt }]),
     created_at: createdAt,
   });
 }

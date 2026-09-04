@@ -93,17 +93,19 @@ jobsRouter.post("/import-csv", requireAuth, requireRole("employer"), (req, res) 
        requirements_json, how_to_apply, status)
      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
   );
-  let imported = 0;
+  const createdIds = [];
   for (const b of jobs) {
     if (!b.title) continue;
+    const id = nextId("j", "jobs");
     insert.run(
-      nextId("j", "jobs"), req.user.employer_id, b.title, b.cat || null, b.city || null, b.prov || null,
+      id, req.user.employer_id, b.title, b.cat || null, b.city || null, b.prov || null,
       b.type || null, b.mode || null, b.lo ?? null, b.hi ?? null, b.unit || null, b.vac ?? 1,
       b.exp || null, b.edu || null, JSON.stringify(b.skills || []), JSON.stringify(b.perks || []),
       b.desc || `Hiring ${b.title}.`, JSON.stringify(b.duties || []), JSON.stringify(b.reqs || []),
       b.how || "Apply through NorthHire.", "review"
     );
-    imported++;
+    createdIds.push(id);
   }
-  res.status(201).json({ imported });
+  const created = createdIds.map(id => serializeJob(db.prepare("SELECT * FROM jobs WHERE id = ?").get(id)));
+  res.status(201).json({ imported: created.length, jobs: created });
 });

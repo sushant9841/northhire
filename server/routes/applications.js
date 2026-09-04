@@ -27,6 +27,18 @@ applicationsRouter.get("/mine", requireAuth, requireRole("seeker"), (req, res) =
   res.json({ applications: rows.map(serializeApplication) });
 });
 
+// Every application across every one of the employer's own jobs in one call - the frontend's
+// applicant counts (job cards, pipeline, analytics) all read one shared local `applications`
+// array rather than fetching per-job, so this is what keeps that array in sync with reality.
+applicationsRouter.get("/employer/mine", requireAuth, requireRole("employer"), (req, res) => {
+  const rows = db.prepare(
+    `SELECT applications.* FROM applications
+     JOIN jobs ON jobs.id = applications.job_id
+     WHERE jobs.employer_id = ? ORDER BY applications.created_at DESC`
+  ).all(req.user.employer_id);
+  res.json({ applications: rows.map(serializeApplication) });
+});
+
 applicationsRouter.get("/job/:jobId", requireAuth, requireRole("employer"), (req, res) => {
   const job = db.prepare("SELECT * FROM jobs WHERE id = ?").get(req.params.jobId);
   if (!job) return res.status(404).json({ error: "Job not found." });

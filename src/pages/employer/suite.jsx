@@ -84,7 +84,7 @@ export function EmpJobs(){
         {importResult.ok?<>Jobs are in review status until an admin approves them.{importResult.errors?.length?` Also skipped ${importResult.errors.length} rows.`:""}</>:importResult.msg}</Banner>}
       <div className="flex gap-2.5 justify-end mt-3.5">
         <Btn kind="ghost" onClick={()=>{setShowImport(false);setImportResult(null);setCsv("");}}>Cancel</Btn>
-        <Btn kind="primary" icon="upload" disabled={!csv.trim()} onClick={()=>{const r=A.importJobsCSV(csv);setImportResult(r);if(r.ok&&!r.errors?.length){setTimeout(()=>{setShowImport(false);setImportResult(null);setCsv("");},1500);}}}>Import</Btn></div>
+        <Btn kind="primary" icon="upload" disabled={!csv.trim()} onClick={async()=>{const r=await A.importJobsCSV(csv);setImportResult(r);if(r.ok&&!r.errors?.length){setTimeout(()=>{setShowImport(false);setImportResult(null);setCsv("");},1500);}}}>Import</Btn></div>
     </Modal>}
     {jobs.length===0?<Empty icon="briefcase" title="No listings yet" body="Create your first posting to start receiving applications."
       action={<Btn kind="primary" icon="plus" onClick={()=>A.go("empPost")}>Post a job</Btn>}/>
@@ -175,7 +175,8 @@ export function EmpPost(){
   const canFeature=A.can("featured")&&featuredUsed<featuredLimit;
 
   const [postErr,setPostErr]=useState("");
-  const next=()=>{if(!validate())return;
+  const [posting,setPosting]=useState(false);
+  const next=async()=>{if(!validate())return;
     if(step<3){setStep(step+1);return;}
     /* Backfill legacy fields the store expects */
     const payload={...f,
@@ -186,7 +187,9 @@ export function EmpPost(){
       perks:(f.perks||[]).join(","),
       dl:f.dlDate?Math.max(1,Math.ceil((new Date(f.dlDate)-new Date())/(1000*60*60*24))):14,
       featured:f.featured};
-    const r=A.publishJob(payload);
+    setPosting(true);
+    const r=await A.publishJob(payload);
+    setPosting(false);
     if(r&&!r.ok)setPostErr(r.msg);
     else try{sessionStorage.removeItem(JOBPOST_DRAFT_KEY);}catch{}
   };
@@ -379,8 +382,8 @@ export function EmpPost(){
       </div>
       <div className="flex justify-between gap-2.5 mt-6 pt-5 border-t border-line-soft">
         <Btn kind="ghost" icon="arrowL" onClick={()=>step===1?A.go("empJobs"):setStep(step-1)}>{step===1?"Cancel":"Back"}</Btn>
-        <Btn kind={step===3?"ok":"primary"} size="lg" iconR={step===3?"check":"arrowR"} onClick={next}>
-          {step===3?"Publish listing":"Continue"}</Btn></div>
+        <Btn kind={step===3?"ok":"primary"} size="lg" iconR={step===3?"check":"arrowR"} onClick={next} disabled={posting}>
+          {posting?"Publishing…":step===3?"Publish listing":"Continue"}</Btn></div>
     </Card>
   </Page>;
 }

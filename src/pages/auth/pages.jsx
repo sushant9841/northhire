@@ -73,17 +73,15 @@ export function SignupPage(){
       if(!d.name.trim())e.name="Your name required";}
     setErr(e); return !Object.keys(e).length;};
 
-  const submit=()=>{
-    if(d.role==="employer"){
-      const r=A.completeEmployerSignup(d);
-      if(!r.ok){setSubmitErr(r.msg);return;}
-    }else{
-      const r=A.completeSignup(d);
-      if(!r.ok){setSubmitErr(r.msg);return;}
-    }
+  const [submitting,setSubmitting]=useState(false);
+  const submit=async()=>{
+    setSubmitting(true); setSubmitErr("");
+    const r = d.role==="employer" ? await A.completeEmployerSignup(d) : await A.completeSignup(d);
+    setSubmitting(false);
+    if(!r.ok){setSubmitErr(r.msg);return;}
     try{sessionStorage.removeItem(SIGNUP_DRAFT_KEY);}catch{}
   };
-  const next=()=>{if(!validate())return; i<STEPS.length-1?setI(i+1):submit();};
+  const next=async()=>{if(!validate())return; i<STEPS.length-1?setI(i+1):await submit();};
 
   if(!A.settings.publicSignup) return <Page narrow>
     <Card pad={34} style={{textAlign:"center"}}>
@@ -233,8 +231,8 @@ export function SignupPage(){
         {submitErr&&<Banner tone="danger" icon="alert" title="Sign-up failed" style={{marginTop:18}}>{submitErr}</Banner>}
         <div className="flex gap-2.5 justify-between mt-7 pt-5 border-t border-line-soft">
           <Btn kind="ghost" icon="arrowL" onClick={()=>{if(i===0){try{sessionStorage.removeItem(SIGNUP_DRAFT_KEY);}catch{} A.go("home");}else setI(i-1);}}>{i===0?"Cancel":"Back"}</Btn>
-          <Btn kind="primary" size="lg" iconR={i===STEPS.length-1?"check":"arrowR"} onClick={next} disabled={step.k==="role"&&!d.role}>
-            {i===STEPS.length-1?(d.role==="employer"?"Create employer account":"Finish and start matching"):"Continue"}</Btn></div>
+          <Btn kind="primary" size="lg" iconR={i===STEPS.length-1?"check":"arrowR"} onClick={next} disabled={(step.k==="role"&&!d.role)||submitting}>
+            {submitting?"Creating account…":i===STEPS.length-1?(d.role==="employer"?"Create employer account":"Finish and start matching"):"Continue"}</Btn></div>
       </Card>
       <div className="text-center mt-5 text-sm text-text-2">
         Already have an account? <button onClick={()=>A.go("login")} className="bg-transparent border-0 p-0 cursor-pointer text-sm font-semibold text-brand">Sign in</button></div>
@@ -245,10 +243,10 @@ export function LoginPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [email,setEmail]=useState(""); const [pw,setPw]=useState("");
   const [err,setErr]=useState(""); const [busy,setBusy]=useState(false);
-  const submit=()=>{setErr("");setBusy(true);
-    setTimeout(()=>{const r=A.loginWithPassword(email,pw); if(!r.ok)setErr(r.msg); setBusy(false);},120);};
-  const demoAs=(e,p)=>{setEmail(e);setPw(p);setErr("");
-    setTimeout(()=>{const r=A.loginWithPassword(e,p); if(!r.ok)setErr(r.msg);},60);};
+  const submit=async()=>{setErr("");setBusy(true);
+    const r=await A.loginWithPassword(email,pw); if(!r.ok)setErr(r.msg); setBusy(false);};
+  const demoAs=async(e,p)=>{setEmail(e);setPw(p);setErr("");setBusy(true);
+    const r=await A.loginWithPassword(e,p); if(!r.ok)setErr(r.msg); setBusy(false);};
   return <div className={`bg-bg min-h-full flex justify-center ${mob?"pt-6 px-4 pb-10":"pt-12 px-6 pb-20"}`}>
     <div className="w-full max-w-md">
       <div className="flex items-center justify-between mb-5">

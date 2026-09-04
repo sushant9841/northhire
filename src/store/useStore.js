@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
 import { ROUTES } from "../routes.js";
-import { C } from "../design/tokens.js";
 import { uid, money, pay, payUnit, payShort, annual, nowStamp, _fmtDate } from "../helpers/utils.js";
 import { CATM, PCODE, STAGES, PLANS, PLAN_REQUIRES, PLAN_ORDER } from "./seed/constants.js";
 import { SEED_EMPLOYERS } from "./seed/employers.js";
@@ -11,6 +10,8 @@ import { SEED_BLOGS } from "./seed/blogs.js";
 import { SEED_TRAININGS } from "./seed/trainings.js";
 import { useHrStore } from "./useHrStore.js";
 import { useStaffingStore } from "./useStaffingStore.js";
+import { api, getToken, setToken, ApiUnreachableError } from "../helpers/api.js";
+import { mapApiJob, mapApiEmployer, mapApiApplication, mapApiUser } from "../helpers/apiMap.js";
 
 /* Real CSV field parsing (quoted fields, embedded commas, "" escaping) — a plain row.split(",")
    silently shifts every column after the first comma inside a free-text field like Description. */
@@ -53,7 +54,11 @@ export function useStore(){
       return out;
     });
   }
-  const [user,setUser]=useState(seed?.user||null);
+  /* A seeker/employer/admin `user` is now backed by a real API session token (see below) - a
+     cached user object with no matching token is a leftover from before this wiring existed
+     (or an expired session), so it's discarded here rather than showing a "logged in" UI the
+     server won't actually recognize for any real action. */
+  const [user,setUser]=useState(seed?.user&&getToken()?seed.user:null);
   const DEMO_PASSWORDS={
     "sarah.chen@example.ca":"Password123",
     "marcus.b@example.ca":"Password123",
@@ -112,6 +117,61 @@ export function useStore(){
   const [employersPrefill,setEmployersPrefill]=useState(null);
   const [pageTitle,setPageTitle]=useState(null);
 
+  /* --- real backend sync (jobs/employers/session) — see server/README.md for exact scope.
+     Everything else in this store (HR, staffing, content, messages...) stays on localStorage;
+     only jobs/employers/applications/accounts have a real API behind them. A network failure
+     here (server not running) is caught and swallowed - the app keeps working against
+     whatever local/seed data it already had, same as before this wiring existed. */
+  useEffect(()=>{
+    let cancelled=false;
+    (async()=>{
+      try{
+        const [jobsRes,employersRes]=await Promise.all([api.get("/jobs?status=all"),api.get("/employers")]);
+        if(cancelled)return;
+        setJobs(jobsRes.jobs.map(mapApiJob));
+        setEmployers(employersRes.employers.map(mapApiEmployer));
+      }catch(e){
+        if(typeof console!=="undefined")console.warn(e instanceof ApiUnreachableError?`[NorthHire] ${e.message}`:`[NorthHire] API sync failed: ${e.message}`);
+      }
+    })();
+    return ()=>{cancelled=true;};
+  },[]);
+  useEffect(()=>{
+    const token=getToken(); if(!token)return;
+    let cancelled=false;
+    (async()=>{
+      try{
+        const {user:apiUser}=await api.get("/auth/me");
+        if(!cancelled)setUser(mapApiUser(apiUser));
+      }catch{
+        if(!cancelled){setToken(null);setUser(null);}
+      }
+    })();
+    return ()=>{cancelled=true;};
+  },[]);
+  /* Applications are per-user (a seeker's own, or an employer's own across their jobs), so
+     unlike jobs/employers they're synced per logged-in session rather than once globally -
+     otherwise an application created in one browser session (or by a different real account)
+     would never appear to the other side of it (e.g. an employer's applicant count staying at
+     0 after a seeker really applied), since local mutations only touch the current tab's state. */
+  useEffect(()=>{
+    if(!user||(user.role!=="seeker"&&user.role!=="employer"))return;
+    let cancelled=false;
+    (async()=>{
+      try{
+        const path=user.role==="seeker"?"/applications/mine":"/applications/employer/mine";
+        const {applications:fresh}=await api.get(path);
+        if(cancelled)return;
+        setApplications(l=>{
+          const freshIds=new Set(fresh.map(a=>a.id));
+          return [...fresh.map(mapApiApplication),...l.filter(a=>!freshIds.has(a.id))];
+        });
+      }catch(e){
+        if(typeof console!=="undefined")console.warn(`[NorthHire] Application sync failed: ${e.message}`);
+      }
+    })();
+    return ()=>{cancelled=true;};
+  },[user?.id,user?.role]);
 
   const emp=id=>employers.find(e=>e.id===id)||employers[0];
   const job=id=>jobs.find(j=>j.id===id);
@@ -213,27 +273,27 @@ export function useStore(){
     setUser(base); setStack([]); setPg(role==="employer"?"empHome":role==="admin"?"admHome":"home");
     log("auth.login",`Signed in as ${base.name}`,"logout");
   };
-  const logout=()=>{setUser(null);setStack([]);setPg("home");setPageTitle(null);};
+  const logout=()=>{setToken(null);setUser(null);setStack([]);setPg("home");setPageTitle(null);};
+  /* hasAccount only ever sees the built-in demo emails now — real accounts created after this
+     backend went live live in the server's database, not this local map. It's still useful as
+     an early "that looks like a demo account" hint during signup; the real authority for
+     "does this email already exist" is the API's signup response (a 409), surfaced via
+     submitErr on the signup wizard's final step. */
   const hasAccount=email=>!!passwords[(email||"").toLowerCase().trim()];
   const checkPassword=(email,pw)=>passwords[(email||"").toLowerCase().trim()]===pw;
   const upsertPassword=(email,pw)=>setPasswords(p=>({...p,[email.toLowerCase().trim()]:pw}));
-  const loginWithPassword=(email,pw)=>{
-    const e=(email||"").toLowerCase().trim();
-    if(!passwords[e])return {ok:false,msg:"No account with that email"};
-    if(passwords[e]!==pw)return {ok:false,msg:"Password does not match"};
-    const seeker=people.find(p=>(p.email||"").toLowerCase()===e);
-    if(seeker&&suspended.has(seeker.id))return {ok:false,msg:"This account has been suspended. Contact support for help."};
-    if(seeker){setUser({...seeker,role:"seeker",defaultCv:cvs.find(c=>c.userEmail===e)?.id||null});
-      setStack([]);setPg("home");log("auth.login",`Signed in as ${seeker.name}`,"logout");
-      return {ok:true};}
-    const emp=employers.find(x=>(x.owner||"").toLowerCase()===e);
-    if(emp){setUser({id:emp.id+"_owner",role:"employer",name:emp.ownerName||"Hiring Team",email:emp.owner,seed:9,skills:[]});
-      setStack([]);setPg("empHome");log("auth.login",`Signed in as ${emp.name}`,"logout");
-      return {ok:true};}
-    if(e==="admin@northhire.ca"){setUser({id:"adm1",role:"admin",name:"Platform Admin",email:e,seed:11,skills:[]});
-      setStack([]);setPg("admHome");log("auth.login","Signed in as Admin","logout");
-      return {ok:true};}
-    return {ok:false,msg:"Account exists but user record missing — contact support"};
+  const loginWithPassword=async(email,pw)=>{
+    try{
+      const {token,user:apiUser}=await api.post("/auth/login",{email:(email||"").trim(),password:pw});
+      setToken(token);
+      const mapped=mapApiUser(apiUser);
+      setUser(mapped);
+      setStack([]); setPg(mapped.role==="employer"?"empHome":mapped.role==="admin"?"admHome":"home");
+      log("auth.login",`Signed in as ${mapped.name}`,"logout");
+      return {ok:true};
+    }catch(e){
+      return {ok:false,msg:e.message};
+    }
   };
   const resetPasswordRequest=email=>{
     const e=(email||"").toLowerCase().trim();
@@ -257,43 +317,65 @@ export function useStore(){
     return {ok:true};
   };
 
-  const completeSignup=d=>{
+  const completeSignup=async d=>{
     const email=(d.email||"").toLowerCase().trim();
-    if(passwords[email])return {ok:false,msg:"An account with that email already exists — try signing in"};
     if(!d.password||d.password.length<8)return {ok:false,msg:"Password must be at least 8 characters"};
     const yearsMap={"No experience yet":0,"Less than 1 year":1,"1-2 years":2,"3-5 years":4,"6-10 years":8,"More than 10 years":12};
-    const u={id:uid("u"),role:"seeker",name:`${d.first} ${d.last}`.trim(),seed:Math.floor(Math.random()*8),
-      title:d.title,cat:d.cat,city:d.city,prov:PCODE[d.prov],years:yearsMap[d.years]??2,email,phone:d.phone,
-      skills:d.skills,edu:d.edu,eligible:d.eligible,payMin:Number(d.payMin)||0,payUnit:d.payUnit,
-      types:d.types,modes:d.modes,startWhen:d.startWhen,summary:"",defaultCv:null,joined:_fmtDate(new Date())};
-    setPasswords(p=>({...p,[email]:d.password}));
-    setUser(u); setPeople(p=>[u,...p]); setStack([]); setPg("welcome");
-    notify({icon:"sparkle",title:"Welcome to NorthHire",body:"Your profile is live. Check Matched jobs to see what fits your skills.",for:u.id,link:"matched"});
-    log("auth.signup",`New job seeker registered: ${u.name}`,"user");
-    return {ok:true};
+    try{
+      const {token,user:apiUser}=await api.post("/auth/signup",{
+        name:`${d.first} ${d.last}`.trim(),email,password:d.password,role:"seeker"});
+      /* The signup endpoint only takes name/email/password/role - everything else the wizard
+         collected (title/cat/city/skills/pay expectations...) is a profile update on top,
+         same two-step shape saveProfile already uses elsewhere. */
+      const patch={title:d.title,cat:d.cat,city:d.city,prov:PCODE[d.prov],years:yearsMap[d.years]??2,phone:d.phone,
+        skills:d.skills,edu:d.edu,eligible:d.eligible,payMin:Number(d.payMin)||0,payUnit:d.payUnit,
+        types:d.types,modes:d.modes};
+      setToken(token);
+      const u={...mapApiUser(apiUser),...patch,startWhen:d.startWhen,summary:"",defaultCv:null,joined:_fmtDate(new Date())};
+      setUser(u); setPeople(p=>[u,...p]); setStack([]); setPg("welcome");
+      notify({icon:"sparkle",title:"Welcome to NorthHire",body:"Your profile is live. Check Matched jobs to see what fits your skills.",for:u.id,link:"matched"});
+      log("auth.signup",`New job seeker registered: ${u.name}`,"user");
+      return {ok:true};
+    }catch(e){
+      return {ok:false,msg:e.message};
+    }
   };
-  const completeEmployerSignup=d=>{
+  const completeEmployerSignup=async d=>{
     const email=(d.email||"").toLowerCase().trim();
-    if(passwords[email])return {ok:false,msg:"An account with that email already exists — try signing in"};
     if(!d.password||d.password.length<8)return {ok:false,msg:"Password must be at least 8 characters"};
     if(!d.company||!d.company.trim())return {ok:false,msg:"Company name required"};
-    const domain=email.split("@")[1]||"example.com";
-    const e={id:uid("e"),name:d.company.trim(),industry:d.industry||"Other",city:d.city||"Toronto",prov:PCODE[d.prov||"Ontario"],
-      size:d.size||"1-50",founded:new Date().getFullYear(),site:domain,mark:"hex",a:C.brand,b:"#EAF2FF",
-      about:d.about||`${d.company.trim()} is hiring on NorthHire.`,verified:false,rating:0,
-      plan:(pendingPlan&&PLANS[pendingPlan])?pendingPlan:"Free",
-      owner:email,ownerName:d.name||"Hiring Team"};
-    setEmployers(list=>[e,...list]);
-    setPasswords(p=>({...p,[email]:d.password}));
-    setUser({id:e.id+"_owner",role:"employer",name:e.ownerName,email,seed:9,skills:[]});
-    setPendingPlan(null);
-    setStack([]);setPg("welcomeEmp");
-    log("auth.signup.employer",`New employer registered: ${e.name}`,"building");
-    notify({icon:"sparkle",title:"Welcome to NorthHire",body:"Post your first job to start receiving applicants. Verification usually takes 1 business day.",for:e.id+"_owner",link:"empPost"});
-    return {ok:true};
+    try{
+      const {token,user:apiUser}=await api.post("/auth/signup",{
+        name:d.name||"Hiring Team",email,password:d.password,role:"employer",companyName:d.company.trim()});
+      const domain=email.split("@")[1]||"example.com";
+      /* The employer record itself was created server-side by signup (its id lives on the
+         returned user as employer_id) - patch in the extra profile fields the wizard collected
+         that /auth/signup doesn't take. */
+      const patch={industry:d.industry||"Other",city:d.city||"Toronto",prov:PCODE[d.prov||"Ontario"],
+        size:d.size||"1-50",site:domain,about:d.about||`${d.company.trim()} is hiring on NorthHire.`};
+      const {employer}=await api.patch(`/employers/${apiUser.employer_id}`,patch);
+      if(pendingPlan&&PLANS[pendingPlan])await api.patch(`/employers/${apiUser.employer_id}`,{plan:pendingPlan});
+      const e=mapApiEmployer({...employer,plan:(pendingPlan&&PLANS[pendingPlan])?pendingPlan:employer.plan});
+      setEmployers(list=>[e,...list]);
+      setToken(token);
+      setUser({...mapApiUser(apiUser),name:e.ownerName,skills:[]});
+      setPendingPlan(null);
+      setStack([]);setPg("welcomeEmp");
+      log("auth.signup.employer",`New employer registered: ${e.name}`,"building");
+      notify({icon:"sparkle",title:"Welcome to NorthHire",body:"Post your first job to start receiving applicants. Verification usually takes 1 business day.",for:apiUser.id,link:"empPost"});
+      return {ok:true};
+    }catch(e){
+      return {ok:false,msg:e.message};
+    }
   };
   const clearAllData=()=>{if(typeof window!=="undefined")localStorage.removeItem(LS_KEY);window.location.reload?.();};
-  const saveProfile=d=>{setUser(d);setPeople(p=>p.map(x=>x.id===d.id?{...x,...d}:x));log("profile.update","Updated their profile","edit");};
+  const saveProfile=async d=>{
+    setUser(d);setPeople(p=>p.map(x=>x.id===d.id?{...x,...d}:x));log("profile.update","Updated their profile","edit");
+    try{
+      await api.patch("/users/me",{title:d.title,cat:d.cat,city:d.city,prov:d.prov,years:d.years,phone:d.phone,
+        skills:d.skills,edu:d.edu,eligible:d.eligible,payMin:d.payMin,payUnit:d.payUnit,types:d.types,modes:d.modes,summary:d.summary});
+    }catch(err){toast(`Profile saved locally, but couldn't sync to the server: ${err.message}`,"warn");}
+  };
   const deleteAccount=()=>{log("account.delete",`Deleted account ${user.name}`,"trash");setUser(null);setCvs([]);setPg("home");setStack([]);};
   const exportData=()=>downloadText(`northhire-data-${user.id}.json`,JSON.stringify({profile:user,cvs,applications:myApps,saved:[...saved]},null,2));
   const setUserSetting=(k,v)=>setUserSettings(s=>({...s,[k]:v}));
@@ -506,7 +588,7 @@ export function useStore(){
   };
 
   /* --- CSV bulk job import (parses a minimal CSV; validates & creates draft jobs) --- */
-  const importJobsCSV=(csvText)=>{
+  const importJobsCSV=async(csvText)=>{
     if(!company)return {ok:false,msg:"Only employers can import jobs"};
     if(!can("csvImport"))return {ok:false,msg:"CSV import is a Growth and Enterprise feature — upgrade to unlock."};
     const lines=csvText.split(/\r?\n/).filter(l=>l.trim());
@@ -516,29 +598,34 @@ export function useStore(){
     const missing=required.filter(r=>!header.includes(r));
     if(missing.length)return {ok:false,msg:`Missing columns: ${missing.join(", ")}`};
     const idx=Object.fromEntries(header.map((h,i)=>[h,i]));
-    const imported=[]; const errors=[];
+    const toImport=[]; const errors=[];
     lines.slice(1).forEach((row,i)=>{
       const cells=parseCsvLine(row);
       const t=cells[idx.title]; if(!t){errors.push(`Row ${i+2}: missing title`);return;}
       const lo=Number(cells[idx.pay_low])||0, hi=Number(cells[idx.pay_high])||0;
       if(settings.payTransparency&&lo<=0&&hi<=0){errors.push(`Row ${i+2}: pay_low or pay_high is required`);return;}
       const prov=PCODE[cells[idx.province]]||cells[idx.province];
-      const nj={id:uid("j"),t,e:company.id,cat:cells[idx.category]||"trades",city:cells[idx.city]||"",prov,
+      toImport.push({t,cat:cells[idx.category]||"trades",city:cells[idx.city]||"",prov,
         type:cells[idx.type]||"Full Time",mode:cells[idx.mode]||"On-site",
         lo,hi,unit:cells[idx.pay_unit]||"hr",
         vac:Number(cells[idx.vacancies])||1,exp:cells[idx.experience]||"1+ years",
-        edu:cells[idx.education]||"High school diploma",dl:14,posted:"Just now",views:0,
-        urgent:false,featured:false,skills:(cells[idx.skills]||"").split(";").map(s=>s.trim()).filter(Boolean),
+        edu:cells[idx.education]||"High school diploma",
+        skills:(cells[idx.skills]||"").split(";").map(s=>s.trim()).filter(Boolean),
         perks:(cells[idx.perks]||"").split(";").map(s=>s.trim()).filter(Boolean),
         duties:(cells[idx.duties]||"").split(";").map(s=>s.trim()).filter(Boolean),
         reqs:(cells[idx.requirements]||"").split(";").map(s=>s.trim()).filter(Boolean),
         desc:cells[idx.description]||`Hiring ${t} in ${cells[idx.city]}.`,
-        how:"Apply through NorthHire.",status:"review",flagged:false};
-      imported.push(nj);
+        how:"Apply through NorthHire."});
     });
-    if(imported.length)setJobs(l=>[...imported,...l]);
-    log("job.import",`Imported ${imported.length} jobs via CSV`,"upload");
-    return {ok:true,imported:imported.length,errors};
+    if(!toImport.length)return {ok:true,imported:0,errors};
+    try{
+      const {jobs:created}=await api.post("/jobs/import-csv",{jobs:toImport});
+      setJobs(l=>[...created.map(mapApiJob),...l]);
+      log("job.import",`Imported ${created.length} jobs via CSV`,"upload");
+      return {ok:true,imported:created.length,errors};
+    }catch(e){
+      return {ok:false,msg:e.message};
+    }
   };
 
   /* --- employer analytics --- */
@@ -612,7 +699,11 @@ export function useStore(){
   const followEmployer=id=>{if(!user)return go("login");
     setFollowing(p=>{const n=new Set(p); n.has(id)?n.delete(id):n.add(id); return n;});};
 
-  const openJob=(id,opts)=>{setJobId(id);if(!opts?.preview)setJobs(js=>js.map(j=>j.id===id?{...j,views:j.views+1}:j));
+  const openJob=(id,opts)=>{setJobId(id);
+    if(!opts?.preview){
+      setJobs(js=>js.map(j=>j.id===id?{...j,views:j.views+1}:j));
+      api.post(`/jobs/${id}/view`).catch(()=>{}); /* best-effort - a failed view-count bump shouldn't block opening the job */
+    }
     const j=job(id); go("job",j?j.t:"Job details");};
   const openEmployer=id=>{setEmpId(id);const e=emp(id);go("employer",e?e.name:"Employer");};
   const openBlog=id=>{setBlogId(id);const b=blogs.find(x=>x.id===id);go("blog",b?"Article":"Article");};
@@ -621,7 +712,7 @@ export function useStore(){
     go("empCandidate",a?person(a.user).name:"Candidate");};
 
   const beginApply=id=>{setApplyDraft({job:id,avail:"Within 2 weeks",expect:"",letter:"",meets:""});go("apply1");};
-  const submitApply=()=>{
+  const submitApply=async()=>{
     const j=job(applyDraft.job); const e=emp(j.e);
     /* rate limit: prevent duplicate application to same job */
     const existing=applications.find(a=>a.job===j.id&&a.user===user.id&&a.stage!=="Withdrawn");
@@ -629,68 +720,71 @@ export function useStore(){
       notify({icon:"alert",title:"Already applied",body:`You applied to ${j.t} on ${existing.at}. Check your status page.`,for:user.id,link:"status"});
       return go("status");
     }
-    setApplications(l=>[...l,{id:uid("a"),job:j.id,user:user.id,stage:"Applied",at:"Just now",
-      note:"Waiting for employer review",avail:applyDraft.avail,expect:applyDraft.expect,letter:applyDraft.letter,
-      cv:applyDraft.cv||defaultCv?.id||null,
-      withdrawnAt:null,previousStage:null,
-      history:[{stage:"Applied",note:"Waiting for employer review",at:nowStamp()}]}]);
-    notify({icon:"send",title:`Application sent to ${e.name}`,body:`Your application for ${j.t} is now in their pipeline.`,for:user.id,link:"status"});
-    log("application.create",`Applied to ${j.t} at ${e.name}`,"send");
-    go("applyDone");
+    try{
+      const {application}=await api.post("/applications",{jobId:j.id,availability:applyDraft.avail,payExpectation:applyDraft.expect,coverLetter:applyDraft.letter});
+      setApplications(l=>[...l,mapApiApplication(application)]);
+      notify({icon:"send",title:`Application sent to ${e.name}`,body:`Your application for ${j.t} is now in their pipeline.`,for:user.id,link:"status"});
+      log("application.create",`Applied to ${j.t} at ${e.name}`,"send");
+      go("applyDone");
+    }catch(err){
+      notify({icon:"alert",title:"Couldn't submit application",body:err.message,for:user.id,link:null});
+      toast(err.message,"danger");
+    }
   };
-  const withdraw=id=>{
-    setApplications(l=>l.map(a=>a.id===id?{...a,previousStage:a.stage,stage:"Withdrawn",
-      note:"You withdrew this application",withdrawnAt:Date.now(),
-      history:[...(a.history||[]),{stage:"Withdrawn",note:"You withdrew this application",at:nowStamp()}]}:a));
-    log("application.withdraw","Withdrew an application","x");
-    notify({icon:"x",title:"Application withdrawn",body:"You can restore it within 7 days from My Status.",for:user?.id,link:"status"});
+  const withdraw=async id=>{
+    try{
+      const {application}=await api.patch(`/applications/${id}/withdraw`);
+      setApplications(l=>l.map(a=>a.id===id?mapApiApplication(application):a));
+      log("application.withdraw","Withdrew an application","x");
+      notify({icon:"x",title:"Application withdrawn",body:"You can restore it within 7 days from My Status.",for:user?.id,link:"status"});
+    }catch(err){toast(err.message,"danger");}
   };
-  const restoreApp=id=>{
-    setApplications(l=>l.map(a=>{if(a.id!==id)return a;
-      if(!a.withdrawnAt||Date.now()-a.withdrawnAt>7*24*60*60*1000)return a;
-      const restoredStage=a.previousStage||"Applied";
-      return {...a,stage:restoredStage,note:"Restored from withdrawn",withdrawnAt:null,previousStage:null,
-        history:[...(a.history||[]),{stage:restoredStage,note:"Restored from withdrawn",at:nowStamp()}]};
-    }));
-    log("application.restore","Restored a withdrawn application","refresh");
+  const restoreApp=async id=>{
+    try{
+      const {application}=await api.patch(`/applications/${id}/restore`);
+      setApplications(l=>l.map(a=>a.id===id?mapApiApplication(application):a));
+      log("application.restore","Restored a withdrawn application","refresh");
+    }catch(err){toast(err.message,"danger");}
   };
-  const acceptOffer=id=>{const a=applications.find(x=>x.id===id);const j=job(a.job);
-    setApplications(l=>l.map(x=>x.id===id?{...x,note:"Offer accepted — congratulations",
-      history:[...(x.history||[]),{stage:"Offer",note:"Offer accepted — congratulations",at:nowStamp()}]}:x));
-    notify({icon:"award",title:"Offer accepted",body:`You accepted the offer for ${j.t}.`,for:user.id,link:"status"});
-    log("application.accept",`Accepted offer for ${j.t}`,"award");};
+  const acceptOffer=async id=>{const a=applications.find(x=>x.id===id);const j=job(a.job);
+    try{
+      const {application}=await api.patch(`/applications/${id}/accept-offer`);
+      setApplications(l=>l.map(x=>x.id===id?mapApiApplication(application):x));
+      notify({icon:"award",title:"Offer accepted",body:`You accepted the offer for ${j.t}.`,for:user.id,link:"status"});
+      log("application.accept",`Accepted offer for ${j.t}`,"award");
+    }catch(err){toast(err.message,"danger");}};
 
   const [hireOnboarding,setHireOnboarding]=useState(null); /* {app,job,person} — surfaces onboarding modal */
-  const moveApp=(id,stage)=>{
+  const moveApp=async(id,stage)=>{
     const a=applications.find(x=>x.id===id); const j=job(a.job); const e=emp(j.e);
-    const stageNote=stage==="Reviewed"?"Employer reviewed your profile":stage==="Shortlisted"?"Shortlisted by the employer"
-      :stage==="Interview"?"Interview stage — expect scheduling details":stage==="Offer"?"Offer extended — check your notifications"
-      :stage==="Hired"?"Welcome to the team! Onboarding details coming.":"Waiting for employer review";
-    setApplications(l=>l.map(x=>x.id===id?{...x,stage,note:stageNote,
-      history:[...(x.history||[]),{stage,note:stageNote,at:nowStamp()}]}:x));
-    /* Filling the last opening closes the listing instead of leaving it live (and collecting
-       applicants) forever — vac previously was only ever set at posting time, never decremented. */
-    if(stage==="Hired"){
-      setJobs(js=>js.map(x=>{if(x.id!==j.id)return x;
-        const vac=Math.max(0,(x.vac||1)-1);
-        return {...x,vac,status:vac===0?"closed":x.status};}));
-    }
-    notify({icon:stage==="Hired"?"award":stage==="Offer"?"award":"activity",title:`${stage} — ${e.name}`,
-      body:stage==="Hired"?`You've been hired for ${j.t}. Congratulations!`:`Your application for ${j.t} moved to ${stage}.`,for:a.user,link:"status"});
-    log("pipeline.move",`Moved ${person(a.user).name} to ${stage} on ${j.t}`,"users");
-    /* Trigger HR onboarding suggestion when candidate is hired at an Enterprise employer */
-    if(stage==="Hired"&&user?.role==="employer"&&company?.plan==="Enterprise"){
-      const p=person(a.user);
-      if(p)setHireOnboarding({app:a,job:j,person:p});
-    }
+    try{
+      const {application}=await api.patch(`/applications/${id}/stage`,{stage});
+      setApplications(l=>l.map(x=>x.id===id?mapApiApplication(application):x));
+      /* Filling the last opening closes the listing instead of leaving it live (and collecting
+         applicants) forever — the server decrements vac/closes the job on Hire; refetch this one
+         job so local state (used for badge counts, analytics) reflects it immediately. */
+      if(stage==="Hired"){
+        const {job:freshJob}=await api.get(`/jobs/${j.id}`);
+        setJobs(js=>js.map(x=>x.id===j.id?mapApiJob(freshJob):x));
+      }
+      notify({icon:stage==="Hired"?"award":stage==="Offer"?"award":"activity",title:`${stage} — ${e.name}`,
+        body:stage==="Hired"?`You've been hired for ${j.t}. Congratulations!`:`Your application for ${j.t} moved to ${stage}.`,for:a.user,link:"status"});
+      log("pipeline.move",`Moved ${person(a.user).name} to ${stage} on ${j.t}`,"users");
+      /* Trigger HR onboarding suggestion when candidate is hired at an Enterprise employer */
+      if(stage==="Hired"&&user?.role==="employer"&&company?.plan==="Enterprise"){
+        const p=person(a.user);
+        if(p)setHireOnboarding({app:a,job:j,person:p});
+      }
+    }catch(err){toast(err.message,"danger");}
   };
-  const rejectApp=id=>{const a=applications.find(x=>x.id===id);
-    const rejectNote="The employer has decided not to move forward with your application at this time.";
-    setApplications(l=>l.map(x=>x.id===id?{...x,stage:"Withdrawn",note:rejectNote,
-      history:[...(x.history||[]),{stage:"Withdrawn",note:rejectNote,at:nowStamp()}]}:x));
-    log("pipeline.reject",`Rejected ${person(a.user).name}`,"x");};
+  const rejectApp=async id=>{const a=applications.find(x=>x.id===id);
+    try{
+      const {application}=await api.patch(`/applications/${id}/reject`);
+      setApplications(l=>l.map(x=>x.id===id?mapApiApplication(application):x));
+      log("pipeline.reject",`Rejected ${person(a.user).name}`,"x");
+    }catch(err){toast(err.message,"danger");}};
 
-  const publishJob=f=>{
+  const publishJob=async f=>{
     /* plan enforcement: at-or-over live job cap → surface an upgrade */
     if(!can("jobs")){
       notify({icon:"alert",title:"Upgrade to post more jobs",
@@ -702,15 +796,23 @@ export function useStore(){
     if(settings.payTransparency&&!(Number(f.lo)>0)&&!(Number(f.hi)>0)){
       return {ok:false,msg:"This platform requires every listing to state a pay range or fixed rate."};
     }
-    const nj={id:uid("j"),t:f.t.trim(),e:company.id,cat:f.cat,city:f.city.trim(),prov:PCODE[f.prov],type:f.type,mode:f.mode,
-      lo:Number(f.lo)||0,hi:Number(f.hi)||0,unit:f.unit,vac:f.vac,exp:f.exp,edu:f.edu,dl:f.dl,posted:"Just now",views:0,
+    const payload={title:f.t.trim(),cat:f.cat,city:f.city.trim(),prov:PCODE[f.prov],type:f.type,mode:f.mode,
+      lo:Number(f.lo)||0,hi:Number(f.hi)||0,unit:f.unit,vac:f.vac,exp:f.exp,edu:f.edu,
+      dlDate:f.dl?new Date(Date.now()+f.dl*86400000).toISOString().slice(0,10):null,
       urgent:f.urgent,featured:f.featured&&settings.employerFeature,
       skills:f.skills.split(",").map(s=>s.trim()).filter(Boolean),
       perks:f.perks.split(",").map(s=>s.trim()).filter(Boolean),
       duties:f.duties.split("\n").map(s=>s.trim()).filter(Boolean),
       reqs:f.reqs.split("\n").map(s=>s.trim()).filter(Boolean),
       desc:f.desc.trim(),how:f.how.trim()||"Apply through NorthHire with your resume.",
-      status:settings.autoApproveJobs?"live":"review",flagged:false};
+      status:settings.autoApproveJobs?"live":"review"};
+    let nj;
+    try{
+      const {job:created}=await api.post("/jobs",payload);
+      nj=mapApiJob(created);
+    }catch(e){
+      return {ok:false,msg:e.message};
+    }
     setJobs(l=>[nj,...l]);
     log("job.publish",`Published "${nj.t}"`,"briefcase");
     notifyFollowers(nj,company);
@@ -726,24 +828,49 @@ export function useStore(){
     });
     setPipelineJob(nj.id); go("empJobs"); return {ok:true};
   };
-  const toggleJobStatus=id=>{setJobs(l=>l.map(j=>j.id===id?{...j,status:j.status==="live"?"paused":"live"}:j));
-    const j=job(id); log("job.status",`${j.status==="live"?"Paused":"Reopened"} "${j.t}"`,"briefcase");};
-  const flagJob=id=>{setJobs(l=>l.map(j=>j.id===id?{...j,flagged:!j.flagged}:j));
-    const j=job(id); log("job.flag",`${j.flagged?"Unflagged":"Flagged"} "${j.t}"`,"shield");};
+  const toggleJobStatus=async id=>{
+    const j=job(id); const nextStatus=j.status==="live"?"paused":"live";
+    try{
+      const {job:updated}=await api.patch(`/jobs/${id}`,{status:nextStatus});
+      setJobs(l=>l.map(x=>x.id===id?mapApiJob(updated):x));
+      log("job.status",`${nextStatus==="paused"?"Paused":"Reopened"} "${j.t}"`,"briefcase");
+    }catch(err){toast(err.message,"danger");}};
+  const flagJob=async id=>{
+    const j=job(id);
+    try{
+      const {job:updated}=await api.patch(`/jobs/${id}`,{flagged:!j.flagged});
+      setJobs(l=>l.map(x=>x.id===id?mapApiJob(updated):x));
+      log("job.flag",`${j.flagged?"Unflagged":"Flagged"} "${j.t}"`,"shield");
+    }catch(err){toast(err.message,"danger");}};
   const setPipelineJobFn=id=>setPipelineJob(id);
 
-  const saveCompany=d=>{setEmployers(l=>l.map(e=>e.id===d.id?d:e));log("company.update",`Updated ${d.name} profile`,"building");};
-  const verifyEmployer=(id,v)=>{setEmployers(l=>l.map(e=>e.id===id?{...e,verified:v,hold:v?false:e.hold}:e));
-    log("employer.verify",`${v?"Verified":"Revoked verification for"} ${emp(id).name}`,"shield");};
-  const holdEmployer=id=>{const wasHeld=!!emp(id)?.hold;
-    setEmployers(l=>l.map(e=>e.id===id?{...e,hold:!e.hold}:e));
-    log("employer.hold",`${wasHeld?"Released":"Placed"} ${emp(id).name} ${wasHeld?"from":"on"} hold`,"clock");};
-  const toggleSuspend=(id,reason)=>{const wasSuspended=suspended.has(id);
-    setSuspended(p=>{const n=new Set(p);n.has(id)?n.delete(id):n.add(id);return n;});
-    setSuspensionInfo(p=>{const n={...p};
-      if(wasSuspended)delete n[id]; else n[id]={reason:reason||"No reason given",at:nowStamp()};
-      return n;});
-    log("user.suspend",`${wasSuspended?"Restored":"Suspended"} ${person(id).name}${!wasSuspended&&reason?` — ${reason}`:""}`,"users");};
+  const saveCompany=async d=>{
+    try{
+      const {employer}=await api.patch(`/employers/${d.id}`,{name:d.name,industry:d.industry,city:d.city,prov:d.prov,size:d.size,about:d.about,site:d.site});
+      setEmployers(l=>l.map(e=>e.id===d.id?{...d,...mapApiEmployer(employer)}:e));
+      log("company.update",`Updated ${d.name} profile`,"building");
+    }catch(err){toast(err.message,"danger");}};
+  const verifyEmployer=async(id,v)=>{
+    try{
+      const {employer}=await api.patch(`/employers/${id}`,{verified:v});
+      setEmployers(l=>l.map(e=>e.id===id?mapApiEmployer(employer):e));
+      log("employer.verify",`${v?"Verified":"Revoked verification for"} ${emp(id).name}`,"shield");
+    }catch(err){toast(err.message,"danger");}};
+  const holdEmployer=async id=>{const wasHeld=!!emp(id)?.hold;
+    try{
+      const {employer}=await api.patch(`/employers/${id}`,{hold:!wasHeld});
+      setEmployers(l=>l.map(e=>e.id===id?mapApiEmployer(employer):e));
+      log("employer.hold",`${wasHeld?"Released":"Placed"} ${emp(id).name} ${wasHeld?"from":"on"} hold`,"clock");
+    }catch(err){toast(err.message,"danger");}};
+  const toggleSuspend=async(id,reason)=>{const wasSuspended=suspended.has(id);
+    try{
+      await api.patch(`/users/${id}/suspend`,{reason});
+      setSuspended(p=>{const n=new Set(p);n.has(id)?n.delete(id):n.add(id);return n;});
+      setSuspensionInfo(p=>{const n={...p};
+        if(wasSuspended)delete n[id]; else n[id]={reason:reason||"No reason given",at:nowStamp()};
+        return n;});
+      log("user.suspend",`${wasSuspended?"Restored":"Suspended"} ${person(id).name}${!wasSuspended&&reason?` — ${reason}`:""}`,"users");
+    }catch(err){toast(err.message,"danger");}};
 
   /* content */
   const editBlog=id=>{setEditId(id);go("empBlogEdit",id==="new"?"New article":"Edit article");};
@@ -943,10 +1070,14 @@ export function useStore(){
     } else toast("Sharing isn't supported in this browser","warn");
     log("share",`Shared "${title}"`,"share");
   };
-  const choosePlan=n=>{
+  const choosePlan=async n=>{
     if(!PLANS[n])return;
-    if(user?.role==="employer"){setEmployers(l=>l.map(e=>e.id===company.id?{...e,plan:n}:e));
-      log("billing.plan",`Switched to the ${n} plan`,"wallet");go("empBilling");
+    if(user?.role==="employer"){
+      try{
+        const {employer}=await api.patch(`/employers/${company.id}`,{plan:n});
+        setEmployers(l=>l.map(e=>e.id===company.id?mapApiEmployer(employer):e));
+        log("billing.plan",`Switched to the ${n} plan`,"wallet");go("empBilling");
+      }catch(err){toast(err.message,"danger");}
     }else if(!user){setPendingPlan(n);go("signup");}
     else go("denied");};
 

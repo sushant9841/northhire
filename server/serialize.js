@@ -71,6 +71,8 @@ export function serializeEmployer(row) {
     founded: row.founded,
     site: row.site,
     plan: row.plan,
+    owner: row.owner || null,
+    ownerName: row.ownerName || null,
   };
 }
 
