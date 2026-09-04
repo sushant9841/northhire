@@ -71,7 +71,8 @@ export function AdmUsers(){
     sort==="apps"?b._apps-a._apps:sort==="city"?a.city.localeCompare(b.city):sort==="joined"?(b.joined||"").localeCompare(a.joined||""):a.name.localeCompare(b.name));
   const pg=usePagination(list,20);
   return <Page wide>
-    <H1 sub={`${A.people.length} registered job seekers`}>Users</H1>
+    <H1 sub={`${A.people.length} registered job seekers`}
+      action={<Btn kind="outline" size="sm" icon="download" onClick={()=>A.exportUsers(list)}>Export {list.length<A.people.length?`filtered (${list.length})`:"CSV"}</Btn>}>Users</H1>
     <div className="flex gap-3 mb-4 flex-wrap items-center">
       <div className="grow shrink basis-60 max-w-90"><Input icon="search" placeholder="Search by name, email or title" value={q} onChange={e=>setQ(e.target.value)}/></div>
       <Sel value={status} onChange={e=>setStatus(e.target.value)} style={{width:150}}>
@@ -115,12 +116,14 @@ export function AdmUsers(){
 export function AdmEmployers(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [tab,setTab]=useState("pending"); const [q,setQ]=useState("");
+  const [holding,setHolding]=useState(null); const [holdReason,setHoldReason]=useState("");
   const match=e=>!q||e.name.toLowerCase().includes(q.toLowerCase())||e.industry.toLowerCase().includes(q.toLowerCase())||(e.owner||"").toLowerCase().includes(q.toLowerCase());
   const pending=A.employers.filter(e=>!e.verified&&!e.hold&&match(e)), held=A.employers.filter(e=>!e.verified&&e.hold&&match(e)), verified=A.employers.filter(e=>e.verified&&match(e));
   const list=tab==="pending"?pending:tab==="held"?held:verified;
   const pg=usePagination(list,24);
   return <Page wide>
-    <H1 sub="Approve companies before their listings carry a verified badge">Employers</H1>
+    <H1 sub="Approve companies before their listings carry a verified badge"
+      action={<Btn kind="outline" size="sm" icon="download" onClick={()=>A.exportEmployers(list)}>Export {list.length<A.employers.length?`filtered (${list.length})`:"CSV"}</Btn>}>Employers</H1>
     <div className="max-w-105 mb-4"><Input icon="search" placeholder="Search by name, industry or contact" value={q} onChange={e=>setQ(e.target.value)}/></div>
     <Tabs items={[{k:"pending",label:"Awaiting review",n:pending.length},{k:"held",label:"On hold",n:held.length},{k:"verified",label:"Verified",n:verified.length}]}
       value={tab} onChange={setTab} style={{marginBottom:18}}/>
@@ -154,21 +157,32 @@ export function AdmEmployers(){
                 :e.hold?<><Btn kind="ok" size="sm" icon="check" onClick={()=>{A.verifyEmployer(e.id,true);A.toast(`${e.name} approved`,"ok");}}>Approve</Btn>
                   <Btn kind="outline" size="sm" onClick={()=>{A.holdEmployer(e.id);A.toast(`${e.name}'s hold released`);}}>Release hold</Btn></>
                 :<><Btn kind="ok" size="sm" icon="check" onClick={()=>{A.verifyEmployer(e.id,true);A.toast(`${e.name} approved`,"ok");}}>Approve</Btn>
-                  <Btn kind="dangerSoft" size="sm" onClick={()=>{A.holdEmployer(e.id);A.toast(`${e.name} put on hold`);}}>Hold</Btn></>}</div></Card>;})}</div>}
+                  <Btn kind="dangerSoft" size="sm" onClick={()=>{setHolding(e);setHoldReason("");}}>Hold</Btn></>}</div></Card>;})}</div>}
     <Pagination {...pg}/>
+    {holding&&<Modal onClose={()=>setHolding(null)} title={`Put ${holding.name} on hold?`}>
+      <div className="flex flex-col gap-3.5">
+        <Field label="Reason" required hint="Recorded in the activity log for accountability.">
+          <Area rows={3} value={holdReason} onChange={e=>setHoldReason(e.target.value)} placeholder="e.g. Unresponsive to a candidate complaint"/></Field>
+        <div className="flex gap-2.5 justify-end">
+          <Btn kind="ghost" onClick={()=>setHolding(null)}>Cancel</Btn>
+          <Btn kind="danger" disabled={!holdReason.trim()} onClick={()=>{A.holdEmployer(holding.id,holdReason.trim());A.toast(`${holding.name} put on hold`);setHolding(null);}}>Hold</Btn>
+        </div>
+      </div>
+    </Modal>}
   </Page>;
 }
 
 export function AdmJobs(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [tab,setTab]=useState("all"); const [q,setQ]=useState(""); const [sel,setSel]=useState(new Set());
+  const [flagging,setFlagging]=useState(null); const [flagReason,setFlagReason]=useState(""); const [bulkFlagging,setBulkFlagging]=useState(false);
   const base=tab==="flagged"?A.jobs.filter(j=>j.flagged):tab==="review"?A.jobs.filter(j=>j.status==="review"):tab==="paused"?A.jobs.filter(j=>j.status==="paused"):A.jobs;
   const list=base.filter(j=>!q||j.t.toLowerCase().includes(q.toLowerCase())||A.emp(j.e).name.toLowerCase().includes(q.toLowerCase()));
   const pg=usePagination(list,20);
   const toggleSel=id=>setSel(s=>{const n=new Set(s); n.has(id)?n.delete(id):n.add(id); return n;});
   const allSelected=pg.pageItems.length>0&&pg.pageItems.every(j=>sel.has(j.id));
   const selJobs=list.filter(j=>sel.has(j.id));
-  const bulkFlag=on=>{selJobs.forEach(j=>{if(!!j.flagged!==on)A.flagJob(j.id);}); A.toast(`${selJobs.length} listing${selJobs.length===1?"":"s"} ${on?"flagged":"unflagged"}`); setSel(new Set());};
+  const bulkFlag=(on,reason)=>{selJobs.forEach(j=>{if(!!j.flagged!==on)A.flagJob(j.id,reason);}); A.toast(`${selJobs.length} listing${selJobs.length===1?"":"s"} ${on?"flagged":"unflagged"}`); setSel(new Set());};
   const bulkPause=()=>{selJobs.filter(j=>j.status==="live").forEach(j=>A.toggleJobStatus(j.id)); A.toast(`${selJobs.length} listing${selJobs.length===1?"":"s"} paused`); setSel(new Set());};
   const bulkApprove=()=>{selJobs.filter(j=>j.status!=="live").forEach(j=>A.toggleJobStatus(j.id)); A.toast(`${selJobs.length} listing${selJobs.length===1?"":"s"} approved`,"ok"); setSel(new Set());};
   return <Page wide>
@@ -182,7 +196,7 @@ export function AdmJobs(){
       action={<div className="flex gap-2 flex-wrap">
         <Btn kind="ok" size="xs" onClick={bulkApprove}>Approve/restore</Btn>
         <Btn kind="outline" size="xs" onClick={bulkPause}>Pause</Btn>
-        <Btn kind="dangerSoft" size="xs" onClick={()=>bulkFlag(true)}>Flag</Btn>
+        <Btn kind="dangerSoft" size="xs" onClick={()=>{setBulkFlagging(true);setFlagReason("");}}>Flag</Btn>
         <Btn kind="ghost" size="xs" onClick={()=>bulkFlag(false)}>Unflag</Btn></div>}>
       {sel.size} listing{sel.size===1?"":"s"} selected</Banner>}
     <Card pad={0} style={{overflow:"hidden"}}>
@@ -201,9 +215,32 @@ export function AdmJobs(){
           <div className="flex gap-2 flex-wrap">
             <Btn kind="ghost" size="xs" icon="eye" title="Preview" onClick={()=>A.openJob(j.id,{preview:true})}/>
             <Btn kind="outline" size="xs" onClick={()=>{const label=j.status==="live"?"paused":j.status==="review"?"approved":"restored";A.toggleJobStatus(j.id);A.toast(`"${j.t}" ${label}`,label==="paused"?"warn":"ok");}}>{j.status==="live"?"Pause":j.status==="review"?"Approve":"Restore"}</Btn>
-            <Btn kind={j.flagged?"dangerSoft":"ghost"} size="xs" onClick={()=>{const willFlag=!j.flagged;A.flagJob(j.id);A.toast(`"${j.t}" ${willFlag?"flagged":"unflagged"}`,willFlag?"danger":"brand");}}>{j.flagged?"Unflag":"Flag"}</Btn></div></div>;})}
+            <Btn kind={j.flagged?"dangerSoft":"ghost"} size="xs" onClick={()=>{
+              if(j.flagged){A.flagJob(j.id);A.toast(`"${j.t}" unflagged`,"brand");}
+              else{setFlagging(j);setFlagReason("");}
+            }}>{j.flagged?"Unflag":"Flag"}</Btn></div></div>;})}
       {list.length===0&&<div className="p-5"><Empty icon="search" title="Nothing matches that filter" body="Try a different search term or switch tabs."/></div>}</Card>
     <Pagination {...pg}/>
+    {flagging&&<Modal onClose={()=>setFlagging(null)} title={`Flag "${flagging.t}"?`}>
+      <div className="flex flex-col gap-3.5">
+        <Field label="Reason" required hint="Recorded in the activity log for accountability.">
+          <Area rows={3} value={flagReason} onChange={e=>setFlagReason(e.target.value)} placeholder="e.g. Reported as a possible scam by 3 applicants"/></Field>
+        <div className="flex gap-2.5 justify-end">
+          <Btn kind="ghost" onClick={()=>setFlagging(null)}>Cancel</Btn>
+          <Btn kind="danger" disabled={!flagReason.trim()} onClick={()=>{A.flagJob(flagging.id,flagReason.trim());A.toast(`"${flagging.t}" flagged`,"danger");setFlagging(null);}}>Flag</Btn>
+        </div>
+      </div>
+    </Modal>}
+    {bulkFlagging&&<Modal onClose={()=>setBulkFlagging(false)} title={`Flag ${selJobs.length} listing${selJobs.length===1?"":"s"}?`}>
+      <div className="flex flex-col gap-3.5">
+        <Field label="Reason" required hint="Recorded in the activity log for accountability.">
+          <Area rows={3} value={flagReason} onChange={e=>setFlagReason(e.target.value)} placeholder="e.g. Batch review found duplicate postings"/></Field>
+        <div className="flex gap-2.5 justify-end">
+          <Btn kind="ghost" onClick={()=>setBulkFlagging(false)}>Cancel</Btn>
+          <Btn kind="danger" disabled={!flagReason.trim()} onClick={()=>{bulkFlag(true,flagReason.trim());setBulkFlagging(false);}}>Flag all</Btn>
+        </div>
+      </div>
+    </Modal>}
   </Page>;
 }
 

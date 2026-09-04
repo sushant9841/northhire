@@ -45,16 +45,18 @@ export function EmpStaffing(){
   const openInvTotal=invoices.filter(i=>i.status==="pending"||i.status==="overdue").reduce((s,i)=>s+i.total,0);
   const [showReq,setShowReq]=useState(false);
   const [req,setReq]=useState({title:"",positions:1,location:"",province:"Alberta",mustHave:"",urgency:"medium"});
-  const submitReq=()=>{
+  const submitReq=async()=>{
     if(!req.title.trim()||!req.location.trim())return;
-    A.createJobOrder({client:client.id,title:req.title.trim(),positions:Math.max(1,Number(req.positions)||1),
-      location:req.location.trim(),province:PCODE[req.province]||req.province,urgency:req.urgency,
-      mustHave:req.mustHave.split(",").map(s=>s.trim()).filter(Boolean),niceToHave:[],
-      startDate:"",endDate:null,ongoing:true,shiftPattern:"",overtimeAvailable:false,payRate:0,billRate:0,
-      supervisor:A.user?.name||"",supervisorEmail:A.user?.email||"",supervisorPhone:"",ppe:"",
-      notes:"Submitted via employer self-service request form."});
-    setShowReq(false);
-    setReq({title:"",positions:1,location:"",province:"Alberta",mustHave:"",urgency:"medium"});
+    try{
+      await A.createJobOrder({client:client.id,title:req.title.trim(),positions:Math.max(1,Number(req.positions)||1),
+        location:req.location.trim(),province:PCODE[req.province]||req.province,urgency:req.urgency,
+        mustHave:req.mustHave.split(",").map(s=>s.trim()).filter(Boolean),niceToHave:[],
+        startDate:"",endDate:null,ongoing:true,shiftPattern:"",overtimeAvailable:false,payRate:0,billRate:0,
+        supervisor:A.user?.name||"",supervisorEmail:A.user?.email||"",supervisorPhone:"",ppe:"",
+        notes:"Submitted via employer self-service request form."});
+      setShowReq(false);
+      setReq({title:"",positions:1,location:"",province:"Alberta",mustHave:"",urgency:"medium"});
+    }catch(err){A.toast(err.message,"danger");}
   };
 
   return <Page wide>

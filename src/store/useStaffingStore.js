@@ -102,9 +102,9 @@ export function useStaffingStore(user){
     let cancelled=false;
     (async()=>{
       try{
-        const {client,jobOrders:jo,assignments:a,timesheets:t,workers:w}=await api.get("/staffing/employer/data");
+        const {client,jobOrders:jo,assignments:a,timesheets:t,workers:w,invoices:inv}=await api.get("/staffing/employer/data");
         if(cancelled)return;
-        setStaffingClients([client]);setJobOrders(jo);setAssignments(a);setTimesheets(t);setWorkers(w);
+        setStaffingClients([client]);setJobOrders(jo);setAssignments(a);setTimesheets(t);setWorkers(w);setStaffingInvoices(inv);
       }catch{ /* no staffing relationship on file for this employer yet - nothing to show */ }
     })();
     return ()=>{cancelled=true;};
@@ -162,6 +162,11 @@ export function useStaffingStore(user){
   const updateWorker=async(id,patch)=>{
     const {worker:w}=await api.patch(`/staffing/workers/${id}`,patch);
     setWorkers(l=>l.map(x=>x.id===id?w:x));
+  };
+  const payoutVacation=async(id)=>{
+    const {worker:w,amount}=await api.patch(`/staffing/workers/${id}/payout-vacation`);
+    setWorkers(l=>l.map(x=>x.id===id?w:x));
+    return {ok:true,amount};
   };
   const setWorkerAvailability=async(id,availability)=>{
     if(agencyStaff)return updateWorker(id,{availability});
@@ -340,7 +345,7 @@ export function useStaffingStore(user){
     worker,workerByPersonId,staffingClient,staffingClientByEmployerId,jobOrder,assignment,timesheet,
     workerAssignments,activeAssignments,clientAssignments,clientTimesheets,workerTimesheets,openJobOrders,
     agencyLogin,agencyLogout,agencyCurrentStaff,STAFFING_AGENCY,STAFFING_RATES,
-    optInAsWorker,updateWorker,setWorkerAvailability,
+    optInAsWorker,updateWorker,setWorkerAvailability,payoutVacation,
     createJobOrder,updateJobOrder,closeJobOrder,
     createAssignment,endAssignment,
     upsertTimesheetDraft,submitTimesheet,approveTimesheet,rejectTimesheet,

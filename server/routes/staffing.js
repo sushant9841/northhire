@@ -107,6 +107,14 @@ staffingRouter.patch("/workers/:id", requireAgencyAuth, (req, res) => {
   res.json({ worker: serializeWorker(db.prepare("SELECT * FROM staffing_workers WHERE id = ?").get(req.params.id)) });
 });
 
+staffingRouter.patch("/workers/:id/payout-vacation", requireAgencyAuth, (req, res) => {
+  const row = db.prepare("SELECT * FROM staffing_workers WHERE id = ?").get(req.params.id);
+  if (!row) return res.status(404).json({ error: "Worker not found." });
+  const amount = row.vac_balance;
+  db.prepare("UPDATE staffing_workers SET vac_balance = 0 WHERE id = ?").run(req.params.id);
+  res.json({ worker: serializeWorker(db.prepare("SELECT * FROM staffing_workers WHERE id = ?").get(req.params.id)), amount });
+});
+
 /* ─── Clients ─── */
 staffingRouter.get("/clients", requireAgencyAuth, (req, res) => {
   res.json({ clients: db.prepare("SELECT * FROM staffing_clients").all().map(serializeStaffingClient) });
@@ -145,8 +153,19 @@ staffingRouter.patch("/clients/:id/sign-msa", requireAgencyAuth, (req, res) => {
 staffingRouter.get("/job-orders", requireAgencyAuth, (req, res) => {
   res.json({ jobOrders: db.prepare("SELECT * FROM staffing_job_orders").all().map(serializeJobOrder) });
 });
+function creditHoldError(client) {
+  if (client.current_ar >= client.credit_limit) {
+    const employer = db.prepare("SELECT name FROM employers WHERE id = ?").get(client.employer_id);
+    return `${employer?.name || "This client"} is over its credit limit ($${client.current_ar.toLocaleString()} of $${client.credit_limit.toLocaleString()} AR) — settle outstanding invoices before placing new orders.`;
+  }
+  return null;
+}
 staffingRouter.post("/job-orders", requireAgencyAuth, (req, res) => {
   const d = req.body || {};
+  const client = db.prepare("SELECT * FROM staffing_clients WHERE id = ?").get(d.client);
+  if (!client) return res.status(404).json({ error: "Client not found." });
+  const holdMsg = creditHoldError(client);
+  if (holdMsg) return res.status(409).json({ error: holdMsg });
   const id = nextId("jo", "staffing_job_orders");
   db.prepare(
     `INSERT INTO staffing_job_orders
@@ -398,14 +417,17 @@ staffingRouter.get("/employer/data", requireAuth, requireRole("employer"), (req,
   const workers = workerIds.length
     ? db.prepare(`SELECT * FROM staffing_workers WHERE id IN (${workerIds.map(() => "?").join(",")})`).all(...workerIds)
     : [];
+  const invoices = db.prepare("SELECT * FROM staffing_invoices WHERE client_id = ?").all(client.id);
   res.json({
     client: serializeStaffingClient(client), jobOrders: jobOrders.map(serializeJobOrder),
     assignments: assignments.map(serializeAssignment), timesheets: timesheets.map(serializeStaffingTimesheet),
-    workers: workers.map(serializeWorker),
+    workers: workers.map(serializeWorker), invoices: invoices.map(serializeStaffingInvoice),
   });
 });
 staffingRouter.post("/employer/job-orders", requireAuth, requireRole("employer"), (req, res) => {
   const client = resolveOwnClient(req, res); if (!client) return;
+  const holdMsg = creditHoldError(client);
+  if (holdMsg) return res.status(409).json({ error: "Your account is over its credit limit — please settle outstanding invoices before requesting more workers." });
   const d = req.body || {};
   const id = nextId("jo", "staffing_job_orders");
   db.prepare(

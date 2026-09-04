@@ -526,9 +526,10 @@ function _NewJobOrderModal({onClose}){
   const client=A.staffingClient(d.client);
   const rateInvalid=d.billRate>0&&d.payRate>0&&d.billRate<d.payRate;
   useEffect(()=>{if(client){set("supervisor",client.notes?.split(" ")[0]||""); set("supervisorEmail",client.defaultSupervisorEmail||"");}},[d.client]);
-  const submit=()=>{
+  const submit=async()=>{
     if(!d.title||!d.client||rateInvalid)return;
-    A.createJobOrder(d); onClose();
+    try{await A.createJobOrder(d); onClose();}
+    catch(err){A.toast(err.message,"danger");}
   };
   return <Modal onClose={onClose} title="New job order" wide>
     <div className="flex flex-col gap-3.5">
@@ -1167,6 +1168,9 @@ export function AgencyWorkers(){
             <div key={l}><div className="text-xs font-bold text-text-3 tracking-wide uppercase mb-1">{l}</div>
               <div className="text-text">{v}</div></div>)}
         </div>
+        {w.vacBalance>0&&<Btn kind="outline" size="sm" icon="wallet" style={{marginTop:14}}
+          onClick={async()=>{const r=await A.payoutVacation(w.id);if(r.ok)A.toast(`Paid out $${r.amount.toFixed(2)} vacation to ${person?.name||"worker"}`,"ok");}}>
+          Pay out vacation balance</Btn>}
         {w.tickets.length>0&&<div className="mt-4">
           <Lbl>Tickets & certifications</Lbl>
           <div className="flex flex-wrap gap-1.5">{w.tickets.map(t=><Tag key={t} tone="brand" sm>{t}</Tag>)}</div>

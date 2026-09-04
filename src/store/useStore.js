@@ -276,8 +276,11 @@ export function useStore(){
   const log=(action,text,icon)=>setActivity(a=>[{id:uid("l"),action,text,icon,
     /* Was capped at 120 — silently dropped anything older with no warning. 1000 is still a
        client-only cap (no real backend/archival exists), but it's no longer trivial to blow
-       through in normal demo use. */
-    actor:user?`${user.name} (${user.role})`:"Guest",at:nowStamp()},...a].slice(0,1000));
+       through in normal demo use. While impersonating, the acting admin (not the target whose
+       account they're viewing) is the one actually responsible for the action, so the log
+       attributes to them explicitly rather than silently reading as if the target did it. */
+    actor:impersonating?.originalUser?`${impersonating.originalUser.name} (admin, viewing as ${user?.name})`
+      :user?`${user.name} (${user.role})`:"Guest",at:nowStamp()},...a].slice(0,1000));
   const notify=(n)=>setNotifications(list=>[{id:uid("n"),read:false,at:"Just now",...n},...list]);
 
   /* Auto-dismissing toast/snackbar — the shared feedback primitive that never existed, which is
@@ -950,12 +953,12 @@ export function useStore(){
       setJobs(l=>l.map(x=>x.id===id?mapApiJob(updated):x));
       log("job.status",`${nextStatus==="paused"?"Paused":"Reopened"} "${j.t}"`,"briefcase");
     }catch(err){toast(err.message,"danger");}};
-  const flagJob=async id=>{
+  const flagJob=async(id,reason)=>{
     const j=job(id);
     try{
       const {job:updated}=await api.patch(`/jobs/${id}`,{flagged:!j.flagged});
       setJobs(l=>l.map(x=>x.id===id?mapApiJob(updated):x));
-      log("job.flag",`${j.flagged?"Unflagged":"Flagged"} "${j.t}"`,"shield");
+      log("job.flag",`${j.flagged?"Unflagged":"Flagged"} "${j.t}"${!j.flagged&&reason?` — ${reason}`:""}`,"shield");
     }catch(err){toast(err.message,"danger");}};
   const setPipelineJobFn=id=>setPipelineJob(id);
 
@@ -971,11 +974,11 @@ export function useStore(){
       setEmployers(l=>l.map(e=>e.id===id?mapApiEmployer(employer):e));
       log("employer.verify",`${v?"Verified":"Revoked verification for"} ${emp(id).name}`,"shield");
     }catch(err){toast(err.message,"danger");}};
-  const holdEmployer=async id=>{const wasHeld=!!emp(id)?.hold;
+  const holdEmployer=async(id,reason)=>{const wasHeld=!!emp(id)?.hold;
     try{
       const {employer}=await api.patch(`/employers/${id}`,{hold:!wasHeld});
       setEmployers(l=>l.map(e=>e.id===id?mapApiEmployer(employer):e));
-      log("employer.hold",`${wasHeld?"Released":"Placed"} ${emp(id).name} ${wasHeld?"from":"on"} hold`,"clock");
+      log("employer.hold",`${wasHeld?"Released":"Placed"} ${emp(id).name} ${wasHeld?"from":"on"} hold${!wasHeld&&reason?` — ${reason}`:""}`,"clock");
     }catch(err){toast(err.message,"danger");}};
   const toggleSuspend=async(id,reason)=>{const wasSuspended=suspended.has(id);
     try{
@@ -1232,6 +1235,12 @@ export function useStore(){
     downloadText(`applicants-${jid}.csv`,rows.map(r=>r.join(",")).join("\n"),"text/csv");};
   const exportLog=(list)=>downloadText("activity-log.csv",
     ["Time,Actor,Action,Detail",...(list||activity).map(e=>`${e.at},"${e.actor}",${e.action},"${e.text}"`)].join("\n"),"text/csv");
+  const exportUsers=(list)=>{const rows=[["Name","Email","Title","Category","City","Province","Years","Suspended"],
+    ...(list||people).map(p=>[p.name,p.email,p.title||"",p.cat||"",p.city||"",p.prov||"",p.years||0,suspended.has(p.id)?"Yes":"No"])];
+    downloadText("seekers.csv",rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n"),"text/csv");};
+  const exportEmployers=(list)=>{const rows=[["Name","Industry","City","Province","Size","Plan","Verified","On hold","Rating"],
+    ...(list||employers).map(e=>[e.name,e.industry||"",e.city||"",e.prov||"",e.size||"",e.plan,e.verified?"Yes":"No",e.hold?"Yes":"No",e.rating])];
+    downloadText("employers.csv",rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n"),"text/csv");};
   /* Real share sheet / clipboard copy, not just a silent activity-log entry. Can't deep-link to
      this specific listing (no real per-item routing exists yet — see Systemic #8), so this
      shares the title as text rather than a URL that would just resolve to the generic home page. */
@@ -1308,7 +1317,7 @@ export function useStore(){
     publishJob,toggleJobStatus,flagJob,setPipelineJob:setPipelineJobFn,saveCompany,verifyEmployer,holdEmployer,toggleSuspend,
     editBlog,editTraining,saveBlog,saveTraining,deleteBlog,deleteTraining,toggleBlogStatus,toggleTrainingStatus,
     enrol,confirmPaidEnrol,advanceTraining,paidTrainings,newCv,editCv,saveCv,duplicateCv,deleteCv,setDefaultCv,
-    printCv,printCert,printInvoice,exportApplicants,exportLog,share,choosePlan,updateCard,setSetting,
+    printCv,printCert,printInvoice,exportApplicants,exportLog,exportUsers,exportEmployers,share,choosePlan,updateCard,setSetting,
     readNotif,markAllRead,logActivity:log,
     ...HR,
     ...STF};

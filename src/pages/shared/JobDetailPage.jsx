@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
@@ -11,6 +12,8 @@ export function JobDetailPage(){
   const job=A.job(A.jobId); if(!job) return <Page><Empty icon="briefcase" title="Job not found" body="This listing may have been closed or removed."
     action={<Btn kind="primary" onClick={()=>A.go("search")}>Browse jobs</Btn>}/></Page>;
   const e=A.emp(job.e); const applied=A.appliedJobIds.has(job.id); const score=A.score(job);
+  useEffect(()=>{A.loadEmployerReviews(e.id);},[e.id]);
+  const employerReviews=A.reviews.filter(r=>r.employer===e.id);
   const Meta=({icon,k,v})=><div className="flex gap-3 items-start">
     <div className="w-10 h-10 rounded-xl bg-bg flex items-center justify-center text-brand shrink-0"><I n={icon} s={17}/></div>
     <div className="min-w-0"><div className="text-xs text-text-3 mb-1 font-medium tracking-wide">{k}</div>
@@ -35,6 +38,8 @@ export function JobDetailPage(){
             <div className="flex items-center gap-2.5 mt-2.5 flex-wrap text-base text-text-2">
               <button onClick={()=>A.openEmployer(e.id)} className="bg-transparent border-0 p-0 cursor-pointer text-base font-bold text-brand">{e.name}</button>
               {e.verified&&<Tag tone="brand" sm icon="checkC2">Verified</Tag>}
+              {e.rating>0&&<button onClick={()=>A.openEmployer(e.id)} className="bg-transparent border-0 p-0 cursor-pointer flex items-center gap-1 text-sm text-warn font-semibold">
+                <I n="star" s={14} fill={C.warn} w={0}/>{e.rating}<span className="text-text-3 font-normal">({employerReviews.length} review{employerReviews.length===1?"":"s"})</span></button>}
               <span className="text-text-3">•</span><span>{job.city}, {job.prov}</span></div>
             <div className="flex gap-2 flex-wrap mt-3.5">
               <HiringTypeBadge jobId={job.id}/>
