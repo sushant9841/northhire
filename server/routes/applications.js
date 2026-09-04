@@ -22,6 +22,25 @@ function loadOwnedApplication(id, req, res, ownerColumn) {
   return app;
 }
 
+/* The candidate's own visibility settings gate which fields the employer viewing this specific
+   application actually sees - phone/email default visible (matches the pre-existing behavior),
+   a seeker can turn either off from their profile settings. */
+applicationsRouter.get("/:id/candidate", requireAuth, requireRole("employer"), (req, res) => {
+  const app = loadOwnedApplication(req.params.id, req, res, "employer");
+  if (!app) return;
+  const user = db.prepare("SELECT * FROM users WHERE id = ?").get(app.user_id);
+  if (!user) return res.status(404).json({ error: "Candidate not found." });
+  const visibility = JSON.parse(user.visibility_json || "{}");
+  res.json({
+    candidate: {
+      id: user.id, name: user.name,
+      email: visibility.email === false ? null : user.email,
+      phone: visibility.phone === false ? null : user.phone,
+      edu: user.edu,
+    },
+  });
+});
+
 applicationsRouter.get("/mine", requireAuth, requireRole("seeker"), (req, res) => {
   const rows = db.prepare("SELECT * FROM applications WHERE user_id = ? ORDER BY created_at DESC").all(req.user.id);
   res.json({ applications: rows.map(serializeApplication) });

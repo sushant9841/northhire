@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS users (
   complete INTEGER DEFAULT 0, summary TEXT,
   suspended INTEGER DEFAULT 0, suspension_reason TEXT, suspended_at TEXT,
   default_cv TEXT, start_when TEXT, joined TEXT,
+  visibility_json TEXT DEFAULT '{}',
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -214,6 +215,17 @@ CREATE TABLE IF NOT EXISTS platform_settings (
   employer_blogs INTEGER DEFAULT 1, employer_trainings INTEGER DEFAULT 1, employer_feature INTEGER DEFAULT 1,
   auto_approve_jobs INTEGER DEFAULT 1, public_signup INTEGER DEFAULT 1, cv_builder INTEGER DEFAULT 1,
   matching INTEGER DEFAULT 1, enrolments INTEGER DEFAULT 1, pay_transparency INTEGER DEFAULT 1, maintenance INTEGER DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS candidate_notes (
+  id TEXT PRIMARY KEY,
+  employer_id TEXT NOT NULL REFERENCES employers(id),
+  candidate_id TEXT NOT NULL REFERENCES users(id),
+  note TEXT NOT NULL DEFAULT '',
+  tags_json TEXT DEFAULT '[]',
+  created_by TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(employer_id, candidate_id)
 );
 
 /* ═══════════════ HR SUITE ═══════════════ */

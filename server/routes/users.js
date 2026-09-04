@@ -19,6 +19,10 @@ usersRouter.patch("/me", requireAuth, (req, res) => {
   if (body.skills !== undefined) { setCols.push("skills_json = ?"); params.push(JSON.stringify(body.skills)); }
   if (body.types !== undefined) { setCols.push("types_json = ?"); params.push(JSON.stringify(body.types)); }
   if (body.modes !== undefined) { setCols.push("modes_json = ?"); params.push(JSON.stringify(body.modes)); }
+  if (body.visibility !== undefined) {
+    const current = JSON.parse(db.prepare("SELECT visibility_json FROM users WHERE id = ?").get(req.user.id)?.visibility_json || "{}");
+    setCols.push("visibility_json = ?"); params.push(JSON.stringify({ ...current, ...body.visibility }));
+  }
   if (setCols.length) {
     db.prepare(`UPDATE users SET ${setCols.join(", ")} WHERE id = ?`).run(...params, req.user.id);
   }

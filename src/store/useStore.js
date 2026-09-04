@@ -67,6 +67,7 @@ export function useStore(){
   const [suspended,setSuspended]=useState(new Set());
   const [suspensionInfo,setSuspensionInfo]=useState({}); /* {[userId]: {reason, at}} */
   const [invitedCandidates,setInvitedCandidates]=useState(new Set()); /* `${jobId}:${candidateId}` */
+  const [candidateNotes,setCandidateNotes]=useState({}); /* {[candidateId]: {note,tags,updatedAt}} - employer's own private CRM notes */
   const [notifications,setNotifications]=useState([]);
   const [savedSearches,setSavedSearches]=useState([]);
   const [messages,setMessages]=useState([]);
@@ -179,7 +180,7 @@ export function useStore(){
     if(!user){
       setCvs([]);setSavedSearches([]);setMessages([]);setInterviews([]);setReviews([]);setNotifications([]);
       setSaved(new Set());setFollowing(new Set());setEnrolled(new Set());setTrainingProgress({});
-      setReferences([]);setPaymentMethods([]);setTwoFactor({});setInvitedCandidates(new Set());setOutbox([]);
+      setReferences([]);setPaymentMethods([]);setTwoFactor({});setInvitedCandidates(new Set());setOutbox([]);setCandidateNotes({});
       return;
     }
     let cancelled=false;
@@ -197,7 +198,7 @@ export function useStore(){
           api.get("/seeker/saved-jobs"),api.get("/seeker/followed-employers"),api.get("/content/enrolments/mine"),
           api.get("/seeker/references"),api.get("/seeker/payment-methods"),api.get("/seeker/two-factor"),
         );
-        if(isEmployer)calls.push(api.get("/seeker/interviews"),api.get("/seeker/invited-candidates"));
+        if(isEmployer)calls.push(api.get("/seeker/interviews"),api.get("/seeker/invited-candidates"),api.get("/employers/candidate-notes"));
         const results=await Promise.all(calls);
         if(cancelled)return;
         const [{notifications:n},{messages:m},{userSettings:us},{outbox:ob}]=results;
@@ -221,6 +222,7 @@ export function useStore(){
         if(isEmployer){
           setInterviews(results[i++].interviews);
           setInvitedCandidates(new Set(results[i++].invited));
+          setCandidateNotes(Object.fromEntries(results[i++].notes.map(n=>[n.candidate,n])));
         }
         /* Reviews are public per-employer, not per-user - fetched lazily by whichever employer
            profile page is open (see employers.jsx), not here. */
@@ -470,7 +472,8 @@ export function useStore(){
     setUser(d);setPeople(p=>p.map(x=>x.id===d.id?{...x,...d}:x));log("profile.update","Updated their profile","edit");
     try{
       await api.patch("/users/me",{title:d.title,cat:d.cat,city:d.city,prov:d.prov,years:d.years,phone:d.phone,
-        skills:d.skills,edu:d.edu,eligible:d.eligible,payMin:d.payMin,payUnit:d.payUnit,types:d.types,modes:d.modes,summary:d.summary});
+        skills:d.skills,edu:d.edu,eligible:d.eligible,payMin:d.payMin,payUnit:d.payUnit,types:d.types,modes:d.modes,summary:d.summary,
+        visibility:d.visibility});
     }catch(err){toast(`Profile saved locally, but couldn't sync to the server: ${err.message}`,"warn");}
   };
   const deleteAccount=()=>{log("account.delete",`Deleted account ${user.name}`,"trash");setUser(null);setCvs([]);setPg("home");setStack([]);};
@@ -593,6 +596,18 @@ export function useStore(){
      Public per-employer, not per-user, so they're fetched lazily by whichever employer profile
      page is open (see employers.jsx) and merged into this shared list, rather than loaded
      wholesale up front. */
+  const saveCandidateNote=async(candidateId,note,tags)=>{
+    try{
+      const {note:saved}=await api.put(`/employers/candidate-notes/${candidateId}`,{note,tags});
+      setCandidateNotes(m=>({...m,[candidateId]:saved}));
+      log("talent.note",`Updated notes for ${person(candidateId).name}`,"edit");
+      return {ok:true};
+    }catch(err){toast(err.message,"danger");return {ok:false,msg:err.message};}
+  };
+  const loadCandidateContact=async(applicationId)=>{
+    try{const {candidate}=await api.get(`/applications/${applicationId}/candidate`);return candidate;}
+    catch{return null;}
+  };
   const loadEmployerReviews=async(employerId)=>{
     try{
       const {reviews:fresh}=await api.get(`/seeker/reviews/employer/${employerId}`);
@@ -1334,7 +1349,7 @@ export function useStore(){
     paymentMethods,addPaymentMethod,removePaymentMethod,setDefaultPayment,
     twoFactor,enable2FA,disable2FA,
     references,addReference,removeReference,
-    addReview,deleteReview,loadEmployerReviews,
+    addReview,deleteReview,loadEmployerReviews,loadCandidateContact,candidateNotes,saveCandidateNote,
     saved,following,enrolled,trainingProgress,suspended,suspensionInfo,invitedCandidates,notifications,activity,settings,userSettings,search,setSearch,
     toasts,toast,dismissToast,
     jobId,empId,blogId,trainingId,cvId,editId,candidateId,pipelineJob,applyDraft,setApplyDraft,

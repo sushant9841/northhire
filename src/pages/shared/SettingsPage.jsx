@@ -35,6 +35,10 @@ export function SettingsPage(){
         <Switch on={S.discoverable} onChange={v=>A.setUserSetting("discoverable",v)}/></Row>
       <Row icon="lock" title="Hide my current employer" sub="Your work history still shows, without the company name">
         <Switch on={S.hideEmployer} onChange={v=>A.setUserSetting("hideEmployer",v)}/></Row>
+      <Row icon="mail" title="Show my email to employers I apply to" sub="Turn off to keep your email private on every application">
+        <Switch on={u.visibility?.email!==false} onChange={v=>A.saveProfile({...u,visibility:{...u.visibility,email:v}})}/></Row>
+      <Row icon="phone" title="Show my phone number to employers I apply to" sub="Turn off to keep your phone number private on every application">
+        <Switch on={u.visibility?.phone!==false} onChange={v=>A.saveProfile({...u,visibility:{...u.visibility,phone:v}})}/></Row>
     </Card>}
     <Card pad={mob?18:24} style={{marginBottom:16}}>
       <Lbl>Your data</Lbl>

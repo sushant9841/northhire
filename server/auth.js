@@ -92,11 +92,12 @@ export function requireAgencyAuth(req, res, next) {
 
 export function publicUser(row) {
   if (!row) return null;
-  const { password_hash, password_salt, skills_json, types_json, modes_json, ...rest } = row;
+  const { password_hash, password_salt, skills_json, types_json, modes_json, visibility_json, ...rest } = row;
   return {
     ...rest,
     skills: JSON.parse(skills_json || "[]"),
     types: JSON.parse(types_json || "[]"),
     modes: JSON.parse(modes_json || "[]"),
+    visibility: JSON.parse(visibility_json || "{}"),
   };
 }

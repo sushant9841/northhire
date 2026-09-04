@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db } from "../db.js";
+import { db, nextId } from "../db.js";
 import { requireAuth, requireRole } from "../auth.js";
 import { serializeEmployer } from "../serialize.js";
 
@@ -17,6 +17,29 @@ const WITH_OWNER = `
 employersRouter.get("/", (req, res) => {
   const rows = db.prepare(`${WITH_OWNER} ORDER BY employers.name`).all();
   res.json({ employers: rows.map(serializeEmployer) });
+});
+
+/* Must come before GET /:id, or "candidate-notes" would itself be matched as an :id. */
+function serializeCandidateNote(row) {
+  if (!row) return null;
+  return { candidate: row.candidate_id, note: row.note, tags: JSON.parse(row.tags_json || "[]"), updatedAt: new Date(row.created_at).getTime() };
+}
+employersRouter.get("/candidate-notes", requireAuth, requireRole("employer"), (req, res) => {
+  const rows = db.prepare("SELECT * FROM candidate_notes WHERE employer_id = ?").all(req.user.employer_id);
+  res.json({ notes: rows.map(serializeCandidateNote) });
+});
+employersRouter.put("/candidate-notes/:candidateId", requireAuth, requireRole("employer"), (req, res) => {
+  const { note, tags } = req.body || {};
+  const existing = db.prepare("SELECT * FROM candidate_notes WHERE employer_id = ? AND candidate_id = ?").get(req.user.employer_id, req.params.candidateId);
+  if (existing) {
+    db.prepare("UPDATE candidate_notes SET note = ?, tags_json = ?, created_by = ?, created_at = datetime('now') WHERE id = ?")
+      .run(note || "", JSON.stringify(tags || []), req.user.name, existing.id);
+  } else {
+    db.prepare("INSERT INTO candidate_notes (id, employer_id, candidate_id, note, tags_json, created_by) VALUES (?, ?, ?, ?, ?, ?)")
+      .run(nextId("cn", "candidate_notes"), req.user.employer_id, req.params.candidateId, note || "", JSON.stringify(tags || []), req.user.name);
+  }
+  const row = db.prepare("SELECT * FROM candidate_notes WHERE employer_id = ? AND candidate_id = ?").get(req.user.employer_id, req.params.candidateId);
+  res.json({ note: serializeCandidateNote(row) });
 });
 
 employersRouter.get("/:id", (req, res) => {

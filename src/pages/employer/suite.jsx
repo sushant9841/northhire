@@ -431,6 +431,7 @@ export function EmpPipeline(){
   };
 
   const [talentMinScore,setTalentMinScore]=useState(65);
+  const [noting,setNoting]=useState(null); const [noteText,setNoteText]=useState(""); const [noteTags,setNoteTags]=useState("");
   const reverseCandidates=A.reverseMatch(jobId,talentMinScore);
   const talentPg=usePagination(reverseCandidates,12);
   useEffect(()=>{talentPg.setPage(1);},[talentMinScore]);
@@ -484,6 +485,7 @@ export function EmpPipeline(){
         ? <Empty icon="target" title="No talent pool matches yet" body="Try lowering the match-score threshold, or check back as more candidates sign up in this trade."/>
         : <><div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
             {talentPg.pageItems.map(({p,score})=>{const invited=A.invitedCandidates.has(`${jobId}:${p.id}`);
+              const cn=A.candidateNotes[p.id];
               return <Card key={p.id} style={{padding:20,borderRadius:16}}>
               <div className="flex gap-3.5 items-center">
                 <SmartPortrait seed={p.seed} size={52}/>
@@ -494,9 +496,15 @@ export function EmpPipeline(){
               <div className="flex flex-wrap gap-1.5 mt-3.5">
                 {(p.skills||[]).slice(0,4).map(s=><Tag key={s} sm>{s}</Tag>)}
                 {(p.skills||[]).length>4&&<Tag sm>+{p.skills.length-4}</Tag>}</div>
-              {invited
-                ?<Btn kind="soft" size="sm" full icon="check" disabled style={{marginTop:14}}>Invited</Btn>
-                :<Btn kind="outline" size="sm" full icon="send" style={{marginTop:14}} onClick={()=>A.inviteToApply(p.id,jobId)}>Invite to apply</Btn>}
+              {cn?.tags?.length>0&&<div className="flex flex-wrap gap-1.5 mt-2">
+                {cn.tags.map(t=><Tag key={t} tone="violet" sm>{t}</Tag>)}</div>}
+              {cn?.note&&<div className="text-xs text-text-2 mt-2.5 p-2.5 bg-bg rounded-lg italic leading-snug">{cn.note}</div>}
+              <div className="flex gap-2 mt-3.5">
+                {invited
+                  ?<Btn kind="soft" size="sm" full icon="check" disabled>Invited</Btn>
+                  :<Btn kind="outline" size="sm" full icon="send" onClick={()=>A.inviteToApply(p.id,jobId)}>Invite to apply</Btn>}
+                <Btn kind="ghost" size="sm" icon="edit" onClick={()=>{setNoting(p);setNoteText(cn?.note||"");setNoteTags((cn?.tags||[]).join(", "));}}>{cn?"Edit note":"Note"}</Btn>
+              </div>
             </Card>;})}</div>
           <Pagination {...talentPg}/></>}
       </>}
@@ -553,6 +561,22 @@ export function EmpPipeline(){
       title={`Reject ${sel.size} candidate${sel.size===1?"":"s"}?`} onConfirm={()=>runBulk("reject")}>
       This withdraws their application{sel.size===1?"":"s"}. This can't be undone from here.
     </ConfirmDialog>
+    {noting&&<Modal onClose={()=>setNoting(null)} title={`Notes — ${noting.name}`}>
+      <div className="flex flex-col gap-3.5">
+        <div className="text-xs text-text-3">Private to your team — never shown to the candidate or other employers.</div>
+        <Field label="Tags" hint="Comma-separated, e.g. Strong culture fit, Follow up in 3mo">
+          <Input value={noteTags} onChange={e=>setNoteTags(e.target.value)} placeholder="Strong culture fit, Follow up in 3mo"/></Field>
+        <Field label="Notes"><Area rows={4} value={noteText} onChange={e=>setNoteText(e.target.value)} placeholder="Interviewed for a similar role last year, references were strong…"/></Field>
+        <div className="flex gap-2.5 justify-end">
+          <Btn kind="ghost" onClick={()=>setNoting(null)}>Cancel</Btn>
+          <Btn kind="primary" icon="check" onClick={async()=>{
+            const tags=noteTags.split(",").map(s=>s.trim()).filter(Boolean);
+            const r=await A.saveCandidateNote(noting.id,noteText.trim(),tags);
+            if(r.ok){A.toast("Notes saved","ok");setNoting(null);}
+          }}>Save</Btn>
+        </div>
+      </div>
+    </Modal>}
   </div>;
 }
 
@@ -567,6 +591,8 @@ export function EmpCandidate(){
   if(!a) return <Page><Empty icon="users" title="Candidate not found" body="This application may have been withdrawn."
     action={<Btn kind="primary" onClick={()=>A.go("empPipeline")}>Back to pipeline</Btn>}/></Page>;
   const u=A.person(a.user), job=A.job(a.job), s=A.scoreCandidate(u,job), idx=STAGES.indexOf(a.stage);
+  const [contact,setContact]=useState(undefined); // undefined = loading, null = load failed
+  useEffect(()=>{let cancelled=false;A.loadCandidateContact(a.id).then(c=>{if(!cancelled)setContact(c);});return()=>{cancelled=true;};},[a.id]);
   const threadMessages=A.messages.filter(m=>(m.from===u.id&&m.to===A.user?.id)||(m.to===u.id&&m.from===A.user?.id)).slice().reverse();
   const upcomingInterviews=A.interviews.filter(iv=>iv.app===a.id&&iv.status==="scheduled");
   return <Page narrow>
@@ -576,7 +602,9 @@ export function EmpCandidate(){
         <div className="grow shrink basis-50 min-w-0">
           <div className={`font-bold text-text tracking-tight ${mob?"text-xl":"text-2xl"}`}>{u.name}</div>
           <div className="text-sm text-text-2 mt-1">{u.title} • {u.years} years • {u.city}, {u.prov}</div>
-          <div className="text-sm text-text-3 mt-0.5">{u.email} • {u.phone}</div>
+          <div className="text-sm text-text-3 mt-0.5">
+            {contact===undefined?"Loading contact info…":
+              [contact?.email,contact?.phone].filter(Boolean).join(" • ")||"Contact details hidden by this candidate"}</div>
           <div className="mt-2.5"><Tag tone={a.stage==="Offer"?"ok":a.stage==="Interview"?"warn":"brand"} sm>{a.stage}</Tag></div></div>
         <Ring v={s} size={62} label="Fit"/></div></Card>
     <div className={`grid gap-4 mb-4 ${mob?"grid-cols-1":"grid-cols-2"}`}>
