@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Local backend database (regenerate with `npm run server:seed`)
+server/data/*.sqlite
+server/data/*.sqlite-*
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
