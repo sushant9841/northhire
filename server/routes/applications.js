@@ -67,19 +67,32 @@ applicationsRouter.get("/job/:jobId", requireAuth, requireRole("employer"), (req
 });
 
 applicationsRouter.post("/", requireAuth, requireRole("seeker"), (req, res) => {
-  const { jobId, availability, payExpectation, coverLetter } = req.body || {};
+  const { jobId, availability, payExpectation, coverLetter, screeningAnswers } = req.body || {};
   const job = db.prepare("SELECT * FROM jobs WHERE id = ? AND status = 'live'").get(jobId);
   if (!job) return res.status(404).json({ error: "This listing is no longer accepting applications." });
 
   const already = db.prepare("SELECT id FROM applications WHERE job_id = ? AND user_id = ? AND stage != 'Withdrawn'").get(jobId, req.user.id);
   if (already) return res.status(409).json({ error: "You've already applied to this job." });
 
+  // The employer's real questions (with their own required flags) live on the job, not on
+  // whatever the client sends - re-derive required-ness here rather than trusting the caller.
+  const questions = JSON.parse(job.screening_questions_json || "[]");
+  const answers = screeningAnswers && typeof screeningAnswers === "object" ? screeningAnswers : {};
+  const isBlank = (q) => q.type === "checkbox" ? !Array.isArray(answers[q.id]) || !answers[q.id].length : !String(answers[q.id] || "").trim();
+  if (questions.some(q => q.required && isBlank(q)))
+    return res.status(400).json({ error: "Please answer every required question." });
+  const answerSnapshot = questions.map(q => ({
+    id: q.id, prompt: q.prompt, type: q.type, required: !!q.required,
+    answer: answers[q.id] ?? (q.type === "checkbox" ? [] : ""),
+  }));
+
   const id = nextId("a", "applications");
   const historyJson = JSON.stringify([{ stage: "Applied", note: "Waiting for employer review", at: new Date().toISOString() }]);
   db.prepare(
-    `INSERT INTO applications (id, job_id, user_id, stage, note, availability, pay_expectation, cover_letter, history_json)
-     VALUES (?, ?, ?, 'Applied', 'Waiting for employer review', ?, ?, ?, ?)`
-  ).run(id, jobId, req.user.id, availability || null, payExpectation || null, coverLetter || null, historyJson);
+    `INSERT INTO applications (id, job_id, user_id, stage, note, availability, pay_expectation, cover_letter, screening_answers_json, history_json)
+     VALUES (?, ?, ?, 'Applied', 'Waiting for employer review', ?, ?, ?, ?, ?)`
+  ).run(id, jobId, req.user.id, availability || null, payExpectation || null, coverLetter || null,
+    JSON.stringify(answerSnapshot), historyJson);
 
   const row = db.prepare("SELECT * FROM applications WHERE id = ?").get(id);
   res.status(201).json({ application: serializeApplication(row) });

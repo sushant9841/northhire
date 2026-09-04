@@ -132,13 +132,38 @@ export function Apply1(){
 }
 export function Apply2(){
   const A=use(); const job=A.job(A.applyDraft.job); if(!job) return null;
+  const e=A.emp(job.e);
   const d=A.applyDraft; const set=(k,v)=>A.setApplyDraft({...d,[k]:v});
+  const setAnswer=(qid,v)=>set("screeningAnswers",{...(d.screeningAnswers||{}),[qid]:v});
+  const toggleChecklistAnswer=(qid,opt)=>{const cur=d.screeningAnswers?.[qid]||[];
+    setAnswer(qid,cur.includes(opt)?cur.filter(x=>x!==opt):[...cur,opt]);};
   const meetsRequired=job.exp!=="No experience required"&&job.exp!=="Entry level welcome";
-  const nextDisabled=!d.avail||(meetsRequired&&!d.meets);
+  const questions=job.questions||[];
+  const answersComplete=questions.every(q=>{if(!q.required)return true; const v=d.screeningAnswers?.[q.id];
+    return q.type==="checkbox"?Array.isArray(v)&&v.length>0:!!String(v||"").trim();});
+  const nextDisabled=!d.avail||(meetsRequired&&!d.meets)||!answersComplete;
   return <ApplyShell step={2} job={job} onBack={()=>A.go("apply1")} onNext={()=>A.go("apply3")} nextLabel="Review application" nextDisabled={nextDisabled}>
     <Card pad={22}>
-      <H2 sub="Three quick questions the employer asked for">A few questions</H2>
+      <H2 sub="A few quick questions before you apply">A few questions</H2>
       <div className="flex flex-col gap-5">
+        {questions.length>0&&<Banner tone="neutral" icon="briefcase" title={`${e?.name||"This employer"} asks every applicant`}>
+          Answer each one below — the employer sees your responses alongside your application.</Banner>}
+        {questions.map(q=>{const v=d.screeningAnswers?.[q.id];
+          return <Field key={q.id} label={q.prompt} required={q.required}>
+            {q.type==="yesno"&&<div className="grid grid-cols-2 gap-2.5">
+              {["Yes","No"].map(o=><button key={o} type="button" onClick={()=>setAnswer(q.id,o)}
+                className={`p-3 rounded-xl cursor-pointer text-sm border-2 transition duration-150 ${v===o?"font-bold border-brand bg-tint text-brand":"font-medium border-line bg-white text-text"}`}>{o}</button>)}</div>}
+            {q.type==="radio"&&<div className="flex flex-col gap-2">
+              {(q.options||[]).map(o=><button key={o} type="button" onClick={()=>setAnswer(q.id,o)}
+                className={`p-3 rounded-xl cursor-pointer text-sm text-left border-2 transition duration-150 ${v===o?"font-bold border-brand bg-tint text-brand":"font-medium border-line bg-white text-text"}`}>{o}</button>)}</div>}
+            {q.type==="checkbox"&&<div className="flex flex-col gap-2">
+              {(q.options||[]).map(o=>{const on=(v||[]).includes(o);
+                return <button key={o} type="button" onClick={()=>toggleChecklistAnswer(q.id,o)}
+                  className={`flex items-center gap-2.5 p-3 rounded-xl cursor-pointer text-sm text-left border-2 transition duration-150 ${on?"font-bold border-brand bg-tint text-brand":"font-medium border-line bg-white text-text"}`}>
+                  <span className={`w-4.5 h-4.5 rounded-md shrink-0 border-2 flex items-center justify-center ${on?"border-brand bg-brand":"border-line"}`}>{on&&<I n="check" s={10} c="#fff" w={3}/>}</span>{o}</button>;})}</div>}
+            {q.type==="short"&&<Input value={v||""} onChange={ev=>setAnswer(q.id,ev.target.value)} placeholder="Your answer"/>}
+            {q.type==="long"&&<Area rows={3} value={v||""} onChange={ev=>setAnswer(q.id,ev.target.value)} placeholder="Your answer"/>}
+          </Field>;})}
         <Field label="When could you start?" required>
           <Sel value={d.avail} onChange={e=>set("avail",e.target.value)}>
             {["Immediately","Within 2 weeks","Within 1 month","More than 1 month"].map(o=><option key={o}>{o}</option>)}</Sel></Field>
@@ -164,7 +189,8 @@ export function Apply3(){
     ["Posted pay",`${pay(job)} ${payUnit(job)}`],["Applicant",u.name],["Contact",`${u.email} • ${u.phone}`],
     ["CV",selectedCv?selectedCv.name:"None attached"],["Available from",d.avail],
     ["Expected pay",d.expect?`${d.expect}${payShort(job)}`:"Open to posted range"],
-    ["Note",d.letter.trim()?`${d.letter.trim().split(/\s+/).length} words`:"Not included"]];
+    ["Note",d.letter.trim()?`${d.letter.trim().split(/\s+/).length} words`:"Not included"],
+    ...(job.questions?.length?[["Screening questions",`${job.questions.length} answered`]]:[])];
   return <ApplyShell step={3} job={job} onBack={()=>A.go("apply2")} onNext={()=>A.submitApply()} nextLabel="Send application">
     <Card pad={22}>
       <H2 sub="Check everything, then send">Review your application</H2>

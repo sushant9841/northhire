@@ -53,13 +53,18 @@ jobsRouter.post("/", requireAuth, requireRole("employer"), (req, res) => {
   db.prepare(
     `INSERT INTO jobs (id, employer_id, title, cat, city, prov, type, mode, pay_lo, pay_hi, pay_unit,
        vacancies, experience, education, deadline_date, urgent, featured, skills_json, perks_json,
-       description, duties_json, requirements_json, how_to_apply, status)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+       description, duties_json, requirements_json, how_to_apply, screening_questions_json, status)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
   ).run(
     id, req.user.employer_id, b.title, b.cat || null, b.city || null, b.prov || null, b.type || null, b.mode || null,
     b.lo ?? null, b.hi ?? null, b.unit || null, b.vac ?? 1, b.exp || null, b.edu || null, b.dlDate || null,
     b.urgent ? 1 : 0, b.featured ? 1 : 0, JSON.stringify(b.skills || []), JSON.stringify(b.perks || []),
-    b.desc, JSON.stringify(b.duties || []), JSON.stringify(b.reqs || []), b.how || null, initialStatus
+    b.desc, JSON.stringify(b.duties || []), JSON.stringify(b.reqs || []), b.how || null,
+    // Employer-authored screening questions (yes/no, single/multiple choice, short/long answer) -
+    // keep only the fields the applicant-facing form actually needs, capped at a sane count.
+    JSON.stringify((b.questions || []).filter(q => q && q.prompt && q.prompt.trim()).slice(0, 10)
+      .map(q => ({ id: q.id, type: q.type, prompt: q.prompt.trim(), required: !!q.required, options: Array.isArray(q.options) ? q.options : [] }))),
+    initialStatus
   );
   const row = db.prepare("SELECT * FROM jobs WHERE id = ?").get(id);
   res.status(201).json({ job: serializeJob(row) });

@@ -50,6 +50,17 @@ export function SearchPage(){
     exps:A.search.exps||[],prov:A.search.prov||"",minPay:A.search.minPay||""});
   const [sort,setSort]=useState(A.user?.role==="seeker"?"match":"recent");
   const [panel,setPanel]=useState(false);
+  const [showSuggest,setShowSuggest]=useState(false);
+  /* Typeahead - drawn from real live job titles rather than a canned list, so suggestions never
+     name a role that doesn't actually exist on the platform right now. */
+  const titleSuggestions=useMemo(()=>{
+    const query=q.trim().toLowerCase(); if(!query)return [];
+    const seen=new Set(); const out=[];
+    for(const j of A.jobs){if(j.status!=="live")continue;
+      if(j.t.toLowerCase().includes(query)&&!seen.has(j.t)){seen.add(j.t);out.push(j.t);}
+      if(out.length>=6)break;}
+    return out;
+  },[q,A.jobs]);
   useEffect(()=>{setQ(A.search.q||"");setWhere(A.search.where||"");
     setF({cats:A.search.cats||[],types:A.search.types||[],modes:A.search.modes||[],
       exps:A.search.exps||[],prov:A.search.prov||"",minPay:A.search.minPay||""});},[A.search]);
@@ -84,7 +95,15 @@ export function SearchPage(){
         <p className={`text-text-2 leading-normal mx-auto mb-8 max-w-lg ${mob?"text-base":"text-lg"}`}>
           {A.jobs.filter(j=>j.status==="live").length.toLocaleString()} live openings across Canada. Every one shows the wage.</p>
         <div className={`bg-white rounded-2xl p-2 flex gap-2 shadow-md border border-line max-w-3xl mx-auto ${mob?"flex-wrap":"flex-nowrap"}`}>
-          <div className="flex-[2_1_240px] min-w-0"><Input icon="search" placeholder="Job title, skill, trade or employer" value={q} onChange={e=>setQ(e.target.value)} style={{border:"none",boxShadow:"none",fontSize:15}}/></div>
+          <div className="flex-[2_1_240px] min-w-0 relative">
+            <Input icon="search" placeholder="Job title, skill, trade or employer" value={q}
+              onChange={e=>{setQ(e.target.value);setShowSuggest(true);}}
+              onFocus={()=>setShowSuggest(true)} onBlur={()=>setTimeout(()=>setShowSuggest(false),150)}
+              style={{border:"none",boxShadow:"none",fontSize:15}}/>
+            {showSuggest&&titleSuggestions.length>0&&<div className="absolute top-full left-0 right-0 mt-1.5 bg-white rounded-xl border border-line shadow-lg z-10 overflow-hidden text-left">
+              {titleSuggestions.map(t=><button key={t} onMouseDown={e=>{e.preventDefault();setQ(t);setShowSuggest(false);}}
+                className="block w-full text-left py-2.5 px-4 bg-transparent border-0 cursor-pointer text-sm text-text hover:bg-bg">
+                <I n="search" s={13} c={C.text3}/> <span className="ml-1.5">{t}</span></button>)}</div>}</div>
           {!mob&&<div className="w-px bg-line my-2"/>}
           <div className="flex-[1_1_180px] min-w-0"><Input icon="pin" placeholder="City or province" value={where} onChange={e=>setWhere(e.target.value)} style={{border:"none",boxShadow:"none",fontSize:15}}/></div>
           {mob&&<Btn kind="outline" icon="sliders" onClick={()=>setPanel(true)} full>Filters{n?` (${n})`:""}</Btn>}
@@ -100,8 +119,12 @@ export function SearchPage(){
           <div className="flex justify-between items-center mb-5 gap-3 flex-wrap">
             <div className="text-base text-text-2"><strong className={`text-text font-bold tracking-tight ${mob?"text-lg":"text-2xl"}`}>{res.length}</strong> {res.length===1?"job":"jobs"}
               {q&&<> for "<strong className="text-text">{q}</strong>"</>}</div>
-            {A.user?.role==="seeker"&&(q||where||f.cats?.length)&&<Btn kind="outline" size="sm" icon="bookmark"
-              onClick={()=>{const nm=q||CATM[f.cats?.[0]]?.label||"Search";A.saveSearch(q,where,f.cats,nm,f);}}>Save this search</Btn>}
+            {A.user?.role==="seeker"&&(q||where||f.cats?.length)&&(A.editingSavedSearchId
+              ?<Btn kind="outline" size="sm" icon="check" onClick={async()=>{
+                  await A.updateSavedSearch(A.editingSavedSearchId,{q,where,cats:f.cats,types:f.types,modes:f.modes,exps:f.exps,prov:f.prov,minPay:f.minPay});
+                  A.setEditingSavedSearchId(null); A.toast("Saved search updated","ok"); A.go("savedSearches");}}>Update saved search</Btn>
+              :<Btn kind="outline" size="sm" icon="bookmark"
+                onClick={()=>{const nm=q||CATM[f.cats?.[0]]?.label||"Search";A.saveSearch(q,where,f.cats,nm,f);}}>Save this search</Btn>)}
             <Sel value={sort} onChange={e=>setSort(e.target.value)} style={{width:mob?170:200,padding:"10px 14px",fontSize:14}}>
               {A.user?.role==="seeker"&&<option value="match">Best match</option>}
               <option value="recent">Most recent</option><option value="pay">Highest pay</option><option value="closing">Closing soon</option></Sel></div>

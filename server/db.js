@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS jobs (
   urgent INTEGER DEFAULT 0, featured INTEGER DEFAULT 0,
   skills_json TEXT DEFAULT '[]', perks_json TEXT DEFAULT '[]',
   description TEXT, duties_json TEXT DEFAULT '[]', requirements_json TEXT DEFAULT '[]', how_to_apply TEXT,
+  screening_questions_json TEXT DEFAULT '[]',
   status TEXT NOT NULL DEFAULT 'live' CHECK(status IN ('live','paused','review','closed')),
   flagged INTEGER DEFAULT 0,
   hiring_type TEXT NOT NULL DEFAULT 'direct' CHECK(hiring_type IN ('direct','agency-contract','agency-perm')),
@@ -67,6 +68,7 @@ CREATE TABLE IF NOT EXISTS applications (
   user_id TEXT NOT NULL REFERENCES users(id),
   stage TEXT NOT NULL DEFAULT 'Applied',
   note TEXT, availability TEXT, pay_expectation TEXT, cover_letter TEXT, cv_id TEXT, meets TEXT,
+  screening_answers_json TEXT DEFAULT '[]',
   history_json TEXT DEFAULT '[]',
   previous_stage TEXT, withdrawn_at TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -121,7 +123,7 @@ CREATE TABLE IF NOT EXISTS saved_searches (
   user_id TEXT NOT NULL REFERENCES users(id),
   name TEXT, q TEXT, where_text TEXT, cats_json TEXT DEFAULT '[]',
   types_json TEXT DEFAULT '[]', modes_json TEXT DEFAULT '[]', exps_json TEXT DEFAULT '[]',
-  prov TEXT, min_pay TEXT, alerts INTEGER DEFAULT 1,
+  prov TEXT, min_pay TEXT, alerts INTEGER DEFAULT 1, frequency TEXT DEFAULT 'instant',
   created_at TEXT NOT NULL DEFAULT (datetime('now')), last_run TEXT, last_count INTEGER DEFAULT 0
 );
 

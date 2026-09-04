@@ -71,10 +71,23 @@ seekerMiscRouter.post("/saved-searches", requireAuth, requireRole("seeker"), (re
     JSON.stringify(d.types || []), JSON.stringify(d.modes || []), JSON.stringify(d.exps || []), d.prov || "", d.minPay || "");
   res.status(201).json({ savedSearch: serializeSavedSearch(db.prepare("SELECT * FROM saved_searches WHERE id = ?").get(id)) });
 });
+const SAVED_SEARCH_FREQUENCIES = ["instant", "daily", "weekly"];
 seekerMiscRouter.patch("/saved-searches/:id", requireAuth, (req, res) => {
   const row = db.prepare("SELECT * FROM saved_searches WHERE id = ?").get(req.params.id);
   if (!row || row.user_id !== req.user.id) return res.status(404).json({ error: "Not found." });
-  if (req.body?.alerts !== undefined) db.prepare("UPDATE saved_searches SET alerts = ? WHERE id = ?").run(req.body.alerts ? 1 : 0, req.params.id);
+  const d = req.body || {};
+  if (d.alerts !== undefined) db.prepare("UPDATE saved_searches SET alerts = ? WHERE id = ?").run(d.alerts ? 1 : 0, req.params.id);
+  if (d.frequency !== undefined && SAVED_SEARCH_FREQUENCIES.includes(d.frequency))
+    db.prepare("UPDATE saved_searches SET frequency = ? WHERE id = ?").run(d.frequency, req.params.id);
+  if (d.name !== undefined) db.prepare("UPDATE saved_searches SET name = ? WHERE id = ?").run(d.name || "Untitled search", req.params.id);
+  // A full filter re-save - lets a saved search actually be edited in place instead of only
+  // deleted and recreated. Only touches the columns the caller actually sent.
+  const filterCols = { q: "q", where: "where_text", cats: "cats_json", types: "types_json", modes: "modes_json", exps: "exps_json", prov: "prov", minPay: "min_pay" };
+  for (const [key, col] of Object.entries(filterCols)) {
+    if (d[key] === undefined) continue;
+    const value = ["cats", "types", "modes", "exps"].includes(key) ? JSON.stringify(d[key] || []) : (d[key] || "");
+    db.prepare(`UPDATE saved_searches SET ${col} = ? WHERE id = ?`).run(value, req.params.id);
+  }
   res.json({ savedSearch: serializeSavedSearch(db.prepare("SELECT * FROM saved_searches WHERE id = ?").get(req.params.id)) });
 });
 seekerMiscRouter.delete("/saved-searches/:id", requireAuth, (req, res) => {

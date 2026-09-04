@@ -282,7 +282,7 @@ export function BlogsPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [cat,setCat]=useState("all"); const [q,setQ]=useState("");
   const [author,setAuthor]=useState(null);
-  useEffect(()=>{if(A.blogAuthorFilter){setAuthor(A.blogAuthorFilter);A.setBlogAuthorFilter(null);}},[]);
+  useEffect(()=>{if(A.blogAuthorFilter){setAuthor(A.blogAuthorFilter);A.setBlogAuthorFilter(null);}},[A.blogAuthorFilter]);
   const pub=A.blogs.filter(b=>b.status==="published");
   const cats=["all",...Array.from(new Set(pub.map(b=>b.cat)))];
   const list=pub.filter(b=>(cat==="all"||b.cat===cat)&&(!author||b.author===author)&&matchesQuery(q,b.title,b.excerpt));

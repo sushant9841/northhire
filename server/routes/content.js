@@ -13,8 +13,11 @@ function ownerFilter(req) {
 
 contentRouter.get("/blogs", (req, res) => {
   const { status } = req.query;
+  // "all" means "every status" (drafts included) - it was previously matched as a literal
+  // status value instead, so ?status=all silently returned zero rows.
   const clauses = []; const params = [];
-  if (status) { clauses.push("status = ?"); params.push(status); } else { clauses.push("status = 'published'"); }
+  if (status && status !== "all") { clauses.push("status = ?"); params.push(status); }
+  else if (!status) { clauses.push("status = 'published'"); }
   const rows = db.prepare(`SELECT * FROM blogs${clauses.length ? " WHERE " + clauses.join(" AND ") : ""} ORDER BY created_at DESC`).all(...params);
   res.json({ blogs: rows.map(serializeBlog) });
 });
@@ -91,7 +94,8 @@ contentRouter.delete("/blogs/:id", requireAuth, requireRole("employer", "admin")
 contentRouter.get("/trainings", (req, res) => {
   const { status } = req.query;
   const clauses = []; const params = [];
-  if (status) { clauses.push("status = ?"); params.push(status); } else { clauses.push("status = 'published'"); }
+  if (status && status !== "all") { clauses.push("status = ?"); params.push(status); }
+  else if (!status) { clauses.push("status = 'published'"); }
   const rows = db.prepare(`SELECT * FROM trainings${clauses.length ? " WHERE " + clauses.join(" AND ") : ""} ORDER BY created_at DESC`).all(...params);
   res.json({ trainings: rows.map(serializeTraining) });
 });

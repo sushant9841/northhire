@@ -623,6 +623,11 @@ export function EmpCandidate(){
             <span className="text-text-2">{k}</span><span className="font-semibold text-text text-right">{v}</span></div>)}</Card></div>
     {a.letter&&<Card style={{marginBottom:16}}><Lbl>Their note</Lbl>
       <p className="text-sm text-text-2 leading-relaxed m-0 whitespace-pre-wrap">{a.letter}</p></Card>}
+    {a.screeningAnswers?.length>0&&<Card style={{marginBottom:16}}><Lbl>Screening question answers</Lbl>
+      <div className="flex flex-col gap-3.5">
+        {a.screeningAnswers.map(sa=><div key={sa.id}>
+          <div className="text-sm font-semibold text-text mb-1">{sa.prompt}</div>
+          <div className="text-sm text-text-2">{Array.isArray(sa.answer)?(sa.answer.join(", ")||"—"):(sa.answer||"—")}</div></div>)}</div></Card>}
     <Card style={{marginBottom:16}}><Lbl>Move this candidate</Lbl>
       <div className="flex gap-2.5 flex-wrap">
         {idx>0&&<Btn kind="outline" icon="arrowL" onClick={()=>A.moveApp(a.id,STAGES[idx-1])}>Back to {STAGES[idx-1]}</Btn>}

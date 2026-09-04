@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { ROUTES } from "../routes.js";
 import { uid, money, pay, payUnit, payShort, annual, nowStamp, _fmtDate } from "../helpers/utils.js";
 import { CATM, PCODE, STAGES, PLANS, PLAN_REQUIRES, PLAN_ORDER } from "./seed/constants.js";
@@ -514,6 +514,18 @@ export function useStore(){
     try{await api.patch(`/seeker/saved-searches/${id}`,{alerts:!cur.alerts});}
     catch(err){setSavedSearches(l=>l.map(s=>s.id===id?{...s,alerts:cur.alerts}:s));toast(err.message,"danger");}
   };
+  /* In-place edit - previously the only way to change a saved search was delete + recreate.
+     Covers a quick name/frequency edit and a full filter overwrite (from SearchPage via the
+     editingSavedSearchId carry below, same "carry a bit of state to the next page" pattern as
+     contactPrefill/blogAuthorFilter). */
+  const updateSavedSearch=async(id,patch)=>{
+    const cur=savedSearches.find(s=>s.id===id); if(!cur)return;
+    setSavedSearches(l=>l.map(s=>s.id===id?{...s,...patch}:s));
+    try{const {savedSearch}=await api.patch(`/seeker/saved-searches/${id}`,patch);
+      setSavedSearches(l=>l.map(s=>s.id===id?savedSearch:s));}
+    catch(err){setSavedSearches(l=>l.map(s=>s.id===id?cur:s));toast(err.message,"danger");}
+  };
+  const [editingSavedSearchId,setEditingSavedSearchId]=useState(null);
 
   /* --- salary insights: median pay per (role keyword × province) --- */
   const salaryInsight=(title,prov)=>{
@@ -863,6 +875,27 @@ export function useStore(){
   };
 
 
+  /* Deadline reminders for saved/applied jobs - previously the only signal an approaching
+     deadline existed was a colour tag on the one job's own detail page, easy to never see again
+     once you'd looked at it once. Fires (this session only, like the saved-search/follow alerts
+     above - there's no persisted "already reminded" flag) the first time a saved or actively-
+     applied-to job is within 3 days of its deadline. */
+  const remindedDeadlines=useRef(new Set());
+  useEffect(()=>{
+    if(!user||user.role!=="seeker")return;
+    const activeAppJobIds=new Set(applications.filter(a=>a.user===user.id&&a.stage!=="Withdrawn").map(a=>a.job));
+    const watched=new Set([...saved,...activeAppJobIds]);
+    watched.forEach(jobId=>{
+      if(remindedDeadlines.current.has(jobId))return;
+      const j=jobs.find(x=>x.id===jobId);
+      if(!j||j.dl==null||j.dl>3||j.dl<0)return;
+      remindedDeadlines.current.add(jobId);
+      notify({icon:"clock",title:`Closing ${j.dl===0?"today":`in ${j.dl} day${j.dl===1?"":"s"}`}: ${j.t}`,
+        body:activeAppJobIds.has(jobId)?"Your application is in - no action needed, just a heads-up.":"Apply soon if you're still interested.",
+        for:user.id,link:"job"});
+    });
+  },[jobs,saved,applications,user]);
+
   const toggleSave=async id=>{if(!user)return go("login");
     setSaved(p=>{const n=new Set(p); n.has(id)?n.delete(id):n.add(id); return n;});
     try{await api.post(`/seeker/saved-jobs/${id}/toggle`);}
@@ -886,7 +919,7 @@ export function useStore(){
   const openCandidate=id=>{setCandidateId(id);const a=applications.find(x=>x.id===id);
     go("empCandidate",a?person(a.user).name:"Candidate");};
 
-  const beginApply=id=>{setApplyDraft({job:id,avail:"Within 2 weeks",expect:"",letter:"",meets:""});go("apply1");};
+  const beginApply=id=>{setApplyDraft({job:id,avail:"Within 2 weeks",expect:"",letter:"",meets:"",screeningAnswers:{}});go("apply1");};
   const submitApply=async()=>{
     const j=job(applyDraft.job); const e=emp(j.e);
     /* rate limit: prevent duplicate application to same job */
@@ -896,7 +929,7 @@ export function useStore(){
       return go("status");
     }
     try{
-      const {application}=await api.post("/applications",{jobId:j.id,availability:applyDraft.avail,payExpectation:applyDraft.expect,coverLetter:applyDraft.letter});
+      const {application}=await api.post("/applications",{jobId:j.id,availability:applyDraft.avail,payExpectation:applyDraft.expect,coverLetter:applyDraft.letter,screeningAnswers:applyDraft.screeningAnswers||{}});
       setApplications(l=>[...l,mapApiApplication(application)]);
       notify({icon:"send",title:`Application sent to ${e.name}`,body:`Your application for ${j.t} is now in their pipeline.`,for:user.id,link:"status"});
       log("application.create",`Applied to ${j.t} at ${e.name}`,"send");
@@ -980,6 +1013,7 @@ export function useStore(){
       duties:f.duties.split("\n").map(s=>s.trim()).filter(Boolean),
       reqs:f.reqs.split("\n").map(s=>s.trim()).filter(Boolean),
       desc:f.desc.trim(),how:f.how.trim()||"Apply through NorthHire with your resume.",
+      questions:f.questions||[],
       status:settings.autoApproveJobs?"live":"review"};
     let nj;
     try{
@@ -1408,7 +1442,8 @@ export function useStore(){
 
   const A={pg,go,back,pageTitle,homePg,history:stack,user,company,employers,jobs,people,applications,blogs,trainings,cvs,passwords,outbox,savedSearches,messages,interviews,reviews,impersonating,setImpersonating,hireOnboarding,setHireOnboarding,
     hasAccount,checkPassword,upsertPassword,loginWithPassword,verifyLogin2FA,resetPasswordRequest,resetPasswordConfirm,completeEmployerSignup,
-    saveSearch,deleteSavedSearch,toggleSearchAlert,salaryInsight,skillsGap,expandQuery,restoreApp,notifyFollowers,
+    saveSearch,deleteSavedSearch,toggleSearchAlert,updateSavedSearch,editingSavedSearchId,setEditingSavedSearchId,
+    salaryInsight,skillsGap,expandQuery,restoreApp,notifyFollowers,
     sendMessage,markMessageRead,scheduleInterview,cancelInterview,bulkMove,bulkReject,reverseMatch,inviteToApply,importJobsCSV,employerAnalytics,
     impersonate,stopImpersonating,
     PLANS,PLAN_ORDER,currentPlan,planName,can,limitOf,planRequires,
