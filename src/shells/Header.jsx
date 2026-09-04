@@ -45,7 +45,8 @@ export function Header(){
       ["Verified employers only",()=>{A.setEmployersPrefill("verified");A.go("employers");setBrowseOpen(false);}]]},
   ];
 
-  return <header className={`h-15 bg-white border-b border-line flex items-center gap-3.5 sticky top-0 z-400 shrink-0 ${mob?"px-3.5":"px-6"}`}>
+  return <header className="h-15 bg-white border-b border-line sticky top-0 z-400 shrink-0">
+  <div className={`h-full max-w-site mx-auto flex items-center gap-3.5 ${mob?"px-3.5":"px-6"}`}>
     {showBackMob ? <>
       <button onClick={A.back} aria-label="Back" className="bg-bg border-0 w-10 h-10 rounded-xl cursor-pointer flex items-center justify-center text-text shrink-0 transition duration-150 active:scale-95"><I n="chevL" s={19} w={2.2}/></button>
       <div className="text-lg font-bold tracking-tight text-text overflow-hidden text-ellipsis whitespace-nowrap flex-1 min-w-0 text-center">{A.pageTitle||r.title}</div>
@@ -116,5 +117,6 @@ export function Header(){
                 <I n="logout" s={17}/>Sign out</button></div></div></>}
       </div>
     </div>
+  </div>
   </header>;
 }

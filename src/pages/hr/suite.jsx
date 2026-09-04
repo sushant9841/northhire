@@ -68,6 +68,10 @@ export function HrLoginPage(){
               <div key={txt} className="flex gap-2.5 items-center">
                 <span className="text-accent flex"><I n={ic} s={17}/></span>{txt}</div>)}
           </div>
+          <div className="flex items-center gap-3 mt-8 pt-6 border-t border-white/10">
+            <div className="flex">{[2,4,7].map((s,i)=><div key={s} className={`${i?"-ml-3":""} border-2 border-[#0A1929] rounded-full flex`}><SmartPortrait seed={s} size={34}/></div>)}</div>
+            <div className="text-sm text-white/60">Trusted by HR teams at growing Canadian employers</div>
+          </div>
         </div>}
         <div className={`bg-white rounded-3xl text-text ${mob?"p-6":"p-9"}`} style={{boxShadow:"0 40px 80px -20px rgba(0,0,0,.5)"}}>
           <div className="mb-6">

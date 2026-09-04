@@ -4,7 +4,7 @@ import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
 import {
-  Btn, Card, Tag, Field, Input, Sel, Area, Banner, Lbl, Modal, DatePicker, SmartPortrait,
+  Btn, Card, Tag, Field, Input, Sel, Area, Banner, Lbl, Modal, DatePicker, SmartPortrait, SmartScene,
   SmartLogo, Empty, ConfirmDialog, usePagination, Pagination, TH_CLASS as TH_CLS, TD_CLASS as TD_CLS,
 } from "../../design/primitives.jsx";
 import { _fmtDate, _weekStart } from "../../helpers/utils.js";
@@ -35,55 +35,71 @@ export function AgencyLoginPage(){
     A.go("agencyDashboard");
   };
 
-  return <div className={`bg-ink min-h-screen flex items-center justify-center ${mob?"p-4":"p-8"}`}>
-    <div className="w-full max-w-110">
-      <div className="mb-6 text-center">
-        <button onClick={()=>A.go("home")} className="bg-transparent border-0 cursor-pointer inline-flex items-center gap-2.5 text-white/75 p-0 mb-4">
-          <div className="w-9 h-9 rounded-xl bg-[rgba(245,165,36,.18)] border border-[rgba(245,165,36,.4)] flex items-center justify-center"><I n="sparkle" s={18} c="#F5A524"/></div>
-          <div className="text-left">
-            <div className="text-sm font-bold text-white tracking-tight">NorthHire</div>
-            <div className="text-xs text-[#F5A524] font-semibold mt-px tracking-wide">STAFFING · Agency Console</div>
-          </div>
-        </button>
-      </div>
-
-      {mode==="login"?<Card pad={mob?24:32} style={{borderRadius:20,background:"#fff"}}>
-        <div className="mb-5">
-          <h1 className="text-2xl font-bold text-text mb-1.5 tracking-tight">Sign in to the agency console</h1>
-          <p className="text-sm text-text-3 m-0 leading-snug">
-            For NorthHire Staffing recruiters, payroll and management.
-            Not for job seekers or clients.</p>
+  return <div className="bg-ink min-h-screen flex">
+    <div className={`flex-1 min-w-0 flex items-center justify-center ${mob?"p-4":"p-8"}`}>
+      <div className="w-full max-w-110">
+        <div className="flex items-center justify-between mb-6">
+          <button onClick={()=>A.go("home")} className="bg-transparent border border-white/20 text-white py-1.5 px-3.5 rounded-lg cursor-pointer text-sm font-semibold hover:bg-white/5">← Back to NorthHire</button>
         </div>
-
-        <div className="flex flex-col gap-3.5">
-          <Field label="Login ID" required>
-            <Input icon="user" value={id} onChange={e=>setId(e.target.value)} placeholder="firstname.lastname"/></Field>
-          <Field label="Password" required>
-            <Input icon="lock" type="password" value={pw} onChange={e=>setPw(e.target.value)} placeholder="At least 8 characters"/></Field>
-          {err&&<Banner tone="danger" icon="alert">{err}</Banner>}
-          <Btn kind="primary" size="lg" onClick={attempt} disabled={busy||!id||!pw} full>
-            {busy?"Signing in…":"Sign in"}</Btn>
-          <button onClick={()=>{setMode("resetRequest");setErr("");}} className="bg-transparent border-0 p-0 cursor-pointer text-sm font-semibold text-brand text-center">Forgot password?</button>
-        </div>
-
-        <div className="mt-6 p-3.5 bg-bg rounded-xl text-xs text-text-3">
-          <div className="font-semibold text-text-2 mb-2">Demo agency accounts (password: <code className="font-mono text-brand">staff2026</code>)</div>
-          <div className="flex flex-col gap-1.5">
-            {[["nadia.singh","Owner — Managing Director"],
-              ["joel.tremblay","Senior Recruiter"],
-              ["aisha.mohamed","Payroll & Compliance"]].map(([lid,role])=>
-              <button key={lid} onClick={()=>{setId(lid); setPw("staff2026");}} className="bg-white border border-line rounded-lg py-1.5 px-2.5 cursor-pointer text-xs text-left text-text-2 flex justify-between gap-2">
-                <code className="text-brand font-mono">{lid}</code>
-                <span>{role}</span>
-              </button>)}
+        <div className="mb-6 text-center">
+          <div className="inline-flex items-center gap-2.5 text-white/75">
+            <div className="w-9 h-9 rounded-xl bg-[rgba(245,165,36,.18)] border border-[rgba(245,165,36,.4)] flex items-center justify-center"><I n="sparkle" s={18} c="#F5A524"/></div>
+            <div className="text-left">
+              <div className="text-sm font-bold text-white tracking-tight">NorthHire</div>
+              <div className="text-xs text-[#F5A524] font-semibold mt-px tracking-wide">STAFFING · Agency Console</div>
+            </div>
           </div>
         </div>
-      </Card>:<AgencyResetFlow onDone={()=>setMode("login")}/>}
 
-      <div className="text-center mt-4 text-xs text-white/50">
-        License: {SEED_AGENCY_LICENSE}
+        {mode==="login"?<Card pad={mob?24:32} style={{borderRadius:20,background:"#fff"}}>
+          <div className="mb-5">
+            <h1 className="text-2xl font-bold text-text mb-1.5 tracking-tight">Good to have you back</h1>
+            <p className="text-sm text-text-3 m-0 leading-snug">
+              For NorthHire Staffing recruiters, payroll and management.
+              Not for job seekers or clients.</p>
+          </div>
+
+          <div className="flex flex-col gap-3.5">
+            <Field label="Login ID" required>
+              <Input icon="user" value={id} onChange={e=>setId(e.target.value)} placeholder="firstname.lastname"/></Field>
+            <Field label="Password" required>
+              <Input icon="lock" type="password" value={pw} onChange={e=>setPw(e.target.value)} placeholder="At least 8 characters"/></Field>
+            {err&&<Banner tone="danger" icon="alert">{err}</Banner>}
+            <Btn kind="primary" size="lg" onClick={attempt} disabled={busy||!id||!pw} full>
+              {busy?"Signing in…":"Sign in"}</Btn>
+            <button onClick={()=>{setMode("resetRequest");setErr("");}} className="bg-transparent border-0 p-0 cursor-pointer text-sm font-semibold text-brand text-center">Forgot password?</button>
+          </div>
+
+          <div className="mt-6 p-3.5 bg-bg rounded-xl text-xs text-text-3">
+            <div className="font-semibold text-text-2 mb-2">Demo agency accounts (password: <code className="font-mono text-brand">staff2026</code>)</div>
+            <div className="flex flex-col gap-1.5">
+              {[["nadia.singh","Owner — Managing Director"],
+                ["joel.tremblay","Senior Recruiter"],
+                ["aisha.mohamed","Payroll & Compliance"]].map(([lid,role])=>
+                <button key={lid} onClick={()=>{setId(lid); setPw("staff2026");}} className="bg-white border border-line rounded-lg py-1.5 px-2.5 cursor-pointer text-xs text-left text-text-2 flex justify-between gap-2">
+                  <code className="text-brand font-mono">{lid}</code>
+                  <span>{role}</span>
+                </button>)}
+            </div>
+          </div>
+        </Card>:<AgencyResetFlow onDone={()=>setMode("login")}/>}
+
+        <div className="text-center mt-4 text-xs text-white/50">
+          License: {SEED_AGENCY_LICENSE}
+        </div>
       </div>
     </div>
+    {!mob&&<div className="flex-1 min-w-0 relative overflow-hidden">
+      <SmartScene kind="road" tone="#F5A524" w="100%" h="100%" seed={6} style={{position:"absolute",inset:0}}/>
+      <div className="absolute inset-0" style={{background:"linear-gradient(180deg,rgba(11,18,32,.15) 0%,rgba(11,18,32,.75) 100%)"}}/>
+      <div className="absolute left-8 right-8 bottom-9 text-white">
+        <div className="text-2xl font-bold tracking-tight leading-snug mb-2">Your desk, staffed and running.</div>
+        <p className="text-sm text-white/80 leading-relaxed max-w-90">Workers, timesheets, payroll and client billing — one console for the whole book.</p></div>
+      <div className="absolute right-7 top-7 bg-white rounded-2xl py-3 px-4 shadow-lg flex items-center gap-2.5">
+        <div className="w-10 h-10 rounded-xl bg-[#FDF5E6] text-[#8F5B05] flex items-center justify-center"><I n="users" s={18}/></div>
+        <div><div className="text-sm font-bold text-text">7 workers</div>
+          <div className="text-xs text-text-2 mt-0.5">on assignment right now</div></div></div>
+    </div>}
   </div>;
 }
 

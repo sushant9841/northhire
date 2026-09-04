@@ -3,7 +3,7 @@ import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
-import { Page, Card, Btn, Bar, Field, Input, Banner, Sel, Area, CheckRow, Lbl, Ring, Tag, HERO_QUIET } from "../../design/primitives.jsx";
+import { Page, Card, Btn, Bar, Field, Input, Banner, Sel, Area, CheckRow, Lbl, Ring, Tag, SmartScene, SmartPortrait, HERO_QUIET } from "../../design/primitives.jsx";
 import { CATS, CATM, PROVS, PLANS } from "../../store/seed/constants.js";
 
 /* ═══════════════ SIGN UP · SIGN IN · FORGOT PASSWORD ═══════════════ */
@@ -261,52 +261,64 @@ export function LoginPage(){
     const r=await A.verifyLogin2FA(mfa.email,code); setBusy(false);
     if(!r.ok)setErr(r.msg);
   };
+  const formCol=(inner)=><div className={`flex-1 min-w-0 flex items-center justify-center bg-white ${mob?"px-4 py-8":"px-10 py-12"}`}>
+    <div className="w-full max-w-md">{inner}</div></div>;
+  const illusCol=!mob&&<div className="flex-1 min-w-0 relative overflow-hidden bg-wash">
+    <SmartScene kind="trades" tone={C.brand} w="100%" h="100%" seed={4} style={{position:"absolute",inset:0}}/>
+    <div className="absolute inset-0" style={{background:"linear-gradient(180deg,rgba(11,18,32,0) 40%,rgba(11,18,32,.55) 100%)"}}/>
+    <div className="absolute left-8 right-8 bottom-9 text-white">
+      <div className="text-2xl font-bold tracking-tight leading-snug mb-2">Real Canadian jobs.<br/>Real people hired.</div>
+      <p className="text-sm text-white/80 leading-relaxed max-w-90">Every listing shows the wage upfront — no guessing, no "competitive salary."</p></div>
+    <div className="absolute right-7 top-7 bg-white rounded-2xl py-3 px-4 shadow-lg flex items-center gap-2.5">
+      <div className="flex">{[1,3,5].map((s,i)=><div key={s} className={`${i?"-ml-3":""} border-2 border-white rounded-full flex`}><SmartPortrait seed={s} size={28}/></div>)}</div>
+      <div><div className="text-sm font-bold text-text">2,400+ hired</div>
+        <div className="text-xs text-text-2 mt-0.5">in the last 30 days</div></div></div>
+  </div>;
+
   if(mfa){
-    return <div className={`bg-bg min-h-full flex justify-center ${mob?"pt-6 px-4 pb-10":"pt-12 px-6 pb-20"}`}>
-      <div className="w-full max-w-md">
-        <div className="flex items-center mb-5">
-          <button onClick={()=>setMfa(null)} className="flex items-center gap-2 bg-transparent border-0 cursor-pointer p-0 text-text-2 text-sm font-semibold hover:text-text">
-            <I n="chevL" s={16} w={2}/> Back to sign in</button>
+    return <div className="bg-white min-h-full flex">
+      {formCol(<>
+        <button onClick={()=>setMfa(null)} className="flex items-center gap-2 bg-transparent border-0 cursor-pointer p-0 text-text-2 text-sm font-semibold hover:text-text mb-6">
+          <I n="chevL" s={16} w={2}/> Back to sign in</button>
+        <Tag tone="brand" icon="shield">Two-factor verification</Tag>
+        <h1 className={`${HERO_QUIET} text-3xl mt-4 mb-2`}>Just one more step</h1>
+        <p className="text-base text-text-2 mb-6">Enter the 6-digit code for {mfa.email}.</p>
+        <div className="flex flex-col gap-3.5">
+          <Field label="Verification code" hint={mfa.code?`Demo mode — your code is ${mfa.code}`:undefined}>
+            <Input icon="shield" value={code} onChange={e=>{setCode(e.target.value);setErr("");}} placeholder="123456" maxLength={6}
+              onKeyDown={e=>e.key==="Enter"&&verify()}/></Field>
+          {err&&<Banner tone="danger" icon="alert" title="Verification failed">{err}</Banner>}
+          <Btn kind="primary" size="lg" full iconR="arrowR" onClick={verify} disabled={busy||code.length<6}>{busy?"Verifying…":"Verify & sign in"}</Btn>
         </div>
-        <Card pad={mob?24:34} style={{borderRadius:20}}>
-          <h1 className={`${HERO_QUIET} text-3xl mb-2`}>Two-factor verification</h1>
-          <p className="text-base text-text-2 mb-6">Enter the 6-digit code for {mfa.email}.</p>
-          <div className="flex flex-col gap-3.5">
-            <Field label="Verification code" hint={mfa.code?`Demo mode — your code is ${mfa.code}`:undefined}>
-              <Input icon="shield" value={code} onChange={e=>{setCode(e.target.value);setErr("");}} placeholder="123456" maxLength={6}
-                onKeyDown={e=>e.key==="Enter"&&verify()}/></Field>
-            {err&&<Banner tone="danger" icon="alert" title="Verification failed">{err}</Banner>}
-            <Btn kind="primary" size="lg" full iconR="arrowR" onClick={verify} disabled={busy||code.length<6}>{busy?"Verifying…":"Verify & sign in"}</Btn>
-          </div>
-        </Card>
-      </div></div>;
+      </>)}
+      {illusCol}
+    </div>;
   }
-  return <div className={`bg-bg min-h-full flex justify-center ${mob?"pt-6 px-4 pb-10":"pt-12 px-6 pb-20"}`}>
-    <div className="w-full max-w-md">
-      <div className="flex items-center justify-between mb-5">
+  return <div className="bg-white min-h-full flex">
+    {formCol(<>
+      <div className="flex items-center justify-between mb-7">
         <button onClick={()=>A.go("home")} className="flex items-center gap-2 bg-transparent border-0 cursor-pointer p-0 text-text-2 text-sm font-semibold hover:text-text">
           <I n="chevL" s={16} w={2}/> Back to NorthHire</button>
         <button onClick={()=>A.go("signup")} className="bg-transparent border-0 cursor-pointer p-0 text-brand text-sm font-semibold">Create account</button>
       </div>
-      <Card pad={mob?24:34} style={{borderRadius:20}}>
-        <h1 className={`${HERO_QUIET} text-3xl mb-2`}>Welcome back</h1>
-        <p className="text-base text-text-2 mb-6">Sign in to continue.</p>
-        <div className="flex flex-col gap-3.5">
-          <Field label="Email address">
-            <Input icon="mail" type="email" value={email} onChange={e=>{setEmail(e.target.value);setErr("");}} placeholder="you@example.ca"
-              onKeyDown={e=>e.key==="Enter"&&submit()}/></Field>
-          <Field label="Password">
-            <Input icon="lock" type="password" value={pw} onChange={e=>{setPw(e.target.value);setErr("");}} placeholder="Your password"
-              onKeyDown={e=>e.key==="Enter"&&submit()}/></Field>
-          {err&&<Banner tone="danger" icon="alert" title="Sign-in failed">{err}</Banner>}
-          <Btn kind="primary" size="lg" full iconR="arrowR" onClick={submit} disabled={busy}>{busy?"Signing in…":"Sign in"}</Btn>
-        </div>
-        <div className="flex justify-between mt-4 text-sm">
-          <button onClick={()=>A.go("signup")} className="bg-transparent border-0 p-0 cursor-pointer font-semibold text-brand">Create account</button>
-          <button onClick={()=>A.go("forgot")} className="bg-transparent border-0 p-0 cursor-pointer font-semibold text-brand">Forgot password?</button>
-        </div>
-      </Card>
-      <Card pad={mob?18:22} style={{marginTop:14,borderRadius:16,background:C.tint,border:`1px solid ${C.line2}`}}>
+      <Tag tone="brand" icon="user">Good to see you</Tag>
+      <h1 className={`${HERO_QUIET} text-3xl mt-4 mb-2`}>Welcome back</h1>
+      <p className="text-base text-text-2 mb-6">Sign in to pick up right where you left off.</p>
+      <div className="flex flex-col gap-3.5">
+        <Field label="Email address">
+          <Input icon="mail" type="email" value={email} onChange={e=>{setEmail(e.target.value);setErr("");}} placeholder="you@example.ca"
+            onKeyDown={e=>e.key==="Enter"&&submit()}/></Field>
+        <Field label="Password">
+          <Input icon="lock" type="password" value={pw} onChange={e=>{setPw(e.target.value);setErr("");}} placeholder="Your password"
+            onKeyDown={e=>e.key==="Enter"&&submit()}/></Field>
+        {err&&<Banner tone="danger" icon="alert" title="Sign-in failed">{err}</Banner>}
+        <Btn kind="primary" size="lg" full iconR="arrowR" onClick={submit} disabled={busy}>{busy?"Signing in…":"Sign in"}</Btn>
+      </div>
+      <div className="flex justify-between mt-4 text-sm">
+        <button onClick={()=>A.go("signup")} className="bg-transparent border-0 p-0 cursor-pointer font-semibold text-brand">Create account</button>
+        <button onClick={()=>A.go("forgot")} className="bg-transparent border-0 p-0 cursor-pointer font-semibold text-brand">Forgot password?</button>
+      </div>
+      <Card pad={mob?18:20} style={{marginTop:22,borderRadius:16,background:C.tint,border:`1px solid ${C.line2}`}}>
         <div className="text-xs font-bold text-brand tracking-wide uppercase mb-2.5">Demo accounts</div>
         <div className="flex flex-col gap-1.5">
           {[["sarah.chen@example.ca","Password123","Job seeker — Sarah Chen"],
@@ -319,7 +331,9 @@ export function LoginPage(){
                 <span className="text-xs text-text-3 mt-0.5 overflow-hidden text-ellipsis whitespace-nowrap">{e}</span></span>
               <span className="text-xs text-brand font-semibold">Sign in →</span></button>)}</div>
       </Card>
-    </div></div>;
+    </>)}
+    {illusCol}
+  </div>;
 }
 
 export function ForgotPasswordPage(){

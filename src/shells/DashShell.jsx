@@ -299,7 +299,7 @@ export function DashShell({modules,children,brandKind}){
     {sidebar}
     <div className="flex-1 min-w-0 flex flex-col">
       {topbar}
-      <main className="flex-1">{children}</main>
+      <main className="flex-1 w-full max-w-wide mx-auto">{children}</main>
     </div>
   </div>;
 }

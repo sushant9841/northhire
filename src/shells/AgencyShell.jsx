@@ -94,7 +94,7 @@ export function AgencyShell({children}){
     {sidebar}
     <div className="flex-1 min-w-0 flex flex-col">
       {topbar}
-      <main className={`flex-1 min-w-0 overflow-auto ${mob?"pt-5 px-4 pb-10":"pt-8 px-8 pb-15"}`}>{children}</main>
+      <main className={`flex-1 min-w-0 overflow-auto w-full max-w-wide mx-auto ${mob?"pt-5 px-4 pb-10":"pt-8 px-8 pb-15"}`}>{children}</main>
     </div>
   </div>;
 }

@@ -197,7 +197,7 @@ export default function NorthHire(){
               <button onClick={stopImpersonating} style={{background:"#fff",color:C.warn,border:"none",padding:"6px 14px",borderRadius:8,cursor:"pointer",fontWeight:700,fontSize:13,fontFamily:"inherit"}}>Return to admin</button>
             </div>}
             {!_isBare&&<Header/>}
-            <main key={pg} style={{flex:1,display:"flex",flexDirection:"column",minWidth:0,animation:"fadeIn .22s ease"}}>{view}</main>
+            <main key={pg} style={{flex:1,display:"flex",flexDirection:"column",minWidth:0,animation:"rise .32s ease"}}>{view}</main>
             {showFooter&&<Footer/>}
             {showTabs&&<TabBar/>}
             {hireOnboarding&&<HireOnboardingModal payload={hireOnboarding} onClose={()=>setHireOnboarding(null)}/>}

@@ -183,7 +183,11 @@ export function SmartImg({ src, alt, fallback, className, style, imgStyle }) {
   const [ok, setOk] = useState(true);
   const [loaded, setLoaded] = useState(false);
   useEffect(()=>{ setOk(true); setLoaded(false); }, [src]);
-  if (!src || !ok) return <div className={className} style={style}>{fallback}</div>;
+  /* overflow-hidden + centering here matters: several callers (SmartLogo especially) pass a
+     className with its own padding/border while the fallback SVG renders at the box's full
+     nominal size - without clipping and centering, that fixed-size SVG child overflows the
+     padded/bordered box toward the bottom-right corner instead of sitting flush inside it. */
+  if (!src || !ok) return <div className={`overflow-hidden flex items-center justify-center ${className||""}`} style={style}>{fallback}</div>;
   return <div className={`relative overflow-hidden ${className||""}`} style={style}>
     {!loaded && <div className="absolute inset-0">{fallback}</div>}
     <img src={src} alt={alt||""} onError={()=>setOk(false)} onLoad={()=>setLoaded(true)}
