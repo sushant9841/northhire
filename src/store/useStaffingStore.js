@@ -56,6 +56,10 @@ const STAFFING_AGENCY = {
 
 export function useStaffingStore(user){
   const [agencyStaff,setAgencyStaff]=useState(null);
+  /* Distinguishes "still checking for a session" from "confirmed signed out" - see the matching
+     hrAuthChecked note in useHrStore.js for why this matters: without it, refreshing on any
+     agency console page raced the /staffing/me check and always redirected to agencyLogin. */
+  const [agencyAuthChecked,setAgencyAuthChecked]=useState(false);
   const [workers,setWorkers]=useState([]);
   const [staffingClients,setStaffingClients]=useState([]);
   const [jobOrders,setJobOrders]=useState([]);
@@ -72,6 +76,7 @@ export function useStaffingStore(user){
     (async()=>{
       try{ const {staff}=await api.get("/staffing/me"); if(!cancelled)setAgencyStaff(staff); }
       catch{ /* no agency session */ }
+      finally{ if(!cancelled)setAgencyAuthChecked(true); }
     })();
     return ()=>{cancelled=true;};
   },[]);
@@ -374,7 +379,7 @@ export function useStaffingStore(user){
     wsibClaims,fileWsibClaim,updateWsibClaim,
     worker,workerByPersonId,staffingClient,staffingClientByEmployerId,jobOrder,assignment,timesheet,
     workerAssignments,activeAssignments,clientAssignments,clientTimesheets,workerTimesheets,openJobOrders,
-    agencyLogin,agencyLogout,agencyCurrentStaff,agencyResetRequest,agencyResetConfirm,STAFFING_AGENCY,STAFFING_RATES,
+    agencyLogin,agencyLogout,agencyCurrentStaff,agencyAuthChecked,agencyResetRequest,agencyResetConfirm,STAFFING_AGENCY,STAFFING_RATES,
     optInAsWorker,updateWorker,setWorkerAvailability,payoutVacation,
     createJobOrder,updateJobOrder,closeJobOrder,
     createAssignment,endAssignment,

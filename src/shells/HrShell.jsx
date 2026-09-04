@@ -75,9 +75,12 @@ export function HrShell({children}){
   useEffect(()=>{setNavOpen(!mob);},[mob]);
 
   /* Not signed into HR — route to HR login instead of crashing, unless a bridge login from
-     the employer console is in flight, in which case just wait for it to resolve. */
+     the employer console is in flight, or the initial /hr/me check hasn't resolved yet, in
+     which case just wait. Without the hrAuthChecked gate, refreshing on any HR Suite page
+     redirected to hrLogin every time - emp/company are null on the very first render
+     regardless of whether the session cookie is actually still valid. */
   if(!emp||!company){
-    if(A.hrBridging)return null;
+    if(A.hrBridging||!A.hrAuthChecked)return null;
     if(typeof window!=="undefined")setTimeout(()=>A.go("hrLogin"),0);
     return null;
   }

@@ -12,11 +12,16 @@ export function AgencyShell({children}){
   const [navOpen,setNavOpen]=useState(!mob);
   const staff=A.agencyCurrentStaff();
   useEffect(()=>{setNavOpen(!mob);},[mob]);
+  /* Wait for the initial /staffing/me check to actually resolve before redirecting - without
+     the agencyAuthChecked gate, refreshing on any agency console page bounced to agencyLogin
+     every time, since `staff` is null on the very first render regardless of whether the
+     session is still valid. Called unconditionally (not inside the `if(!staff)` below) since
+     conditionally calling a hook is a real bug - it was in the pre-existing code too - that
+     surfaced as a real "Rendered fewer hooks than expected" crash once this effect actually
+     had a dependency that changes across renders. */
+  useEffect(()=>{if(!staff&&A.agencyAuthChecked)A.go("agencyLogin");},[staff,A.agencyAuthChecked]);
 
-  if(!staff){
-    useEffect(()=>{A.go("agencyLogin");},[]);
-    return null;
-  }
+  if(!staff)return null;
 
   const kpi=A.agencyKPIs();
   const badges={openOrders:kpi.openOrdersCount,

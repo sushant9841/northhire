@@ -12,6 +12,7 @@ import { useHrStore } from "./useHrStore.js";
 import { useStaffingStore } from "./useStaffingStore.js";
 import { api, ApiUnreachableError } from "../helpers/api.js";
 import { mapApiJob, mapApiEmployer, mapApiApplication, mapApiUser } from "../helpers/apiMap.js";
+import { buildPath, matchPath, ID_STATE_FOR_ROUTE } from "../helpers/urlRouter.js";
 
 /* Real CSV field parsing (quoted fields, embedded commas, "" escaping) — a plain row.split(",")
    silently shifts every column after the first comma inside a free-text field like Description. */
@@ -31,11 +32,15 @@ function parseCsvLine(line){
 }
 
 export function useStore(){
+  /* Real URL support: computed once at mount (this hook is only ever instantiated once at the
+     app root) so every entity-id useState below can seed itself from whatever the visitor
+     actually landed on - a shared link, a bookmark, or a hard refresh. */
+  const initialMatch=typeof window!=="undefined"?matchPath(ROUTES,window.location.pathname):null;
   const [pg,setPg]=useState(()=>{
     /* Minimal hash entry point so "open HR Suite in a new tab" lands somewhere real —
        HrShell's own guard redirects to hrLogin if this tab has no active HR session. */
     if(typeof window!=="undefined"&&window.location.hash==="#hr")return "hrDashboard";
-    return "home";
+    return initialMatch?.pg||"home";
   });
   const [stack,setStack]=useState([]);
   /* A seeker/employer/admin `user` is now backed by a real httpOnly session cookie the browser
@@ -80,9 +85,10 @@ export function useStore(){
     autoApproveJobs:true,publicSignup:true,cvBuilder:true,matching:true,enrolments:true,payTransparency:true,maintenance:false});
   const [userSettings,setUserSettings]=useState({matchAlerts:true,appAlerts:true,marketing:false,discoverable:true,hideEmployer:false,reducedMotion:false,lang:"en"});
   const [search,setSearch]=useState({q:"",where:"",cats:[]});
-  const [jobId,setJobId]=useState(null),[empId,setEmpId]=useState(null),[blogId,setBlogId]=useState(null);
-  const [trainingId,setTrainingId]=useState(null),[cvId,setCvId]=useState(null),[editId,setEditId]=useState(null);
-  const [candidateId,setCandidateId]=useState(null),[pipelineJob,setPipelineJob]=useState(null);
+  const _idFor=k=>initialMatch&&ID_STATE_FOR_ROUTE[initialMatch.pg]===k?initialMatch.id:null;
+  const [jobId,setJobId]=useState(()=>_idFor("jobId")),[empId,setEmpId]=useState(()=>_idFor("empId")),[blogId,setBlogId]=useState(()=>_idFor("blogId"));
+  const [trainingId,setTrainingId]=useState(()=>_idFor("trainingId")),[cvId,setCvId]=useState(()=>_idFor("cvId")),[editId,setEditId]=useState(()=>_idFor("editId"));
+  const [candidateId,setCandidateId]=useState(()=>_idFor("candidateId")),[pipelineJob,setPipelineJob]=useState(null);
   const [applyDraft,setApplyDraft]=useState({job:null,avail:"Within 2 weeks",expect:"",letter:"",meets:"Yes"});
   /* Lightweight prefill for ContactPage — there's no real URL/param passing between pages, so
      this is the same pattern as applyDraft: a small piece of shared state a page reads and
@@ -300,7 +306,13 @@ export function useStore(){
   };
   const dismissToast=id=>setToasts(l=>l.filter(t=>t.id!==id));
 
-  const go=(p,title)=>{
+  /* Real URL support, part 2: which entity id (if any) the target route needs, and the id's
+     current value so `go()` can build a real path even when the caller doesn't pass one
+     explicitly (idOverride exists for callers like openJob/openBlog that set the id state and
+     navigate in the same tick — reading the id back from state would still see the stale
+     pre-update value, since state setters don't apply mid-render). */
+  const _idStateValues={jobId,empId,blogId,trainingId,candidateId,cvId,editId};
+  const go=(p,title,idOverride)=>{
     const r=ROUTES[p];
     if(r?.roles&&(!user||!r.roles.includes(user.role))){setStack(s=>[...s,pg]);setPg("denied");setPageTitle(null);return;}
     /* Auto-provision HR session when an Enterprise employer navigates into HR modules.
@@ -309,11 +321,59 @@ export function useStore(){
     if(p?.startsWith("hr")&&p!=="hrLogin"&&user?.role==="employer"&&company?.plan==="Enterprise"&&!HR?.hrCurrentEmp()){
       HR?.hrAutoLogin?.();
     }
+    if(typeof window!=="undefined"){
+      const idKey=ID_STATE_FOR_ROUTE[p];
+      const id=idOverride!==undefined?idOverride:(idKey?_idStateValues[idKey]:null);
+      const path=buildPath(ROUTES,p,id)||"/";
+      const depth=(window.history.state?.depth||0)+1;
+      window.history.pushState({depth,pg:p,id},"",path);
+    }
     setStack(s=>[...s,pg]); setPg(p); setPageTitle(title||null);
     if(typeof window!=="undefined")window.scrollTo?.(0,0);
   };
-  const back=()=>{setStack(s=>{const c=[...s];const prev=c.pop();setPg(prev||homePg);setPageTitle(null);return c;});
-    if(typeof window!=="undefined")window.scrollTo?.(0,0);};
+  /* Browser-native back/forward is now the source of truth (see the popstate effect below) -
+     this in-app Back button just asks the browser to go back one real entry when we've pushed
+     at least one, and falls back to homePg only when there's truly nothing to unwind (e.g. a
+     shared link opened with no prior in-app navigation this session). */
+  const back=()=>{
+    if(typeof window!=="undefined"&&(window.history.state?.depth||0)>0){window.history.back();return;}
+    setStack(s=>{const c=[...s];const prev=c.pop();setPg(prev||homePg);setPageTitle(null);return c;});
+    if(typeof window!=="undefined")window.scrollTo?.(0,0);
+  };
+  useEffect(()=>{
+    if(typeof window==="undefined")return;
+    /* Establishes depth:0 baseline so the very first back() press falls through to the
+       homePg fallback instead of trying to unwind a history entry that doesn't carry our
+       {depth,pg,id} shape (e.g. whatever the browser had before this page ever loaded). */
+    if(!window.history.state)window.history.replaceState({depth:0,pg,id:null},"",window.location.pathname+window.location.search);
+    const SETTER_FOR_ID_KEY={jobId:setJobId,empId:setEmpId,blogId:setBlogId,trainingId:setTrainingId,candidateId:setCandidateId,cvId:setCvId,editId:setEditId};
+    const onPopState=()=>{
+      const state=window.history.state;
+      let pg2,id2;
+      if(state?.pg){pg2=state.pg;id2=state.id??null;}
+      else{const m=matchPath(ROUTES,window.location.pathname);pg2=m?.pg||"home";id2=m?.id??null;}
+      const idKey=ID_STATE_FOR_ROUTE[pg2];
+      if(idKey)SETTER_FOR_ID_KEY[idKey]?.(id2);
+      setPg(pg2); setPageTitle(null);
+      setStack(s=>s.length?s.slice(0,-1):s);
+      window.scrollTo?.(0,0);
+    };
+    window.addEventListener("popstate",onPopState);
+    return ()=>window.removeEventListener("popstate",onPopState);
+  },[]);
+  /* Login/logout/signup-success and similar "fresh start" transitions used to call setPg(...)
+     directly, bypassing go() entirely - the app's internal state was correct (PAGES[pg]
+     re-rendered fine) but the URL was left stuck on whatever page you navigated FROM (e.g.
+     still showing /login after a successful sign-in). Depth resets to 0 here since these are
+     genuine new contexts, not a step deeper into the previous one - Back afterward should land
+     on home, not try to unwind pre-login browsing. */
+  const _hardNav=p=>{
+    if(typeof window!=="undefined"){
+      const path=buildPath(ROUTES,p,null)||"/";
+      window.history.pushState({depth:0,pg:p,id:null},"",path);
+    }
+    setStack([]); setPg(p); setPageTitle(null);
+  };
 
   /* --- matching --- */
   const scoreCandidate=(u,j)=>{
@@ -370,7 +430,7 @@ export function useStore(){
   /* --- actions --- */
   const logout=()=>{
     api.post("/auth/logout").catch(()=>{}); /* best-effort - the cookie is cleared server-side either way */
-    setUser(null);setStack([]);setPg("home");setPageTitle(null);
+    setUser(null);_hardNav("home");
   };
   /* hasAccount only ever sees the built-in demo emails now — real accounts created after this
      backend went live live in the server's database, not this local map. It's still useful as
@@ -386,7 +446,7 @@ export function useStore(){
       if(r.mfaRequired)return {ok:false,mfaRequired:true,email:r.email,code:r.code};
       const mapped=mapApiUser(r.user);
       setUser(mapped);
-      setStack([]); setPg(mapped.role==="employer"?"empHome":mapped.role==="admin"?"admHome":"home");
+      _hardNav(mapped.role==="employer"?"empHome":mapped.role==="admin"?"admHome":"home");
       log("auth.login",`Signed in as ${mapped.name}`,"logout");
       return {ok:true};
     }catch(e){
@@ -398,7 +458,7 @@ export function useStore(){
       const {user:apiUser}=await api.post("/auth/login/verify-2fa",{email,code});
       const mapped=mapApiUser(apiUser);
       setUser(mapped);
-      setStack([]); setPg(mapped.role==="employer"?"empHome":mapped.role==="admin"?"admHome":"home");
+      _hardNav(mapped.role==="employer"?"empHome":mapped.role==="admin"?"admHome":"home");
       log("auth.login",`Signed in as ${mapped.name}`,"logout");
       return {ok:true};
     }catch(e){
@@ -437,7 +497,7 @@ export function useStore(){
         types:d.types,modes:d.modes};
       await api.patch("/users/me",patch); /* persisted server-side so it survives a refresh, unlike before this store was cookie/API-backed */
       const u={...mapApiUser(apiUser),...patch,startWhen:d.startWhen,summary:"",defaultCv:null,joined:_fmtDate(new Date())};
-      setUser(u); setPeople(p=>[u,...p]); setStack([]); setPg("welcome");
+      setUser(u); setPeople(p=>[u,...p]); _hardNav("welcome");
       notify({icon:"sparkle",title:"Welcome to NorthHire",body:"Your profile is live. Check Matched jobs to see what fits your skills.",for:u.id,link:"matched"});
       log("auth.signup",`New job seeker registered: ${u.name}`,"user");
       return {ok:true};
@@ -465,7 +525,7 @@ export function useStore(){
       setEmployers(list=>[e,...list]);
       setUser({...mapApiUser(apiUser),name:e.ownerName,skills:[]});
       setPendingPlan(null);
-      setStack([]);setPg("welcomeEmp");
+      _hardNav("welcomeEmp");
       log("auth.signup.employer",`New employer registered: ${e.name}`,"building");
       notify({icon:"sparkle",title:"Welcome to NorthHire",body:"Post your first job to start receiving applicants. Verification usually takes 1 business day.",for:apiUser.id,link:"empPost"});
       return {ok:true};
@@ -481,7 +541,7 @@ export function useStore(){
         visibility:d.visibility});
     }catch(err){toast(`Profile saved locally, but couldn't sync to the server: ${err.message}`,"warn");}
   };
-  const deleteAccount=()=>{log("account.delete",`Deleted account ${user.name}`,"trash");setUser(null);setCvs([]);setPg("home");setStack([]);};
+  const deleteAccount=()=>{log("account.delete",`Deleted account ${user.name}`,"trash");setUser(null);setCvs([]);_hardNav("home");};
   const exportData=()=>downloadText(`northhire-data-${user.id}.json`,JSON.stringify({profile:user,cvs,applications:myApps,saved:[...saved]},null,2));
   const setUserSetting=(k,v)=>{
     setUserSettings(s=>({...s,[k]:v}));
@@ -668,13 +728,13 @@ export function useStore(){
     const target=people.find(p=>p.id===userId); if(!target)return;
     setImpersonating({originalUser:user}); /* remember admin */
     setUser({...target,role:"seeker"});
-    setStack([]); setPg("home");
+    _hardNav("home");
     log("admin.impersonate",`Admin viewing as ${target.name}`,"eye");
     notify({icon:"eye",title:"Impersonation active",body:`You are viewing as ${target.name}. Return to admin from the banner.`,for:target.id,link:null});
   };
   const stopImpersonating=()=>{
     if(!impersonating?.originalUser)return;
-    setUser(impersonating.originalUser); setImpersonating(null); setStack([]); setPg("admHome");
+    setUser(impersonating.originalUser); setImpersonating(null); _hardNav("admHome");
     log("admin.impersonate.stop","Ended impersonation","shield");
   };
 
@@ -920,12 +980,12 @@ export function useStore(){
       setJobs(js=>js.map(j=>j.id===id?{...j,views:j.views+1}:j));
       api.post(`/jobs/${id}/view`).catch(()=>{}); /* best-effort - a failed view-count bump shouldn't block opening the job */
     }
-    const j=job(id); go("job",j?j.t:"Job details");};
-  const openEmployer=id=>{setEmpId(id);const e=emp(id);go("employer",e?e.name:"Employer");};
-  const openBlog=id=>{setBlogId(id);const b=blogs.find(x=>x.id===id);go("blog",b?"Article":"Article");};
-  const openTraining=id=>{setTrainingId(id);go("training","Training");};
+    const j=job(id); go("job",j?j.t:"Job details",id);};
+  const openEmployer=id=>{setEmpId(id);const e=emp(id);go("employer",e?e.name:"Employer",id);};
+  const openBlog=id=>{setBlogId(id);const b=blogs.find(x=>x.id===id);go("blog",b?"Article":"Article",id);};
+  const openTraining=id=>{setTrainingId(id);go("training","Training",id);};
   const openCandidate=id=>{setCandidateId(id);const a=applications.find(x=>x.id===id);
-    go("empCandidate",a?person(a.user).name:"Candidate");};
+    go("empCandidate",a?person(a.user).name:"Candidate",id);};
 
   const beginApply=id=>{setApplyDraft({job:id,avail:"Within 2 weeks",expect:"",letter:"",meets:"",screeningAnswers:{}});go("apply1");};
   const submitApply=async()=>{
@@ -1098,8 +1158,8 @@ export function useStore(){
     }catch(err){toast(err.message,"danger");}};
 
   /* content */
-  const editBlog=id=>{setEditId(id);go("empBlogEdit",id==="new"?"New article":"Edit article");};
-  const editTraining=id=>{setEditId(id);go("empTrainEdit",id==="new"?"New training":"Edit training");};
+  const editBlog=id=>{setEditId(id);go("empBlogEdit",id==="new"?"New article":"Edit article",id);};
+  const editTraining=id=>{setEditId(id);go("empTrainEdit",id==="new"?"New training":"Edit training",id);};
   const saveBlog=async(d,isNew)=>{
     const {bodyText,...rest}=d;
     try{
@@ -1195,10 +1255,10 @@ export function useStore(){
       const {cv}=await api.post("/seeker/cvs",draft);
       setCvs(l=>[cv,...l]);
       if(!user.defaultCv){await api.patch("/users/me",{defaultCv:cv.id});setUser(u=>({...u,defaultCv:cv.id}));}
-      setCvId(cv.id); go("cvEdit","CV builder"); log("cv.create",`Created CV "${cv.name}"`,"file");
+      setCvId(cv.id); go("cvEdit","CV builder",cv.id); log("cv.create",`Created CV "${cv.name}"`,"file");
     }catch(err){toast(err.message,"danger");}
   };
-  const editCv=id=>{setCvId(id);go("cvEdit","CV builder");};
+  const editCv=id=>{setCvId(id);go("cvEdit","CV builder",id);};
   const saveCv=async d=>{
     try{
       const {cv}=await api.patch(`/seeker/cvs/${d.id}`,d);

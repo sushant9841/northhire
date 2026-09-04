@@ -16,6 +16,11 @@ export function useHrStore(){
   const [hrEmployee,setHrEmployee]=useState(null); /* the signed-in HR employee, or null */
   const [hrCompany,setHrCompany]=useState(null); /* {id,name,plan} */
   const [hrBridging,setHrBridging]=useState(false); /* true while auto-bridging from the employer console */
+  /* Distinguishes "still checking for a session" from "confirmed signed out" - without this,
+     a refresh on any HR Suite page raced the /hr/me check and always lost: HrShell saw
+     hrEmployee===null on the very first render (before the fetch below had a chance to
+     resolve) and immediately redirected to hrLogin, even when the session cookie was valid. */
+  const [hrAuthChecked,setHrAuthChecked]=useState(false);
   const [hrEmployees,setHrEmployees]=useState([]);
   const [hrAttendance,setHrAttendance]=useState([]);
   const [hrLeave,setHrLeave]=useState([]);
@@ -37,6 +42,7 @@ export function useHrStore(){
         const {employee,company}=await api.get("/hr/me");
         if(!cancelled){setHrEmployee(employee);setHrCompany(company);}
       }catch{ /* no HR session - stays signed out */ }
+      finally{ if(!cancelled)setHrAuthChecked(true); }
     })();
     return ()=>{cancelled=true;};
   },[]);
@@ -420,7 +426,7 @@ export function useHrStore(){
   const canAccessModule=(role,module)=>modulesForRole(role).includes(module);
 
   return {
-    hrBridging,
+    hrBridging,hrAuthChecked,
     hrEmployees,hrAttendance,hrLeave,hrTasks,hrEvents,hrInvoices,hrChats,hrChatMsgs,
     hrPayruns,hrCompanySettings,hrDepartments,hrExpenses,hrAuditLog,
     hrEmp,hrEmpsAtCompany,hrCurrentEmp,hrCurrentCompany,hrLogin,hrLogout,hrAutoLogin,
