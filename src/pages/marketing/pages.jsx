@@ -783,18 +783,18 @@ export function ContactPage(){
   const [f,setF]=useState({name:A.user?.name||"",email:A.user?.email||"",
     topic:A.contactPrefill?.topic||"General",msg:A.contactPrefill?.msg||""});
   useEffect(()=>{if(A.contactPrefill)A.setContactPrefill(null);},[]);
-  const [err,setErr]=useState({}); const [sent,setSent]=useState(false);
+  const [err,setErr]=useState({}); const [sent,setSent]=useState(false); const [ticket,setTicket]=useState(null); const [busy,setBusy]=useState(false);
   const set=(k,v)=>{setF(p=>({...p,[k]:v}));setErr(e=>({...e,[k]:undefined}));};
-  const submit=()=>{const e={};
+  const submit=async()=>{const e={};
     if(!f.name.trim())e.name="Required";
     if(!f.email.includes("@"))e.email="Enter a valid email";
     if(f.msg.trim().length<10)e.msg="A bit more, please";
     setErr(e); if(Object.keys(e).length)return;
-    /* No dedicated contact-inbox store exists yet, so the full submission (not just the topic)
-       goes into the activity log, which admins can already search/read via Activity Log —
-       previously the actual message text was discarded entirely. */
-    A.logActivity("contact.submitted",`Contact (${f.topic}) from ${f.name} <${f.email}>: "${f.msg.trim()}"`);
-    setSent(true);};
+    setBusy(true);
+    const r=await A.submitContact({...f,msg:f.msg.trim()});
+    setBusy(false);
+    if(!r.ok){setErr({msg:r.msg});return;}
+    setTicket(r.ticket); setSent(true);};
   const pad=mob?"py-14 px-4":"py-24 px-8";
 
   if(sent) return <div className={`bg-white ${pad}`}>
@@ -802,8 +802,9 @@ export function ContactPage(){
       <div className="w-22 h-22 rounded-full bg-ok-bg border-2 border-ok-ln flex items-center justify-center mx-auto mb-8">
         <I n="check" s={44} c={C.ok} w={2.6}/></div>
       <h1 className={`${HERO_QUIET} mb-5 leading-snug ${mob?"text-3xl":"text-4xl"}`}>Message received.</h1>
-      <p className={`text-text-2 leading-snug mx-auto mb-9 max-w-110 ${mob?"text-base":"text-lg"}`}>
+      <p className={`text-text-2 leading-snug mx-auto mb-3 max-w-110 ${mob?"text-base":"text-lg"}`}>
         Thanks {f.name.split(" ")[0]}. We'll reply to <strong className="text-text">{f.email}</strong> by end of the next business day.</p>
+      {ticket&&<p className="text-sm text-text-3 mx-auto mb-9">Reference this ticket if you follow up: <strong className="text-text font-mono">{ticket}</strong></p>}
       <Btn kind="primary" size="lg" onClick={()=>A.go("home")}>Back to home</Btn></div></div>;
 
   const topics=[["General","Something else"],["Job seeker","Help with my account"],["Hiring","Sales or demo"],["Report","Suspicious posting"]];
@@ -840,7 +841,7 @@ export function ContactPage(){
               <Field label="Email" required error={err.email}><Input icon="mail" type="email" value={f.email} onChange={e=>set("email",e.target.value)} placeholder="you@example.ca" invalid={!!err.email}/></Field></div>
             <Field label="Message" required error={err.msg}>
               <Area rows={7} value={f.msg} onChange={e=>set("msg",e.target.value)} invalid={!!err.msg} placeholder="Tell us what's going on."/></Field>
-            <Btn kind="primary" size="lg" icon="send" onClick={submit}>Send message</Btn></div>
+            <Btn kind="primary" size="lg" icon="send" onClick={submit} disabled={busy}>{busy?"Sending…":"Send message"}</Btn></div>
         </div>
 
         <div className="flex flex-col gap-4">

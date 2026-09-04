@@ -1097,6 +1097,8 @@ export function AgencyClients(){
 export function AgencyWorkers(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [selected,setSelected]=useState(null);
+  const [filingClaim,setFilingClaim]=useState(false);
+  const [claimDraft,setClaimDraft]=useState({claimNumber:"",incidentDate:"",description:""});
   const list=A.workers;
   const pg=usePagination(list,20);
   return <div>
@@ -1148,7 +1150,8 @@ export function AgencyWorkers(){
     <Pagination {...pg}/>
 
     {selected&&(()=>{const w=A.worker(selected); const person=(A.people||[]).find(p=>p.id===w.personId);
-      return <Modal onClose={()=>setSelected(null)} title="Worker file" wide>
+      return <>
+      <Modal onClose={()=>setSelected(null)} title="Worker file" wide>
         <div className="flex gap-3.5 items-center mb-4">
           <SmartPortrait seed={person?.seed||0} size={54} radius={13}/>
           <div>
@@ -1171,6 +1174,25 @@ export function AgencyWorkers(){
         {w.vacBalance>0&&<Btn kind="outline" size="sm" icon="wallet" style={{marginTop:14}}
           onClick={async()=>{const r=await A.payoutVacation(w.id);if(r.ok)A.toast(`Paid out $${r.amount.toFixed(2)} vacation to ${person?.name||"worker"}`,"ok");}}>
           Pay out vacation balance</Btn>}
+        <div className="mt-4">
+          <div className="flex justify-between items-center mb-1.5">
+            <Lbl style={{margin:0}}>WSIB claims</Lbl>
+            <Btn kind="ghost" size="xs" icon="plus" onClick={()=>{setFilingClaim(true);setClaimDraft({claimNumber:"",incidentDate:"",description:""});}}>File claim</Btn>
+          </div>
+          {A.wsibClaims.filter(c=>c.worker===w.id).length===0
+            ?<div className="text-xs text-text-3">No claims on file for this worker.</div>
+            :<div className="flex flex-col gap-1.5">
+              {A.wsibClaims.filter(c=>c.worker===w.id).map(c=>
+                <div key={c.id} className="flex justify-between items-center py-2 px-3 bg-bg rounded-lg">
+                  <div className="min-w-0">
+                    <div className="text-xs font-semibold text-text">{c.claimNumber||c.id} {c.incidentDate?`· incident ${c.incidentDate}`:""}</div>
+                    {c.description&&<div className="text-xs text-text-3 mt-0.5">{c.description}</div>}
+                  </div>
+                  <Sel value={c.status} onChange={e=>A.updateWsibClaim(c.id,{status:e.target.value})} style={{width:130,fontSize:12,padding:"4px 8px"}}>
+                    {["filed","under-review","approved","denied","closed"].map(s=><option key={s} value={s}>{s}</option>)}</Sel>
+                </div>)}
+            </div>}
+        </div>
         {w.tickets.length>0&&<div className="mt-4">
           <Lbl>Tickets & certifications</Lbl>
           <div className="flex flex-wrap gap-1.5">{w.tickets.map(t=><Tag key={t} tone="brand" sm>{t}</Tag>)}</div>
@@ -1192,7 +1214,23 @@ export function AgencyWorkers(){
           <Lbl>Recruiter notes</Lbl>
           <div className="text-sm text-text-2 leading-relaxed p-3 bg-bg rounded-lg italic">{w.notes}</div>
         </div>}
-      </Modal>;
+      </Modal>
+      {filingClaim&&<Modal onClose={()=>setFilingClaim(false)} title={`File WSIB claim — ${person?.name||""}`}>
+        <div className="flex flex-col gap-3.5">
+          <Field label="Claim number (optional)" hint="If already assigned by WSIB, otherwise leave blank and add later.">
+            <Input value={claimDraft.claimNumber} onChange={e=>setClaimDraft({...claimDraft,claimNumber:e.target.value})} placeholder="e.g. 1234567"/></Field>
+          <Field label="Incident date"><Input type="date" value={claimDraft.incidentDate} onChange={e=>setClaimDraft({...claimDraft,incidentDate:e.target.value})}/></Field>
+          <Field label="Description"><Area rows={3} value={claimDraft.description} onChange={e=>setClaimDraft({...claimDraft,description:e.target.value})} placeholder="What happened, where, and any immediate first aid given"/></Field>
+          <div className="flex gap-2.5 justify-end">
+            <Btn kind="ghost" onClick={()=>setFilingClaim(false)}>Cancel</Btn>
+            <Btn kind="primary" icon="check" disabled={!claimDraft.incidentDate} onClick={async()=>{
+              await A.fileWsibClaim({worker:w.id,...claimDraft});
+              A.toast("WSIB claim filed","ok"); setFilingClaim(false);
+            }}>File claim</Btn>
+          </div>
+        </div>
+      </Modal>}
+      </>;
     })()}
   </div>;
 }

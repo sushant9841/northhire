@@ -604,6 +604,20 @@ export function useStore(){
       return {ok:true};
     }catch(err){toast(err.message,"danger");return {ok:false,msg:err.message};}
   };
+  const submitContact=async(f)=>{
+    try{
+      const {ticket}=await api.post("/platform/contact",{name:f.name,email:f.email,topic:f.topic,message:f.msg});
+      log("contact.submitted",`Contact (${f.topic}) from ${f.name} <${f.email}> — ticket ${ticket}`,"mail");
+      return {ok:true,ticket};
+    }catch(err){return {ok:false,msg:err.message};}
+  };
+  const loadContactInbox=async()=>{
+    try{const {messages}=await api.get("/platform/contact");return messages;}catch{return [];}
+  };
+  const resolveContactMessage=async(id)=>{
+    try{await api.patch(`/platform/contact/${id}`,{status:"resolved"});return {ok:true};}
+    catch(err){return {ok:false,msg:err.message};}
+  };
   const loadCandidateContact=async(applicationId)=>{
     try{const {candidate}=await api.get(`/applications/${applicationId}/candidate`);return candidate;}
     catch{return null;}
@@ -1275,6 +1289,53 @@ export function useStore(){
     w.document.write(html); w.document.close();
     log("billing.invoice_download",`Downloaded invoice ${id}`,"file");
   };
+  /* Real offer-letter generation - no e-signature (that stays blocked, real e-sig needs a
+     third-party provider), but the letter itself is a genuine formatted document via the same
+     browser print-to-PDF pattern printCv/printCert/printInvoice already established, not a
+     one-line stage label pretending to be an offer process. */
+  const printOfferLetter=(candidate,j,e,draft)=>{
+    if(typeof window==="undefined")return;
+    const today=new Date().toLocaleDateString("en-CA",{year:"numeric",month:"long",day:"numeric"});
+    const html=`<!DOCTYPE html><html><head><title>Offer letter — ${candidate.name}</title>
+      <style>body{font-family:Georgia,serif;max-width:720px;margin:40px auto;padding:0 40px;color:#111;line-height:1.65}
+        .brand{font-size:14pt;font-weight:700;color:#005CCC;margin-bottom:2px}.sub{font-size:9pt;color:#888;margin-bottom:30px}
+        h1{font-size:17pt;margin:0 0 18px}p{margin:0 0 14px;font-size:11.5pt}
+        table{width:auto;margin:18px 0;border-collapse:collapse}td{padding:4px 16px 4px 0;font-size:11pt;vertical-align:top}
+        td:first-child{color:#555;white-space:nowrap}.sig{margin-top:50px;display:flex;justify-content:space-between}
+        .sig div{width:45%}.sig .line{border-top:1px solid #111;margin-top:40px;padding-top:6px;font-size:9.5pt;color:#555}
+        @media print{@page{margin:2cm}}</style></head><body>
+      <div class="brand">${(e?.name||"Your company").replace(/[<>]/g,"")}</div>
+      <div class="sub">${today}</div>
+      <h1>Offer of Employment</h1>
+      <p>Dear ${candidate.name.replace(/[<>]/g,"")},</p>
+      <p>We are pleased to offer you the position of <strong>${(j?.t||"").replace(/[<>]/g,"")}</strong> at ${(e?.name||"our company").replace(/[<>]/g,"")}. This letter outlines the key terms of your offer.</p>
+      <table>
+        <tr><td>Position</td><td><strong>${j?.t||""}</strong></td></tr>
+        <tr><td>Location</td><td>${j?.city||""}, ${j?.prov||""} (${j?.mode||"On-site"})</td></tr>
+        <tr><td>Employment type</td><td>${j?.type||"Full Time"}</td></tr>
+        <tr><td>Start date</td><td>${draft.startDate||"To be confirmed"}</td></tr>
+        <tr><td>Compensation</td><td>${draft.salary||"To be confirmed"}</td></tr>
+        ${draft.manager?`<tr><td>Reporting to</td><td>${draft.manager}</td></tr>`:""}
+        ${draft.deadline?`<tr><td>Offer expires</td><td>${draft.deadline}</td></tr>`:""}
+      </table>
+      <p>This offer is contingent on satisfactory completion of any reference or background checks required for the role, and on your eligibility to work in Canada. Full terms will be confirmed in your formal employment agreement.</p>
+      <p>We're excited about the possibility of you joining our team. Please indicate your acceptance by signing below.</p>
+      <div class="sig">
+        <div><div class="line">${candidate.name} — Candidate signature &amp; date</div></div>
+        <div><div class="line">On behalf of ${e?.name||"the company"} — date</div></div>
+      </div>
+      <script>window.onload=()=>setTimeout(()=>window.print(),400);</script>
+      </body></html>`;
+    const w=window.open("","_blank");
+    if(!w){
+      downloadText(`offer-letter-${candidate.name.replace(/\s+/g,"-")}.txt`,
+        `Offer of Employment\n\n${today}\n\nDear ${candidate.name},\n\nWe are pleased to offer you the position of ${j?.t||""} at ${e?.name||""}.\nStart date: ${draft.startDate||"TBC"}\nCompensation: ${draft.salary||"TBC"}${draft.manager?`\nReporting to: ${draft.manager}`:""}`);
+      toast("Enable pop-ups to print a formatted offer letter — a text version was downloaded instead.","warn");
+      return;
+    }
+    w.document.write(html); w.document.close();
+    log("pipeline.offer_letter",`Generated offer letter for ${candidate.name} — ${j?.t||""}`,"file");
+  };
   const exportApplicants=jid=>{const j=job(jid);
     const rows=[["Name","Email","Stage","Applied","Fit"],...applications.filter(a=>a.job===jid)
       .map(a=>{const u=person(a.user);return [u.name,u.email,a.stage,a.at,scoreCandidate(u,j)];})];
@@ -1350,6 +1411,7 @@ export function useStore(){
     twoFactor,enable2FA,disable2FA,
     references,addReference,removeReference,
     addReview,deleteReview,loadEmployerReviews,loadCandidateContact,candidateNotes,saveCandidateNote,
+    submitContact,loadContactInbox,resolveContactMessage,
     saved,following,enrolled,trainingProgress,suspended,suspensionInfo,invitedCandidates,notifications,activity,settings,userSettings,search,setSearch,
     toasts,toast,dismissToast,
     jobId,empId,blogId,trainingId,cvId,editId,candidateId,pipelineJob,applyDraft,setApplyDraft,
@@ -1363,7 +1425,7 @@ export function useStore(){
     publishJob,toggleJobStatus,flagJob,setPipelineJob:setPipelineJobFn,saveCompany,verifyEmployer,holdEmployer,toggleSuspend,eraseUser,
     editBlog,editTraining,saveBlog,saveTraining,deleteBlog,deleteTraining,toggleBlogStatus,toggleTrainingStatus,
     enrol,confirmPaidEnrol,advanceTraining,paidTrainings,newCv,editCv,saveCv,duplicateCv,deleteCv,setDefaultCv,
-    printCv,printCert,printInvoice,exportApplicants,exportLog,exportUsers,exportEmployers,share,choosePlan,updateCard,setSetting,
+    printCv,printCert,printInvoice,printOfferLetter,exportApplicants,exportLog,exportUsers,exportEmployers,share,choosePlan,updateCard,setSetting,
     readNotif,markAllRead,logActivity:log,
     ...HR,
     ...STF};

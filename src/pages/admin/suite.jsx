@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
@@ -327,6 +327,10 @@ export function AdmJobs(){
 export function AdmSettings(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const S=A.settings;
+  const [inbox,setInbox]=useState([]); const [inboxTab,setInboxTab]=useState("open");
+  useEffect(()=>{A.loadContactInbox().then(setInbox);},[]);
+  const resolveMsg=async(id)=>{const r=await A.resolveContactMessage(id);
+    if(r.ok){setInbox(l=>l.map(m=>m.id===id?{...m,status:"resolved"}:m));A.toast("Marked resolved","ok");}};
   /* setSetting logs "Enabled {k}"/"Disabled {k}" to the activity feed - surface the most recent
      one inline instead of forcing a cross-reference to the separate activity log. */
   const lastChange=k=>A.activity.find(a=>a.action==="settings.change"&&(a.text===`Enabled ${k}`||a.text===`Disabled ${k}`));
@@ -355,6 +359,27 @@ export function AdmSettings(){
     <Group title="Platform" sub="Global controls"
       rows={[["payTransparency","Require a pay range on every listing","Strongly recommended. Employers cannot publish without stating pay."],
         ["maintenance","Maintenance mode","Shows a maintenance notice to everyone except administrators.",true]]}/>
+    <Card pad={mob?18:24} style={{marginBottom:16}}>
+      <div className="flex justify-between items-center mb-1">
+        <H2 sub="Every contact-form submission, with the full message — not just a topic string">Contact inbox</H2>
+        <Tag tone={inbox.filter(m=>m.status==="open").length>0?"warn":"ok"} sm>{inbox.filter(m=>m.status==="open").length} open</Tag>
+      </div>
+      <Tabs items={[{k:"open",label:`Open (${inbox.filter(m=>m.status==="open").length})`},{k:"resolved",label:"Resolved"}]} value={inboxTab} onChange={setInboxTab}/>
+      <div className="flex flex-col gap-2 mt-3" style={{maxHeight:320,overflowY:"auto"}}>
+        {inbox.filter(m=>m.status===inboxTab).map(m=>
+          <div key={m.id} className="py-3 px-3.5 bg-bg rounded-xl border border-line">
+            <div className="flex justify-between items-start gap-2.5">
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-text">{m.name||"—"} · <span className="text-text-3 font-normal">{m.email}</span></div>
+                <div className="text-xs text-text-3 mt-0.5">{m.topic||"General"} · {new Date(m.at).toLocaleString("en-CA")} · <span className="font-mono">{m.id}</span></div>
+              </div>
+              {m.status==="open"&&<Btn kind="outline" size="xs" onClick={()=>resolveMsg(m.id)}>Mark resolved</Btn>}
+            </div>
+            <div className="text-sm text-text-2 mt-2 leading-relaxed whitespace-pre-wrap">{m.message}</div>
+          </div>)}
+        {inbox.filter(m=>m.status===inboxTab).length===0&&<div className="text-sm text-text-3 py-4">Nothing here.</div>}
+      </div>
+    </Card>
     <Card pad={mob?18:24}>
       <H2 sub="A snapshot of what these switches currently affect">Current impact</H2>
       <div className={`grid ${mob?"grid-cols-1":"grid-cols-2"} gap-3`}>

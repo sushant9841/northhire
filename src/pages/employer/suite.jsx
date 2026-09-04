@@ -587,6 +587,8 @@ export function EmpCandidate(){
   const [showSched,setShowSched]=useState(false);
   const [ivDate,setIvDate]=useState(""); const [ivTime,setIvTime]=useState(""); const [ivMode,setIvMode]=useState("video"); const [ivNotes,setIvNotes]=useState("");
   const [confirmReject,setConfirmReject]=useState(false); const [rejectReason,setRejectReason]=useState("");
+  const [showOfferLetter,setShowOfferLetter]=useState(false);
+  const [offerDraft,setOfferDraft]=useState({startDate:"",salary:"",manager:"",deadline:""});
   const a=A.applications.find(x=>x.id===A.candidateId);
   if(!a) return <Page><Empty icon="users" title="Candidate not found" body="This application may have been withdrawn."
     action={<Btn kind="primary" onClick={()=>A.go("empPipeline")}>Back to pipeline</Btn>}/></Page>;
@@ -627,6 +629,7 @@ export function EmpCandidate(){
         {idx<STAGES.length-1&&<Btn kind="primary" iconR="arrowR" onClick={()=>A.moveApp(a.id,STAGES[idx+1])}>Advance to {STAGES[idx+1]}</Btn>}
         {A.can("messages")?<Btn kind="outline" icon="mail" onClick={()=>setShowMsg(true)}>Message</Btn>:<Btn kind="ghost" icon="lock" onClick={()=>A.go("pricing")}>Message (Growth+)</Btn>}
         {A.can("interviews")?<Btn kind="outline" icon="calendar" onClick={()=>setShowSched(true)}>Schedule interview</Btn>:<Btn kind="ghost" icon="lock" onClick={()=>A.go("pricing")}>Schedule (Growth+)</Btn>}
+        {a.stage==="Offer"&&<Btn kind="ok" icon="file" onClick={()=>setShowOfferLetter(true)}>Generate offer letter</Btn>}
         <Btn kind="dangerSoft" onClick={()=>{setConfirmReject(true);setRejectReason("");}}>Not a fit</Btn>
         <Btn kind="ghost" onClick={()=>A.go("empPipeline")}>Back to pipeline</Btn></div></Card>
     <ConfirmDialog open={confirmReject} onClose={()=>setConfirmReject(false)} confirmLabel="Reject"
@@ -637,6 +640,22 @@ export function EmpCandidate(){
           <Area rows={2} value={rejectReason} onChange={e=>setRejectReason(e.target.value)} placeholder="e.g. Went with a candidate with more site experience"/></Field>
       </div>
     </ConfirmDialog>
+
+    {showOfferLetter&&<Modal onClose={()=>setShowOfferLetter(false)} title={`Offer letter — ${u.name}`}>
+      <div className="flex flex-col gap-3.5">
+        <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
+          <Field label="Start date"><Input type="date" value={offerDraft.startDate} onChange={e=>setOfferDraft({...offerDraft,startDate:e.target.value})}/></Field>
+          <Field label="Compensation"><Input value={offerDraft.salary} onChange={e=>setOfferDraft({...offerDraft,salary:e.target.value})} placeholder={`e.g. ${pay(job)}${payShort(job)}`}/></Field>
+          <Field label="Reporting to (optional)"><Input value={offerDraft.manager} onChange={e=>setOfferDraft({...offerDraft,manager:e.target.value})} placeholder="Hiring manager's name"/></Field>
+          <Field label="Offer expires (optional)"><Input type="date" value={offerDraft.deadline} onChange={e=>setOfferDraft({...offerDraft,deadline:e.target.value})}/></Field>
+        </div>
+        <Banner tone="brand" icon="info">Opens a formatted letter ready to print or save as PDF. No e-signature is collected — the candidate signs the printed copy.</Banner>
+        <div className="flex gap-2.5 justify-end">
+          <Btn kind="ghost" onClick={()=>setShowOfferLetter(false)}>Cancel</Btn>
+          <Btn kind="primary" icon="file" onClick={()=>{A.printOfferLetter(u,job,A.company,offerDraft);setShowOfferLetter(false);}}>Generate &amp; print</Btn>
+        </div>
+      </div>
+    </Modal>}
 
     {threadMessages.length>0&&<Card style={{marginBottom:16}}><Lbl>Message history</Lbl>
       <div className="flex flex-col gap-2.5 overflow-y-auto" style={{maxHeight:280}}>

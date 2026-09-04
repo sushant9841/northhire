@@ -42,3 +42,27 @@ platformRouter.post("/activity", requireAuth, (req, res) => {
     .run(id, action, text, icon, `${req.user.name} (${req.user.role})`);
   res.status(201).json({ ok: true });
 });
+
+/* ─── Contact form: a real ticket + an admin inbox, replacing the old "logs a topic string and
+   discards the actual message" behavior. Public - a visitor filing a contact request isn't
+   necessarily signed in. ─── */
+function serializeContactMessage(row) {
+  if (!row) return null;
+  return { id: row.id, name: row.name, email: row.email, topic: row.topic, message: row.message, status: row.status, at: new Date(row.created_at).getTime() };
+}
+platformRouter.post("/contact", (req, res) => {
+  const { name, email, topic, message } = req.body || {};
+  if (!email || !message) return res.status(400).json({ error: "Email and message are required." });
+  const id = nextId("ct", "contact_messages");
+  db.prepare("INSERT INTO contact_messages (id, name, email, topic, message) VALUES (?, ?, ?, ?, ?)").run(id, name || "", email, topic || "", message);
+  res.status(201).json({ ticket: id });
+});
+platformRouter.get("/contact", requireAuth, requireRole("admin"), (req, res) => {
+  const rows = db.prepare("SELECT * FROM contact_messages ORDER BY created_at DESC").all();
+  res.json({ messages: rows.map(serializeContactMessage) });
+});
+platformRouter.patch("/contact/:id", requireAuth, requireRole("admin"), (req, res) => {
+  const { status } = req.body || {};
+  db.prepare("UPDATE contact_messages SET status = ? WHERE id = ?").run(status, req.params.id);
+  res.json({ message: serializeContactMessage(db.prepare("SELECT * FROM contact_messages WHERE id = ?").get(req.params.id)) });
+});

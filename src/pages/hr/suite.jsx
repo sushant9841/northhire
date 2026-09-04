@@ -608,6 +608,16 @@ export function HrLeave(){
   const settings=A.hrCompanySettings[emp.companyId]||HR_COMPANY_SETTINGS_DEFAULT;
   const myLeave=A.hrLeave.filter(l=>l.employee===emp.id);
   const usedVacation=myLeave.filter(l=>l.status==="approved"&&l.type==="Vacation").reduce((s,l)=>s+l.days,0);
+  /* Real per-pay-period accrual instead of the flat annual number being available on day one -
+     prorated by how much of the calendar year has actually elapsed (and by first-year tenure,
+     so someone hired in October doesn't accrue as if they'd been here since January). */
+  const yearStart=new Date(new Date().getFullYear(),0,1);
+  const hireDate=new Date(emp.hired);
+  const accrualStart=hireDate>yearStart?hireDate:yearStart;
+  const daysElapsed=Math.max(0,(Date.now()-accrualStart.getTime())/86400000);
+  const daysInYear=(new Date(new Date().getFullYear(),11,31)-yearStart)/86400000+1;
+  const accruedVacation=Math.round(settings.leave.annualVacationDays*Math.min(1,daysElapsed/daysInYear)*10)/10;
+  const vacationBalance=Math.round((accruedVacation-usedVacation)*10)/10;
   const usedSick=myLeave.filter(l=>l.status==="approved"&&l.type==="Sick").reduce((s,l)=>s+l.days,0);
   const usedPersonal=myLeave.filter(l=>l.status==="approved"&&l.type==="Personal").reduce((s,l)=>s+l.days,0);
   const pending=A.hrLeave.filter(l=>l.status==="pending");
@@ -630,18 +640,24 @@ export function HrLeave(){
     let days=0; const d=new Date(req.from); const end=new Date(req.to);
     for(;d<=end;d.setDate(d.getDate()+1)){if(d.getDay()!==0&&d.getDay()!==6)days++;}
     days=Math.max(1,days);
+    if(req.type==="Vacation"&&days>vacationBalance){
+      setReqErr(`This request is for ${days} day${days===1?"":"s"}, but you've only accrued ${vacationBalance} day${vacationBalance===1?"":"s"} of vacation balance so far this year.`);
+      return;
+    }
     A.requestLeave({...req,days}); setReq({type:"Vacation",from:"",to:"",reason:""}); setShowReq(false);};
 
   return <div>
     <div className={`grid gap-3 mb-4 ${mob?"grid-cols-2":"grid-cols-4"}`}>
       {[
-        {l:"Vacation days used",v:usedVacation,total:settings.leave.annualVacationDays,tone:C.brand},
+        {l:"Vacation balance available",v:vacationBalance,tone:vacationBalance<0?C.danger:C.brand,
+          sub:`${accruedVacation} accrued so far · ${settings.leave.annualVacationDays}/yr allowance`},
         {l:"Sick days used",v:usedSick,total:settings.leave.sickDays,tone:C.ok},
         {l:"Personal days used",v:usedPersonal,total:settings.leave.personalDays,tone:C.violet},
         {l:"My open requests",v:myLeave.filter(l=>l.status==="pending").length,tone:C.warn}
       ].map(k=><Card key={k.l} pad={mob?16:20} style={{borderRadius:14}}>
         <div className={`font-bold tracking-tight ${mob?"text-2xl":"text-3xl"}`} style={{color:k.tone}}>{k.v}{k.total?<span className="text-sm text-text-3 font-medium"> / {k.total}</span>:""}</div>
         <div className="text-xs text-text-3 mt-1.5">{k.l}</div>
+        {k.sub&&<div className="text-xs text-text-3 mt-0.5">{k.sub}</div>}
       </Card>)}
     </div>
 

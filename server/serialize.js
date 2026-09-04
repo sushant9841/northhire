@@ -319,6 +319,12 @@ export function serializeStaffingInvoice(row) {
     due: row.due, status: row.status, paidOn: row.paid_on, lines: JSON.parse(row.lines_json || "[]"),
     subtotal: row.subtotal, gst: row.gst, hst: row.hst, total: row.total, po: row.po };
 }
+export function serializeWsibClaim(row) {
+  if (!row) return null;
+  return { id: row.id, worker: row.worker_id, assignment: row.assignment_id, claimNumber: row.claim_number,
+    filedDate: row.filed_date, incidentDate: row.incident_date, description: row.description,
+    status: row.status, notes: row.notes, createdAt: new Date(row.created_at).getTime() };
+}
 export function serializeStaffingAuditEntry(row) {
   if (!row) return null;
   return { id: row.id, actor: row.actor_staff_id, action: row.action, detail: row.detail, at: new Date(row.created_at).getTime() };

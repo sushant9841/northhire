@@ -206,6 +206,12 @@ CREATE TABLE IF NOT EXISTS reset_codes (
 CREATE TABLE IF NOT EXISTS login_2fa_codes (
   email TEXT PRIMARY KEY, code TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+CREATE TABLE IF NOT EXISTS contact_messages (
+  id TEXT PRIMARY KEY,
+  name TEXT, email TEXT NOT NULL, topic TEXT, message TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','resolved')),
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 CREATE TABLE IF NOT EXISTS activity_log (
   id TEXT PRIMARY KEY, action TEXT, text TEXT, icon TEXT, actor TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -406,6 +412,15 @@ CREATE TABLE IF NOT EXISTS staffing_invoices (
   lines_json TEXT DEFAULT '[]', subtotal REAL, gst REAL DEFAULT 0, hst REAL, total REAL, po TEXT
 );
 
+CREATE TABLE IF NOT EXISTS staffing_wsib_claims (
+  id TEXT PRIMARY KEY,
+  worker_id TEXT NOT NULL REFERENCES staffing_workers(id),
+  assignment_id TEXT REFERENCES staffing_assignments(id),
+  claim_number TEXT, filed_date TEXT, incident_date TEXT, description TEXT,
+  status TEXT NOT NULL DEFAULT 'filed' CHECK(status IN ('filed','under-review','approved','denied','closed')),
+  notes TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 CREATE TABLE IF NOT EXISTS staffing_audit_log (
   id TEXT PRIMARY KEY,
   actor_staff_id TEXT REFERENCES agency_staff(id),

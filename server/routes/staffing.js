@@ -5,7 +5,7 @@ import { salesTaxRate } from "../../src/helpers/salesTax.js";
 import {
   serializeWorker, serializeStaffingClient, serializeJobOrder, serializeAssignment,
   serializeStaffingTimesheet, serializeStaffingPayrun, serializeStaffingInvoice, serializePlacement,
-  serializeStaffingAuditEntry,
+  serializeStaffingAuditEntry, serializeWsibClaim,
 } from "../serialize.js";
 
 export const staffingRouter = Router();
@@ -517,6 +517,33 @@ staffingRouter.patch("/my/timesheets/:id/submit", requireAuth, requireRole("seek
   if (t.status !== "draft") return res.status(409).json({ error: "Already submitted" });
   db.prepare("UPDATE staffing_timesheets SET status = 'submitted', submitted_at = datetime('now') WHERE id = ?").run(req.params.id);
   res.json({ ok: true });
+});
+
+/* ─── WSIB claims ─── */
+staffingRouter.get("/wsib-claims", requireAgencyAuth, (req, res) => {
+  res.json({ claims: db.prepare("SELECT * FROM staffing_wsib_claims ORDER BY created_at DESC").all().map(serializeWsibClaim) });
+});
+staffingRouter.post("/wsib-claims", requireAgencyAuth, (req, res) => {
+  const d = req.body || {};
+  const id = nextId("wc", "staffing_wsib_claims");
+  db.prepare(
+    `INSERT INTO staffing_wsib_claims (id, worker_id, assignment_id, claim_number, filed_date, incident_date, description, notes)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(id, d.worker, d.assignment || null, d.claimNumber || null, d.filedDate || new Date().toISOString().slice(0, 10), d.incidentDate || null, d.description || "", d.notes || "");
+  const claim = db.prepare("SELECT * FROM staffing_wsib_claims WHERE id = ?").get(id);
+  logStaffingAudit(req.agencyStaff.id, "wsib_claim_filed", `Filed WSIB claim for worker ${d.worker}${d.claimNumber ? ` (${d.claimNumber})` : ""}`);
+  res.status(201).json({ claim: serializeWsibClaim(claim) });
+});
+staffingRouter.patch("/wsib-claims/:id", requireAgencyAuth, (req, res) => {
+  const row = db.prepare("SELECT * FROM staffing_wsib_claims WHERE id = ?").get(req.params.id);
+  if (!row) return res.status(404).json({ error: "Claim not found." });
+  const d = req.body || {};
+  const fields = { status: "status", claimNumber: "claim_number", notes: "notes" };
+  const setCols = []; const params = [];
+  for (const [key, col] of Object.entries(fields)) if (d[key] !== undefined) { setCols.push(`${col} = ?`); params.push(d[key]); }
+  if (setCols.length) db.prepare(`UPDATE staffing_wsib_claims SET ${setCols.join(", ")} WHERE id = ?`).run(...params, req.params.id);
+  if (d.status && d.status !== row.status) logStaffingAudit(req.agencyStaff.id, "wsib_claim_updated", `WSIB claim ${row.claim_number || row.id} status: ${row.status} → ${d.status}`);
+  res.json({ claim: serializeWsibClaim(db.prepare("SELECT * FROM staffing_wsib_claims WHERE id = ?").get(req.params.id)) });
 });
 
 staffingRouter.get("/audit-log", requireAgencyAuth, (req, res) => {
