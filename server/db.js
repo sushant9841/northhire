@@ -348,6 +348,10 @@ CREATE TABLE IF NOT EXISTS agency_staff (
   login_id TEXT NOT NULL UNIQUE, name TEXT, role TEXT, title TEXT, seed INTEGER DEFAULT 0, email TEXT,
   password_hash TEXT NOT NULL, password_salt TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS agency_reset_codes (
+  email TEXT PRIMARY KEY, code TEXT, attempts INTEGER DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 
 CREATE TABLE IF NOT EXISTS staffing_workers (
   id TEXT PRIMARY KEY,

@@ -25,6 +25,7 @@ export function AgencyLoginPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [id,setId]=useState(""); const [pw,setPw]=useState("");
   const [err,setErr]=useState(""); const [busy,setBusy]=useState(false);
+  const [mode,setMode]=useState("login"); // login | resetRequest | resetVerify
 
   const attempt=async()=>{
     setErr(""); setBusy(true);
@@ -46,7 +47,7 @@ export function AgencyLoginPage(){
         </button>
       </div>
 
-      <Card pad={mob?24:32} style={{borderRadius:20,background:"#fff"}}>
+      {mode==="login"?<Card pad={mob?24:32} style={{borderRadius:20,background:"#fff"}}>
         <div className="mb-5">
           <h1 className="text-2xl font-bold text-text mb-1.5 tracking-tight">Sign in to the agency console</h1>
           <p className="text-sm text-text-3 m-0 leading-snug">
@@ -62,6 +63,7 @@ export function AgencyLoginPage(){
           {err&&<Banner tone="danger" icon="alert">{err}</Banner>}
           <Btn kind="primary" size="lg" onClick={attempt} disabled={busy||!id||!pw} full>
             {busy?"Signing in…":"Sign in"}</Btn>
+          <button onClick={()=>{setMode("resetRequest");setErr("");}} className="bg-transparent border-0 p-0 cursor-pointer text-sm font-semibold text-brand text-center">Forgot password?</button>
         </div>
 
         <div className="mt-6 p-3.5 bg-bg rounded-xl text-xs text-text-3">
@@ -76,13 +78,64 @@ export function AgencyLoginPage(){
               </button>)}
           </div>
         </div>
-      </Card>
+      </Card>:<AgencyResetFlow onDone={()=>setMode("login")}/>}
 
       <div className="text-center mt-4 text-xs text-white/50">
         License: {SEED_AGENCY_LICENSE}
       </div>
     </div>
   </div>;
+}
+
+function AgencyResetFlow({onDone}){
+  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const [stage,setStage]=useState("request"); // request | verify | done
+  const [email,setEmail]=useState(""); const [code,setCode]=useState(""); const [newPw,setNewPw]=useState("");
+  const [err,setErr]=useState(""); const [busy,setBusy]=useState(false); const [sentCode,setSentCode]=useState("");
+  const [cooldown,setCooldown]=useState(0);
+  useEffect(()=>{if(cooldown<=0)return; const t=setTimeout(()=>setCooldown(c=>c-1),1000); return()=>clearTimeout(t);},[cooldown]);
+
+  const request=async()=>{setErr("");setBusy(true);const r=await A.agencyResetRequest(email);setBusy(false);
+    if(!r.ok){setErr(r.msg);return;} setSentCode(r.code); setStage("verify"); setCooldown(60);};
+  const resend=async()=>{if(cooldown>0)return; setErr("");const r=await A.agencyResetRequest(email);
+    if(!r.ok){setErr(r.msg);return;} setSentCode(r.code); setCooldown(60);};
+  const confirm=async()=>{setErr(""); if(newPw.length<8){setErr("Password must be at least 8 characters");return;}
+    setBusy(true); const r=await A.agencyResetConfirm(email,code,newPw); setBusy(false);
+    if(!r.ok){setErr(r.msg);return;} setStage("done");};
+
+  return <Card pad={mob?24:32} style={{borderRadius:20,background:"#fff"}}>
+    {stage==="request"&&<>
+      <h1 className="text-2xl font-bold text-text mb-1.5 tracking-tight">Reset your password</h1>
+      <p className="text-sm text-text-3 mb-4 leading-snug">Enter the email on your agency account and we'll send a reset code.</p>
+      <Field label="Email"><Input icon="mail" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@northhirestaffing.ca"/></Field>
+      {err&&<Banner tone="danger" icon="alert" style={{marginTop:12}}>{err}</Banner>}
+      <div className="flex gap-2.5 mt-4">
+        <Btn kind="ghost" onClick={onDone}>Back to sign in</Btn>
+        <Btn kind="primary" onClick={request} disabled={busy||!email} full>{busy?"Sending…":"Send reset code"}</Btn>
+      </div>
+    </>}
+    {stage==="verify"&&<>
+      <h1 className="text-2xl font-bold text-text mb-1.5 tracking-tight">Enter your code</h1>
+      <p className="text-sm text-text-3 mb-4 leading-snug">We sent a 6-digit code to {email}. {sentCode&&<span>(Demo code: <strong>{sentCode}</strong>)</span>}</p>
+      <div className="flex flex-col gap-3">
+        <Field label="Reset code"><Input value={code} onChange={e=>setCode(e.target.value)} placeholder="123456"/></Field>
+        <Field label="New password"><Input type="password" value={newPw} onChange={e=>setNewPw(e.target.value)} placeholder="At least 8 characters"/></Field>
+      </div>
+      {err&&<Banner tone="danger" icon="alert" style={{marginTop:12}}>{err}</Banner>}
+      <div className="flex justify-between items-center mt-3">
+        <button onClick={()=>setStage("request")} className="bg-transparent border-0 p-0 cursor-pointer text-sm text-text-2">← Different email</button>
+        <button onClick={resend} disabled={cooldown>0} className={`bg-transparent border-0 p-0 text-sm font-semibold ${cooldown>0?"text-text-3 cursor-not-allowed":"text-brand cursor-pointer"}`}>
+          {cooldown>0?`Resend in ${cooldown}s`:"Resend code"}</button>
+      </div>
+      <Btn kind="primary" size="lg" full onClick={confirm} disabled={busy} style={{marginTop:14}}>{busy?"Resetting…":"Reset password"}</Btn>
+    </>}
+    {stage==="done"&&<div className="text-center">
+      <div className="w-14 h-14 rounded-full bg-ok-bg border-2 border-ok-ln flex items-center justify-center mx-auto mb-4"><I n="check" s={26} c={C.ok}/></div>
+      <h1 className="text-xl font-bold text-text mb-1.5 tracking-tight">Password updated</h1>
+      <p className="text-sm text-text-3 mb-5">Sign in with your new password.</p>
+      <Btn kind="primary" full onClick={onDone}>Back to sign in</Btn>
+    </div>}
+  </Card>;
 }
 
 /* ─── Dashboard: role-shaped KPIs ─── */
@@ -1310,6 +1363,10 @@ export function AgencyCompliance(){
   const [drill,setDrill]=useState(null);
   const workersMissingDocs=A.workers.filter(w=>w.status==="active"&&(!w.tdOnFile||!w.directDepositOnFile||!w.workEligibility));
   const workersExpiringWE=A.workers.filter(w=>w.weExpiry&&new Date(w.weExpiry)<Date.now()+90*864e5);
+  /* The per-worker file view already flags an individual document as "Expiring" (within 90
+     days), but there was no way to see that across the whole roster without opening every
+     worker's file one at a time - this rolls that same check up company-wide. */
+  const expiringDocs=A.workers.flatMap(w=>(w.documents||[]).filter(d=>d.expires&&new Date(d.expires)<Date.now()+90*864e5).map(d=>({w,d})));
   const clientsMissingMsa=A.staffingClients.filter(c=>c.status==="active"&&!c.signedMsa);
   const overdueInvoices=A.staffingInvoices.filter(i=>i.status==="overdue");
 
@@ -1321,6 +1378,10 @@ export function AgencyCompliance(){
     {ok:workersExpiringWE.length===0, title:"Work permits current", body:workersExpiringWE.length===0?"No permits expiring in the next 90 days.":`${workersExpiringWE.length} permits expiring within 90 days.`, count:workersExpiringWE.length,
       drillRows:workersExpiringWE.map(w=>{const p=(A.people||[]).find(pp=>pp.id===w.personId);
         return {name:p?.name||w.id,detail:`${w.workEligibility} expires ${w.weExpiry}`};})},
+    {ok:expiringDocs.length===0, title:"Worker documents current", body:expiringDocs.length===0?"No worker documents expired or expiring in the next 90 days.":`${expiringDocs.length} document(s) expired or expiring within 90 days.`, count:expiringDocs.length,
+      drillRows:expiringDocs.map(({w,d})=>{const p=(A.people||[]).find(pp=>pp.id===w.personId);
+        const expired=new Date(d.expires)<Date.now();
+        return {name:p?.name||w.id,detail:`${d.label} ${expired?"expired":"expires"} ${d.expires}`};})},
     {ok:clientsMissingMsa.length===0, title:"MSAs signed for all active clients", body:clientsMissingMsa.length===0?"Every active client has a signed Master Services Agreement.":`${clientsMissingMsa.length} clients billing without signed MSA.`, count:clientsMissingMsa.length,
       drillRows:clientsMissingMsa.map(c=>{const emp=A.employers.find(e=>e.id===c.employerId);
         return {name:emp?.name||c.id,detail:`${A.jobOrders.filter(j=>j.client===c.id&&j.status==="open").length} open order(s)`};})},

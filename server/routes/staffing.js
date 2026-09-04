@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { db, nextId } from "../db.js";
-import { verifyPassword, createSessionCookie, clearSessionCookie, requireAgencyAuth, requireAuth, requireRole } from "../auth.js";
+import { db, nextId, sqlTime } from "../db.js";
+import { verifyPassword, hashPassword, createSessionCookie, clearSessionCookie, requireAgencyAuth, requireAuth, requireRole } from "../auth.js";
 import { salesTaxRate } from "../../src/helpers/salesTax.js";
 import {
   serializeWorker, serializeStaffingClient, serializeJobOrder, serializeAssignment,
@@ -60,6 +60,51 @@ staffingRouter.post("/logout", (req, res) => { clearSessionCookie(req, res, "age
 staffingRouter.get("/me", requireAgencyAuth, (req, res) => {
   const s = req.agencyStaff;
   res.json({ staff: { id: s.id, loginId: s.login_id, name: s.name, role: s.role, title: s.title, seed: s.seed, email: s.email } });
+});
+
+// Password reset for the agency console - previously the only auth surface with none at all,
+// a real gap for a payroll-and-PII-bearing back office. Same cooldown/attempt-lockout shape as
+// the main site's reset flow (auth.js), scoped to its own table since agency staff and NorthHire
+// users are entirely separate accounts that can share an email address.
+const AGENCY_RESET_COOLDOWN_MS = 60 * 1000;
+const AGENCY_RESET_MAX_ATTEMPTS = 5;
+staffingRouter.post("/reset/request", (req, res) => {
+  const email = (req.body?.email || "").toLowerCase().trim();
+  const staff = db.prepare("SELECT id FROM agency_staff WHERE lower(email) = ?").get(email);
+  if (!staff) return res.status(404).json({ error: "No agency account with that email." });
+  const existing = db.prepare("SELECT * FROM agency_reset_codes WHERE email = ?").get(email);
+  if (existing) {
+    const sinceLast = Date.now() - sqlTime(existing.created_at).getTime();
+    if (sinceLast < AGENCY_RESET_COOLDOWN_MS) {
+      return res.status(429).json({ error: `Please wait ${Math.ceil((AGENCY_RESET_COOLDOWN_MS - sinceLast) / 1000)} more seconds before requesting another code.` });
+    }
+  }
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  db.prepare("INSERT INTO agency_reset_codes (email, code, attempts) VALUES (?, ?, 0) ON CONFLICT(email) DO UPDATE SET code = excluded.code, attempts = 0, created_at = datetime('now')").run(email, code);
+  db.prepare("INSERT INTO outbox (id, to_email, subject, body) VALUES (?, ?, 'Reset your NorthHire Staffing password', ?)")
+    .run(nextId("m", "outbox"), email, `Your reset code is ${code}. It expires in 15 minutes.`);
+  res.json({ ok: true, code }); // dev returns code for demo visibility, matching the main site's reset flow
+});
+staffingRouter.post("/reset/confirm", (req, res) => {
+  const email = (req.body?.email || "").toLowerCase().trim();
+  const { code, newPassword } = req.body || {};
+  const rec = db.prepare("SELECT * FROM agency_reset_codes WHERE email = ?").get(email);
+  if (!rec) return res.status(400).json({ error: "No pending reset for this account." });
+  if (rec.attempts >= AGENCY_RESET_MAX_ATTEMPTS) {
+    db.prepare("DELETE FROM agency_reset_codes WHERE email = ?").run(email);
+    return res.status(429).json({ error: "Too many incorrect attempts — request a new code." });
+  }
+  if (Date.now() - sqlTime(rec.created_at).getTime() > 15 * 60 * 1000) return res.status(400).json({ error: "Code expired — request a new one." });
+  if (rec.code !== code) {
+    db.prepare("UPDATE agency_reset_codes SET attempts = attempts + 1 WHERE email = ?").run(email);
+    const remaining = AGENCY_RESET_MAX_ATTEMPTS - rec.attempts - 1;
+    return res.status(400).json({ error: `Code does not match.${remaining > 0 ? ` ${remaining} attempt${remaining === 1 ? "" : "s"} remaining.` : " No attempts remaining — request a new code."}` });
+  }
+  if (!newPassword || newPassword.length < 8) return res.status(400).json({ error: "Password must be at least 8 characters." });
+  const { hash, salt } = hashPassword(newPassword);
+  db.prepare("UPDATE agency_staff SET password_hash = ?, password_salt = ? WHERE lower(email) = ?").run(hash, salt, email);
+  db.prepare("DELETE FROM agency_reset_codes WHERE email = ?").run(email);
+  res.json({ ok: true });
 });
 
 /* ─── Job hiring type (reads jobs.hiring_type directly now) ─── */

@@ -157,6 +157,14 @@ export function useStaffingStore(user){
   };
   const agencyLogout=()=>{ api.post("/staffing/logout").catch(()=>{}); setAgencyStaff(null); };
   const agencyCurrentStaff=()=>agencyStaff;
+  const agencyResetRequest=async email=>{
+    try{ const r=await api.post("/staffing/reset/request",{email}); return {ok:true,code:r.code}; }
+    catch(e){ return {ok:false,msg:e.message}; }
+  };
+  const agencyResetConfirm=async(email,code,newPassword)=>{
+    try{ await api.post("/staffing/reset/confirm",{email,code,newPassword}); return {ok:true}; }
+    catch(e){ return {ok:false,msg:e.message}; }
+  };
 
   /* ─── Worker actions ─── */
   const optInAsWorker=async()=>{
@@ -366,7 +374,7 @@ export function useStaffingStore(user){
     wsibClaims,fileWsibClaim,updateWsibClaim,
     worker,workerByPersonId,staffingClient,staffingClientByEmployerId,jobOrder,assignment,timesheet,
     workerAssignments,activeAssignments,clientAssignments,clientTimesheets,workerTimesheets,openJobOrders,
-    agencyLogin,agencyLogout,agencyCurrentStaff,STAFFING_AGENCY,STAFFING_RATES,
+    agencyLogin,agencyLogout,agencyCurrentStaff,agencyResetRequest,agencyResetConfirm,STAFFING_AGENCY,STAFFING_RATES,
     optInAsWorker,updateWorker,setWorkerAvailability,payoutVacation,
     createJobOrder,updateJobOrder,closeJobOrder,
     createAssignment,endAssignment,
