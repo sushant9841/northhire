@@ -823,7 +823,15 @@ export function useStore(){
     for(let i=days-1;i>=0;i--){const d=new Date(Date.now()-i*86400000);byDay[dayKey(d.getTime())]=0;}
     myApps.forEach(a=>{if(a.createdAt){const k=dayKey(a.createdAt);if(k in byDay)byDay[k]++;}});
     const applicationTrend=Object.entries(byDay).map(([date,count])=>({date,count}));
-    return {totalJobs:myJobs.length,liveJobs:myJobs.filter(j=>j.status==="live").length,totalViews,totalApps,conversion,byStage,topJob,avgScore,applicationTrend};
+    /* Work-authorization mix, for real compliance reporting - built from the seeker profile's
+       actual `eligible` field (set at signup), not a fabricated demographic field. Deliberately
+       does NOT add race/gender/disability self-identification - that's a real HR feature but
+       needs its own voluntary, legally-reviewed collection flow, not a field bolted on here. */
+    const ELIG_LABEL={citizen:"Citizen / permanent resident",permit:"Valid work permit",student:"Student permit",need:"Needs sponsorship"};
+    const eligibilityCounts={};
+    myApps.forEach(a=>{const el=person(a.user)?.eligible; const key=ELIG_LABEL[el]||"Not stated"; eligibilityCounts[key]=(eligibilityCounts[key]||0)+1;});
+    const eligibilityMix=Object.entries(eligibilityCounts).map(([label,count])=>({label,count})).sort((a,b)=>b.count-a.count);
+    return {totalJobs:myJobs.length,liveJobs:myJobs.filter(j=>j.status==="live").length,totalViews,totalApps,conversion,byStage,topJob,avgScore,applicationTrend,eligibilityMix};
   };
 
   /* --- fuzzy / synonym expansion for search queries --- */

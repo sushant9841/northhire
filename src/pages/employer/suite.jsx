@@ -8,7 +8,7 @@ import {
   RichText, Switch, DatePicker, Ring, Tabs, Lbl, SmartPortrait, SmartScene, SmartLogo, Mark, MARKS, ConfirmDialog,
   usePagination, Pagination, HERO_WIDE,
 } from "../../design/primitives.jsx";
-import { pay, payShort, dlText, money, uid } from "../../helpers/utils.js";
+import { pay, payShort, dlText, money, uid, matchesQuery } from "../../helpers/utils.js";
 import { sanitizeHtml } from "../../helpers/sanitize.js";
 import { STAGES, PROVS, PCODE, CATS, CATM } from "../../store/seed/constants.js";
 import { jobTone, jobStatusLabel } from "../../helpers/statusTone.js";
@@ -396,7 +396,7 @@ export function EmpPipeline(){
   const rawApps=A.applications.filter(a=>a.job===jobId);
   const [tab,setTab]=useState("pipeline");
   const [sel,setSel]=useState(new Set());
-  const [f,setF]=useState({minScore:0,prov:"",skill:""});
+  const [f,setF]=useState({minScore:0,prov:"",q:""});
   const [bulkMenu,setBulkMenu]=useState(false);
   const [confirmRejectAll,setConfirmRejectAll]=useState(false);
   const bulkMenuRef=useRef(null);
@@ -412,10 +412,13 @@ export function EmpPipeline(){
   if(!job) return <Page><Empty icon="users" title="No listings to review" body="Post a job and applicants land here automatically."
     action={<Btn kind="primary" icon="plus" onClick={()=>A.go("empPost")}>Post a job</Btn>}/></Page>;
 
+  /* Full-text across name/title/city/skills, multi-word AND matching in any order - same
+     matchesQuery() helper the rest of the app's search boxes already use, replacing the old
+     single-skill-substring-only filter. */
   const apps=rawApps.filter(a=>{const u=A.person(a.user);const s=A.scoreCandidate(u,job);
     if(s<f.minScore)return false;
     if(f.prov&&u.prov!==PCODE[f.prov])return false;
-    if(f.skill&&!u.skills.some(sk=>sk.toLowerCase().includes(f.skill.toLowerCase())))return false;
+    if(f.q&&!matchesQuery(f.q,u.name,u.title,u.city,(u.skills||[]).join(" ")))return false;
     return true;});
 
   const tog=id=>{const n=new Set(sel);n.has(id)?n.delete(id):n.add(id);setSel(n);};
@@ -431,17 +434,19 @@ export function EmpPipeline(){
   };
 
   const [talentMinScore,setTalentMinScore]=useState(65);
+  const [talentQ,setTalentQ]=useState("");
   const [noting,setNoting]=useState(null); const [noteText,setNoteText]=useState(""); const [noteTags,setNoteTags]=useState("");
-  const reverseCandidates=A.reverseMatch(jobId,talentMinScore);
+  const reverseCandidates=A.reverseMatch(jobId,talentMinScore)
+    .filter(({p})=>!talentQ||matchesQuery(talentQ,p.name,p.title,p.city,(p.skills||[]).join(" ")));
   const talentPg=usePagination(reverseCandidates,12);
-  useEffect(()=>{talentPg.setPage(1);},[talentMinScore]);
+  useEffect(()=>{talentPg.setPage(1);},[talentMinScore,talentQ]);
 
   return <div className="flex flex-col min-h-full bg-bg">
     <div className={`bg-white border-b border-line ${mob?"py-3.5 px-4":"py-4 px-7"}`}>
       <div className="max-w-site mx-auto flex gap-3.5 items-end flex-wrap">
         <div className="grow shrink basis-60 min-w-0">
           <Lbl style={{marginBottom:6}}>Pipeline for</Lbl>
-          <Sel value={jobId} onChange={e=>{A.setPipelineJob(e.target.value);clear();setF({minScore:0,prov:"",skill:""});}} style={{fontWeight:640}}>
+          <Sel value={jobId} onChange={e=>{A.setPipelineJob(e.target.value);clear();setF({minScore:0,prov:"",q:""});}} style={{fontWeight:640}}>
             {myJobs.map(j=><option key={j.id} value={j.id}>{j.t} ({A.applications.filter(a=>a.job===j.id).length})</option>)}</Sel></div>
         <Btn kind="outline" size="sm" icon="download" onClick={()=>A.exportApplicants(jobId)}>Export CSV</Btn></div>
       <div className="max-w-site mx-auto mt-3.5">
@@ -458,11 +463,11 @@ export function EmpPipeline(){
               {[0,50,60,70,75,80,85].map(v=><option key={v} value={v}>{v?`${v}+`:"Any"}</option>)}</Sel></Field>
           <Field label="Province"><Sel value={f.prov} onChange={e=>setF({...f,prov:e.target.value})}>
             <option value="">All provinces</option>{PROVS.map(p=><option key={p}>{p}</option>)}</Sel></Field>
-          <Field label="Has skill"><Input value={f.skill} onChange={e=>setF({...f,skill:e.target.value})} placeholder="e.g. Red Seal, Forklift"/></Field>
+          <Field label="Search"><Input icon="search" value={f.q} onChange={e=>setF({...f,q:e.target.value})} placeholder="Name, title, city or skill"/></Field>
         </div>
         <div className="mt-4 flex gap-2.5 items-center flex-wrap">
           <Btn kind="primary" onClick={()=>setTab("pipeline")}>Show {apps.length} candidate{apps.length===1?"":"s"}</Btn>
-          <Btn kind="ghost" onClick={()=>setF({minScore:0,prov:"",skill:""})}>Reset</Btn></div>
+          <Btn kind="ghost" onClick={()=>setF({minScore:0,prov:"",q:""})}>Reset</Btn></div>
       </Card>
     </div>}
 
@@ -477,6 +482,7 @@ export function EmpPipeline(){
           <div className="w-11 h-11 rounded-xl bg-wash text-brand flex items-center justify-center shrink-0"><I n="target" s={22}/></div>
           <div className="flex-1 min-w-45"><div className="text-base font-semibold text-text">Talent pool matches</div>
             <div className="text-sm text-text-2 mt-0.5">Candidates on NorthHire who match this posting but haven't applied yet.</div></div>
+          <div style={{width:220}}><Input icon="search" value={talentQ} onChange={e=>setTalentQ(e.target.value)} placeholder="Name, title, city or skill"/></div>
           <Sel value={talentMinScore} onChange={e=>setTalentMinScore(Number(e.target.value))} style={{width:170}}>
             {[50,60,65,70,80,90].map(v=><option key={v} value={v}>{v}+ match score</option>)}</Sel>
         </div>
@@ -1200,6 +1206,16 @@ export function EmpAnalyticsPage(){
               <Btn kind="outline" size="sm" onClick={()=>{A.setPipelineJob(stats.topJob.j.id);A.go("empPipeline");}}>Open pipeline</Btn></Card>}
           </div>
         </div>
+        {stats.eligibilityMix?.length>0&&<Card pad={mob?24:32} style={{borderRadius:20,marginTop:16}}>
+          <Lbl>Applicant work-authorization mix</Lbl>
+          <p className="text-sm text-text-2 leading-snug mt-1 mb-4">From each applicant's own eligibility answer at signup — for compliance reporting, not a hiring filter.</p>
+          <div className="flex flex-col gap-3">
+            {stats.eligibilityMix.map(({label,count})=>{const max=Math.max(...stats.eligibilityMix.map(x=>x.count),1); const pct=Math.round((count/max)*100);
+              return <div key={label}>
+                <div className="flex justify-between text-sm mb-1.5"><span className="text-text">{label}</span><span className="font-semibold text-text-2">{count}</span></div>
+                <div className="h-2 bg-bg rounded-full overflow-hidden"><div className="h-full transition-[width] duration-300" style={{width:`${pct}%`,background:C.brand}}/></div></div>;})}
+          </div>
+        </Card>}
       </div>
     </section>
   </div>;
