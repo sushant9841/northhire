@@ -5,6 +5,7 @@ import { authRouter } from "./routes/auth.js";
 import { jobsRouter } from "./routes/jobs.js";
 import { employersRouter } from "./routes/employers.js";
 import { applicationsRouter } from "./routes/applications.js";
+import { usersRouter } from "./routes/users.js";
 
 const app = express();
 const PORT = process.env.PORT || 8787;
@@ -17,6 +18,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/jobs", jobsRouter);
 app.use("/api/employers", employersRouter);
 app.use("/api/applications", applicationsRouter);
+app.use("/api/users", usersRouter);
 
 app.use((req, res) => res.status(404).json({ error: "Not found." }));
 // eslint-disable-next-line no-unused-vars

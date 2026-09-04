@@ -42,6 +42,9 @@ authRouter.post("/login", (req, res) => {
   if (!user || !verifyPassword(password, user.password_hash, user.password_salt)) {
     return res.status(401).json({ error: "Incorrect email or password." });
   }
+  if (user.suspended) {
+    return res.status(403).json({ error: "This account has been suspended. Contact support for help." });
+  }
   const token = createSession(user.id);
   res.json({ token, user: publicUser(user) });
 });

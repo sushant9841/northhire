@@ -109,4 +109,11 @@ for (const a of SEED_APPS) {
 }
 console.log(`Seeded ${SEED_APPS.length} applications.`);
 
+const ADMIN_PASSWORD = "Admin1234";
+const { hash: adminHash, salt: adminSalt } = hashPassword(ADMIN_PASSWORD);
+db.prepare(
+  `INSERT INTO users (id, role, name, email, password_hash, password_salt) VALUES ('adm1','admin','Platform Admin','admin@northhire.ca',?,?)`
+).run(adminHash, adminSalt);
+console.log(`Seeded 1 admin account (admin@northhire.ca / "${ADMIN_PASSWORD}").`);
+
 console.log("Done.");

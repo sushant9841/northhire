@@ -66,6 +66,7 @@ export function serializeEmployer(row) {
     size: row.size,
     rating: row.rating,
     verified: !!row.verified,
+    hold: !!row.hold,
     about: row.about,
     founded: row.founded,
     site: row.site,
@@ -85,5 +86,8 @@ export function serializeApplication(row) {
     avail: row.availability,
     expect: row.pay_expectation,
     letter: row.cover_letter,
+    history: JSON.parse(row.history_json || "[]"),
+    previousStage: row.previous_stage,
+    withdrawnAt: row.withdrawn_at,
   };
 }

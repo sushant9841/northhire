@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS users (
   edu TEXT, eligible TEXT, pay_min REAL, pay_unit TEXT,
   types_json TEXT DEFAULT '[]', modes_json TEXT DEFAULT '[]',
   complete INTEGER DEFAULT 0,
+  suspended INTEGER DEFAULT 0, suspension_reason TEXT, suspended_at TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -32,7 +33,7 @@ CREATE TABLE IF NOT EXISTS employers (
   name TEXT NOT NULL,
   mark TEXT, a TEXT, b TEXT,
   industry TEXT, city TEXT, prov TEXT, size TEXT,
-  rating REAL DEFAULT 0, verified INTEGER DEFAULT 0,
+  rating REAL DEFAULT 0, verified INTEGER DEFAULT 0, hold INTEGER DEFAULT 0,
   about TEXT, founded INTEGER, site TEXT, plan TEXT DEFAULT 'Free',
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -61,6 +62,8 @@ CREATE TABLE IF NOT EXISTS applications (
   user_id TEXT NOT NULL REFERENCES users(id),
   stage TEXT NOT NULL DEFAULT 'Applied',
   note TEXT, availability TEXT, pay_expectation TEXT, cover_letter TEXT,
+  history_json TEXT DEFAULT '[]',
+  previous_stage TEXT, withdrawn_at TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE(job_id, user_id)
 );
