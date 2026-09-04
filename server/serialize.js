@@ -63,6 +63,7 @@ export function serializeJob(row) {
     how: row.how_to_apply,
     status: row.status,
     flagged: !!row.flagged,
+    hiringType: row.hiring_type,
   };
 }
 

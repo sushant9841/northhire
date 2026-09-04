@@ -7,6 +7,7 @@ export const usersRouter = Router();
 const OWN_PROFILE_FIELDS = {
   title: "title", cat: "cat", city: "city", prov: "prov", years: "years", phone: "phone",
   edu: "edu", eligible: "eligible", payMin: "pay_min", payUnit: "pay_unit", summary: "summary",
+  defaultCv: "default_cv", startWhen: "start_when",
 };
 usersRouter.patch("/me", requireAuth, (req, res) => {
   const body = req.body || {};

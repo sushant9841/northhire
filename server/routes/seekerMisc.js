@@ -239,6 +239,32 @@ seekerMiscRouter.patch("/payment-methods/:id/default", requireAuth, (req, res) =
   res.json({ ok: true });
 });
 
+/* ─── User settings (notification prefs, privacy, language) ─── */
+function serializeUserSettings(row) {
+  if (!row) return { matchAlerts: true, appAlerts: true, marketing: false, discoverable: true, hideEmployer: false, reducedMotion: false, lang: "en" };
+  return { matchAlerts: !!row.match_alerts, appAlerts: !!row.app_alerts, marketing: !!row.marketing,
+    discoverable: !!row.discoverable, hideEmployer: !!row.hide_employer, reducedMotion: !!row.reduced_motion, lang: row.lang };
+}
+seekerMiscRouter.get("/user-settings", requireAuth, (req, res) => {
+  const row = db.prepare("SELECT * FROM user_settings WHERE user_id = ?").get(req.user.id);
+  res.json({ userSettings: serializeUserSettings(row) });
+});
+seekerMiscRouter.patch("/user-settings", requireAuth, (req, res) => {
+  const fields = { matchAlerts: "match_alerts", appAlerts: "app_alerts", marketing: "marketing",
+    discoverable: "discoverable", hideEmployer: "hide_employer", reducedMotion: "reduced_motion", lang: "lang" };
+  const d = req.body || {};
+  const setCols = []; const params = [];
+  for (const [key, col] of Object.entries(fields)) {
+    if (d[key] === undefined) continue;
+    setCols.push(`${col} = ?`);
+    params.push(typeof d[key] === "boolean" ? (d[key] ? 1 : 0) : d[key]);
+  }
+  db.prepare("INSERT INTO user_settings (user_id) VALUES (?) ON CONFLICT(user_id) DO NOTHING").run(req.user.id);
+  if (setCols.length) db.prepare(`UPDATE user_settings SET ${setCols.join(", ")} WHERE user_id = ?`).run(...params, req.user.id);
+  const row = db.prepare("SELECT * FROM user_settings WHERE user_id = ?").get(req.user.id);
+  res.json({ userSettings: serializeUserSettings(row) });
+});
+
 /* ─── Two-factor ─── */
 seekerMiscRouter.get("/two-factor", requireAuth, (req, res) => {
   const row = db.prepare("SELECT * FROM two_factor WHERE user_id = ?").get(req.user.id);

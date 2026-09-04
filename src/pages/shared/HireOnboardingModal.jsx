@@ -25,14 +25,13 @@ export function HireOnboardingModal({payload,onClose}){
 
   const activeEmps=A.hrEmpsAtCompany?.(company.id).filter(e=>e.status==="active")||[];
 
-  const finish=()=>{
+  const finish=async()=>{
     if(addToHr){
-      A.addEmployee({
+      await A.addEmployee({
         companyId:company.id,
         name:person.name, email:person.email, role, dept,
         title, manager:manager||null, city:person.city||"", prov:person.prov||"ON",
-        phone:person.phone||"", salary,
-        linkedNorthHireUserId:person.id, hiredFrom:job.id, startDate,
+        phone:person.phone||"", salary, hired:startDate,
       });
     }
     onClose();

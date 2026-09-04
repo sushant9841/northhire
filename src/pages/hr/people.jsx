@@ -186,8 +186,8 @@ function HrPeople_Departments(){
   const save=()=>{if(!editing.name.trim())return;
     A.updateDepartment(editing.id,{name:editing.name.trim(),lead:editing.lead,color:editing.color,about:editing.about});
     setEditing(null);};
-  const doRemove=(d)=>{
-    const r=A.removeDepartment(d.id);
+  const doRemove=async(d)=>{
+    const r=await A.removeDepartment(d.id);
     if(!r.ok)A.toast(r.msg,"danger");
   };
 

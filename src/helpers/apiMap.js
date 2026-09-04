@@ -4,4 +4,5 @@
 export const mapApiJob = j => j ? { ...j, dl: j.daysLeft } : j;
 export const mapApiEmployer = e => e; // already field-compatible (owner/ownerName joined server-side)
 export const mapApiApplication = a => a; // already field-compatible
-export const mapApiUser = u => u ? { ...u, payMin: u.pay_min, payUnit: u.pay_unit, employerId: u.employer_id } : u;
+export const mapApiUser = u => u ? { ...u, payMin: u.pay_min, payUnit: u.pay_unit, employerId: u.employer_id,
+  defaultCv: u.default_cv, startWhen: u.start_when } : u;

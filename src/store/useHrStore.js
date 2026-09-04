@@ -1,75 +1,115 @@
-import { useState } from "react";
-import { uid, _fmtDate } from "../helpers/utils.js";
-import { HR_EMPLOYEE, HR_EMPLOYEES } from "./seed/hrEmployees.js";
-import { HR_ATTENDANCE } from "./seed/hrAttendance.js";
-import { HR_LEAVE_REQUESTS } from "./seed/hrLeave.js";
-import { HR_TASKS } from "./seed/hrTasks.js";
-import { HR_EVENTS } from "./seed/hrEvents.js";
-import { HR_INVOICES } from "./seed/hrInvoices.js";
-import { HR_CHATS, HR_CHAT_MESSAGES } from "./seed/hrChats.js";
-import { HR_PAYRUNS } from "./seed/hrPayruns.js";
+import { useState, useEffect } from "react";
+import { api } from "../helpers/api.js";
 import { HR_ROLES, HR_COMPANY_SETTINGS_DEFAULT, PUNCH_VENDORS, PRIOR_HR_VENDORS } from "./seed/hrCompanySettings.js";
-import { HR_DEPARTMENTS, HR_DEPARTMENTS_SEED } from "./seed/hrDepartments.js";
-import { HR_EXPENSES_SEED } from "./seed/hrExpenses.js";
+import { HR_DEPARTMENTS } from "./seed/hrDepartments.js";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   HR STORE — helpers that plug into the main NorthHire store.
-   Kept in a separate function so it can be composed cleanly.
-   These are hooks-based and are called from within the main store.
+   HR STORE — HR Suite is its own login surface (a real `hr_session` cookie,
+   separate from the main NorthHire session) backed entirely by /api/hr/*.
+   Nothing here reads or writes localStorage - a fresh page load calls /hr/me
+   to find out whether there's an active HR session, same as the main store's
+   /auth/me. Kept in a separate function so it can be composed cleanly into
+   the main store.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-export function useHrStore(seed,mainStore){
-  const [hrEmployees,setHrEmployees]=useState(seed?.hrEmployees||HR_EMPLOYEES);
-  const [hrAttendance,setHrAttendance]=useState(seed?.hrAttendance||HR_ATTENDANCE);
-  const [hrLeave,setHrLeave]=useState(seed?.hrLeave||HR_LEAVE_REQUESTS);
-  const [hrTasks,setHrTasks]=useState(seed?.hrTasks||HR_TASKS);
-  const [hrEvents,setHrEvents]=useState(seed?.hrEvents||HR_EVENTS);
-  const [hrInvoices,setHrInvoices]=useState(seed?.hrInvoices||HR_INVOICES);
-  const [hrChats,setHrChats]=useState(seed?.hrChats||HR_CHATS);
-  const [hrChatMsgs,setHrChatMsgs]=useState(seed?.hrChatMsgs||HR_CHAT_MESSAGES);
-  const [hrPayruns,setHrPayruns]=useState(seed?.hrPayruns||HR_PAYRUNS);
-  const [hrCompanySettings,setHrCompanySettings]=useState(seed?.hrCompanySettings||{e1:HR_COMPANY_SETTINGS_DEFAULT});
-  const [hrSession,setHrSession]=useState(seed?.hrSession||null); /* {employeeId, companyId} */
-  const [hrRemember,setHrRemember]=useState(seed?.hrRemember||null); /* {company,loginId} */
-  /* NEW: departments as first-class managed entity per company */
-  const [hrDepartments,setHrDepartments]=useState(seed?.hrDepartments||HR_DEPARTMENTS_SEED);
-  /* NEW: expenses — per-employee reimbursement claims with approval + payout flow */
-  const [hrExpenses,setHrExpenses]=useState(seed?.hrExpenses||HR_EXPENSES_SEED);
+export function useHrStore(){
+  const [hrEmployee,setHrEmployee]=useState(null); /* the signed-in HR employee, or null */
+  const [hrCompany,setHrCompany]=useState(null); /* {id,name,plan} */
+  const [hrBridging,setHrBridging]=useState(false); /* true while auto-bridging from the employer console */
+  const [hrEmployees,setHrEmployees]=useState([]);
+  const [hrAttendance,setHrAttendance]=useState([]);
+  const [hrLeave,setHrLeave]=useState([]);
+  const [hrTasks,setHrTasks]=useState([]);
+  const [hrEvents,setHrEvents]=useState([]);
+  const [hrInvoices,setHrInvoices]=useState([]);
+  const [hrChats,setHrChats]=useState([]);
+  const [hrChatMsgs,setHrChatMsgs]=useState([]);
+  const [hrPayruns,setHrPayruns]=useState([]);
+  const [hrCompanySettings,setHrCompanySettingsMap]=useState({}); /* {[companyId]: settings} */
+  const [hrDepartments,setHrDepartments]=useState([]);
+  const [hrExpenses,setHrExpenses]=useState([]);
+
+  useEffect(()=>{
+    let cancelled=false;
+    (async()=>{
+      try{
+        const {employee,company}=await api.get("/hr/me");
+        if(!cancelled){setHrEmployee(employee);setHrCompany(company);}
+      }catch{ /* no HR session - stays signed out */ }
+    })();
+    return ()=>{cancelled=true;};
+  },[]);
+
+  useEffect(()=>{
+    if(!hrEmployee||!hrCompany){
+      setHrEmployees([]);setHrAttendance([]);setHrLeave([]);setHrTasks([]);setHrEvents([]);
+      setHrInvoices([]);setHrChats([]);setHrChatMsgs([]);setHrPayruns([]);setHrCompanySettingsMap({});
+      setHrDepartments([]);setHrExpenses([]);
+      return;
+    }
+    let cancelled=false;
+    const isPriv=["owner","admin","hr"].includes(hrEmployee.role);
+    (async()=>{
+      try{
+        const [emps,att,leave,tasks,events,invoices,depts,chats,settings,expenses]=await Promise.all([
+          api.get("/hr/employees"),api.get("/hr/attendance"),api.get("/hr/leave"),api.get("/hr/tasks"),
+          api.get("/hr/events"),api.get("/hr/invoices"),api.get("/hr/departments"),api.get("/hr/chats"),
+          api.get("/hr/company-settings"),isPriv?api.get("/hr/expenses/company"):api.get("/hr/expenses/mine"),
+        ]);
+        if(cancelled)return;
+        setHrEmployees(emps.employees);
+        setHrAttendance(att.attendance);
+        setHrLeave(leave.leave);
+        setHrTasks(tasks.tasks);
+        setHrEvents(events.events);
+        setHrInvoices(invoices.invoices);
+        setHrDepartments(depts.departments);
+        setHrChats(chats.chats);
+        setHrCompanySettingsMap({[hrCompany.id]:settings.settings||HR_COMPANY_SETTINGS_DEFAULT});
+        setHrExpenses(expenses.expenses);
+        if(isPriv){
+          const {payruns}=await api.get("/hr/payruns");
+          if(!cancelled)setHrPayruns(payruns);
+        }
+        const msgLists=await Promise.all(chats.chats.map(c=>api.get(`/hr/chats/${c.id}/messages`)));
+        if(!cancelled)setHrChatMsgs(msgLists.flatMap(r=>r.messages));
+      }catch(e){
+        if(typeof console!=="undefined")console.warn(`[NorthHire] HR data sync failed: ${e.message}`);
+      }
+    })();
+    return ()=>{cancelled=true;};
+  },[hrEmployee?.id]);
 
   const hrEmp=id=>hrEmployees.find(e=>e.id===id);
   const hrEmpsAtCompany=cid=>hrEmployees.filter(e=>e.companyId===cid);
-  const hrCurrentEmp=()=>hrSession?hrEmp(hrSession.employeeId):null;
-  const hrCurrentCompany=()=>hrSession?mainStore.employers.find(e=>e.id===hrSession.companyId):null;
+  const hrCurrentEmp=()=>hrEmployee;
+  const hrCurrentCompany=()=>hrCompany;
 
   /* --- HR authentication --- */
-  /* Company + login ID (employee email prefix or full email) + password.
-     All PCL employees use password "pcl2026" for the demo. */
-  const HR_DEMO_PASSWORD="pcl2026";
-  const hrLogin=(companyName,loginId,password,remember)=>{
-    const company=mainStore.employers.find(e=>e.name.toLowerCase()===(companyName||"").toLowerCase().trim());
-    if(!company)return {ok:false,msg:`No company named "${companyName}"`};
-    if(company.plan!=="Enterprise")return {ok:false,msg:`${company.name} does not have an Enterprise plan. HR Suite is Enterprise-only.`};
-    const id=(loginId||"").toLowerCase().trim();
-    const emp=hrEmpsAtCompany(company.id).find(e=>
-      e.email.toLowerCase()===id ||
-      e.email.toLowerCase().split("@")[0]===id ||
-      e.name.toLowerCase()===id
-    );
-    if(!emp)return {ok:false,msg:"No employee with that login ID at "+company.name};
-    if(emp.status==="terminated")return {ok:false,msg:"This employee account is not active"};
-    if(password!==HR_DEMO_PASSWORD)return {ok:false,msg:"Password does not match"};
-    setHrSession({employeeId:emp.id,companyId:company.id,at:Date.now()});
-    if(remember){setHrRemember({company:company.name,loginId});
-      try{localStorage.setItem("northhire.hr.remember",JSON.stringify({company:company.name,loginId}));}catch{}
-    }
-    return {ok:true,employee:emp,company};
+  const hrLogin=async(companyName,loginId,password)=>{
+    try{
+      const {employee,company}=await api.post("/hr/login",{companyName,loginId,password});
+      setHrEmployee(employee);setHrCompany(company);
+      return {ok:true,employee,company};
+    }catch(e){return {ok:false,msg:e.message};}
   };
-  const hrLogout=()=>{setHrSession(null);};
+  const hrLogout=()=>{
+    api.post("/hr/logout").catch(()=>{});
+    setHrEmployee(null);setHrCompany(null);
+  };
+  /* Bridges the main employer session straight into an HR session for their own Enterprise
+     company - lets navigating into HR Suite feel like a native tab instead of a second login. */
+  const hrAutoLogin=async()=>{
+    setHrBridging(true);
+    try{
+      const {employee,company}=await api.post("/hr/auto-login");
+      setHrEmployee(employee);setHrCompany(company);
+      return {ok:true,employee,company};
+    }catch(e){return {ok:false,msg:e.message};}
+    finally{setHrBridging(false);}
+  };
 
-  /* --- Sync layer: HR employee ↔ NorthHire seeker profile ---
-     When an HR record has a `linkedNorthHireUserId` (or matching email in
-     mainStore.people), the two stay aligned. Public seeker profile can
-     surface HR-derived stats: tenure, badges, current title, department. */
+  /* --- Sync layer: HR employee ↔ NorthHire seeker profile --- */
   const hrPublicProfile=empId=>{
     const emp=hrEmp(empId); if(!emp)return null;
     const v=emp.visibility||{};
@@ -90,105 +130,87 @@ export function useHrStore(seed,mainStore){
     };
   };
 
-  const updateEmpVisibility=(empId,patch)=>{
-    setHrEmployees(l=>l.map(e=>e.id===empId?{...e,visibility:{...e.visibility,...patch}}:e));
+  const updateEmpVisibility=async(empId,patch)=>{
+    try{
+      const {employee}=await api.patch(`/hr/employees/${empId}/visibility`,patch);
+      setHrEmployees(l=>l.map(e=>e.id===empId?employee:e));
+    }catch(e){/* best-effort - visibility toggles aren't safety-critical */}
   };
-
-  const updateEmp=(empId,patch)=>{
-    setHrEmployees(l=>l.map(e=>e.id===empId?{...e,...patch}:e));
+  const updateEmp=async(empId,patch)=>{
+    try{
+      const {employee}=await api.patch(`/hr/employees/${empId}`,patch);
+      setHrEmployees(l=>l.map(e=>e.id===empId?employee:e));
+    }catch(e){/* surfaced via the calling page's own error handling, if any */}
   };
-
-  const addEmployee=(data)=>{
-    const emp=HR_EMPLOYEE(uid("emp"),data.companyId||hrSession?.companyId,
-      data.name,data.email,data.role||"employee",data.dept,data.title,
-      data.hired||new Date().toISOString().slice(0,10),
-      data.seed||Math.floor(Math.random()*11),data.phone,data.city,data.prov,
-      data.salary,data.birthDate,data.manager,data.skills||[],data.badges||[]);
-    setHrEmployees(l=>[...l,emp]);
-    return emp;
+  const addEmployee=async(data)=>{
+    /* Reachable from the employer console right after a hire, before the employer has ever
+       opened HR Suite in this session - bridge into an HR session first if one isn't active yet. */
+    if(!hrEmployee)await hrAutoLogin();
+    const {employee}=await api.post("/hr/employees",data);
+    setHrEmployees(l=>[...l,employee]);
+    return employee;
   };
-  const removeEmployee=(empId)=>{
-    /* Reassign the departing employee's direct reports up to their own manager instead of
-       leaving a dangling `manager` reference — otherwise those reports silently vanish from
-       the org chart and directory (both only render active employees). */
-    setHrEmployees(l=>{
-      const leaving=l.find(e=>e.id===empId);
-      const newManager=leaving?leaving.manager:null;
-      return l.map(e=>{
-        if(e.id===empId)return {...e,status:"terminated",terminatedAt:_fmtDate(new Date())};
-        if(e.manager===empId)return {...e,manager:newManager};
-        return e;
-      });
-    });
+  const removeEmployee=async(empId)=>{
+    await api.del(`/hr/employees/${empId}`);
+    const {employees}=await api.get("/hr/employees"); /* refetch - manager reassignment happens server-side */
+    setHrEmployees(employees);
   };
 
   /* --- Attendance --- */
-  const punchIn=(empId,source)=>{
-    const today=_fmtDate(new Date());
-    const now=new Date(); const time=`${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
-    const existing=hrAttendance.find(a=>a.employee===empId&&a.date===today);
-    if(existing)return {ok:false,msg:"Already punched in today at "+existing.clockIn};
-    /* Late flag actually derived from the company's own working-hours/threshold settings
-       instead of those settings sitting unread. */
-    const companyId=hrEmp(empId)?.companyId;
-    const att=(hrCompanySettings[companyId]||HR_COMPANY_SETTINGS_DEFAULT).attendance;
-    const [sh,sm]=att.workingHoursStart.split(":").map(Number);
-    const lateAfter=sh*60+sm+(att.lateThresholdMin||0);
-    const late=(now.getHours()*60+now.getMinutes())>lateAfter;
-    const rec={id:`att_${empId}_${today}`,employee:empId,date:today,clockIn:time,clockOut:null,source:source||"web",hours:0,site:"Head Office",late};
-    setHrAttendance(l=>[rec,...l]);
-    return {ok:true,rec};
+  const punchIn=async(empId,source)=>{
+    try{
+      const {record}=await api.post("/hr/attendance/punch-in",{employeeId:empId,source});
+      setHrAttendance(l=>[record,...l]);
+      return {ok:true,rec:record};
+    }catch(e){return {ok:false,msg:e.message};}
   };
-  const punchOut=empId=>{
-    const now=new Date(); const time=`${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
-    /* Find the open punch regardless of date — an overnight shift clocks in "yesterday" and
-       clocks out "today", so requiring today's date here meant punchOut incorrectly claimed
-       "you haven't punched in today" for anyone working past midnight. */
-    const existing=[...hrAttendance].sort((a,b)=>b.date.localeCompare(a.date)).find(a=>a.employee===empId&&!a.clockOut);
-    if(!existing)return {ok:false,msg:"You haven't punched in"};
-    const clockInAt=new Date(`${existing.date}T${existing.clockIn}:00`);
-    const hours=Math.max(0,Math.round((now-clockInAt)/36000)/100);
-    setHrAttendance(l=>l.map(a=>a.id===existing.id?{...a,clockOut:time,hours}:a));
-    return {ok:true,hours};
+  const punchOut=async(empId)=>{
+    try{
+      const {hours,record}=await api.post("/hr/attendance/punch-out",{employeeId:empId});
+      if(record)setHrAttendance(l=>l.map(a=>a.id===record.id?record:a));
+      return {ok:true,hours};
+    }catch(e){return {ok:false,msg:e.message};}
   };
 
   /* --- Leave --- */
-  const requestLeave=data=>{
-    const req={id:uid("lv"),employee:hrSession?.employeeId,type:data.type,from:data.from,to:data.to,
-      days:data.days,status:"pending",reason:data.reason,approvedBy:null,requestedAt:Date.now()};
-    setHrLeave(l=>[req,...l]);
-    return req;
+  const requestLeave=async(data)=>{
+    const {leave}=await api.post("/hr/leave",data);
+    setHrLeave(l=>[leave,...l]);
+    return leave;
   };
-  const decideLeave=(id,decision,approverId)=>{
-    setHrLeave(l=>l.map(r=>r.id===id?{...r,status:decision,approvedBy:approverId}:r));
+  const decideLeave=async(id,decision)=>{
+    const {leave}=await api.patch(`/hr/leave/${id}/decide`,{decision});
+    setHrLeave(l=>l.map(r=>r.id===id?leave:r));
   };
 
   /* --- Tasks --- */
-  const addTask=data=>{
-    const t={id:uid("tk"),title:data.title,assignee:data.assignee,assignedBy:hrSession?.employeeId,
-      due:data.due,priority:data.priority||"medium",status:"todo",created:Date.now(),tags:data.tags||[]};
-    setHrTasks(l=>[t,...l]);
-    return t;
+  const addTask=async(data)=>{
+    const {task}=await api.post("/hr/tasks",data);
+    setHrTasks(l=>[task,...l]);
+    return task;
   };
-  const updateTaskStatus=(id,status)=>{
-    setHrTasks(l=>l.map(t=>t.id===id?{...t,status,completed:status==="done"?Date.now():null}:t));
+  const updateTaskStatus=async(id,status)=>{
+    const {task}=await api.patch(`/hr/tasks/${id}/status`,{status});
+    setHrTasks(l=>l.map(t=>t.id===id?task:t));
   };
-  const deleteTask=id=>setHrTasks(l=>l.filter(t=>t.id!==id));
+  const deleteTask=async(id)=>{await api.del(`/hr/tasks/${id}`);setHrTasks(l=>l.filter(t=>t.id!==id));};
 
   /* --- Events --- */
-  const addEvent=data=>{const ev={id:uid("ev"),...data,organiser:hrSession?.employeeId}; setHrEvents(l=>[ev,...l]);return ev;};
-  const deleteEvent=id=>setHrEvents(l=>l.filter(e=>e.id!==id));
+  const addEvent=async(data)=>{
+    const {event}=await api.post("/hr/events",data);
+    setHrEvents(l=>[event,...l]);
+    return event;
+  };
+  const deleteEvent=async(id)=>{await api.del(`/hr/events/${id}`);setHrEvents(l=>l.filter(e=>e.id!==id));};
 
   /* --- Invoices --- */
-  const addInvoice=data=>{
-    const next=1042+hrInvoices.length+1;
-    const inv={id:uid("inv"),number:`INV-2026-${next}`,client:data.client,amount:Number(data.amount)||0,
-      status:"draft",issued:_fmtDate(new Date()),due:data.due,paid:null,createdBy:hrSession?.employeeId,po:data.po||""};
-    setHrInvoices(l=>[inv,...l]);
-    return inv;
+  const addInvoice=async(data)=>{
+    const {invoice}=await api.post("/hr/invoices",data);
+    setHrInvoices(l=>[invoice,...l]);
+    return invoice;
   };
-  const markInvoicePaid=id=>setHrInvoices(l=>l.map(i=>i.id===id?{...i,status:"paid",paid:_fmtDate(new Date())}:i));
-  const sendInvoice=id=>setHrInvoices(l=>l.map(i=>i.id===id?{...i,status:"pending"}:i));
+  const markInvoicePaid=async(id)=>{const {invoice}=await api.patch(`/hr/invoices/${id}/paid`);setHrInvoices(l=>l.map(i=>i.id===id?invoice:i));};
+  const sendInvoice=async(id)=>{const {invoice}=await api.patch(`/hr/invoices/${id}/send`);setHrInvoices(l=>l.map(i=>i.id===id?invoice:i));};
   const printHrInvoice=(inv,company)=>{
     const items=inv.items||[{desc:"Services",qty:1,unitPrice:inv.amount}];
     const lines=[
@@ -213,139 +235,105 @@ export function useHrStore(seed,mainStore){
 
   /* --- Departments --- */
   const hrDeptsAtCompany=cid=>hrDepartments.filter(d=>d.companyId===cid);
-  const addDepartment=data=>{
-    const d={id:uid("d"),companyId:data.companyId,name:data.name,lead:data.lead||null,
-      color:data.color||"#6AACFF",about:data.about||"",createdAt:Date.now()};
-    setHrDepartments(l=>[...l,d]);
-    return d;
+  const addDepartment=async(data)=>{
+    const {department}=await api.post("/hr/departments",data);
+    setHrDepartments(l=>[...l,department]);
+    return department;
   };
-  const updateDepartment=(id,patch)=>{
-    setHrDepartments(l=>l.map(d=>d.id===id?{...d,...patch}:d));
+  const updateDepartment=async(id,patch)=>{
+    const {department}=await api.patch(`/hr/departments/${id}`,patch);
+    setHrDepartments(l=>l.map(d=>d.id===id?department:d));
   };
-  const removeDepartment=id=>{
-    /* Only remove if no employees are assigned. Caller must check. */
-    const assigned=hrEmployees.filter(e=>e.dept===id).length;
-    if(assigned>0)return {ok:false,msg:`${assigned} employees are in this department. Move them first.`};
-    setHrDepartments(l=>l.filter(d=>d.id!==id));
-    return {ok:true};
+  const removeDepartment=async(id)=>{
+    try{
+      await api.del(`/hr/departments/${id}`);
+      setHrDepartments(l=>l.filter(d=>d.id!==id));
+      return {ok:true};
+    }catch(e){return {ok:false,msg:e.message};}
   };
 
   /* --- Expenses --- */
   const empExpenses=empId=>hrExpenses.filter(x=>x.employee===empId).sort((a,b)=>b.submitted-a.submitted);
-  const companyExpenses=cid=>{
-    const empIds=new Set(hrEmpsAtCompany(cid).map(e=>e.id));
-    return hrExpenses.filter(x=>empIds.has(x.employee)).sort((a,b)=>b.submitted-a.submitted);
+  const companyExpenses=cid=>hrExpenses.slice().sort((a,b)=>b.submitted-a.submitted);
+  const submitExpense=async(data)=>{
+    const {expense}=await api.post("/hr/expenses",data);
+    setHrExpenses(l=>[expense,...l]);
+    return expense;
   };
-  const submitExpense=data=>{
-    const x={id:uid("xp"),employee:data.employee||hrSession?.employeeId,category:data.category,
-      merchant:data.merchant,amount:Number(data.amount)||0,currency:data.currency||"CAD",
-      description:data.description||"",receiptUrl:data.receiptUrl||null,date:data.date,
-      status:"submitted",submitted:Date.now(),approvedBy:null,approvedAt:null,paidAt:null,rejectReason:null,
-      reimburseVia:data.reimburseVia||"next-payroll"};
-    setHrExpenses(l=>[x,...l]);
-    return x;
+  const decideExpense=async(id,decision,approverId,reason)=>{
+    const {expense}=await api.patch(`/hr/expenses/${id}/decide`,{decision,reason});
+    setHrExpenses(l=>l.map(x=>x.id===id?expense:x));
   };
-  const decideExpense=(id,decision,approverId,reason)=>{
-    setHrExpenses(l=>l.map(x=>x.id===id?{...x,status:decision,approvedBy:approverId,
-      approvedAt:decision==="approved"?Date.now():x.approvedAt,rejectReason:reason||null}:x));
-  };
-  const payExpense=id=>{
-    setHrExpenses(l=>l.map(x=>x.id===id?{...x,status:"paid",paidAt:Date.now()}:x));
+  const payExpense=async(id)=>{
+    const {expense}=await api.patch(`/hr/expenses/${id}/pay`);
+    setHrExpenses(l=>l.map(x=>x.id===id?expense:x));
   };
 
-  /* --- Payroll runs — biweekly by default. Computes gross/deductions/net per employee. --- */
-  const runPayroll=(companyId,periodStart,periodEnd)=>{
-    const emps=hrEmpsAtCompany(companyId).filter(e=>e.status==="active");
-    /* Include approved (unpaid) expenses in this run */
-    const empIds=new Set(emps.map(e=>e.id));
-    const dueExpenses=hrExpenses.filter(x=>empIds.has(x.employee)&&x.status==="approved"&&x.reimburseVia==="next-payroll");
-    const expByEmp={}; dueExpenses.forEach(x=>{expByEmp[x.employee]=(expByEmp[x.employee]||0)+x.amount;});
-    const lines=emps.map(e=>{
-      const grossPeriod=Math.round((e.salary||0)/26); /* biweekly */
-      const reimb=expByEmp[e.id]||0;
-      const cpp=Math.round(grossPeriod*0.0595); /* 2026 CPP rate */
-      const ei=Math.round(grossPeriod*0.0221);  /* 2026 EI rate */
-      const fedTax=Math.round(grossPeriod*0.145); /* effective marginal after credits */
-      const provTax=Math.round(grossPeriod*0.075);
-      const deductions=cpp+ei+fedTax+provTax;
-      const net=grossPeriod-deductions+reimb;
-      return {employee:e.id,name:e.name,gross:grossPeriod,cpp,ei,fedTax,provTax,reimb,net};
-    });
-    const totalGross=lines.reduce((s,l)=>s+l.gross,0);
-    const totalNet=lines.reduce((s,l)=>s+l.net,0);
-    const totalReimb=lines.reduce((s,l)=>s+l.reimb,0);
-    const run={id:uid("pr"),companyId,period:`${periodStart} → ${periodEnd}`,periodStart,periodEnd,
-      runDate:_fmtDate(new Date()),status:"draft",employees:lines.length,
-      totalGross,totalNet,totalReimb,lines};
-    setHrPayruns(l=>[run,...l]);
-    return run;
+  /* --- Payroll runs --- */
+  const runPayroll=async(companyId,periodStart,periodEnd)=>{
+    const {payrun}=await api.post("/hr/payruns",{periodStart,periodEnd});
+    setHrPayruns(l=>[payrun,...l]);
+    return payrun;
   };
-  const approvePayroll=id=>{
-    setHrPayruns(l=>l.map(p=>p.id===id?{...p,status:"approved",approvedAt:Date.now()}:p));
+  const approvePayroll=async(id)=>{
+    const {payrun}=await api.patch(`/hr/payruns/${id}/approve`);
+    setHrPayruns(l=>l.map(p=>p.id===id?payrun:p));
   };
-  const executePayroll=id=>{
-    const run=hrPayruns.find(p=>p.id===id); if(!run)return;
-    /* Mark the run paid + flip any approved expenses in it to paid */
-    setHrPayruns(l=>l.map(p=>p.id===id?{...p,status:"paid",paidAt:Date.now()}:p));
-    setHrExpenses(l=>l.map(x=>{
-      if(x.status==="approved"&&x.reimburseVia==="next-payroll"){
-        const inRun=run.lines.find(ln=>ln.employee===x.employee);
-        if(inRun&&inRun.reimb>0)return {...x,status:"paid",paidAt:Date.now()};
-      }
-      return x;
-    }));
+  const executePayroll=async(id)=>{
+    await api.patch(`/hr/payruns/${id}/execute`);
+    setHrPayruns(l=>l.map(p=>p.id===id?{...p,status:"paid"}:p));
+    const isPriv=hrEmployee&&["owner","admin","hr"].includes(hrEmployee.role);
+    const {expenses}=isPriv?await api.get("/hr/expenses/company"):await api.get("/hr/expenses/mine");
+    setHrExpenses(expenses);
   };
 
-  /* --- Badges: award/remove internal recognition badges to employees --- */
-  const awardBadge=(empId,badge)=>{
-    setHrEmployees(l=>l.map(e=>e.id===empId?{...e,badges:[...(e.badges||[]).filter(b=>b!==badge),badge]}:e));
+  /* --- Badges --- */
+  const awardBadge=async(empId,badge)=>{
+    const {employee}=await api.patch(`/hr/employees/${empId}/badges`,{badge});
+    setHrEmployees(l=>l.map(e=>e.id===empId?employee:e));
   };
-  const removeBadge=(empId,badge)=>{
-    setHrEmployees(l=>l.map(e=>e.id===empId?{...e,badges:(e.badges||[]).filter(b=>b!==badge)}:e));
+  const removeBadge=async(empId,badge)=>{
+    const {employee}=await api.patch(`/hr/employees/${empId}/badges`,{badge,remove:true});
+    setHrEmployees(l=>l.map(e=>e.id===empId?employee:e));
   };
 
   /* --- Chat --- */
-  const sendHrMessage=(chatId,text)=>{
-    const m={id:uid("hm"),chat:chatId,from:hrSession?.employeeId,text,at:Date.now()};
-    setHrChatMsgs(l=>[...l,m]);
-    return m;
+  const sendHrMessage=async(chatId,text)=>{
+    const {message}=await api.post(`/hr/chats/${chatId}/messages`,{text});
+    setHrChatMsgs(l=>[...l,message]);
+    return message;
   };
-  const createHrChat=data=>{
-    const c={id:uid("gc"),kind:data.kind||"group",name:data.name,members:data.members,
-      about:data.about||"",createdBy:hrSession?.employeeId,createdAt:Date.now()};
-    setHrChats(l=>[c,...l]);
-    return c;
+  const createHrChat=async(data)=>{
+    const {chat}=await api.post("/hr/chats",data);
+    setHrChats(l=>[chat,...l]);
+    return chat;
   };
 
-  /* --- Company settings & integrations --- */
-  const updateCompanySettings=(companyId,patch)=>{
-    setHrCompanySettings(s=>({...s,[companyId]:{...(s[companyId]||HR_COMPANY_SETTINGS_DEFAULT),...patch}}));
+  /* --- Company settings & integrations ---
+     The server merges one level deep only, so a nested-object field (modules, integrations)
+     must be sent whole - not just the one sub-key that changed - or the rest of that nested
+     object would be silently dropped. */
+  const updateCompanySettings=async(companyId,patch)=>{
+    const {settings}=await api.patch("/hr/company-settings",patch);
+    setHrCompanySettingsMap(s=>({...s,[companyId]:settings}));
   };
   const toggleModule=(companyId,module,on)=>{
-    setHrCompanySettings(s=>{
-      const cur=s[companyId]||HR_COMPANY_SETTINGS_DEFAULT;
-      return {...s,[companyId]:{...cur,modules:{...cur.modules,[module]:on}}};
-    });
+    const cur=hrCompanySettings[companyId]||HR_COMPANY_SETTINGS_DEFAULT;
+    return updateCompanySettings(companyId,{modules:{...cur.modules,[module]:on}});
   };
   const connectPunchMachine=(companyId,vendor)=>{
-    setHrCompanySettings(s=>{
-      const cur=s[companyId]||HR_COMPANY_SETTINGS_DEFAULT;
-      return {...s,[companyId]:{...cur,integrations:{...cur.integrations,
-        punchMachine:{connected:true,vendor,lastSync:new Date().toISOString()}}}};
-    });
+    const cur=hrCompanySettings[companyId]||HR_COMPANY_SETTINGS_DEFAULT;
+    return updateCompanySettings(companyId,{integrations:{...cur.integrations,
+      punchMachine:{connected:true,vendor,lastSync:new Date().toISOString()}}});
   };
   const connectPriorSystem=(companyId,vendor)=>{
-    setHrCompanySettings(s=>{
-      const cur=s[companyId]||HR_COMPANY_SETTINGS_DEFAULT;
-      return {...s,[companyId]:{...cur,integrations:{...cur.integrations,
-        priorHRSystem:{connected:true,vendor,lastImport:new Date().toISOString()}}}};
-    });
+    const cur=hrCompanySettings[companyId]||HR_COMPANY_SETTINGS_DEFAULT;
+    return updateCompanySettings(companyId,{integrations:{...cur.integrations,
+      priorHRSystem:{connected:true,vendor,lastImport:new Date().toISOString()}}});
   };
 
   /* --- Role-gated module visibility --- */
   const modulesForRole=(role)=>{
-    /* "expenses" belongs on base, not just employee - finance builds off base (not employee) and
-       still needs to see and decide on submitted expenses. */
     const base=["dashboard","directory","profile","chat","calendar","tasks","expenses"];
     const employee=[...base,"attendance","leave","payslips"];
     const hr=[...employee,"people","hiring","trainings","badges","reports"];
@@ -357,11 +345,10 @@ export function useHrStore(seed,mainStore){
   const canAccessModule=(role,module)=>modulesForRole(role).includes(module);
 
   return {
-    hrEmployees,setHrEmployees,hrAttendance,setHrAttendance,hrLeave,setHrLeave,hrTasks,setHrTasks,
-    hrEvents,setHrEvents,hrInvoices,setHrInvoices,hrChats,setHrChats,hrChatMsgs,setHrChatMsgs,
-    hrPayruns,setHrPayruns,hrCompanySettings,setHrCompanySettings,hrSession,setHrSession,hrRemember,setHrRemember,
-    hrDepartments,setHrDepartments,hrExpenses,setHrExpenses,
-    hrEmp,hrEmpsAtCompany,hrCurrentEmp,hrCurrentCompany,hrLogin,hrLogout,
+    hrBridging,
+    hrEmployees,hrAttendance,hrLeave,hrTasks,hrEvents,hrInvoices,hrChats,hrChatMsgs,
+    hrPayruns,hrCompanySettings,hrDepartments,hrExpenses,
+    hrEmp,hrEmpsAtCompany,hrCurrentEmp,hrCurrentCompany,hrLogin,hrLogout,hrAutoLogin,
     hrPublicProfile,updateEmpVisibility,updateEmp,addEmployee,removeEmployee,
     punchIn,punchOut,requestLeave,decideLeave,
     addTask,updateTaskStatus,deleteTask,addEvent,deleteEvent,

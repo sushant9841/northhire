@@ -27,22 +27,22 @@ function _PillTabs({items,value,onChange}){
 
 export function HrLoginPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
-  const remembered=(()=>{try{return JSON.parse(localStorage.getItem("northhire.hr.remember")||"null");}catch{return null;}})();
-  const [company,setCompany]=useState(remembered?.company||"PCL Construction");
-  const [loginId,setLoginId]=useState(remembered?.loginId||"");
+  const [company,setCompany]=useState("PCL Construction");
+  const [loginId,setLoginId]=useState("");
   const [pw,setPw]=useState("");
-  const [remember,setRemember]=useState(!!remembered);
   const [err,setErr]=useState(""); const [busy,setBusy]=useState(false);
 
-  const submit=()=>{setErr(""); setBusy(true);
-    setTimeout(()=>{const r=A.hrLogin(company,loginId,pw,remember);
-      setBusy(false);
-      if(!r.ok){setErr(r.msg);return;}
-      A.go("hrDashboard");
-    },200);
+  const submit=async()=>{setErr(""); setBusy(true);
+    const r=await A.hrLogin(company,loginId,pw);
+    setBusy(false);
+    if(!r.ok){setErr(r.msg);return;}
+    A.go("hrDashboard");
   };
-  const demoAs=(id)=>{setLoginId(id); setPw("pcl2026");
-    setTimeout(()=>{const r=A.hrLogin("PCL Construction",id,"pcl2026",remember); if(!r.ok)setErr(r.msg); else A.go("hrDashboard");},60);};
+  const demoAs=async(id)=>{setLoginId(id); setPw("pcl2026"); setErr(""); setBusy(true);
+    const r=await A.hrLogin("PCL Construction",id,"pcl2026");
+    setBusy(false);
+    if(!r.ok)setErr(r.msg); else A.go("hrDashboard");
+  };
 
   return <div className="min-h-screen flex flex-col text-white" style={{background:`linear-gradient(135deg,#0A1929 0%,${C.ink} 60%,#152538 100%)`}}>
     <div className={`flex items-center justify-between ${mob?"py-6 px-5":"py-8 px-10"}`}>
@@ -81,8 +81,6 @@ export function HrLoginPage(){
                 onKeyDown={e=>e.key==="Enter"&&submit()}/></Field>
             <Field label="Password"><Input icon="lock" type="password" value={pw} onChange={e=>{setPw(e.target.value);setErr("");}}
               placeholder="Your password" onKeyDown={e=>e.key==="Enter"&&submit()}/></Field>
-            <CheckRow on={remember} onChange={setRemember} label="Remember me on this device"
-              sub="Company name and login ID stay filled in next time."/>
             {err&&<Banner tone="danger" icon="alert" title="Sign-in failed">{err}</Banner>}
             <Btn kind="primary" size="lg" full iconR="arrowR" onClick={submit} disabled={busy}>{busy?"Signing in…":"Enter HR Suite"}</Btn>
           </div>
@@ -186,11 +184,11 @@ export function HrDashboard(){
           </div>
           {!todayAttendance?<div>
             <p className="text-sm text-text-2 mb-3.5 leading-relaxed">Start your day by punching in.</p>
-            <Btn kind="primary" icon="clock" onClick={()=>{const r=A.punchIn(emp.id,"web"); if(!r.ok)A.toast(r.msg,"danger");}}>Punch in</Btn>
+            <Btn kind="primary" icon="clock" onClick={async()=>{const r=await A.punchIn(emp.id,"web"); if(!r.ok)A.toast(r.msg,"danger");}}>Punch in</Btn>
           </div>:!todayAttendance.clockOut?<div>
             <div className="text-base text-text mb-2">Punched in at <strong>{todayAttendance.clockIn}</strong></div>
             <p className="text-sm text-text-2 mb-3.5">Have a great day. Punch out when you're wrapping up.</p>
-            <Btn kind="outline" icon="clock" onClick={()=>{const r=A.punchOut(emp.id); if(!r.ok)A.toast(r.msg,"danger");}}>Punch out</Btn>
+            <Btn kind="outline" icon="clock" onClick={async()=>{const r=await A.punchOut(emp.id); if(!r.ok)A.toast(r.msg,"danger");}}>Punch out</Btn>
           </div>:<div>
             <div className="text-sm text-text">In: <strong>{todayAttendance.clockIn}</strong> · Out: <strong>{todayAttendance.clockOut}</strong> · Total: <strong className="text-brand">{todayAttendance.hours}h</strong></div>
             <p className="text-sm text-text-2 mt-2">Good work today. See you tomorrow.</p></div>}
@@ -533,11 +531,11 @@ export function HrAttendance(){
         <Tag tone={todayRecord?"ok":"neutral"} sm>{todayRecord?(todayRecord.clockOut?"Signed out":"On the clock"):"Not clocked in"}</Tag>
       </div>
       {!todayRecord?
-        <Btn kind="primary" size="lg" icon="clock" onClick={()=>{const r=A.punchIn(emp.id,"web"); if(!r.ok)A.toast(r.msg,"danger");}}>Punch in now</Btn>
+        <Btn kind="primary" size="lg" icon="clock" onClick={async()=>{const r=await A.punchIn(emp.id,"web"); if(!r.ok)A.toast(r.msg,"danger");}}>Punch in now</Btn>
         :!todayRecord.clockOut?
         <div className="flex gap-3 flex-wrap items-center">
           <div className="text-base text-text-2">Punched in at <strong className="text-text">{todayRecord.clockIn}</strong> via {todayRecord.source}</div>
-          <Btn kind="outline" icon="clock" onClick={()=>{const r=A.punchOut(emp.id); if(!r.ok)A.toast(r.msg,"danger");}}>Punch out</Btn>
+          <Btn kind="outline" icon="clock" onClick={async()=>{const r=await A.punchOut(emp.id); if(!r.ok)A.toast(r.msg,"danger");}}>Punch out</Btn>
         </div>
         :
         <div className="text-base text-text-2">In: <strong>{todayRecord.clockIn}</strong> · Out: <strong>{todayRecord.clockOut}</strong> · Total: <strong className="text-brand">{todayRecord.hours}h</strong></div>}
@@ -938,13 +936,13 @@ function _HrNewChat({onClose,onCreate,allowDm=true,allowGroup=true}){
   const [selected,setSelected]=useState([]);
   const all=A.hrEmpsAtCompany(emp.companyId).filter(e=>e.id!==emp.id&&e.status==="active");
   const toggle=(id)=>setSelected(s=>s.includes(id)?s.filter(x=>x!==id):[...s,id]);
-  const create=()=>{
+  const create=async()=>{
     if(kind==="dm"&&selected.length===1){
       const other=A.hrEmp(selected[0]);
-      const c=A.createHrChat({kind:"dm",name:other.name,members:`${emp.id},${selected[0]}`,about:"Direct message"});
+      const c=await A.createHrChat({kind:"dm",name:other.name,members:`${emp.id},${selected[0]}`,about:"Direct message"});
       onCreate(c.id);
     } else if(kind==="group"&&name.trim()&&selected.length>0){
-      const c=A.createHrChat({kind:"group",name:`# ${name.trim()}`,members:`${emp.id},${selected.join(",")}`,about:`Group of ${selected.length+1}`});
+      const c=await A.createHrChat({kind:"group",name:`# ${name.trim()}`,members:`${emp.id},${selected.join(",")}`,about:`Group of ${selected.length+1}`});
       onCreate(c.id);
     }
   };
@@ -1253,8 +1251,8 @@ export function HrPayroll(){
   const twoWeeksAgo=new Date(today.getTime()-14*864e5);
   const [np,setNp]=useState({periodStart:_fmtDate(twoWeeksAgo),periodEnd:_fmtDate(today)});
 
-  const createRun=()=>{
-    const r=A.runPayroll(company.id,np.periodStart,np.periodEnd);
+  const createRun=async()=>{
+    const r=await A.runPayroll(company.id,np.periodStart,np.periodEnd);
     setShowNew(false); setDetail(r);
   };
 

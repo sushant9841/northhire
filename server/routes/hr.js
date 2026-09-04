@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, nextId } from "../db.js";
-import { hashPassword, verifyPassword, createSessionCookie, clearSessionCookie, requireHrAuth, hrEmployeeFromRequest } from "../auth.js";
+import { hashPassword, verifyPassword, createSessionCookie, clearSessionCookie, requireHrAuth, hrEmployeeFromRequest, requireAuth, requireRole } from "../auth.js";
 import {
   serializeHrEmployee, serializeHrAttendance, serializeHrLeave, serializeHrTask, serializeHrEvent,
   serializeHrInvoice, serializeHrDepartment, serializeHrExpense, serializeHrPayrun, serializeHrChat, serializeHrChatMessage,
@@ -24,6 +24,18 @@ hrRouter.post("/login", (req, res) => {
   res.json({ employee: serializeHrEmployee(emp), company: { id: company.id, name: company.name, plan: company.plan } });
 });
 hrRouter.post("/logout", (req, res) => { clearSessionCookie(req, res, "hr_session", "hr"); res.json({ ok: true }); });
+/* Bridges the main employer session straight into an HR session for their own company, so
+   navigating into HR Suite from the employer console doesn't demand a second, separate login -
+   only valid for the employer's own Enterprise company, never any other. */
+hrRouter.post("/auto-login", requireAuth, requireRole("employer"), (req, res) => {
+  const company = db.prepare("SELECT * FROM employers WHERE id = ?").get(req.user.employer_id);
+  if (!company || company.plan !== "Enterprise") return res.status(403).json({ error: "HR Suite is Enterprise-only." });
+  const emps = db.prepare("SELECT * FROM hr_employees WHERE company_id = ? AND status = 'active'").all(company.id);
+  const owner = emps.find(e => e.role === "owner" || e.role === "admin") || emps[0];
+  if (!owner) return res.status(404).json({ error: "No HR employees at this company yet." });
+  createSessionCookie(res, "hr_session", "hr", owner.id);
+  res.json({ employee: serializeHrEmployee(owner), company: { id: company.id, name: company.name, plan: company.plan } });
+});
 hrRouter.get("/me", requireHrAuth, (req, res) => {
   const company = db.prepare("SELECT * FROM employers WHERE id = ?").get(req.hrEmployee.company_id);
   res.json({ employee: serializeHrEmployee(req.hrEmployee), company: { id: company.id, name: company.name, plan: company.plan } });
@@ -115,7 +127,7 @@ hrRouter.post("/attendance/punch-out", requireHrAuth, (req, res) => {
   const clockInAt = new Date(`${existing.date}T${existing.clock_in}:00`);
   const hours = Math.max(0, Math.round((now - clockInAt) / 36000) / 100);
   db.prepare("UPDATE hr_attendance SET clock_out = ?, hours = ? WHERE id = ?").run(time, hours, existing.id);
-  res.json({ hours });
+  res.json({ hours, record: serializeHrAttendance(db.prepare("SELECT * FROM hr_attendance WHERE id = ?").get(existing.id)) });
 });
 
 /* ─── Leave ─── */

@@ -22,7 +22,7 @@ export function WorkerDashboard(){
           <br/><br/>
           <span className="text-text-3 text-sm">We never charge job seekers anything. Ever.</span>
         </p>
-        <Btn kind="primary" onClick={()=>{const r=A.optInAsWorker(A.user); if(r.ok){A.go("workerDashboard");}}}>Opt in as a worker</Btn>
+        <Btn kind="primary" onClick={async()=>{const r=await A.optInAsWorker(A.user); if(r.ok){A.go("workerDashboard");}}}>Opt in as a worker</Btn>
       </Card>
     </Page>;
   }
@@ -131,11 +131,10 @@ export function WorkerTimesheet(){
   const gross=asn?regHrs*asn.payRate+otHrs*asn.payRate*1.5:0;
   const locked=existing&&(existing.status==="submitted"||existing.status==="approved"||existing.status==="paid");
 
-  const save=()=>{const r=A.upsertTimesheetDraft(asnId,worker.id,weekStart,hours,otHrs,notes);
+  const save=async()=>{const r=await A.upsertTimesheetDraft(asnId,worker.id,weekStart,hours,otHrs,notes);
     if(r.ok)A.toast("Draft saved.");};
-  const submit=()=>{A.upsertTimesheetDraft(asnId,worker.id,weekStart,hours,otHrs,notes);
-    const t=A.timesheets.find(t=>t.assignment===asnId&&t.weekStart===weekStart);
-    if(t){const r=A.submitTimesheet(t.id); if(r.ok)A.toast("Timesheet submitted for supervisor approval.","ok");}};
+  const submit=async()=>{const r=await A.upsertTimesheetDraft(asnId,worker.id,weekStart,hours,otHrs,notes);
+    if(r.ok&&r.timesheet){const r2=await A.submitTimesheet(r.timesheet.id); if(r2.ok)A.toast("Timesheet submitted for supervisor approval.","ok");}};
 
   return <Page narrow>
     <H1 sub="Enter your hours. Submit weekly by Monday for the previous week.">Weekly timesheet</H1>

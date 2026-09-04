@@ -66,6 +66,11 @@ authRouter.get("/me", requireAuth, (req, res) => {
   res.json({ user: publicUser(req.user) });
 });
 
+authRouter.get("/outbox", requireAuth, (req, res) => {
+  const rows = db.prepare("SELECT * FROM outbox WHERE to_email = ? ORDER BY created_at DESC").all(req.user.email);
+  res.json({ outbox: rows.map(r => ({ id: r.id, to: r.to_email, subject: r.subject, body: r.body, at: new Date(r.created_at).toLocaleString("en-CA") })) });
+});
+
 authRouter.post("/reset/request", (req, res) => {
   const email = (req.body?.email || "").toLowerCase().trim();
   const user = db.prepare("SELECT id FROM users WHERE email = ?").get(email);

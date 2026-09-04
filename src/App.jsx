@@ -62,10 +62,10 @@ export default function NorthHire(){
   const mob=useMedia("(max-width: 900px)");
   const A=useStore();
   const {pg,user,settings,impersonating,stopImpersonating,hireOnboarding,setHireOnboarding,go}=A;
-  const [cookieAck,setCookieAck]=useState(()=>{if(typeof window==="undefined")return true;
-    try{return localStorage.getItem("northhire.cookies")==="1";}catch{return true;}});
-  const acceptCookies=()=>{try{localStorage.setItem("northhire.cookies","1");}catch{}
-    setCookieAck(true); A.logActivity("cookies.accepted","Accepted cookie use","shield");};
+  /* In-memory only - the banner reappears on a fresh load rather than persisting a "seen it"
+     flag to storage, since nothing on the client persists across reloads any more. */
+  const [cookieAck,setCookieAck]=useState(false);
+  const acceptCookies=()=>{setCookieAck(true); A.logActivity("cookies.accepted","Accepted cookie use","shield");};
 
   const _roleWrap=(node)=>{
     if(user?.role==="employer")return <EmpShell>{node}</EmpShell>;

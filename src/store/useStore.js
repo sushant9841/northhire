@@ -10,7 +10,7 @@ import { SEED_BLOGS } from "./seed/blogs.js";
 import { SEED_TRAININGS } from "./seed/trainings.js";
 import { useHrStore } from "./useHrStore.js";
 import { useStaffingStore } from "./useStaffingStore.js";
-import { api, getToken, setToken, ApiUnreachableError } from "../helpers/api.js";
+import { api, ApiUnreachableError } from "../helpers/api.js";
 import { mapApiJob, mapApiEmployer, mapApiApplication, mapApiUser } from "../helpers/apiMap.js";
 
 /* Real CSV field parsing (quoted fields, embedded commas, "" escaping) — a plain row.split(",")
@@ -38,27 +38,10 @@ export function useStore(){
     return "home";
   });
   const [stack,setStack]=useState([]);
-  /* --- persistence: hydrate from localStorage, save on change --- */
-  const LS_KEY="northhire.v4"; /* bumped: staffing agency schema — workers, clients, orders, timesheets, invoices */
-  const hydrate=()=>{ if(typeof window==="undefined")return null;
-    try{const raw=localStorage.getItem(LS_KEY); return raw?JSON.parse(raw):null;}catch{return null;} };
-  const seed=hydrate();
-  /* Migrate seeded state to current schema. Runs once per hydration. */
-  if(seed?.employers){
-    /* Old plan-name → new plan-name */
-    const planMap={Starter:"Free",Growth:"Growth",Scale:"Enterprise"};
-    seed.employers=seed.employers.map(e=>{
-      let out=e.plan&&planMap[e.plan]?{...e,plan:planMap[e.plan]}:e;
-      /* Guarantee PCL Construction is on Enterprise so HR Suite demo works */
-      if(out.name==="PCL Construction"){out={...out,plan:"Enterprise",owner:out.owner||"hr@pcl.com"};}
-      return out;
-    });
-  }
-  /* A seeker/employer/admin `user` is now backed by a real API session token (see below) - a
-     cached user object with no matching token is a leftover from before this wiring existed
-     (or an expired session), so it's discarded here rather than showing a "logged in" UI the
-     server won't actually recognize for any real action. */
-  const [user,setUser]=useState(seed?.user&&getToken()?seed.user:null);
+  /* A seeker/employer/admin `user` is now backed by a real httpOnly session cookie the browser
+     manages itself - there's no client-readable token to gate on, so the app always starts
+     signed-out and the /auth/me effect below fills in `user` once the cookie is checked. */
+  const [user,setUser]=useState(null);
   const DEMO_PASSWORDS={
     "sarah.chen@example.ca":"Password123",
     "marcus.b@example.ca":"Password123",
@@ -66,39 +49,35 @@ export function useStore(){
     "hr@pcl.com":"Employer123",
     "admin@northhire.ca":"Admin1234"
   };
-  /* Always merge demo passwords on top so demo accounts NEVER break regardless of stale localStorage */
-  const [passwords,setPasswords]=useState({...(seed?.passwords||{}),...DEMO_PASSWORDS});
-  const [resetCodes,setResetCodes]=useState(seed?.resetCodes||{});
-  const [employers,setEmployers]=useState(seed?.employers||SEED_EMPLOYERS);
-  const [jobs,setJobs]=useState(seed?.jobs||SEED_JOBS);
-  const [people,setPeople]=useState(seed?.people||SEED_PEOPLE);
-  const [applications,setApplications]=useState(seed?.applications||SEED_APPS);
-  const [blogs,setBlogs]=useState(seed?.blogs||SEED_BLOGS);
-  const [trainings,setTrainings]=useState(seed?.trainings||SEED_TRAININGS);
-  const [cvs,setCvs]=useState(seed?.cvs||[]);
-  const [saved,setSaved]=useState(new Set(seed?.saved||["j3"]));
-  const [following,setFollowing]=useState(new Set(seed?.following||[]));
-  const [enrolled,setEnrolled]=useState(new Set(seed?.enrolled||[]));
+  /* passwords is just a demo-account hint map for hasAccount()/checkPassword() (see below) - the
+     real authority for credentials is always the server. */
+  const [passwords,setPasswords]=useState(DEMO_PASSWORDS);
+  const [employers,setEmployers]=useState(SEED_EMPLOYERS);
+  const [jobs,setJobs]=useState(SEED_JOBS);
+  const [people,setPeople]=useState(SEED_PEOPLE);
+  const [applications,setApplications]=useState(SEED_APPS);
+  const [blogs,setBlogs]=useState(SEED_BLOGS);
+  const [trainings,setTrainings]=useState(SEED_TRAININGS);
+  const [cvs,setCvs]=useState([]);
+  const [saved,setSaved]=useState(new Set());
+  const [following,setFollowing]=useState(new Set());
+  const [enrolled,setEnrolled]=useState(new Set());
   const [paidTrainings,setPaidTrainings]=useState(()=>new Set());
-  const [trainingProgress,setTrainingProgress]=useState(seed?.trainingProgress||{});
-  const [suspended,setSuspended]=useState(new Set(seed?.suspended||[]));
-  const [suspensionInfo,setSuspensionInfo]=useState(seed?.suspensionInfo||{}); /* {[userId]: {reason, at}} */
-  const [invitedCandidates,setInvitedCandidates]=useState(new Set(seed?.invitedCandidates||[])); /* `${jobId}:${candidateId}` */
-  const [notifications,setNotifications]=useState(seed?.notifications||[
-    {id:"n1",icon:"calendar",title:"Interview booked — PCL Construction",body:"Site interview Thursday at 9:00 AM. Bring your Red Seal certificate.",at:"2 hours ago",read:false,for:"u2",link:"status"},
-    {id:"n2",icon:"target",title:"6 new jobs match your profile",body:"New trades roles in Alberta paying $42–$52 per hour.",at:"5 hours ago",read:false,for:"u2",link:"matched"},
-    {id:"n3",icon:"eye",title:"An employer viewed your profile",body:"A verified construction employer opened your profile today.",at:"Yesterday",read:true,for:"u2",link:null},
-  ]);
-  const [savedSearches,setSavedSearches]=useState(seed?.savedSearches||[]);
-  const [messages,setMessages]=useState(seed?.messages||[]);
-  const [interviews,setInterviews]=useState(seed?.interviews||[]);
-  const [reviews,setReviews]=useState(seed?.reviews||[]);
-  const [outbox,setOutbox]=useState(seed?.outbox||[]);
+  const [trainingProgress,setTrainingProgress]=useState({});
+  const [suspended,setSuspended]=useState(new Set());
+  const [suspensionInfo,setSuspensionInfo]=useState({}); /* {[userId]: {reason, at}} */
+  const [invitedCandidates,setInvitedCandidates]=useState(new Set()); /* `${jobId}:${candidateId}` */
+  const [notifications,setNotifications]=useState([]);
+  const [savedSearches,setSavedSearches]=useState([]);
+  const [messages,setMessages]=useState([]);
+  const [interviews,setInterviews]=useState([]);
+  const [reviews,setReviews]=useState([]);
+  const [outbox,setOutbox]=useState([]);
   const [impersonating,setImpersonating]=useState(null);
-  const [activity,setActivity]=useState(seed?.activity||[]);
-  const [settings,setSettings]=useState(seed?.settings||{employerBlogs:true,employerTrainings:true,employerFeature:true,
+  const [activity,setActivity]=useState([]);
+  const [settings,setSettings]=useState({employerBlogs:true,employerTrainings:true,employerFeature:true,
     autoApproveJobs:true,publicSignup:true,cvBuilder:true,matching:true,enrolments:true,payTransparency:true,maintenance:false});
-  const [userSettings,setUserSettings]=useState(seed?.userSettings||{matchAlerts:true,appAlerts:true,marketing:false,discoverable:true,hideEmployer:false,reducedMotion:false,lang:"en"});
+  const [userSettings,setUserSettings]=useState({matchAlerts:true,appAlerts:true,marketing:false,discoverable:true,hideEmployer:false,reducedMotion:false,lang:"en"});
   const [search,setSearch]=useState({q:"",where:"",cats:[]});
   const [jobId,setJobId]=useState(null),[empId,setEmpId]=useState(null),[blogId,setBlogId]=useState(null);
   const [trainingId,setTrainingId]=useState(null),[cvId,setCvId]=useState(null),[editId,setEditId]=useState(null);
@@ -117,11 +96,11 @@ export function useStore(){
   const [employersPrefill,setEmployersPrefill]=useState(null);
   const [pageTitle,setPageTitle]=useState(null);
 
-  /* --- real backend sync (jobs/employers/session) — see server/README.md for exact scope.
-     Everything else in this store (HR, staffing, content, messages...) stays on localStorage;
-     only jobs/employers/applications/accounts have a real API behind them. A network failure
-     here (server not running) is caught and swallowed - the app keeps working against
-     whatever local/seed data it already had, same as before this wiring existed. */
+  /* --- real backend sync: every domain in this store is now API-backed, nothing persists to
+     localStorage. Jobs/employers are global, so they're fetched once here; a network failure
+     (server not running) is caught and swallowed so the app still renders against the seed
+     data used as its initial state, same graceful-degradation behavior as before this wiring
+     existed - it just won't reflect any real signed-in session until the server comes back. */
   useEffect(()=>{
     let cancelled=false;
     (async()=>{
@@ -137,14 +116,13 @@ export function useStore(){
     return ()=>{cancelled=true;};
   },[]);
   useEffect(()=>{
-    const token=getToken(); if(!token)return;
     let cancelled=false;
     (async()=>{
       try{
         const {user:apiUser}=await api.get("/auth/me");
         if(!cancelled)setUser(mapApiUser(apiUser));
       }catch{
-        if(!cancelled){setToken(null);setUser(null);}
+        /* No cookie, an expired one, or the server's unreachable - either way there's no session. */
       }
     })();
     return ()=>{cancelled=true;};
@@ -173,8 +151,124 @@ export function useStore(){
     return ()=>{cancelled=true;};
   },[user?.id,user?.role]);
 
+  /* Published content is global, not per-session, so it's fetched once on mount alongside
+     jobs/employers - the same "server is the source of truth, seed data is just the pre-fetch
+     placeholder" pattern used everywhere else in this store. */
+  useEffect(()=>{
+    let cancelled=false;
+    (async()=>{
+      try{
+        const [{blogs:freshBlogs},{trainings:freshTrainings}]=await Promise.all([
+          api.get("/content/blogs?status=all"),api.get("/content/trainings?status=all")]);
+        if(cancelled)return;
+        setBlogs(freshBlogs); setTrainings(freshTrainings);
+      }catch(e){
+        if(typeof console!=="undefined")console.warn(`[NorthHire] Content sync failed: ${e.message}`);
+      }
+    })();
+    return ()=>{cancelled=true;};
+  },[]);
+
+  /* Every remaining personal domain (CVs, saved searches, messages, interviews, reviews,
+     notifications, saved jobs, followed employers, enrolments, references, payment methods,
+     2FA, personal settings, sent-mail outbox) used to live only in the localStorage snapshot -
+     nothing server-backed kept it around. Now that each has a real table and route, they're
+     fetched here per session the same way applications are, and every mutation below writes
+     through the API instead of only touching local state. */
+  useEffect(()=>{
+    if(!user){
+      setCvs([]);setSavedSearches([]);setMessages([]);setInterviews([]);setReviews([]);setNotifications([]);
+      setSaved(new Set());setFollowing(new Set());setEnrolled(new Set());setTrainingProgress({});
+      setReferences([]);setPaymentMethods([]);setTwoFactor({});setInvitedCandidates(new Set());setOutbox([]);
+      return;
+    }
+    let cancelled=false;
+    (async()=>{
+      try{
+        const isSeeker=user.role==="seeker", isEmployer=user.role==="employer";
+        const calls=[
+          api.get("/seeker/notifications"),
+          api.get("/seeker/messages"),
+          api.get("/seeker/user-settings"),
+          api.get("/auth/outbox"),
+        ];
+        if(isSeeker)calls.push(
+          api.get("/seeker/cvs"),api.get("/seeker/saved-searches"),api.get("/seeker/interviews"),
+          api.get("/seeker/saved-jobs"),api.get("/seeker/followed-employers"),api.get("/content/enrolments/mine"),
+          api.get("/seeker/references"),api.get("/seeker/payment-methods"),api.get("/seeker/two-factor"),
+        );
+        if(isEmployer)calls.push(api.get("/seeker/interviews"),api.get("/seeker/invited-candidates"));
+        const results=await Promise.all(calls);
+        if(cancelled)return;
+        const [{notifications:n},{messages:m},{userSettings:us},{outbox:ob}]=results;
+        setNotifications(n);setMessages(m);setUserSettings(us);setOutbox(ob);
+        let i=4;
+        if(isSeeker){
+          setCvs(results[i++].cvs);
+          setSavedSearches(results[i++].savedSearches);
+          setInterviews(results[i++].interviews);
+          setSaved(new Set(results[i++].jobIds));
+          setFollowing(new Set(results[i++].employerIds));
+          const enrol=results[i++].enrolments;
+          setEnrolled(new Set(enrol.map(e=>e.trainingId)));
+          setTrainingProgress(Object.fromEntries(enrol.map(e=>[e.trainingId,e.progress])));
+          setPaidTrainings(new Set(enrol.filter(e=>e.paid).map(e=>e.trainingId)));
+          setReferences(results[i++].references);
+          setPaymentMethods(results[i++].paymentMethods);
+          const tf=results[i++].twoFactor;
+          setTwoFactor(tf?{[user.id]:tf}:{});
+        }
+        if(isEmployer){
+          setInterviews(results[i++].interviews);
+          setInvitedCandidates(new Set(results[i++].invited));
+        }
+        /* Reviews are public per-employer, not per-user - fetched lazily by whichever employer
+           profile page is open (see employers.jsx), not here. */
+      }catch(e){
+        if(typeof console!=="undefined")console.warn(`[NorthHire] Account data sync failed: ${e.message}`);
+      }
+    })();
+    return ()=>{cancelled=true;};
+  },[user?.id,user?.role]);
+
+  /* Platform-wide settings and the admin activity log - fetched once (settings are public,
+     used to gate features for every visitor) and re-fetched for admins so the audit log page
+     shows what actually happened across sessions, not just this tab's in-memory log. */
+  useEffect(()=>{
+    let cancelled=false;
+    (async()=>{
+      try{
+        const {settings:s}=await api.get("/platform/settings");
+        if(!cancelled)setSettings(s);
+      }catch(e){
+        if(typeof console!=="undefined")console.warn(`[NorthHire] Platform settings sync failed: ${e.message}`);
+      }
+    })();
+    return ()=>{cancelled=true;};
+  },[]);
+  useEffect(()=>{
+    if(user?.role!=="admin")return;
+    let cancelled=false;
+    (async()=>{
+      try{
+        const {activity:a}=await api.get("/platform/activity");
+        if(!cancelled)setActivity(a.map(e=>({id:e.id,action:e.action,text:e.text,icon:e.icon,actor:e.actor,at:new Date(e.at).toLocaleString("en-CA")})));
+      }catch(e){
+        if(typeof console!=="undefined")console.warn(`[NorthHire] Activity log sync failed: ${e.message}`);
+      }
+    })();
+    return ()=>{cancelled=true;};
+  },[user?.id,user?.role]);
+
   const emp=id=>employers.find(e=>e.id===id)||employers[0];
   const job=id=>jobs.find(j=>j.id===id);
+  const jobHiringType=jobId=>job(jobId)?.hiringType||"direct";
+  const jobHiringLabel=jobId=>{
+    const t=jobHiringType(jobId);
+    if(t==="agency-contract")return "Agency contract — NorthHire Staffing";
+    if(t==="agency-perm")return "Agency permanent — placed by NorthHire Staffing";
+    return "Direct — hired by employer";
+  };
   const person=id=>people.find(p=>p.id===id)||people[0];
   const company=user?.role==="employer"?employers.find(e=>e.owner===user.email)||employers[0]:null;
   const homePg=user?.role==="employer"?"empHome":user?.role==="admin"?"admHome":"home";
@@ -203,9 +297,8 @@ export function useStore(){
     /* Auto-provision HR session when an Enterprise employer navigates into HR modules.
        This makes HR Suite feel like a native tab inside the employer console,
        instead of demanding a separate /hr-login step. */
-    if(p?.startsWith("hr")&&p!=="hrLogin"&&user?.role==="employer"&&company?.plan==="Enterprise"&&!HR?.hrSession){
-      const owner=HR?.hrEmpsAtCompany?.(company.id)?.find(e=>e.role==="Owner"||e.role==="Admin")||HR?.hrEmpsAtCompany?.(company.id)?.[0];
-      if(owner){HR.setHrSession({employeeId:owner.id,companyId:company.id,at:Date.now()});}
+    if(p?.startsWith("hr")&&p!=="hrLogin"&&user?.role==="employer"&&company?.plan==="Enterprise"&&!HR?.hrCurrentEmp()){
+      HR?.hrAutoLogin?.();
     }
     setStack(s=>[...s,pg]); setPg(p); setPageTitle(title||null);
     if(typeof window!=="undefined")window.scrollTo?.(0,0);
@@ -266,14 +359,10 @@ export function useStore(){
   },[user,myApps,cvs,jobs,applications,company,employers,blogs,trainings]);
 
   /* --- actions --- */
-  const login=role=>{
-    const base=role==="seeker"?{...people[1],role,defaultCv:null,seed:people[1].seed}
-      :role==="employer"?{id:"emp1",role,name:"PCL Hiring Team",email:"hr@pcl.com",seed:9,skills:[]}
-      :{id:"adm1",role,name:"Platform Admin",email:"admin@northhire.ca",seed:11,skills:[]};
-    setUser(base); setStack([]); setPg(role==="employer"?"empHome":role==="admin"?"admHome":"home");
-    log("auth.login",`Signed in as ${base.name}`,"logout");
+  const logout=()=>{
+    api.post("/auth/logout").catch(()=>{}); /* best-effort - the cookie is cleared server-side either way */
+    setUser(null);setStack([]);setPg("home");setPageTitle(null);
   };
-  const logout=()=>{setToken(null);setUser(null);setStack([]);setPg("home");setPageTitle(null);};
   /* hasAccount only ever sees the built-in demo emails now — real accounts created after this
      backend went live live in the server's database, not this local map. It's still useful as
      an early "that looks like a demo account" hint during signup; the real authority for
@@ -284,8 +373,7 @@ export function useStore(){
   const upsertPassword=(email,pw)=>setPasswords(p=>({...p,[email.toLowerCase().trim()]:pw}));
   const loginWithPassword=async(email,pw)=>{
     try{
-      const {token,user:apiUser}=await api.post("/auth/login",{email:(email||"").trim(),password:pw});
-      setToken(token);
+      const {user:apiUser}=await api.post("/auth/login",{email:(email||"").trim(),password:pw});
       const mapped=mapApiUser(apiUser);
       setUser(mapped);
       setStack([]); setPg(mapped.role==="employer"?"empHome":mapped.role==="admin"?"admHome":"home");
@@ -295,26 +383,21 @@ export function useStore(){
       return {ok:false,msg:e.message};
     }
   };
-  const resetPasswordRequest=email=>{
+  const resetPasswordRequest=async email=>{
     const e=(email||"").toLowerCase().trim();
-    if(!passwords[e])return {ok:false,msg:"No account with that email"};
-    const code=Math.floor(100000+Math.random()*900000).toString();
-    setResetCodes(c=>({...c,[e]:{code,at:Date.now()}}));
-    setOutbox(o=>[{id:uid("m"),to:e,subject:"Reset your NorthHire password",
-      body:`Your reset code is ${code}. It expires in 15 minutes.`,at:new Date().toLocaleString("en-CA")},...o]);
-    log("auth.reset.request",`Reset code emailed to ${e}`,"mail");
-    return {ok:true,code}; /* dev returns code for demo visibility */
+    try{
+      const {code}=await api.post("/auth/reset/request",{email:e});
+      log("auth.reset.request",`Reset code emailed to ${e}`,"mail");
+      return {ok:true,code}; /* dev returns code for demo visibility */
+    }catch(err){return {ok:false,msg:err.message};}
   };
-  const resetPasswordConfirm=(email,code,newPw)=>{
+  const resetPasswordConfirm=async(email,code,newPw)=>{
     const e=(email||"").toLowerCase().trim();
-    const rec=resetCodes[e];
-    if(!rec)return {ok:false,msg:"No pending reset for this account"};
-    if(Date.now()-rec.at>15*60*1000)return {ok:false,msg:"Code expired — request a new one"};
-    if(rec.code!==code)return {ok:false,msg:"Code does not match"};
-    setPasswords(p=>({...p,[e]:newPw}));
-    setResetCodes(c=>{const n={...c};delete n[e];return n;});
-    log("auth.reset.complete",`Password reset for ${e}`,"lock");
-    return {ok:true};
+    try{
+      await api.post("/auth/reset/confirm",{email:e,code,newPassword:newPw});
+      log("auth.reset.complete",`Password reset for ${e}`,"lock");
+      return {ok:true};
+    }catch(err){return {ok:false,msg:err.message};}
   };
 
   const completeSignup=async d=>{
@@ -322,7 +405,7 @@ export function useStore(){
     if(!d.password||d.password.length<8)return {ok:false,msg:"Password must be at least 8 characters"};
     const yearsMap={"No experience yet":0,"Less than 1 year":1,"1-2 years":2,"3-5 years":4,"6-10 years":8,"More than 10 years":12};
     try{
-      const {token,user:apiUser}=await api.post("/auth/signup",{
+      const {user:apiUser}=await api.post("/auth/signup",{
         name:`${d.first} ${d.last}`.trim(),email,password:d.password,role:"seeker"});
       /* The signup endpoint only takes name/email/password/role - everything else the wizard
          collected (title/cat/city/skills/pay expectations...) is a profile update on top,
@@ -330,7 +413,7 @@ export function useStore(){
       const patch={title:d.title,cat:d.cat,city:d.city,prov:PCODE[d.prov],years:yearsMap[d.years]??2,phone:d.phone,
         skills:d.skills,edu:d.edu,eligible:d.eligible,payMin:Number(d.payMin)||0,payUnit:d.payUnit,
         types:d.types,modes:d.modes};
-      setToken(token);
+      await api.patch("/users/me",patch); /* persisted server-side so it survives a refresh, unlike before this store was cookie/API-backed */
       const u={...mapApiUser(apiUser),...patch,startWhen:d.startWhen,summary:"",defaultCv:null,joined:_fmtDate(new Date())};
       setUser(u); setPeople(p=>[u,...p]); setStack([]); setPg("welcome");
       notify({icon:"sparkle",title:"Welcome to NorthHire",body:"Your profile is live. Check Matched jobs to see what fits your skills.",for:u.id,link:"matched"});
@@ -345,7 +428,7 @@ export function useStore(){
     if(!d.password||d.password.length<8)return {ok:false,msg:"Password must be at least 8 characters"};
     if(!d.company||!d.company.trim())return {ok:false,msg:"Company name required"};
     try{
-      const {token,user:apiUser}=await api.post("/auth/signup",{
+      const {user:apiUser}=await api.post("/auth/signup",{
         name:d.name||"Hiring Team",email,password:d.password,role:"employer",companyName:d.company.trim()});
       const domain=email.split("@")[1]||"example.com";
       /* The employer record itself was created server-side by signup (its id lives on the
@@ -357,7 +440,6 @@ export function useStore(){
       if(pendingPlan&&PLANS[pendingPlan])await api.patch(`/employers/${apiUser.employer_id}`,{plan:pendingPlan});
       const e=mapApiEmployer({...employer,plan:(pendingPlan&&PLANS[pendingPlan])?pendingPlan:employer.plan});
       setEmployers(list=>[e,...list]);
-      setToken(token);
       setUser({...mapApiUser(apiUser),name:e.ownerName,skills:[]});
       setPendingPlan(null);
       setStack([]);setPg("welcomeEmp");
@@ -368,7 +450,6 @@ export function useStore(){
       return {ok:false,msg:e.message};
     }
   };
-  const clearAllData=()=>{if(typeof window!=="undefined")localStorage.removeItem(LS_KEY);window.location.reload?.();};
   const saveProfile=async d=>{
     setUser(d);setPeople(p=>p.map(x=>x.id===d.id?{...x,...d}:x));log("profile.update","Updated their profile","edit");
     try{
@@ -378,25 +459,37 @@ export function useStore(){
   };
   const deleteAccount=()=>{log("account.delete",`Deleted account ${user.name}`,"trash");setUser(null);setCvs([]);setPg("home");setStack([]);};
   const exportData=()=>downloadText(`northhire-data-${user.id}.json`,JSON.stringify({profile:user,cvs,applications:myApps,saved:[...saved]},null,2));
-  const setUserSetting=(k,v)=>setUserSettings(s=>({...s,[k]:v}));
+  const setUserSetting=(k,v)=>{
+    setUserSettings(s=>({...s,[k]:v}));
+    api.patch("/seeker/user-settings",{[k]:v}).catch(err=>toast(`Setting saved locally, but couldn't sync to the server: ${err.message}`,"warn"));
+  };
 
   /* --- saved searches --- */
-  const saveSearch=(q,where,cats,name,filters)=>{
+  const saveSearch=async(q,where,cats,name,filters)=>{
     if(!user||user.role!=="seeker")return;
     /* filters carries the rest of the SearchPage filter panel (type/work-setting/experience/
        min-pay) — previously only q/where/cats were saved, silently dropping everything else
        the user had just set. */
-    const s={id:uid("ss"),user:user.id,name:name||(q||CATM[cats?.[0]]?.label||"Untitled search"),
-      q:q||"",where:where||"",cats:cats||[],
-      types:filters?.types||[],modes:filters?.modes||[],exps:filters?.exps||[],prov:filters?.prov||"",minPay:filters?.minPay||"",
-      alerts:true,createdAt:Date.now(),lastRun:Date.now(),lastCount:0};
-    setSavedSearches(l=>[s,...l]);
-    log("search.save",`Saved search "${s.name}"`,"bookmark");
-    notify({icon:"bell",title:"Search saved",body:`We'll alert you when new jobs match "${s.name}".`,for:user.id,link:"savedSearches"});
-    return s.id;
+    const nm=name||(q||CATM[cats?.[0]]?.label||"Untitled search");
+    try{
+      const {savedSearch:s}=await api.post("/seeker/saved-searches",{name:nm,q:q||"",where:where||"",cats:cats||[],
+        types:filters?.types||[],modes:filters?.modes||[],exps:filters?.exps||[],prov:filters?.prov||"",minPay:filters?.minPay||""});
+      setSavedSearches(l=>[s,...l]);
+      log("search.save",`Saved search "${s.name}"`,"bookmark");
+      notify({icon:"bell",title:"Search saved",body:`We'll alert you when new jobs match "${s.name}".`,for:user.id,link:"savedSearches"});
+      return s.id;
+    }catch(err){toast(err.message,"danger");}
   };
-  const deleteSavedSearch=id=>{setSavedSearches(l=>l.filter(s=>s.id!==id));log("search.delete","Deleted saved search","trash");};
-  const toggleSearchAlert=id=>setSavedSearches(l=>l.map(s=>s.id===id?{...s,alerts:!s.alerts}:s));
+  const deleteSavedSearch=async id=>{
+    try{await api.del(`/seeker/saved-searches/${id}`);setSavedSearches(l=>l.filter(s=>s.id!==id));log("search.delete","Deleted saved search","trash");}
+    catch(err){toast(err.message,"danger");}
+  };
+  const toggleSearchAlert=async id=>{
+    const cur=savedSearches.find(s=>s.id===id); if(!cur)return;
+    setSavedSearches(l=>l.map(s=>s.id===id?{...s,alerts:!s.alerts}:s));
+    try{await api.patch(`/seeker/saved-searches/${id}`,{alerts:!cur.alerts});}
+    catch(err){setSavedSearches(l=>l.map(s=>s.id===id?{...s,alerts:cur.alerts}:s));toast(err.message,"danger");}
+  };
 
   /* --- salary insights: median pay per (role keyword × province) --- */
   const salaryInsight=(title,prov)=>{
@@ -424,81 +517,88 @@ export function useStore(){
   };
 
   /* --- payment / cards --- */
-  const [paymentMethods,setPaymentMethods]=useState(seed?.paymentMethods||[]);
-  const addPaymentMethod=card=>{
-    const masked=`•••• ${card.number.slice(-4)}`;
-    const pm={id:uid("pm"),masked,brand:card.brand||"Card",exp:card.exp,name:card.name,default:paymentMethods.length===0};
-    setPaymentMethods(l=>[pm,...l]);
-    log("billing.card.add",`Added ${pm.brand} ${masked}`,"wallet");
-    return pm;
+  const [paymentMethods,setPaymentMethods]=useState([]);
+  const addPaymentMethod=async card=>{
+    try{
+      const {paymentMethod:pm}=await api.post("/seeker/payment-methods",{number:card.number,brand:card.brand||"Card",exp:card.exp,name:card.name});
+      setPaymentMethods(l=>[pm,...l]);
+      log("billing.card.add",`Added ${pm.brand} ${pm.masked}`,"wallet");
+      return pm;
+    }catch(err){toast(err.message,"danger");}
   };
-  const removePaymentMethod=id=>{setPaymentMethods(l=>l.filter(p=>p.id!==id));log("billing.card.remove","Removed a payment method","trash");};
-  const setDefaultPayment=id=>setPaymentMethods(l=>l.map(p=>({...p,default:p.id===id})));
+  const removePaymentMethod=async id=>{
+    try{await api.del(`/seeker/payment-methods/${id}`);setPaymentMethods(l=>l.filter(p=>p.id!==id));log("billing.card.remove","Removed a payment method","trash");}
+    catch(err){toast(err.message,"danger");}
+  };
+  const setDefaultPayment=async id=>{
+    setPaymentMethods(l=>l.map(p=>({...p,default:p.id===id})));
+    try{await api.patch(`/seeker/payment-methods/${id}/default`);}catch(err){toast(err.message,"danger");}
+  };
 
   /* --- 2FA --- */
-  const [twoFactor,setTwoFactor]=useState(seed?.twoFactor||{}); // {userId: {enabled, phone, backupCodes}}
-  const enable2FA=(phone)=>{
+  const [twoFactor,setTwoFactor]=useState({}); // {userId: {enabled, phone, backupCodes}}
+  const enable2FA=async(phone)=>{
     if(!user)return {ok:false,msg:"Sign in first"};
-    const codes=Array.from({length:6},()=>Math.random().toString(36).slice(2,10).toUpperCase());
-    setTwoFactor(t=>({...t,[user.id]:{enabled:true,phone,backupCodes:codes}}));
-    log("auth.2fa.enable","Enabled two-factor authentication","shield");
-    return {ok:true,codes};
+    try{
+      const {codes}=await api.post("/seeker/two-factor/enable",{phone});
+      setTwoFactor(t=>({...t,[user.id]:{enabled:true,phone,backupCodes:codes}}));
+      log("auth.2fa.enable","Enabled two-factor authentication","shield");
+      return {ok:true,codes};
+    }catch(err){return {ok:false,msg:err.message};}
   };
-  const disable2FA=()=>{if(!user)return;
-    setTwoFactor(t=>{const n={...t};delete n[user.id];return n;});
-    log("auth.2fa.disable","Disabled two-factor authentication","shield");
+  const disable2FA=async()=>{if(!user)return;
+    try{
+      await api.post("/seeker/two-factor/disable");
+      setTwoFactor(t=>{const n={...t};delete n[user.id];return n;});
+      log("auth.2fa.disable","Disabled two-factor authentication","shield");
+    }catch(err){toast(err.message,"danger");}
   };
 
   /* --- references --- */
-  const [references,setReferences]=useState(seed?.references||[]);
+  const [references,setReferences]=useState([]);
   /* --- HR SUITE store composition --- */
-  const _mainStore={employers,people,jobs,applications,notifications};
-  const HR=useHrStore(seed,_mainStore);
-  const STF=useStaffingStore({workers:seed?.workers,staffingClients:seed?.staffingClients,jobOrders:seed?.jobOrders,assignments:seed?.assignments,timesheets:seed?.timesheets,staffingPayruns:seed?.staffingPayruns,staffingInvoices:seed?.staffingInvoices,placements:seed?.placements,agencySession:seed?.agencySession,people});
+  const HR=useHrStore();
+  const STF=useStaffingStore(user);
 
-
-  /* --- persist to localStorage on any change --- */
-  useEffect(()=>{ if(typeof window==="undefined")return;
-    try{
-      const snap={user,passwords,resetCodes,employers,jobs,people,applications,blogs,trainings,cvs,
-        saved:[...saved],following:[...following],enrolled:[...enrolled],trainingProgress,paymentMethods,twoFactor,references,
-        suspended:[...suspended],suspensionInfo,invitedCandidates:[...invitedCandidates],notifications,activity,settings,userSettings,
-        savedSearches,messages,interviews,reviews,outbox,
-        hrEmployees:HR.hrEmployees,hrAttendance:HR.hrAttendance,hrLeave:HR.hrLeave,
-        hrTasks:HR.hrTasks,hrEvents:HR.hrEvents,hrInvoices:HR.hrInvoices,
-        hrChats:HR.hrChats,hrChatMsgs:HR.hrChatMsgs,hrPayruns:HR.hrPayruns,
-        hrCompanySettings:HR.hrCompanySettings,hrSession:HR.hrSession,hrRemember:HR.hrRemember,
-        hrDepartments:HR.hrDepartments,hrExpenses:HR.hrExpenses,
-        workers:STF.workers,staffingClients:STF.staffingClients,jobOrders:STF.jobOrders,
-        assignments:STF.assignments,timesheets:STF.timesheets,staffingPayruns:STF.staffingPayruns,
-        staffingInvoices:STF.staffingInvoices,placements:STF.placements,agencySession:STF.agencySession};
-      localStorage.setItem(LS_KEY,JSON.stringify(snap));
-    }catch(e){/* quota exceeded or private mode — silently drop */}
-  },[user,passwords,resetCodes,employers,jobs,people,applications,blogs,trainings,cvs,saved,following,
-    enrolled,trainingProgress,suspended,suspensionInfo,invitedCandidates,notifications,activity,settings,userSettings,paymentMethods,twoFactor,references,
-    savedSearches,messages,interviews,reviews,outbox,
-    HR.hrEmployees,HR.hrAttendance,HR.hrLeave,HR.hrTasks,HR.hrEvents,HR.hrInvoices,HR.hrChats,HR.hrChatMsgs,HR.hrPayruns,HR.hrCompanySettings,HR.hrSession]);
-
-  const addReference=(ref)=>{
+  const addReference=async(ref)=>{
     if(!user||user.role!=="seeker")return;
-    setReferences(l=>[{id:uid("ref"),user:user.id,...ref,addedAt:Date.now()},...l]);
-    log("reference.add",`Added reference ${ref.name}`,"user");
+    try{
+      const {reference}=await api.post("/seeker/references",ref);
+      setReferences(l=>[reference,...l]);
+      log("reference.add",`Added reference ${ref.name}`,"user");
+    }catch(err){toast(err.message,"danger");}
   };
-  const removeReference=id=>setReferences(l=>l.filter(r=>r.id!==id));
+  const removeReference=async id=>{
+    try{await api.del(`/seeker/references/${id}`);setReferences(l=>l.filter(r=>r.id!==id));}
+    catch(err){toast(err.message,"danger");}
+  };
 
-  /* --- company reviews --- */
-  const addReview=(empId,rating,text,anon)=>{
-    if(!user)return {ok:false,msg:"Sign in first"};
-    const rv={id:uid("rv"),employer:empId,user:user.id,rating,text,anon,at:Date.now()};
-    setReviews(l=>[rv,...l]);
-    /* Also update employer's rolling average rating */
-    const empRevs=[rv,...reviews.filter(r=>r.employer===empId)];
-    const avg=empRevs.reduce((s,r)=>s+r.rating,0)/empRevs.length;
-    setEmployers(list=>list.map(e=>e.id===empId?{...e,rating:Math.round(avg*10)/10}:e));
-    log("review.add",`Reviewed ${emp(empId).name} (${rating}★)`,"star");
-    return {ok:true};
+  /* --- company reviews ---
+     Public per-employer, not per-user, so they're fetched lazily by whichever employer profile
+     page is open (see employers.jsx) and merged into this shared list, rather than loaded
+     wholesale up front. */
+  const loadEmployerReviews=async(employerId)=>{
+    try{
+      const {reviews:fresh}=await api.get(`/seeker/reviews/employer/${employerId}`);
+      setReviews(l=>{const freshIds=new Set(fresh.map(r=>r.id));return [...fresh,...l.filter(r=>!freshIds.has(r.id))];});
+    }catch(e){if(typeof console!=="undefined")console.warn(`[NorthHire] Review sync failed: ${e.message}`);}
   };
-  const deleteReview=id=>{setReviews(l=>l.filter(r=>r.id!==id));log("review.delete","Deleted a review","trash");};
+  const addReview=async(empId,rating,text,anon)=>{
+    if(!user)return {ok:false,msg:"Sign in first"};
+    try{
+      const {review:rv}=await api.post("/seeker/reviews",{employerId:empId,rating,text,anon});
+      setReviews(l=>[rv,...l]);
+      const empRevs=[rv,...reviews.filter(r=>r.employer===empId)];
+      const avg=empRevs.reduce((s,r)=>s+r.rating,0)/empRevs.length;
+      setEmployers(list=>list.map(e=>e.id===empId?{...e,rating:Math.round(avg*10)/10}:e));
+      log("review.add",`Reviewed ${emp(empId).name} (${rating}★)`,"star");
+      return {ok:true};
+    }catch(err){return {ok:false,msg:err.message};}
+  };
+  const deleteReview=async id=>{
+    try{await api.del(`/seeker/reviews/${id}`);setReviews(l=>l.filter(r=>r.id!==id));log("review.delete","Deleted a review","trash");}
+    catch(err){toast(err.message,"danger");}
+  };
 
     /* --- admin impersonation --- */
   const impersonate=userId=>{
@@ -517,42 +617,48 @@ export function useStore(){
   };
 
     /* --- messaging & interviews --- */
-  const sendMessage=(toUserId,jobId,text)=>{
+  const sendMessage=async(toUserId,jobId,text)=>{
     if(user?.role==="employer"&&!can("messages")){
       notify({icon:"lock",title:"Upgrade to message candidates",body:`Direct messaging is a Growth and Enterprise feature.`,for:user.id,link:"pricing"});
       return {ok:false,msg:"Messaging is a Growth+ feature — upgrade to unlock."};
     }
-    const from=user?.id||"anon"; const at=Date.now();
-    setMessages(l=>[{id:uid("m"),from,to:toUserId,job:jobId,text,at,read:false},...l]);
-    log("message.send","Sent a message","send");
-    // notify recipient
-    const recipUser=people.find(p=>p.id===toUserId);
-    if(recipUser){
-      notify({icon:"mail",title:"New message",body:text.slice(0,80),for:toUserId,link:"messages"});
-    }
+    try{
+      const {message}=await api.post("/seeker/messages",{toUserId,jobId,text});
+      setMessages(l=>[message,...l]);
+      log("message.send","Sent a message","send");
+      const recipUser=people.find(p=>p.id===toUserId);
+      if(recipUser)notify({icon:"mail",title:"New message",body:text.slice(0,80),for:toUserId,link:"messages"});
+      return {ok:true};
+    }catch(err){toast(err.message,"danger");return {ok:false,msg:err.message};}
   };
-  const markMessageRead=id=>setMessages(l=>l.map(m=>m.id===id?{...m,read:true}:m));
+  const markMessageRead=async id=>{
+    setMessages(l=>l.map(m=>m.id===id?{...m,read:true}:m));
+    try{await api.patch(`/seeker/messages/${id}/read`);}catch{/* best-effort */}
+  };
 
-  const scheduleInterview=(candidateAppId,when,mode,notes)=>{
+  const scheduleInterview=async(candidateAppId,when,mode,notes)=>{
     if(user?.role==="employer"&&!can("interviews")){
       notify({icon:"lock",title:"Upgrade to schedule interviews",body:`Interview scheduling is a Growth and Enterprise feature.`,for:user.id,link:"pricing"});
       return {ok:false,msg:"Interview scheduling is a Growth+ feature."};
     }
     const app=applications.find(a=>a.id===candidateAppId); if(!app)return;
     const j=job(app.job); const e=emp(j.e);
-    const iv={id:uid("iv"),app:candidateAppId,candidate:app.user,job:app.job,employer:j.e,
-      when,mode,notes:notes||"",status:"scheduled",createdAt:Date.now()};
-    setInterviews(l=>[iv,...l]);
-    /* auto-move app to Interview stage */
-    setApplications(l=>l.map(a=>a.id===candidateAppId?{...a,stage:"Interview",note:`Interview ${mode==="video"?"video call":"in-person"} scheduled for ${when}`}:a));
-    notify({icon:"calendar",title:`Interview scheduled — ${e.name}`,
-      body:`${mode==="video"?"Video call":"On-site interview"} on ${when} for ${j.t}.`,for:app.user,link:"status"});
-    log("interview.schedule",`Scheduled interview with ${person(app.user).name}`,"calendar");
-    return iv.id;
+    try{
+      const {interview:iv}=await api.post("/seeker/interviews",{applicationId:candidateAppId,when,mode,notes:notes||""});
+      setInterviews(l=>[iv,...l]);
+      setApplications(l=>l.map(a=>a.id===candidateAppId?{...a,stage:"Interview",note:`Interview ${mode==="video"?"video call":"in-person"} scheduled for ${when}`}:a));
+      notify({icon:"calendar",title:`Interview scheduled — ${e.name}`,
+        body:`${mode==="video"?"Video call":"On-site interview"} on ${when} for ${j.t}.`,for:app.user,link:"status"});
+      log("interview.schedule",`Scheduled interview with ${person(app.user).name}`,"calendar");
+      return iv.id;
+    }catch(err){toast(err.message,"danger");}
   };
-  const cancelInterview=id=>{
-    setInterviews(l=>l.map(iv=>iv.id===id?{...iv,status:"cancelled"}:iv));
-    log("interview.cancel","Cancelled an interview","x");
+  const cancelInterview=async id=>{
+    try{
+      await api.patch(`/seeker/interviews/${id}/cancel`);
+      setInterviews(l=>l.map(iv=>iv.id===id?{...iv,status:"cancelled"}:iv));
+      log("interview.cancel","Cancelled an interview","x");
+    }catch(err){toast(err.message,"danger");}
   };
 
   /* --- bulk pipeline actions --- */
@@ -579,12 +685,15 @@ export function useStore(){
       .sort((a,b)=>b.score-a.score)
       .slice(0,10);
   };
-  const inviteToApply=(candidateId,jobId)=>{
+  const inviteToApply=async(candidateId,jobId)=>{
     const j=job(jobId); const e=emp(j.e);
-    notify({icon:"target",title:`${e.name} invited you to apply`,
-      body:`Your profile matches ${j.t} — ${pay(j)}${payShort(j)}`,for:candidateId,link:"job"});
-    log("talent.invite",`Invited ${person(candidateId).name} to apply for ${j.t}`,"send");
-    setInvitedCandidates(s=>new Set(s).add(`${jobId}:${candidateId}`));
+    try{
+      await api.post("/seeker/invited-candidates",{jobId,candidateId});
+      notify({icon:"target",title:`${e.name} invited you to apply`,
+        body:`Your profile matches ${j.t} — ${pay(j)}${payShort(j)}`,for:candidateId,link:"job"});
+      log("talent.invite",`Invited ${person(candidateId).name} to apply for ${j.t}`,"send");
+      setInvitedCandidates(s=>new Set(s).add(`${jobId}:${candidateId}`));
+    }catch(err){toast(err.message,"danger");}
   };
 
   /* --- CSV bulk job import (parses a minimal CSV; validates & creates draft jobs) --- */
@@ -694,10 +803,16 @@ export function useStore(){
   };
 
 
-  const toggleSave=id=>{if(!user)return go("login");
-    setSaved(p=>{const n=new Set(p); n.has(id)?n.delete(id):n.add(id); return n;});};
-  const followEmployer=id=>{if(!user)return go("login");
-    setFollowing(p=>{const n=new Set(p); n.has(id)?n.delete(id):n.add(id); return n;});};
+  const toggleSave=async id=>{if(!user)return go("login");
+    setSaved(p=>{const n=new Set(p); n.has(id)?n.delete(id):n.add(id); return n;});
+    try{await api.post(`/seeker/saved-jobs/${id}/toggle`);}
+    catch(err){setSaved(p=>{const n=new Set(p); n.has(id)?n.delete(id):n.add(id); return n;});toast(err.message,"danger");}
+  };
+  const followEmployer=async id=>{if(!user)return go("login");
+    setFollowing(p=>{const n=new Set(p); n.has(id)?n.delete(id):n.add(id); return n;});
+    try{await api.post(`/seeker/followed-employers/${id}/toggle`);}
+    catch(err){setFollowing(p=>{const n=new Set(p); n.has(id)?n.delete(id):n.add(id); return n;});toast(err.message,"danger");}
+  };
 
   const openJob=(id,opts)=>{setJobId(id);
     if(!opts?.preview){
@@ -875,31 +990,62 @@ export function useStore(){
   /* content */
   const editBlog=id=>{setEditId(id);go("empBlogEdit",id==="new"?"New article":"Edit article");};
   const editTraining=id=>{setEditId(id);go("empTrainEdit",id==="new"?"New training":"Edit training");};
-  const saveBlog=(d,isNew)=>{const {bodyText,...rest}=d;
-    setBlogs(l=>isNew?[{...rest},...l]:l.map(b=>b.id===d.id?{...rest}:b));
-    log("blog.save",`${isNew?"Created":"Updated"} article "${d.title}" (${d.status})`,"book");
-    go(user.role==="admin"?"admBlogs":"empContent");};
-  const saveTraining=(d,isNew)=>{const {modsText,outText,...rest}=d;
-    setTrainings(l=>isNew?[{...rest},...l]:l.map(t=>t.id===d.id?{...rest}:t));
-    log("training.save",`${isNew?"Created":"Updated"} training "${d.title}" (${d.status})`,"cap");
-    go(user.role==="admin"?"admTrainings":"empContent");};
-  const deleteBlog=id=>{const b=blogs.find(x=>x.id===id);setBlogs(l=>l.filter(x=>x.id!==id));
-    log("blog.delete",`Deleted article "${b.title}"`,"trash");};
-  const deleteTraining=id=>{const t=trainings.find(x=>x.id===id);setTrainings(l=>l.filter(x=>x.id!==id));
-    log("training.delete",`Deleted training "${t.title}"`,"trash");};
-  const toggleBlogStatus=id=>{setBlogs(l=>l.map(b=>b.id===id?{...b,status:b.status==="published"?"draft":"published"}:b));
-    const b=blogs.find(x=>x.id===id); log("blog.status",`${b.status==="published"?"Unpublished":"Published"} "${b.title}"`,"book");};
-  const toggleTrainingStatus=id=>{setTrainings(l=>l.map(t=>t.id===id?{...t,status:t.status==="published"?"draft":"published"}:t));
-    const t=trainings.find(x=>x.id===id); log("training.status",`${t.status==="published"?"Unpublished":"Published"} "${t.title}"`,"cap");};
+  const saveBlog=async(d,isNew)=>{
+    const {bodyText,...rest}=d;
+    try{
+      const {blog}=isNew?await api.post("/content/blogs",rest):await api.patch(`/content/blogs/${d.id}`,rest);
+      setBlogs(l=>isNew?[blog,...l]:l.map(b=>b.id===d.id?blog:b));
+      log("blog.save",`${isNew?"Created":"Updated"} article "${d.title}" (${d.status})`,"book");
+      go(user.role==="admin"?"admBlogs":"empContent");
+    }catch(err){toast(err.message,"danger");}
+  };
+  const saveTraining=async(d,isNew)=>{
+    const {modsText,outText,...rest}=d;
+    try{
+      const {training}=isNew?await api.post("/content/trainings",rest):await api.patch(`/content/trainings/${d.id}`,rest);
+      setTrainings(l=>isNew?[training,...l]:l.map(t=>t.id===d.id?training:t));
+      log("training.save",`${isNew?"Created":"Updated"} training "${d.title}" (${d.status})`,"cap");
+      go(user.role==="admin"?"admTrainings":"empContent");
+    }catch(err){toast(err.message,"danger");}
+  };
+  const deleteBlog=async id=>{
+    const b=blogs.find(x=>x.id===id);
+    try{await api.del(`/content/blogs/${id}`);setBlogs(l=>l.filter(x=>x.id!==id));log("blog.delete",`Deleted article "${b.title}"`,"trash");}
+    catch(err){toast(err.message,"danger");}
+  };
+  const deleteTraining=async id=>{
+    const t=trainings.find(x=>x.id===id);
+    try{await api.del(`/content/trainings/${id}`);setTrainings(l=>l.filter(x=>x.id!==id));log("training.delete",`Deleted training "${t.title}"`,"trash");}
+    catch(err){toast(err.message,"danger");}
+  };
+  const toggleBlogStatus=async id=>{
+    const b=blogs.find(x=>x.id===id); const nextStatus=b.status==="published"?"draft":"published";
+    try{
+      const {blog}=await api.patch(`/content/blogs/${id}`,{status:nextStatus});
+      setBlogs(l=>l.map(x=>x.id===id?blog:x));
+      log("blog.status",`${b.status==="published"?"Unpublished":"Published"} "${b.title}"`,"book");
+    }catch(err){toast(err.message,"danger");}
+  };
+  const toggleTrainingStatus=async id=>{
+    const t=trainings.find(x=>x.id===id); const nextStatus=t.status==="published"?"draft":"published";
+    try{
+      const {training}=await api.patch(`/content/trainings/${id}`,{status:nextStatus});
+      setTrainings(l=>l.map(x=>x.id===id?training:x));
+      log("training.status",`${t.status==="published"?"Unpublished":"Published"} "${t.title}"`,"cap");
+    }catch(err){toast(err.message,"danger");}
+  };
 
   /* trainings */
-  const _finishEnrol=id=>{
-    setEnrolled(p=>new Set(p).add(id)); setTrainingProgress(p=>({...p,[id]:0}));
-    setTrainings(l=>l.map(t=>t.id===id?{...t,enrolled:t.enrolled+1}:t));
-    const t=trainings.find(x=>x.id===id);
-    notify({icon:"cap",title:`Enrolled in ${t.title}`,body:"Your progress is tracked on your profile under Learning.",for:user.id,link:"profile"});
-    log("training.enrol",`Enrolled in "${t.title}"`,"cap");
-    return {ok:true};
+  const _finishEnrol=async id=>{
+    try{
+      await api.post(`/content/trainings/${id}/enrol`,{paid:paidTrainings.has(id)});
+      setEnrolled(p=>new Set(p).add(id)); setTrainingProgress(p=>({...p,[id]:0}));
+      setTrainings(l=>l.map(t=>t.id===id?{...t,enrolled:t.enrolled+1}:t));
+      const t=trainings.find(x=>x.id===id);
+      notify({icon:"cap",title:`Enrolled in ${t.title}`,body:"Your progress is tracked on your profile under Learning.",for:user.id,link:"profile"});
+      log("training.enrol",`Enrolled in "${t.title}"`,"cap");
+      return {ok:true};
+    }catch(err){return {ok:false,msg:err.message};}
   };
   /* Paid trainings can't be charged synchronously behind a native confirm() — this returns a
      needsPayment flag so the caller can show a real confirm modal, then call confirmPaidEnrol. */
@@ -917,27 +1063,55 @@ export function useStore(){
       notify({icon:"wallet",title:"Payment received",body:`${money(_preT.price)} charged for "${_preT.title}"`,for:user.id});}
     return _finishEnrol(id);
   };
-  const advanceTraining=id=>{const t=trainings.find(x=>x.id===id);
-    setTrainingProgress(p=>{const cur=p[id]||0; const step=Math.ceil(100/t.mods.length);
-      const nx=Math.min(100,cur+step);
+  const advanceTraining=async id=>{
+    const t=trainings.find(x=>x.id===id);
+    const cur=trainingProgress[id]||0; const step=Math.ceil(100/t.mods.length);
+    const nx=Math.min(100,cur+step);
+    try{
+      await api.patch(`/content/trainings/${id}/progress`,{progress:nx});
+      setTrainingProgress(p=>({...p,[id]:nx}));
       if(nx>=100&&cur<100)notify({icon:"award",title:`Completed ${t.title}`,body:"Your certificate is ready to download.",for:user?.id,link:"profile"});
-      return {...p,[id]:nx};});};
+    }catch(err){toast(err.message,"danger");}
+  };
 
   /* CVs */
-  const newCv=()=>{const cv={id:uid("cv"),name:`${user.title} CV`,template:"classic",updated:"just now",
-    name0:user.name,title:user.title,email:user.email,phone:user.phone,city:user.city,prov:user.prov,
-    summary:user.summary||"",skills:(user.skills||[]).slice(0,8),certs:[],
-    exp:[{id:uid("x"),role:user.title,org:"",place:`${user.city}, ${user.prov}`,from:"",to:"Present",detail:""}],
-    edu:[{id:uid("e"),qual:user.edu||"",org:"",year:""}]};
-    setCvs(l=>[cv,...l]); if(!user.defaultCv)setUser(u=>({...u,defaultCv:cv.id}));
-    setCvId(cv.id); go("cvEdit","CV builder"); log("cv.create",`Created CV "${cv.name}"`,"file");};
+  const newCv=async()=>{
+    const draft={name:`${user.title} CV`,template:"classic",
+      name0:user.name,title:user.title,email:user.email,phone:user.phone,city:user.city,prov:user.prov,
+      summary:user.summary||"",skills:(user.skills||[]).slice(0,8),certs:[],
+      exp:[{id:uid("x"),role:user.title,org:"",place:`${user.city}, ${user.prov}`,from:"",to:"Present",detail:""}],
+      edu:[{id:uid("e"),qual:user.edu||"",org:"",year:""}]};
+    try{
+      const {cv}=await api.post("/seeker/cvs",draft);
+      setCvs(l=>[cv,...l]);
+      if(!user.defaultCv){await api.patch("/users/me",{defaultCv:cv.id});setUser(u=>({...u,defaultCv:cv.id}));}
+      setCvId(cv.id); go("cvEdit","CV builder"); log("cv.create",`Created CV "${cv.name}"`,"file");
+    }catch(err){toast(err.message,"danger");}
+  };
   const editCv=id=>{setCvId(id);go("cvEdit","CV builder");};
-  const saveCv=d=>{setCvs(l=>l.map(c=>c.id===d.id?{...d,updated:"just now"}:c));log("cv.save",`Saved CV "${d.name}"`,"file");};
-  const duplicateCv=id=>{const c=cvs.find(x=>x.id===id);
-    setCvs(l=>[{...c,id:uid("cv"),name:`${c.name} (copy)`,updated:"just now"},...l]);};
-  const deleteCv=id=>{setCvs(l=>l.filter(c=>c.id!==id));
-    if(user.defaultCv===id)setUser(u=>({...u,defaultCv:null}));log("cv.delete","Deleted a CV","trash");};
-  const setDefaultCv=id=>setUser(u=>({...u,defaultCv:id}));
+  const saveCv=async d=>{
+    try{
+      const {cv}=await api.patch(`/seeker/cvs/${d.id}`,d);
+      setCvs(l=>l.map(c=>c.id===d.id?cv:c));
+      log("cv.save",`Saved CV "${d.name}"`,"file");
+    }catch(err){toast(err.message,"danger");}
+  };
+  const duplicateCv=async id=>{
+    try{const {cv}=await api.post(`/seeker/cvs/${id}/duplicate`);setCvs(l=>[cv,...l]);}
+    catch(err){toast(err.message,"danger");}
+  };
+  const deleteCv=async id=>{
+    try{
+      await api.del(`/seeker/cvs/${id}`);
+      setCvs(l=>l.filter(c=>c.id!==id));
+      if(user.defaultCv===id){await api.patch("/users/me",{defaultCv:null});setUser(u=>({...u,defaultCv:null}));}
+      log("cv.delete","Deleted a CV","trash");
+    }catch(err){toast(err.message,"danger");}
+  };
+  const setDefaultCv=async id=>{
+    try{await api.patch("/users/me",{defaultCv:id});setUser(u=>({...u,defaultCv:id}));}
+    catch(err){toast(err.message,"danger");}
+  };
 
   /* utilities */
   const downloadText=(name,text,type="text/plain")=>{
@@ -1096,13 +1270,23 @@ export function useStore(){
   const limitOf=(feature)=>{const p=currentPlan(); if(!p)return 0; return p[feature];};
   const planRequires=(feature)=>PLAN_REQUIRES[feature]||"Growth";
   const updateCard=()=>log("billing.card","Updated the payment method","wallet");
-  const setSetting=(k,v)=>{setSettings(s=>({...s,[k]:v}));
-    log("settings.change",`${v?"Enabled":"Disabled"} ${k}`,"gear");};
-  const readNotif=(id,link)=>{setNotifications(l=>l.map(n=>n.id===id?{...n,read:true}:n)); if(link)go(link);};
-  const markAllRead=()=>setNotifications(l=>l.map(n=>({...n,read:true})));
+  const setSetting=async(k,v)=>{
+    setSettings(s=>({...s,[k]:v}));
+    try{await api.patch("/platform/settings",{key:k,value:v});log("settings.change",`${v?"Enabled":"Disabled"} ${k}`,"gear");}
+    catch(err){setSettings(s=>({...s,[k]:!v}));toast(err.message,"danger");}
+  };
+  const readNotif=async(id,link)=>{
+    setNotifications(l=>l.map(n=>n.id===id?{...n,read:true}:n));
+    if(link)go(link);
+    try{await api.patch(`/seeker/notifications/${id}/read`);}catch{/* best-effort */}
+  };
+  const markAllRead=async()=>{
+    setNotifications(l=>l.map(n=>({...n,read:true})));
+    try{await api.patch("/seeker/notifications/read-all");}catch{/* best-effort */}
+  };
 
-  const A={pg,go,back,pageTitle,homePg,history:stack,user,company,employers,jobs,people,applications,blogs,trainings,cvs,passwords,resetCodes,outbox,savedSearches,messages,interviews,reviews,impersonating,setImpersonating,hireOnboarding,setHireOnboarding,
-    hasAccount,checkPassword,upsertPassword,loginWithPassword,resetPasswordRequest,resetPasswordConfirm,completeEmployerSignup,clearAllData,
+  const A={pg,go,back,pageTitle,homePg,history:stack,user,company,employers,jobs,people,applications,blogs,trainings,cvs,passwords,outbox,savedSearches,messages,interviews,reviews,impersonating,setImpersonating,hireOnboarding,setHireOnboarding,
+    hasAccount,checkPassword,upsertPassword,loginWithPassword,resetPasswordRequest,resetPasswordConfirm,completeEmployerSignup,
     saveSearch,deleteSavedSearch,toggleSearchAlert,salaryInsight,skillsGap,expandQuery,restoreApp,notifyFollowers,
     sendMessage,markMessageRead,scheduleInterview,cancelInterview,bulkMove,bulkReject,reverseMatch,inviteToApply,importJobsCSV,employerAnalytics,
     impersonate,stopImpersonating,
@@ -1110,14 +1294,15 @@ export function useStore(){
     paymentMethods,addPaymentMethod,removePaymentMethod,setDefaultPayment,
     twoFactor,enable2FA,disable2FA,
     references,addReference,removeReference,
-    addReview,deleteReview,
+    addReview,deleteReview,loadEmployerReviews,
     saved,following,enrolled,trainingProgress,suspended,suspensionInfo,invitedCandidates,notifications,activity,settings,userSettings,search,setSearch,
     toasts,toast,dismissToast,
     jobId,empId,blogId,trainingId,cvId,editId,candidateId,pipelineJob,applyDraft,setApplyDraft,
     contactPrefill,setContactPrefill,pendingPlan,setPendingPlan,employersPrefill,setEmployersPrefill,
     emp,job,person,score,scoreCandidate,matchReasons,myApps,appliedJobIds,myNotifications,defaultCv,
+    jobHiringType,jobHiringLabel,
     completeness,completenessHint,tabBadges,
-    login,logout,completeSignup,saveProfile,deleteAccount,exportData,setUserSetting,
+    logout,completeSignup,saveProfile,deleteAccount,exportData,setUserSetting,
     toggleSave,followEmployer,openJob,openEmployer,openBlog,openTraining,openCandidate,
     beginApply,submitApply,withdraw,acceptOffer,moveApp,rejectApp,
     publishJob,toggleJobStatus,flagJob,setPipelineJob:setPipelineJobFn,saveCompany,verifyEmployer,holdEmployer,toggleSuspend,

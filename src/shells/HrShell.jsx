@@ -15,8 +15,10 @@ export function HrShell({children}){
 
   useEffect(()=>{setNavOpen(!mob);},[mob]);
 
-  /* Not signed into HR — route to HR login instead of crashing */
+  /* Not signed into HR — route to HR login instead of crashing, unless a bridge login from
+     the employer console is in flight, in which case just wait for it to resolve. */
   if(!emp||!company){
+    if(A.hrBridging)return null;
     if(typeof window!=="undefined")setTimeout(()=>A.go("hrLogin"),0);
     return null;
   }

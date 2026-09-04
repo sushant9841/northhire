@@ -378,6 +378,113 @@ staffingRouter.patch("/placements/:id/clawback", requireAgencyAuth, (req, res) =
 });
 
 /* ─── Analytics ─── */
+/* ─── Employer-facing views (the client side of a staffing relationship, not agency back-office) ───
+   An employer with a signed staffing client record can see and act on their own jobOrders/
+   assignments/timesheets - never another employer's - without needing agency-staff credentials. */
+function resolveOwnClient(req, res) {
+  const client = db.prepare("SELECT * FROM staffing_clients WHERE employer_id = ?").get(req.user.employer_id);
+  if (!client) { res.status(404).json({ error: "No staffing relationship on file for your company." }); return null; }
+  return client;
+}
+staffingRouter.get("/employer/data", requireAuth, requireRole("employer"), (req, res) => {
+  const client = resolveOwnClient(req, res); if (!client) return;
+  const jobOrders = db.prepare("SELECT * FROM staffing_job_orders WHERE client_id = ?").all(client.id);
+  const assignments = db.prepare("SELECT * FROM staffing_assignments WHERE client_id = ?").all(client.id);
+  const asnIds = assignments.map(a => a.id);
+  const timesheets = asnIds.length
+    ? db.prepare(`SELECT * FROM staffing_timesheets WHERE assignment_id IN (${asnIds.map(() => "?").join(",")})`).all(...asnIds)
+    : [];
+  const workerIds = [...new Set(assignments.map(a => a.worker_id))];
+  const workers = workerIds.length
+    ? db.prepare(`SELECT * FROM staffing_workers WHERE id IN (${workerIds.map(() => "?").join(",")})`).all(...workerIds)
+    : [];
+  res.json({
+    client: serializeStaffingClient(client), jobOrders: jobOrders.map(serializeJobOrder),
+    assignments: assignments.map(serializeAssignment), timesheets: timesheets.map(serializeStaffingTimesheet),
+    workers: workers.map(serializeWorker),
+  });
+});
+staffingRouter.post("/employer/job-orders", requireAuth, requireRole("employer"), (req, res) => {
+  const client = resolveOwnClient(req, res); if (!client) return;
+  const d = req.body || {};
+  const id = nextId("jo", "staffing_job_orders");
+  db.prepare(
+    `INSERT INTO staffing_job_orders (id, client_id, status, urgency, title, positions, location, province, start_date, end_date, ongoing, shift_pattern, pay_rate, bill_rate, must_have_json, notes)
+     VALUES (?,?,'open',?,?,?,?,?,?,?,?,?,?,?,?,?)`
+  ).run(id, client.id, d.urgency || "medium", d.title, d.positions || 1, d.location || client.bill_to_address, client.industry,
+    d.startDate || null, d.endDate || null, d.ongoing ? 1 : 0, d.shiftPattern || null, d.payRate || 0, d.billRate || 0,
+    JSON.stringify(d.mustHave || []), d.notes || "");
+  res.status(201).json({ jobOrder: serializeJobOrder(db.prepare("SELECT * FROM staffing_job_orders WHERE id = ?").get(id)) });
+});
+function ownTimesheetForEmployer(req, res) {
+  const client = resolveOwnClient(req, res); if (!client) return null;
+  const t = db.prepare("SELECT * FROM staffing_timesheets WHERE id = ?").get(req.params.id);
+  if (!t) { res.status(404).json({ error: "Timesheet not found." }); return null; }
+  const a = db.prepare("SELECT * FROM staffing_assignments WHERE id = ?").get(t.assignment_id);
+  if (!a || a.client_id !== client.id) { res.status(403).json({ error: "Not your timesheet to approve." }); return null; }
+  return t;
+}
+staffingRouter.patch("/employer/timesheets/:id/approve", requireAuth, requireRole("employer"), (req, res) => {
+  if (!ownTimesheetForEmployer(req, res)) return;
+  db.prepare("UPDATE staffing_timesheets SET status = 'approved', approved_at = datetime('now'), approved_by = ? WHERE id = ?")
+    .run(req.body?.approver || req.user.email, req.params.id);
+  res.json({ ok: true });
+});
+staffingRouter.patch("/employer/timesheets/:id/reject", requireAuth, requireRole("employer"), (req, res) => {
+  const t = ownTimesheetForEmployer(req, res); if (!t) return;
+  const note = `${t.notes || ""}\n[Returned: ${req.body?.reason || "reason not given"}]`;
+  db.prepare("UPDATE staffing_timesheets SET status = 'draft', submitted_at = NULL, notes = ? WHERE id = ?").run(note, req.params.id);
+  res.json({ ok: true });
+});
+
+/* ─── Seeker-facing "worker portal" (self-service, main NorthHire session - not agency staff) ─── */
+function resolveOwnWorker(req, res) {
+  const worker = db.prepare("SELECT * FROM staffing_workers WHERE person_id = ?").get(req.user.id);
+  if (!worker) { res.status(404).json({ error: "You haven't opted in as a worker yet." }); return null; }
+  return worker;
+}
+staffingRouter.get("/my/data", requireAuth, requireRole("seeker"), (req, res) => {
+  const worker = resolveOwnWorker(req, res); if (!worker) return;
+  const assignments = db.prepare("SELECT * FROM staffing_assignments WHERE worker_id = ?").all(worker.id);
+  const timesheets = db.prepare("SELECT * FROM staffing_timesheets WHERE worker_id = ?").all(worker.id);
+  res.json({
+    worker: serializeWorker(worker), assignments: assignments.map(serializeAssignment),
+    timesheets: timesheets.map(serializeStaffingTimesheet),
+  });
+});
+staffingRouter.post("/my/timesheets/draft", requireAuth, requireRole("seeker"), (req, res) => {
+  const worker = resolveOwnWorker(req, res); if (!worker) return;
+  const { assignmentId, weekStart, hours, otHours, notes } = req.body || {};
+  const a = db.prepare("SELECT * FROM staffing_assignments WHERE id = ? AND worker_id = ?").get(assignmentId, worker.id);
+  if (!a) return res.status(403).json({ error: "Not your assignment." });
+  const existing = db.prepare("SELECT * FROM staffing_timesheets WHERE assignment_id = ? AND week_start = ?").get(assignmentId, weekStart);
+  if (existing) {
+    if (existing.status !== "draft") return res.status(409).json({ error: "Timesheet already submitted" });
+    db.prepare("UPDATE staffing_timesheets SET hours_json = ?, ot_hours = ?, notes = ? WHERE id = ?")
+      .run(JSON.stringify(hours), otHours || 0, notes || "", existing.id);
+    return res.json({ ok: true, timesheet: serializeStaffingTimesheet(db.prepare("SELECT * FROM staffing_timesheets WHERE id = ?").get(existing.id)) });
+  }
+  const id = nextId("ts", "staffing_timesheets");
+  db.prepare(
+    `INSERT INTO staffing_timesheets (id, assignment_id, worker_id, week_start, status, hours_json, ot_hours, notes)
+     VALUES (?, ?, ?, ?, 'draft', ?, ?, ?)`
+  ).run(id, assignmentId, worker.id, weekStart, JSON.stringify(hours), otHours || 0, notes || "");
+  res.status(201).json({ ok: true, timesheet: serializeStaffingTimesheet(db.prepare("SELECT * FROM staffing_timesheets WHERE id = ?").get(id)) });
+});
+staffingRouter.patch("/my/availability", requireAuth, requireRole("seeker"), (req, res) => {
+  const worker = resolveOwnWorker(req, res); if (!worker) return;
+  db.prepare("UPDATE staffing_workers SET availability = ? WHERE id = ?").run(req.body?.availability, worker.id);
+  res.json({ worker: serializeWorker(db.prepare("SELECT * FROM staffing_workers WHERE id = ?").get(worker.id)) });
+});
+staffingRouter.patch("/my/timesheets/:id/submit", requireAuth, requireRole("seeker"), (req, res) => {
+  const worker = resolveOwnWorker(req, res); if (!worker) return;
+  const t = db.prepare("SELECT * FROM staffing_timesheets WHERE id = ? AND worker_id = ?").get(req.params.id, worker.id);
+  if (!t) return res.status(404).json({ error: "Not found" });
+  if (t.status !== "draft") return res.status(409).json({ error: "Already submitted" });
+  db.prepare("UPDATE staffing_timesheets SET status = 'submitted', submitted_at = datetime('now') WHERE id = ?").run(req.params.id);
+  res.json({ ok: true });
+});
+
 staffingRouter.get("/kpis", requireAgencyAuth, (req, res) => {
   const activeCount = db.prepare("SELECT COUNT(*) AS n FROM staffing_assignments WHERE status = 'active'").get().n;
   const availableWorkers = db.prepare("SELECT COUNT(*) AS n FROM staffing_workers WHERE availability = 'available' AND status = 'active'").get().n;

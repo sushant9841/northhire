@@ -3,7 +3,7 @@ import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
-import { Btn, Card, Switch, Field, Input, Empty, Banner, Lbl, Modal, Page, H1, ConfirmDialog } from "../../design/primitives.jsx";
+import { Btn, Card, Switch, Field, Input, Empty, Banner, Lbl, Modal, Page, H1 } from "../../design/primitives.jsx";
 import { DeniedPage } from "./DeniedPage.jsx";
 
 export function SettingsPage(){
@@ -11,7 +11,6 @@ export function SettingsPage(){
   const u=A.user;
   if(!u) return <DeniedPage/>;
   const [confirm,setConfirm]=useState(false);
-  const [wipeConfirm,setWipeConfirm]=useState(false);
   const [show2FA,setShow2FA]=useState(false); const [tfaPhone,setTfaPhone]=useState(""); const [tfaResult,setTfaResult]=useState(null);
   const [showOutbox,setShowOutbox]=useState(false);
   const S=A.userSettings;
@@ -64,8 +63,6 @@ export function SettingsPage(){
       <Lbl>Danger zone</Lbl>
       <Row icon="alert" title="Delete my account" sub="Removes your profile, CVs and saved jobs. Applications already sent stay with the employer.">
         <Btn kind="dangerSoft" size="sm" onClick={()=>setConfirm(true)}>Delete</Btn></Row>
-      <Row icon="refresh" title="Reset all local data" sub="Wipes localStorage — sign-ins, saved jobs, drafts, everything. Reseeds with fresh demo data on reload.">
-        <Btn kind="dangerSoft" size="sm" onClick={()=>setWipeConfirm(true)}>Reset</Btn></Row>
     </Card>
 
     {show2FA&&<Modal onClose={()=>setShow2FA(false)} title="Set up two-factor authentication">
@@ -82,7 +79,7 @@ export function SettingsPage(){
           <Input icon="phone" value={tfaPhone} onChange={e=>setTfaPhone(e.target.value)} placeholder="416 555 0100"/></Field>
         <div className="flex gap-2.5 justify-end">
           <Btn kind="ghost" onClick={()=>setShow2FA(false)}>Cancel</Btn>
-          <Btn kind="primary" icon="shield" disabled={tfaPhone.replace(/\D/g,"").length<10} onClick={()=>{const r=A.enable2FA(tfaPhone);if(r.ok)setTfaResult(r);}}>Enable 2FA</Btn></div></div>}</Modal>}
+          <Btn kind="primary" icon="shield" disabled={tfaPhone.replace(/\D/g,"").length<10} onClick={async()=>{const r=await A.enable2FA(tfaPhone);if(r.ok)setTfaResult(r);}}>Enable 2FA</Btn></div></div>}</Modal>}
 
     {showOutbox&&<Modal onClose={()=>setShowOutbox(false)} title="Outbox — all sent messages">
       {A.outbox.length===0?<Empty icon="mail" title="Nothing sent" body="Password resets and notification emails would appear here."/>
@@ -99,10 +96,5 @@ export function SettingsPage(){
       <p className="text-base text-text-2 leading-relaxed">
         Deleting removes your profile, your {A.cvs.length} saved {A.cvs.length===1?"CV":"CVs"}, your saved jobs and your notification history.
         Applications you have already sent remain with those employers, who become responsible for that copy under PIPEDA.</p></Modal>
-
-    <ConfirmDialog open={wipeConfirm} onClose={()=>setWipeConfirm(false)} confirmLabel="Wipe local data" onConfirm={A.clearAllData}
-      title="Wipe all local data?">
-      You'll be signed out and everything reseeds with fresh demo data. This can't be undone.
-    </ConfirmDialog>
   </Page>;
 }

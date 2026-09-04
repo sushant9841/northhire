@@ -54,6 +54,7 @@ export function EmployerPublicPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [showRev,setShowRev]=useState(false); const [revD,setRevD]=useState({rating:0,text:"",anon:false});
   const e=A.emp(A.empId); if(!e) return <Page><Empty title="Employer not found" body="This company profile is unavailable."/></Page>;
+  useEffect(()=>{A.loadEmployerReviews(e.id);},[e.id]);
   const jobs=A.jobs.filter(j=>j.e===e.id&&j.status==="live");
   const reviews=A.reviews.filter(r=>r.employer===e.id).sort((a,b)=>b.at-a.at);
   const userReview=reviews.find(r=>r.user===A.user?.id);

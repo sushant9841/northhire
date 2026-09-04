@@ -24,12 +24,11 @@ const TONE_CLS={
 export function AgencyLoginPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [id,setId]=useState(""); const [pw,setPw]=useState("");
-  const [remember,setRemember]=useState(true);
   const [err,setErr]=useState(""); const [busy,setBusy]=useState(false);
 
-  const attempt=()=>{
+  const attempt=async()=>{
     setErr(""); setBusy(true);
-    const r=A.agencyLogin(id.trim(),pw,remember);
+    const r=await A.agencyLogin(id.trim(),pw);
     setBusy(false);
     if(!r.ok){setErr(r.msg||"Sign-in failed"); return;}
     A.go("agencyDashboard");
@@ -60,8 +59,6 @@ export function AgencyLoginPage(){
             <Input icon="user" value={id} onChange={e=>setId(e.target.value)} placeholder="firstname.lastname"/></Field>
           <Field label="Password" required>
             <Input icon="lock" type="password" value={pw} onChange={e=>setPw(e.target.value)} placeholder="At least 8 characters"/></Field>
-          <label className="flex items-center gap-2 text-sm text-text-2 cursor-pointer">
-            <input type="checkbox" checked={remember} onChange={e=>setRemember(e.target.checked)}/> Remember me for 14 days</label>
           {err&&<Banner tone="danger" icon="alert">{err}</Banner>}
           <Btn kind="primary" size="lg" onClick={attempt} disabled={busy||!id||!pw} full>
             {busy?"Signing in…":"Sign in"}</Btn>

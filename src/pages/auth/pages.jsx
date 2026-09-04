@@ -293,10 +293,10 @@ export function ForgotPasswordPage(){
   const [stage,setStage]=useState("request"); // request | verify | done
   const [email,setEmail]=useState(""); const [code,setCode]=useState(""); const [newPw,setNewPw]=useState("");
   const [err,setErr]=useState(""); const [sentCode,setSentCode]=useState("");
-  const request=()=>{setErr("");const r=A.resetPasswordRequest(email); if(!r.ok){setErr(r.msg);return;}
+  const request=async()=>{setErr("");const r=await A.resetPasswordRequest(email); if(!r.ok){setErr(r.msg);return;}
     setSentCode(r.code); setStage("verify");};
-  const confirm=()=>{setErr(""); if(newPw.length<8){setErr("Password must be at least 8 characters");return;}
-    const r=A.resetPasswordConfirm(email,code,newPw); if(!r.ok){setErr(r.msg);return;} setStage("done");};
+  const confirm=async()=>{setErr(""); if(newPw.length<8){setErr("Password must be at least 8 characters");return;}
+    const r=await A.resetPasswordConfirm(email,code,newPw); if(!r.ok){setErr(r.msg);return;} setStage("done");};
 
   return <div className={`bg-bg min-h-full flex justify-center ${mob?"pt-6 px-4 pb-10":"pt-12 px-6 pb-20"}`}>
     <div className="w-full max-w-md">
