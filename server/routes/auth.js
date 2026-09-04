@@ -1,8 +1,11 @@
 import { Router } from "express";
-import { db, nextId } from "../db.js";
+import { db, nextId, sqlTime } from "../db.js";
 import { hashPassword, verifyPassword, createSessionCookie, clearSessionCookie, publicUser, requireAuth } from "../auth.js";
 
 export const authRouter = Router();
+
+const CODE_COOLDOWN_MS = 60 * 1000; // shared by reset-password and login-2FA code requests
+const CODE_MAX_ATTEMPTS = 5;
 
 authRouter.post("/signup", (req, res) => {
   const { name, email, password, role = "seeker", companyName } = req.body || {};
@@ -69,11 +72,19 @@ authRouter.post("/login/verify-2fa", (req, res) => {
   const { code } = req.body || {};
   const rec = db.prepare("SELECT * FROM login_2fa_codes WHERE email = ?").get(email);
   if (!rec) return res.status(400).json({ error: "No pending sign-in for this account." });
-  if (Date.now() - new Date(rec.created_at).getTime() > 15 * 60 * 1000) return res.status(400).json({ error: "Code expired — sign in again." });
+  if (rec.attempts >= CODE_MAX_ATTEMPTS) {
+    db.prepare("DELETE FROM login_2fa_codes WHERE email = ?").run(email);
+    return res.status(429).json({ error: "Too many incorrect attempts — sign in again to get a new code." });
+  }
+  if (Date.now() - sqlTime(rec.created_at).getTime() > 15 * 60 * 1000) return res.status(400).json({ error: "Code expired — sign in again." });
   const user = db.prepare("SELECT * FROM users WHERE email = ?").get(email);
   const tf = user ? db.prepare("SELECT * FROM two_factor WHERE user_id = ?").get(user.id) : null;
   const backupCodes = tf ? JSON.parse(tf.backup_codes_json || "[]") : [];
-  if (rec.code !== code && !backupCodes.includes(code)) return res.status(400).json({ error: "Code does not match." });
+  if (rec.code !== code && !backupCodes.includes(code)) {
+    db.prepare("UPDATE login_2fa_codes SET attempts = attempts + 1 WHERE email = ?").run(email);
+    const remaining = CODE_MAX_ATTEMPTS - rec.attempts - 1;
+    return res.status(400).json({ error: `Code does not match.${remaining > 0 ? ` ${remaining} attempt${remaining === 1 ? "" : "s"} remaining.` : " No attempts remaining — sign in again for a new code."}` });
+  }
   db.prepare("DELETE FROM login_2fa_codes WHERE email = ?").run(email);
   if (backupCodes.includes(code)) {
     db.prepare("UPDATE two_factor SET backup_codes_json = ? WHERE user_id = ?").run(JSON.stringify(backupCodes.filter(c => c !== code)), user.id);
@@ -93,15 +104,22 @@ authRouter.get("/me", requireAuth, (req, res) => {
 
 authRouter.get("/outbox", requireAuth, (req, res) => {
   const rows = db.prepare("SELECT * FROM outbox WHERE to_email = ? ORDER BY created_at DESC").all(req.user.email);
-  res.json({ outbox: rows.map(r => ({ id: r.id, to: r.to_email, subject: r.subject, body: r.body, at: new Date(r.created_at).toLocaleString("en-CA") })) });
+  res.json({ outbox: rows.map(r => ({ id: r.id, to: r.to_email, subject: r.subject, body: r.body, at: sqlTime(r.created_at).toLocaleString("en-CA") })) });
 });
 
 authRouter.post("/reset/request", (req, res) => {
   const email = (req.body?.email || "").toLowerCase().trim();
   const user = db.prepare("SELECT id FROM users WHERE email = ?").get(email);
   if (!user) return res.status(404).json({ error: "No account with that email." });
+  const existing = db.prepare("SELECT * FROM reset_codes WHERE email = ?").get(email);
+  if (existing) {
+    const sinceLast = Date.now() - sqlTime(existing.created_at).getTime();
+    if (sinceLast < CODE_COOLDOWN_MS) {
+      return res.status(429).json({ error: `Please wait ${Math.ceil((CODE_COOLDOWN_MS - sinceLast) / 1000)} more seconds before requesting another code.` });
+    }
+  }
   const code = Math.floor(100000 + Math.random() * 900000).toString();
-  db.prepare("INSERT INTO reset_codes (email, code) VALUES (?, ?) ON CONFLICT(email) DO UPDATE SET code = excluded.code, created_at = datetime('now')").run(email, code);
+  db.prepare("INSERT INTO reset_codes (email, code, attempts) VALUES (?, ?, 0) ON CONFLICT(email) DO UPDATE SET code = excluded.code, attempts = 0, created_at = datetime('now')").run(email, code);
   db.prepare("INSERT INTO outbox (id, to_email, subject, body) VALUES (?, ?, 'Reset your NorthHire password', ?)")
     .run(nextId("m", "outbox"), email, `Your reset code is ${code}. It expires in 15 minutes.`);
   res.json({ ok: true, code }); // dev returns code for demo visibility, matching the old local-only behavior
@@ -112,8 +130,16 @@ authRouter.post("/reset/confirm", (req, res) => {
   const { code, newPassword } = req.body || {};
   const rec = db.prepare("SELECT * FROM reset_codes WHERE email = ?").get(email);
   if (!rec) return res.status(400).json({ error: "No pending reset for this account." });
-  if (Date.now() - new Date(rec.created_at).getTime() > 15 * 60 * 1000) return res.status(400).json({ error: "Code expired — request a new one." });
-  if (rec.code !== code) return res.status(400).json({ error: "Code does not match." });
+  if (rec.attempts >= CODE_MAX_ATTEMPTS) {
+    db.prepare("DELETE FROM reset_codes WHERE email = ?").run(email);
+    return res.status(429).json({ error: "Too many incorrect attempts — request a new code." });
+  }
+  if (Date.now() - sqlTime(rec.created_at).getTime() > 15 * 60 * 1000) return res.status(400).json({ error: "Code expired — request a new one." });
+  if (rec.code !== code) {
+    db.prepare("UPDATE reset_codes SET attempts = attempts + 1 WHERE email = ?").run(email);
+    const remaining = CODE_MAX_ATTEMPTS - rec.attempts - 1;
+    return res.status(400).json({ error: `Code does not match.${remaining > 0 ? ` ${remaining} attempt${remaining === 1 ? "" : "s"} remaining.` : " No attempts remaining — request a new code."}` });
+  }
   if (!newPassword || newPassword.length < 8) return res.status(400).json({ error: "Password must be at least 8 characters." });
   const { hash, salt } = hashPassword(newPassword);
   db.prepare("UPDATE users SET password_hash = ?, password_salt = ? WHERE email = ?").run(hash, salt, email);

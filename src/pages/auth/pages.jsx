@@ -324,8 +324,12 @@ export function ForgotPasswordPage(){
   const [stage,setStage]=useState("request"); // request | verify | done
   const [email,setEmail]=useState(""); const [code,setCode]=useState(""); const [newPw,setNewPw]=useState("");
   const [err,setErr]=useState(""); const [sentCode,setSentCode]=useState("");
+  const [cooldown,setCooldown]=useState(0);
+  useEffect(()=>{if(cooldown<=0)return; const t=setTimeout(()=>setCooldown(c=>c-1),1000); return()=>clearTimeout(t);},[cooldown]);
   const request=async()=>{setErr("");const r=await A.resetPasswordRequest(email); if(!r.ok){setErr(r.msg);return;}
-    setSentCode(r.code); setStage("verify");};
+    setSentCode(r.code); setStage("verify"); setCooldown(60);};
+  const resend=async()=>{if(cooldown>0)return; setErr("");const r=await A.resetPasswordRequest(email);
+    if(!r.ok){setErr(r.msg);return;} setSentCode(r.code); setCooldown(60);};
   const confirm=async()=>{setErr(""); if(newPw.length<8){setErr("Password must be at least 8 characters");return;}
     const r=await A.resetPasswordConfirm(email,code,newPw); if(!r.ok){setErr(r.msg);return;} setStage("done");};
 
@@ -358,7 +362,11 @@ export function ForgotPasswordPage(){
               onChange={e=>{setNewPw(e.target.value);setErr("");}} placeholder="At least 8 characters"/></Field>
             {err&&<Banner tone="danger" icon="alert" title="Cannot reset">{err}</Banner>}
             <Btn kind="primary" size="lg" full icon="check" onClick={confirm}>Set new password</Btn>
-            <button onClick={()=>setStage("request")} className="bg-transparent border-0 p-0 cursor-pointer text-sm text-text-2 mt-1.5">← Different email</button>
+            <div className="flex justify-between items-center mt-1.5">
+              <button onClick={()=>setStage("request")} className="bg-transparent border-0 p-0 cursor-pointer text-sm text-text-2">← Different email</button>
+              <button onClick={resend} disabled={cooldown>0} className={`bg-transparent border-0 p-0 text-sm font-semibold ${cooldown>0?"text-text-3 cursor-not-allowed":"text-brand cursor-pointer"}`}>
+                {cooldown>0?`Resend in ${cooldown}s`:"Resend code"}</button>
+            </div>
           </div>
         </>}
         {stage==="done"&&<div className="text-center">
