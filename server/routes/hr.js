@@ -49,6 +49,14 @@ hrRouter.get("/me", requireHrAuth, (req, res) => {
 
 function isPriv(emp) { return ["owner", "admin", "hr"].includes(emp.role); }
 function requireHrPriv(req, res, next) { if (!isPriv(req.hrEmployee)) return res.status(403).json({ error: "Not allowed for your role." }); next(); }
+// A plain "employee"-role manager can approve their own direct reports' leave/expenses -
+// previously only owner/admin/hr could approve anyone's, bypassing the real reporting chain
+// (hr_employees.manager) entirely.
+function canDecideFor(hrEmployee, targetEmployeeId) {
+  if (isPriv(hrEmployee)) return true;
+  const target = db.prepare("SELECT manager FROM hr_employees WHERE id = ?").get(targetEmployeeId);
+  return !!target && target.manager === hrEmployee.id;
+}
 
 /* ─── Employees ─── */
 hrRouter.get("/employees", requireHrAuth, (req, res) => {
@@ -158,7 +166,10 @@ hrRouter.post("/leave", requireHrAuth, (req, res) => {
     .run(id, req.hrEmployee.id, d.type, d.from, d.to, d.days, d.reason);
   res.status(201).json({ leave: serializeHrLeave(db.prepare("SELECT * FROM hr_leave WHERE id = ?").get(id)) });
 });
-hrRouter.patch("/leave/:id/decide", requireHrAuth, requireHrPriv, (req, res) => {
+hrRouter.patch("/leave/:id/decide", requireHrAuth, (req, res) => {
+  const row = db.prepare("SELECT * FROM hr_leave WHERE id = ?").get(req.params.id);
+  if (!row) return res.status(404).json({ error: "Leave request not found." });
+  if (!canDecideFor(req.hrEmployee, row.employee_id)) return res.status(403).json({ error: "Only this employee's manager or HR can decide this request." });
   db.prepare("UPDATE hr_leave SET status = ?, approved_by = ? WHERE id = ?").run(req.body?.decision, req.hrEmployee.id, req.params.id);
   res.json({ leave: serializeHrLeave(db.prepare("SELECT * FROM hr_leave WHERE id = ?").get(req.params.id)) });
 });
@@ -259,6 +270,16 @@ hrRouter.get("/expenses/mine", requireHrAuth, (req, res) => {
   const rows = db.prepare("SELECT * FROM hr_expenses WHERE employee_id = ? ORDER BY submitted_at DESC").all(req.hrEmployee.id);
   res.json({ expenses: rows.map(serializeHrExpense) });
 });
+// A manager (any role, including plain "employee") can see just their own direct reports'
+// expense claims - the real reporting-chain-scoped counterpart to /expenses/company below,
+// which stays HR/finance/owner-only since it returns the whole company.
+hrRouter.get("/expenses/team", requireHrAuth, (req, res) => {
+  const rows = db.prepare(
+    `SELECT hr_expenses.* FROM hr_expenses JOIN hr_employees ON hr_employees.id = hr_expenses.employee_id
+     WHERE hr_employees.manager = ? ORDER BY hr_expenses.submitted_at DESC`
+  ).all(req.hrEmployee.id);
+  res.json({ expenses: rows.map(serializeHrExpense) });
+});
 hrRouter.get("/expenses/company", requireHrAuth, requireHrPriv, (req, res) => {
   const rows = db.prepare(
     `SELECT hr_expenses.* FROM hr_expenses JOIN hr_employees ON hr_employees.id = hr_expenses.employee_id
@@ -275,7 +296,10 @@ hrRouter.post("/expenses", requireHrAuth, (req, res) => {
   ).run(id, req.hrEmployee.id, d.category, d.merchant, d.amount, d.description || "", d.receiptUrl || null, d.date, d.reimburseVia || "next-payroll");
   res.status(201).json({ expense: serializeHrExpense(db.prepare("SELECT * FROM hr_expenses WHERE id = ?").get(id)) });
 });
-hrRouter.patch("/expenses/:id/decide", requireHrAuth, requireHrPriv, (req, res) => {
+hrRouter.patch("/expenses/:id/decide", requireHrAuth, (req, res) => {
+  const target = db.prepare("SELECT * FROM hr_expenses WHERE id = ?").get(req.params.id);
+  if (!target) return res.status(404).json({ error: "Expense claim not found." });
+  if (!canDecideFor(req.hrEmployee, target.employee_id)) return res.status(403).json({ error: "Only this employee's manager or HR can decide this claim." });
   const { decision, reason } = req.body || {};
   db.prepare("UPDATE hr_expenses SET status = ?, approved_by = ?, approved_at = CASE WHEN ? = 'approved' THEN datetime('now') ELSE approved_at END, reject_reason = ? WHERE id = ?")
     .run(decision, req.hrEmployee.id, decision, reason || null, req.params.id);

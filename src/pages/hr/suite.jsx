@@ -601,7 +601,11 @@ export function HrAttendance(){
 export function HrLeave(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const emp=A.hrCurrentEmp();
-  const canApprove=emp.role==="owner"||emp.role==="admin"||emp.role==="hr";
+  const isPriv=emp.role==="owner"||emp.role==="admin"||emp.role==="hr";
+  /* A plain-"employee"-role manager approves just their own direct reports' leave - the real
+     reporting chain (hr_employees.manager), previously bypassed in favour of a flat role check. */
+  const myReports=A.hrEmployees.filter(e=>e.manager===emp.id);
+  const canApprove=isPriv||myReports.length>0;
   const [tab,setTab]=useState(canApprove?"pending":"mine");
   const [showReq,setShowReq]=useState(false);
   const [req,setReq]=useState({type:"Vacation",from:"",to:"",reason:""});
@@ -620,8 +624,9 @@ export function HrLeave(){
   const vacationBalance=Math.round((accruedVacation-usedVacation)*10)/10;
   const usedSick=myLeave.filter(l=>l.status==="approved"&&l.type==="Sick").reduce((s,l)=>s+l.days,0);
   const usedPersonal=myLeave.filter(l=>l.status==="approved"&&l.type==="Personal").reduce((s,l)=>s+l.days,0);
-  const pending=A.hrLeave.filter(l=>l.status==="pending");
-  const list=tab==="mine"?myLeave:tab==="pending"?pending:A.hrLeave;
+  const scopedLeave=isPriv?A.hrLeave:A.hrLeave.filter(l=>myReports.some(r=>r.id===l.employee)||l.employee===emp.id);
+  const pending=scopedLeave.filter(l=>l.status==="pending");
+  const list=tab==="mine"?myLeave:tab==="pending"?pending:scopedLeave;
   const sorted=[...list].sort((a,b)=>b.requestedAt-a.requestedAt);
 
   const [reqErr,setReqErr]=useState("");

@@ -51,12 +51,20 @@ export function useHrStore(){
     let cancelled=false;
     const isPriv=["owner","admin","hr"].includes(hrEmployee.role);
     const canSeeAudit=isPriv||hrEmployee.role==="finance";
+    /* A manager (any role, even plain "employee") sees their own expenses plus their direct
+       reports' - merged client-side since they're two separate, differently-scoped endpoints
+       (the team one is new; a manager was previously invisible to this fetch entirely). */
+    const expensesReq=isPriv
+      ? api.get("/hr/expenses/company").then(r=>r.expenses)
+      : Promise.all([api.get("/hr/expenses/mine"),api.get("/hr/expenses/team")]).then(([mine,team])=>{
+          const byId=new Map(); [...mine.expenses,...team.expenses].forEach(x=>byId.set(x.id,x)); return [...byId.values()];
+        });
     (async()=>{
       try{
         const [emps,att,leave,tasks,events,invoices,depts,chats,settings,expenses]=await Promise.all([
           api.get("/hr/employees"),api.get("/hr/attendance"),api.get("/hr/leave"),api.get("/hr/tasks"),
           api.get("/hr/events"),api.get("/hr/invoices"),api.get("/hr/departments"),api.get("/hr/chats"),
-          api.get("/hr/company-settings"),isPriv?api.get("/hr/expenses/company"):api.get("/hr/expenses/mine"),
+          api.get("/hr/company-settings"),expensesReq,
         ]);
         if(cancelled)return;
         setHrEmployees(emps.employees);
@@ -68,7 +76,7 @@ export function useHrStore(){
         setHrDepartments(depts.departments);
         setHrChats(chats.chats);
         setHrCompanySettingsMap({[hrCompany.id]:settings.settings||HR_COMPANY_SETTINGS_DEFAULT});
-        setHrExpenses(expenses.expenses);
+        setHrExpenses(expenses);
         if(isPriv){
           const {payruns}=await api.get("/hr/payruns");
           if(!cancelled)setHrPayruns(payruns);

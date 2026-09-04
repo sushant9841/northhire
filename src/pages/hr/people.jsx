@@ -448,10 +448,15 @@ export function HrExpensesPage(){
   const [detail,setDetail]=useState(null);
   const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
   if(!emp||!company)return null;
-  const isApprover=["hr","admin","owner","finance"].includes(emp.role);
+  const isPriv=["hr","admin","owner","finance"].includes(emp.role);
+  /* A plain-"employee"-role manager reviews just their own direct reports' claims - the real
+     reporting chain (hr_employees.manager), previously ignored entirely in favour of a flat
+     hr/admin/owner/finance role check. */
+  const myReports=A.hrEmployees.filter(e=>e.manager===emp.id);
+  const isApprover=isPriv||myReports.length>0;
 
   const myExp=A.empExpenses(emp.id);
-  const allExp=isApprover?A.companyExpenses(company.id):[];
+  const allExp=isPriv?A.companyExpenses(company.id):isApprover?A.companyExpenses(company.id).filter(x=>myReports.some(r=>r.id===x.employee)):[];
   const queued=allExp.filter(x=>x.status==="submitted");
   const approved=allExp.filter(x=>x.status==="approved");
 
@@ -507,7 +512,7 @@ export function HrExpensesPage(){
                 <Btn kind="dangerSoft" size="xs" onClick={()=>setDetail(x)}>Reject</Btn>
                 <Btn kind="primary" size="xs" onClick={()=>A.decideExpense(x.id,"approved",emp.id)}>Approve</Btn>
               </div>}
-              {isApprover&&tab==="approved"&&<Btn kind="primary" size="xs" onClick={()=>A.payExpense(x.id)}>Mark paid</Btn>}
+              {isPriv&&tab==="approved"&&<Btn kind="primary" size="xs" onClick={()=>A.payExpense(x.id)}>Mark paid</Btn>}
             </td>
           </tr>;})}
           {list.length===0&&<tr><td colSpan={tab==="mine"?6:7} className="p-5"><Empty icon="wallet" title="No expenses in this view" body="Submitted expense claims will show up here."/></td></tr>}
@@ -517,7 +522,7 @@ export function HrExpensesPage(){
     <Pagination {...pg}/>
 
     {showSubmit&&<ExpenseSubmitModal onClose={()=>setShowSubmit(false)} onSubmit={(data)=>{A.submitExpense({...data,employee:emp.id}); setShowSubmit(false);}}/>}
-    {detail&&<ExpenseDetailModal expense={detail} onClose={()=>setDetail(null)} isApprover={isApprover} currentEmpId={emp.id}/>}
+    {detail&&<ExpenseDetailModal expense={detail} onClose={()=>setDetail(null)} isApprover={isApprover} isPriv={isPriv} currentEmpId={emp.id}/>}
   </div>;
 }
 
@@ -551,7 +556,7 @@ function ExpenseSubmitModal({onClose,onSubmit}){
   </Modal>;
 }
 
-function ExpenseDetailModal({expense:x,onClose,isApprover,currentEmpId}){
+function ExpenseDetailModal({expense:x,onClose,isApprover,isPriv,currentEmpId}){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const e=A.hrEmp(x.employee); const approver=x.approvedBy?A.hrEmp(x.approvedBy):null;
   const [rejecting,setRejecting]=useState(false); const [reason,setReason]=useState("");
@@ -604,7 +609,7 @@ function ExpenseDetailModal({expense:x,onClose,isApprover,currentEmpId}){
           <Btn kind="dangerSoft" disabled={!reason.trim()} onClick={()=>{A.decideExpense(x.id,"rejected",currentEmpId,reason.trim()); onClose();}}>Confirm reject</Btn>
         </div>
       </div>}
-      {isApprover&&x.status==="approved"&&<div className="flex gap-2.5 justify-end pt-3 border-t border-line">
+      {isPriv&&x.status==="approved"&&<div className="flex gap-2.5 justify-end pt-3 border-t border-line">
         <Btn kind="primary" icon="check" onClick={()=>{A.payExpense(x.id); onClose();}}>Mark as paid</Btn>
       </div>}
     </div>
