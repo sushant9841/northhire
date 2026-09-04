@@ -2,7 +2,7 @@ import { useState } from "react";
 import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
-import { Btn, Card, Tag, Bar, Stat, Tabs, Empty, H1, Page, ConfirmDialog, Modal } from "../../design/primitives.jsx";
+import { Btn, Card, Tag, Bar, Stat, Tabs, Empty, H1, Page, ConfirmDialog, Modal, Field, Area } from "../../design/primitives.jsx";
 import { pay, payShort } from "../../helpers/utils.js";
 import { STAGES } from "../../store/seed/constants.js";
 import { EmpMark } from "../shared/cards.jsx";
@@ -40,7 +40,7 @@ function HistoryModal({app:a,onClose}){
 export function StatusPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [tab,setTab]=useState("all");
-  const [withdrawing,setWithdrawing]=useState(null);
+  const [withdrawing,setWithdrawing]=useState(null); const [withdrawReason,setWithdrawReason]=useState("");
   const [viewingAnswers,setViewingAnswers]=useState(null);
   const [viewingHistory,setViewingHistory]=useState(null);
   const mine=A.myApps;
@@ -85,13 +85,17 @@ export function StatusPage(){
               <Btn kind="outline" size="sm" iconR="chevR" onClick={()=>A.openJob(j.id)}>View job</Btn>
               <Btn kind="ghost" size="sm" icon="file" onClick={()=>setViewingAnswers({app:a,job:j})}>Your answers</Btn>
               {(a.history?.length||0)>1&&<Btn kind="ghost" size="sm" icon="clock" onClick={()=>setViewingHistory(a)}>Timeline</Btn>}
-              {a.stage!=="Withdrawn"&&a.stage!=="Offer"&&<Btn kind="ghost" size="sm" onClick={()=>setWithdrawing(a)}>Withdraw</Btn>}
+              {a.stage!=="Withdrawn"&&a.stage!=="Offer"&&<Btn kind="ghost" size="sm" onClick={()=>{setWithdrawing(a);setWithdrawReason("");}}>Withdraw</Btn>}
               {a.stage==="Offer"&&<Btn kind="ok" size="sm" icon="check" onClick={()=>A.acceptOffer(a.id)}>Accept offer</Btn>}
             {a.stage==="Withdrawn"&&a.withdrawnAt&&(Date.now()-a.withdrawnAt<7*24*60*60*1000)&&
               <Btn kind="outline" size="sm" icon="refresh" onClick={()=>A.restoreApp(a.id)}>Restore</Btn>}</div></Card>;})}</div>}
     <ConfirmDialog open={!!withdrawing} onClose={()=>setWithdrawing(null)} confirmLabel="Withdraw"
-      title="Withdraw this application?" onConfirm={()=>A.withdraw(withdrawing.id)}>
-      You can restore it within 7 days from this page if you change your mind.
+      title="Withdraw this application?" onConfirm={()=>A.withdraw(withdrawing.id,withdrawReason.trim())}>
+      <div className="flex flex-col gap-3">
+        <div>You can restore it within 7 days from this page if you change your mind.</div>
+        <Field label="Reason (optional)" hint="Shared with the employer so they know why, if you'd like.">
+          <Area rows={2} value={withdrawReason} onChange={e=>setWithdrawReason(e.target.value)} placeholder="e.g. Accepted another offer"/></Field>
+      </div>
     </ConfirmDialog>
     {viewingAnswers&&<AnswersModal app={viewingAnswers.app} job={viewingAnswers.job} onClose={()=>setViewingAnswers(null)}/>}
     {viewingHistory&&<HistoryModal app={viewingHistory} onClose={()=>setViewingHistory(null)}/>}

@@ -63,6 +63,7 @@ export function AdmUsers(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [q,setQ]=useState(""); const [status,setStatus]=useState("all"); const [sort,setSort]=useState("name");
   const [suspending,setSuspending]=useState(null); const [reason,setReason]=useState("");
+  const [erasing,setErasing]=useState(null); const [viewing,setViewing]=useState(null);
   const withApps=A.people.map(u=>({...u,_apps:A.applications.filter(a=>a.user===u.id).length,_sus:A.suspended.has(u.id)}));
   const filtered=withApps.filter(u=>
     (!q||u.name.toLowerCase().includes(q.toLowerCase())||u.email.toLowerCase().includes(q.toLowerCase())||u.title.toLowerCase().includes(q.toLowerCase()))
@@ -93,11 +94,13 @@ export function AdmUsers(){
           {!mob&&<div className="w-24 text-xs text-text-3">{u.joined?`Joined ${u.joined}`:"—"}</div>}
           <div className="w-20 text-sm text-text-2">{apps} apps</div>
           <Tag tone={sus?"danger":"ok"} sm>{sus?"Suspended":"Active"}</Tag>
+          <Btn kind="ghost" size="xs" onClick={()=>setViewing(u)}>Details</Btn>
           <Btn kind="ghost" size="xs" icon="eye" onClick={()=>A.impersonate(u.id)}>View as</Btn>
           <Btn kind={sus?"outline":"ghost"} size="xs" onClick={()=>{
             if(sus){A.toggleSuspend(u.id);A.toast(`${u.name} restored`,"ok");}
             else{setSuspending(u);setReason("");}
-          }}>{sus?"Restore":"Suspend"}</Btn></div>;})}
+          }}>{sus?"Restore":"Suspend"}</Btn>
+          <Btn kind="dangerSoft" size="xs" icon="trash" onClick={()=>setErasing(u)}>Erase</Btn></div>;})}
       {list.length===0&&<div className="p-5"><Empty icon="search" title="No users match that search" body="Try a different name, email, or title."/></div>}</Card>
     <Pagination {...pg}/>
     {suspending&&<Modal onClose={()=>setSuspending(null)} title={`Suspend ${suspending.name}?`}>
@@ -110,6 +113,48 @@ export function AdmUsers(){
         </div>
       </div>
     </Modal>}
+    <ConfirmDialog open={!!erasing} onClose={()=>setErasing(null)} confirmLabel="Erase permanently"
+      title={`Erase ${erasing?.name}'s account?`}
+      onConfirm={async()=>{const name=erasing.name;const id=erasing.id;setErasing(null);
+        const r=await A.eraseUser(id); A.toast(r.ok?`${name}'s account and personal data erased`:r.msg,r.ok?"danger":"warn");}}>
+      Permanently removes their CVs, saved searches, messages, reviews, references, payment methods, and saved/followed data.
+      Their name and email are replaced so the account can't be recovered. Applications they already sent stay on file
+      for the employers who received them. This cannot be undone.</ConfirmDialog>
+    {viewing&&<Modal onClose={()=>setViewing(null)} title={viewing.name} wide>
+      <div className="flex gap-3.5 items-center mb-4">
+        <SmartPortrait seed={viewing.seed} size={52}/>
+        <div className="min-w-0">
+          <div className="text-base font-bold text-text">{viewing.name}</div>
+          <div className="text-sm text-text-2">{viewing.email}</div>
+        </div>
+        <Tag tone={A.suspended.has(viewing.id)?"danger":"ok"} sm style={{marginLeft:"auto"}}>{A.suspended.has(viewing.id)?"Suspended":"Active"}</Tag>
+      </div>
+      <div className="grid grid-cols-2 gap-2.5 mb-4">
+        {[["Title",viewing.title||"—"],["Category",viewing.cat||"—"],["Location",`${viewing.city||"—"}, ${viewing.prov||""}`],
+          ["Years experience",viewing.years??"—"],["Phone",viewing.phone||"—"],["Joined",viewing.joined||"—"]].map(([l,v])=>
+          <div key={l} className="bg-bg rounded-xl py-2.5 px-3">
+            <div className="text-xs text-text-3">{l}</div>
+            <div className="text-sm font-semibold text-text mt-0.5">{v}</div></div>)}
+      </div>
+      {A.suspended.has(viewing.id)&&A.suspensionInfo?.[viewing.id]&&<Banner tone="danger" icon="alert" title="Suspended" style={{marginBottom:16}}>
+        {A.suspensionInfo[viewing.id].at}: {A.suspensionInfo[viewing.id].reason}</Banner>}
+      <Lbl>Applications ({A.applications.filter(a=>a.user===viewing.id).length})</Lbl>
+      <div className="flex flex-col gap-2 mb-2" style={{maxHeight:260,overflowY:"auto"}}>
+        {A.applications.filter(a=>a.user===viewing.id).map(a=>{const j=A.job(a.job); const e=j?A.emp(j.e):null;
+          return <div key={a.id} className="flex justify-between items-center py-2.5 px-3 bg-bg rounded-lg">
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap">{j?.t||"—"}</div>
+              <div className="text-xs text-text-3">{e?.name||"—"} · {a.at}</div>
+            </div>
+            <Tag tone={a.stage==="Hired"?"ok":a.stage==="Withdrawn"?"neutral":"brand"} sm>{a.stage}</Tag>
+          </div>;})}
+        {A.applications.filter(a=>a.user===viewing.id).length===0&&<div className="text-sm text-text-3 py-3">No applications on file.</div>}
+      </div>
+      <div className="flex gap-2.5 justify-end pt-3 border-t border-line">
+        <Btn kind="ghost" onClick={()=>setViewing(null)}>Close</Btn>
+        <Btn kind="outline" icon="eye" onClick={()=>{A.impersonate(viewing.id);setViewing(null);}}>View as</Btn>
+      </div>
+    </Modal>}
   </Page>;
 }
 
@@ -117,6 +162,7 @@ export function AdmEmployers(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [tab,setTab]=useState("pending"); const [q,setQ]=useState("");
   const [holding,setHolding]=useState(null); const [holdReason,setHoldReason]=useState("");
+  const [viewing,setViewing]=useState(null);
   const match=e=>!q||e.name.toLowerCase().includes(q.toLowerCase())||e.industry.toLowerCase().includes(q.toLowerCase())||(e.owner||"").toLowerCase().includes(q.toLowerCase());
   const pending=A.employers.filter(e=>!e.verified&&!e.hold&&match(e)), held=A.employers.filter(e=>!e.verified&&e.hold&&match(e)), verified=A.employers.filter(e=>e.verified&&match(e));
   const list=tab==="pending"?pending:tab==="held"?held:verified;
@@ -152,6 +198,7 @@ export function AdmEmployers(){
               </div></div>}
             <div className="flex gap-2 pt-3 border-t border-line-soft flex-wrap">
               <Btn kind="ghost" size="sm" onClick={()=>A.openEmployer(e.id)}>View page</Btn>
+              <Btn kind="ghost" size="sm" onClick={()=>setViewing(e)}>Details</Btn>
               <div className="flex-1"/>
               {e.verified?<Btn kind="outline" size="sm" onClick={()=>{A.verifyEmployer(e.id,false);A.toast(`${e.name}'s verification revoked`,"danger");}}>Revoke</Btn>
                 :e.hold?<><Btn kind="ok" size="sm" icon="check" onClick={()=>{A.verifyEmployer(e.id,true);A.toast(`${e.name} approved`,"ok");}}>Approve</Btn>
@@ -167,6 +214,39 @@ export function AdmEmployers(){
           <Btn kind="ghost" onClick={()=>setHolding(null)}>Cancel</Btn>
           <Btn kind="danger" disabled={!holdReason.trim()} onClick={()=>{A.holdEmployer(holding.id,holdReason.trim());A.toast(`${holding.name} put on hold`);setHolding(null);}}>Hold</Btn>
         </div>
+      </div>
+    </Modal>}
+    {viewing&&<Modal onClose={()=>setViewing(null)} title={viewing.name} wide>
+      <div className="flex gap-3.5 items-center mb-4">
+        <EmpMark e={viewing} size={52}/>
+        <div className="min-w-0">
+          <div className="text-base font-bold text-text">{viewing.name}</div>
+          <div className="text-sm text-text-2">{viewing.industry} · {viewing.city}, {viewing.prov} · {viewing.owner}</div>
+        </div>
+        <Tag tone={viewing.verified?"ok":viewing.hold?"warn":"neutral"} sm style={{marginLeft:"auto"}}>{viewing.verified?"Verified":viewing.hold?"On hold":"Pending"}</Tag>
+      </div>
+      <Lbl>Job listings ({A.jobs.filter(j=>j.e===viewing.id).length})</Lbl>
+      <div className="flex flex-col gap-2 mb-4" style={{maxHeight:220,overflowY:"auto"}}>
+        {A.jobs.filter(j=>j.e===viewing.id).map(j=>{const n=A.applications.filter(a=>a.job===j.id).length;
+          return <div key={j.id} className="flex justify-between items-center py-2.5 px-3 bg-bg rounded-lg">
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap">{j.t}</div>
+              <div className="text-xs text-text-3">{j.city}, {j.prov} · {j.views} views · {n} applicant{n===1?"":"s"}</div>
+            </div>
+            <Tag tone={jobTone(j.status)} sm>{jobStatusLabel(j.status)}</Tag>
+          </div>;})}
+        {A.jobs.filter(j=>j.e===viewing.id).length===0&&<div className="text-sm text-text-3 py-3">No listings yet.</div>}
+      </div>
+      <Lbl>Recent activity mentioning this company</Lbl>
+      <div className="flex flex-col gap-2" style={{maxHeight:180,overflowY:"auto"}}>
+        {A.activity.filter(a=>a.text.includes(viewing.name)).slice(0,20).map(a=>
+          <div key={a.id} className="py-2 px-3 bg-bg rounded-lg text-xs">
+            <span className="text-text-3">{a.at}</span> — <span className="text-text-2">{a.text}</span></div>)}
+        {A.activity.filter(a=>a.text.includes(viewing.name)).length===0&&<div className="text-sm text-text-3 py-3">Nothing recorded yet.</div>}
+      </div>
+      <div className="flex gap-2.5 justify-end pt-3 mt-3 border-t border-line">
+        <Btn kind="ghost" onClick={()=>setViewing(null)}>Close</Btn>
+        <Btn kind="outline" onClick={()=>{A.openEmployer(viewing.id);setViewing(null);}}>View public page</Btn>
       </div>
     </Modal>}
   </Page>;

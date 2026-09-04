@@ -100,7 +100,10 @@ applicationsRouter.patch("/:id/stage", requireAuth, requireRole("employer"), (re
 applicationsRouter.patch("/:id/reject", requireAuth, requireRole("employer"), (req, res) => {
   const app = loadOwnedApplication(req.params.id, req, res, "employer");
   if (!app) return;
-  const note = "The employer has decided not to move forward with your application at this time.";
+  const reason = (req.body?.reason || "").trim();
+  const note = reason
+    ? `The employer has decided not to move forward with your application at this time: ${reason}`
+    : "The employer has decided not to move forward with your application at this time.";
   const history = appendHistory(app, "Withdrawn", note);
   db.prepare("UPDATE applications SET stage = 'Withdrawn', note = ?, history_json = ? WHERE id = ?").run(note, history, req.params.id);
   const row = db.prepare("SELECT * FROM applications WHERE id = ?").get(req.params.id);
@@ -110,7 +113,8 @@ applicationsRouter.patch("/:id/reject", requireAuth, requireRole("employer"), (r
 applicationsRouter.patch("/:id/withdraw", requireAuth, requireRole("seeker"), (req, res) => {
   const app = loadOwnedApplication(req.params.id, req, res, "seeker");
   if (!app) return;
-  const note = "You withdrew this application";
+  const reason = (req.body?.reason || "").trim();
+  const note = reason ? `You withdrew this application: ${reason}` : "You withdrew this application";
   const history = appendHistory(app, "Withdrawn", note);
   const withdrawnAt = new Date().toISOString();
   db.prepare(

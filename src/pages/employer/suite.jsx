@@ -562,7 +562,7 @@ export function EmpCandidate(){
   const [showMsg,setShowMsg]=useState(false); const [msgText,setMsgText]=useState("");
   const [showSched,setShowSched]=useState(false);
   const [ivDate,setIvDate]=useState(""); const [ivTime,setIvTime]=useState(""); const [ivMode,setIvMode]=useState("video"); const [ivNotes,setIvNotes]=useState("");
-  const [confirmReject,setConfirmReject]=useState(false);
+  const [confirmReject,setConfirmReject]=useState(false); const [rejectReason,setRejectReason]=useState("");
   const a=A.applications.find(x=>x.id===A.candidateId);
   if(!a) return <Page><Empty icon="users" title="Candidate not found" body="This application may have been withdrawn."
     action={<Btn kind="primary" onClick={()=>A.go("empPipeline")}>Back to pipeline</Btn>}/></Page>;
@@ -599,11 +599,15 @@ export function EmpCandidate(){
         {idx<STAGES.length-1&&<Btn kind="primary" iconR="arrowR" onClick={()=>A.moveApp(a.id,STAGES[idx+1])}>Advance to {STAGES[idx+1]}</Btn>}
         {A.can("messages")?<Btn kind="outline" icon="mail" onClick={()=>setShowMsg(true)}>Message</Btn>:<Btn kind="ghost" icon="lock" onClick={()=>A.go("pricing")}>Message (Growth+)</Btn>}
         {A.can("interviews")?<Btn kind="outline" icon="calendar" onClick={()=>setShowSched(true)}>Schedule interview</Btn>:<Btn kind="ghost" icon="lock" onClick={()=>A.go("pricing")}>Schedule (Growth+)</Btn>}
-        <Btn kind="dangerSoft" onClick={()=>setConfirmReject(true)}>Not a fit</Btn>
+        <Btn kind="dangerSoft" onClick={()=>{setConfirmReject(true);setRejectReason("");}}>Not a fit</Btn>
         <Btn kind="ghost" onClick={()=>A.go("empPipeline")}>Back to pipeline</Btn></div></Card>
     <ConfirmDialog open={confirmReject} onClose={()=>setConfirmReject(false)} confirmLabel="Reject"
-      title={`Reject ${u.name}?`} onConfirm={()=>{A.rejectApp(a.id);A.go("empPipeline");}}>
-      This withdraws their application. This can't be undone from here.
+      title={`Reject ${u.name}?`} onConfirm={()=>{A.rejectApp(a.id,rejectReason.trim());A.go("empPipeline");}}>
+      <div className="flex flex-col gap-3">
+        <div>This withdraws their application. This can't be undone from here.</div>
+        <Field label="Reason (optional)" hint="Shared with the candidate so they know why.">
+          <Area rows={2} value={rejectReason} onChange={e=>setRejectReason(e.target.value)} placeholder="e.g. Went with a candidate with more site experience"/></Field>
+      </div>
     </ConfirmDialog>
 
     {threadMessages.length>0&&<Card style={{marginBottom:16}}><Lbl>Message history</Lbl>

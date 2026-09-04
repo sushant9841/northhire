@@ -872,9 +872,9 @@ export function useStore(){
       toast(err.message,"danger");
     }
   };
-  const withdraw=async id=>{
+  const withdraw=async(id,reason)=>{
     try{
-      const {application}=await api.patch(`/applications/${id}/withdraw`);
+      const {application}=await api.patch(`/applications/${id}/withdraw`,{reason});
       setApplications(l=>l.map(a=>a.id===id?mapApiApplication(application):a));
       log("application.withdraw","Withdrew an application","x");
       notify({icon:"x",title:"Application withdrawn",body:"You can restore it within 7 days from My Status.",for:user?.id,link:"status"});
@@ -918,11 +918,11 @@ export function useStore(){
       }
     }catch(err){toast(err.message,"danger");}
   };
-  const rejectApp=async id=>{const a=applications.find(x=>x.id===id);
+  const rejectApp=async(id,reason)=>{const a=applications.find(x=>x.id===id);
     try{
-      const {application}=await api.patch(`/applications/${id}/reject`);
+      const {application}=await api.patch(`/applications/${id}/reject`,{reason});
       setApplications(l=>l.map(x=>x.id===id?mapApiApplication(application):x));
-      log("pipeline.reject",`Rejected ${person(a.user).name}`,"x");
+      log("pipeline.reject",`Rejected ${person(a.user).name}${reason?` — ${reason}`:""}`,"x");
     }catch(err){toast(err.message,"danger");}};
 
   const publishJob=async f=>{
@@ -1003,6 +1003,14 @@ export function useStore(){
       setEmployers(l=>l.map(e=>e.id===id?mapApiEmployer(employer):e));
       log("employer.hold",`${wasHeld?"Released":"Placed"} ${emp(id).name} ${wasHeld?"from":"on"} hold${!wasHeld&&reason?` — ${reason}`:""}`,"clock");
     }catch(err){toast(err.message,"danger");}};
+  const eraseUser=async(id)=>{
+    try{
+      await api.del(`/users/${id}`);
+      setPeople(l=>l.filter(p=>p.id!==id));
+      log("user.erase",`Erased account ${id}`,"trash");
+      return {ok:true};
+    }catch(err){return {ok:false,msg:err.message};}
+  };
   const toggleSuspend=async(id,reason)=>{const wasSuspended=suspended.has(id);
     try{
       await api.patch(`/users/${id}/suspend`,{reason});
@@ -1337,7 +1345,7 @@ export function useStore(){
     logout,completeSignup,saveProfile,deleteAccount,exportData,setUserSetting,
     toggleSave,followEmployer,openJob,openEmployer,openBlog,openTraining,openCandidate,
     beginApply,submitApply,withdraw,acceptOffer,moveApp,rejectApp,
-    publishJob,toggleJobStatus,flagJob,setPipelineJob:setPipelineJobFn,saveCompany,verifyEmployer,holdEmployer,toggleSuspend,
+    publishJob,toggleJobStatus,flagJob,setPipelineJob:setPipelineJobFn,saveCompany,verifyEmployer,holdEmployer,toggleSuspend,eraseUser,
     editBlog,editTraining,saveBlog,saveTraining,deleteBlog,deleteTraining,toggleBlogStatus,toggleTrainingStatus,
     enrol,confirmPaidEnrol,advanceTraining,paidTrainings,newCv,editCv,saveCv,duplicateCv,deleteCv,setDefaultCv,
     printCv,printCert,printInvoice,exportApplicants,exportLog,exportUsers,exportEmployers,share,choosePlan,updateCard,setSetting,
