@@ -206,6 +206,7 @@ export function serializeHrEmployee(row) {
     dept: rest.dept, title: rest.title, hired: rest.hired, seed: rest.seed, phone: rest.phone,
     city: rest.city, prov: rest.prov, salary: rest.salary, birthDate: rest.birth_date, manager: rest.manager,
     skills: JSON.parse(rest.skills_json || "[]"), badges: JSON.parse(rest.badges_json || "[]"),
+    certifications: JSON.parse(rest.certifications_json || "[]"),
     status: rest.status, terminatedAt: rest.terminated_at,
     visibility: JSON.parse(rest.visibility_json || "{}"),
     joinedDate: rest.hired,

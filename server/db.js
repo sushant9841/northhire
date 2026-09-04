@@ -246,7 +246,7 @@ CREATE TABLE IF NOT EXISTS hr_employees (
   role TEXT NOT NULL DEFAULT 'employee',
   dept TEXT, title TEXT, hired TEXT, seed INTEGER DEFAULT 0,
   phone TEXT, city TEXT, prov TEXT, salary REAL, birth_date TEXT,
-  manager TEXT, skills_json TEXT DEFAULT '[]', badges_json TEXT DEFAULT '[]',
+  manager TEXT, skills_json TEXT DEFAULT '[]', badges_json TEXT DEFAULT '[]', certifications_json TEXT DEFAULT '[]',
   status TEXT NOT NULL DEFAULT 'active',
   terminated_at TEXT,
   visibility_json TEXT DEFAULT '{}',

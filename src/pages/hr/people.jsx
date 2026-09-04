@@ -3,7 +3,7 @@ import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C, SH } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
-import { Btn, Card, Tag, Field, Input, Sel, Area, Banner, Modal, SmartPortrait, Empty, Stat, ConfirmDialog, usePagination, Pagination, TH_CLASS, TD_CLASS } from "../../design/primitives.jsx";
+import { Btn, Card, Tag, Field, Input, Sel, Area, Banner, Modal, SmartPortrait, Empty, Stat, ConfirmDialog, Lbl, usePagination, Pagination, TH_CLASS, TD_CLASS } from "../../design/primitives.jsx";
 import { _fmtDate } from "../../helpers/utils.js";
 import { HR_ROLES } from "../../store/seed/hrCompanySettings.js";
 import { HR_DEPARTMENTS } from "../../store/seed/hrDepartments.js";
@@ -326,8 +326,11 @@ function HrPeople_Manage(){
       return;
     }
     if(!(Number(editing.salary)>0)){A.toast("Enter a salary greater than $0.","danger");return;}
-    A.updateEmp(editing.id,{name:editing.name,title:editing.title,role:editing.role,dept:editing.dept,manager:editing.manager||null,phone:editing.phone,salary:editing.salary});
+    A.updateEmp(editing.id,{name:editing.name,title:editing.title,role:editing.role,dept:editing.dept,manager:editing.manager||null,phone:editing.phone,salary:editing.salary,certifications:editing.certifications||[]});
     setEditing(null);};
+  const addCert=()=>setEditing(p=>({...p,certifications:[...(p.certifications||[]),{name:"",issued:"",expires:""}]}));
+  const updateCert=(i,patch)=>setEditing(p=>({...p,certifications:p.certifications.map((c,j)=>j===i?{...c,...patch}:c)}));
+  const removeCert=i=>setEditing(p=>({...p,certifications:p.certifications.filter((_,j)=>j!==i)}));
 
   return <div>
     <div className="flex justify-between items-center mb-4 flex-wrap gap-2.5">
@@ -412,6 +415,26 @@ function HrPeople_Manage(){
           </Sel></Field>
           <Field label="Phone"><Input value={editing.phone||""} onChange={e=>setEditing({...editing,phone:e.target.value})}/></Field>
           <Field label="Annual salary (CAD)"><Input type="number" value={editing.salary||0} onChange={e=>setEditing({...editing,salary:Number(e.target.value)||0})}/></Field>
+        </div>
+        <div>
+          <div className="flex justify-between items-center mb-2">
+            <Lbl>Certifications</Lbl>
+            <Btn kind="ghost" size="xs" icon="plus" onClick={addCert}>Add</Btn>
+          </div>
+          {(editing.certifications||[]).length===0
+            ? <div className="text-xs text-text-3">No certifications on file.</div>
+            : <div className="flex flex-col gap-2">
+                {editing.certifications.map((c,i)=>{const expired=c.expires&&new Date(c.expires)<new Date();
+                  const soon=c.expires&&!expired&&(new Date(c.expires)-Date.now())<30*864e5;
+                  return <div key={i} className={`grid gap-2 items-center ${mob?"grid-cols-1":""}`} style={{gridTemplateColumns:mob?undefined:"1.3fr 1fr 1fr auto"}}>
+                    <Input value={c.name} onChange={e=>updateCert(i,{name:e.target.value})} placeholder="e.g. Red Seal, WHMIS"/>
+                    <Input type="date" value={c.issued||""} onChange={e=>updateCert(i,{issued:e.target.value})}/>
+                    <Input type="date" value={c.expires||""} invalid={expired} onChange={e=>updateCert(i,{expires:e.target.value})}/>
+                    <div className="flex gap-1.5 items-center">
+                      {expired&&<Tag tone="danger" sm>Expired</Tag>}
+                      {soon&&<Tag tone="warn" sm>Expiring soon</Tag>}
+                      <Btn kind="ghost" size="xs" icon="trash" onClick={()=>removeCert(i)}/></div></div>;})}
+              </div>}
         </div>
         <div className="flex gap-2.5 justify-end">
           <Btn kind="ghost" onClick={()=>setEditing(null)}>Cancel</Btn>

@@ -1665,6 +1665,26 @@ export function HrReports(){
           </div>;})}
       </Card>
     </div>
+    {(()=>{
+      const now=Date.now();
+      const withCert=all.flatMap(e=>(e.certifications||[]).filter(c=>c.expires).map(c=>({...c,emp:e})));
+      const expiringSoon=withCert.filter(c=>{const t=new Date(c.expires).getTime(); return t>=now&&t-now<=60*864e5;}).sort((a,b)=>new Date(a.expires)-new Date(b.expires));
+      const expired=withCert.filter(c=>new Date(c.expires).getTime()<now);
+      if(!expiringSoon.length&&!expired.length)return null;
+      return <Card pad={mob?20:24} style={{borderRadius:14,marginTop:16}}>
+        <Lbl>Certifications expiring soon</Lbl>
+        <div className="flex flex-col gap-2">
+          {[...expired.map(c=>({...c,status:"expired"})),...expiringSoon.map(c=>({...c,status:"soon"}))].map((c,i)=>
+            <div key={i} className="flex justify-between items-center py-2.5 px-3 bg-bg rounded-xl">
+              <div className="flex gap-2.5 items-center">
+                <SmartPortrait seed={c.emp.seed} size={28} radius={7}/>
+                <div><div className="text-sm font-semibold text-text">{c.emp.name}</div>
+                  <div className="text-xs text-text-3">{c.name}</div></div></div>
+              <Tag tone={c.status==="expired"?"danger":"warn"} sm>{c.status==="expired"?"Expired":"Expires"} {new Date(c.expires).toLocaleDateString("en-CA")}</Tag>
+            </div>)}
+        </div>
+      </Card>;
+    })()}
     <Card pad={mob?20:24} style={{borderRadius:14,marginTop:16}}>
       <Lbl>Audit log — salary, role, payroll &amp; badge changes</Lbl>
       {A.hrAuditLog.length===0?<Empty icon="shield" title="No audited changes yet" body="Salary changes, role changes, payroll runs, and badge grants/removals are recorded here as they happen."/>
