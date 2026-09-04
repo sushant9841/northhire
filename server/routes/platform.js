@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, nextId } from "../db.js";
+import { db, nextId, sqlTime } from "../db.js";
 import { requireAuth, requireRole } from "../auth.js";
 
 export const platformRouter = Router();
@@ -33,7 +33,7 @@ platformRouter.patch("/settings", requireAuth, requireRole("admin"), (req, res) 
 
 platformRouter.get("/activity", requireAuth, requireRole("admin"), (req, res) => {
   const rows = db.prepare("SELECT * FROM activity_log ORDER BY created_at DESC LIMIT 1000").all();
-  res.json({ activity: rows.map(r => ({ id: r.id, action: r.action, text: r.text, icon: r.icon, actor: r.actor, at: r.created_at })) });
+  res.json({ activity: rows.map(r => ({ id: r.id, action: r.action, text: r.text, icon: r.icon, actor: r.actor, at: sqlTime(r.created_at).getTime() })) });
 });
 platformRouter.post("/activity", requireAuth, (req, res) => {
   const { action, text, icon } = req.body || {};
@@ -48,7 +48,7 @@ platformRouter.post("/activity", requireAuth, (req, res) => {
    necessarily signed in. ─── */
 function serializeContactMessage(row) {
   if (!row) return null;
-  return { id: row.id, name: row.name, email: row.email, topic: row.topic, message: row.message, status: row.status, at: new Date(row.created_at).getTime() };
+  return { id: row.id, name: row.name, email: row.email, topic: row.topic, message: row.message, status: row.status, at: sqlTime(row.created_at).getTime() };
 }
 platformRouter.post("/contact", (req, res) => {
   const { name, email, topic, message } = req.body || {};

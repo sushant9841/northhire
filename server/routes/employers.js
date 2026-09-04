@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, nextId } from "../db.js";
+import { db, nextId, sqlTime } from "../db.js";
 import { requireAuth, requireRole } from "../auth.js";
 import { serializeEmployer } from "../serialize.js";
 
@@ -22,7 +22,7 @@ employersRouter.get("/", (req, res) => {
 /* Must come before GET /:id, or "candidate-notes" would itself be matched as an :id. */
 function serializeCandidateNote(row) {
   if (!row) return null;
-  return { candidate: row.candidate_id, note: row.note, tags: JSON.parse(row.tags_json || "[]"), updatedAt: new Date(row.created_at).getTime() };
+  return { candidate: row.candidate_id, note: row.note, tags: JSON.parse(row.tags_json || "[]"), updatedAt: sqlTime(row.created_at).getTime() };
 }
 employersRouter.get("/candidate-notes", requireAuth, requireRole("employer"), (req, res) => {
   const rows = db.prepare("SELECT * FROM candidate_notes WHERE employer_id = ?").all(req.user.employer_id);

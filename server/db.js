@@ -201,10 +201,10 @@ CREATE TABLE IF NOT EXISTS outbox (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE TABLE IF NOT EXISTS reset_codes (
-  email TEXT PRIMARY KEY, code TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  email TEXT PRIMARY KEY, code TEXT, attempts INTEGER DEFAULT 0, created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE TABLE IF NOT EXISTS login_2fa_codes (
-  email TEXT PRIMARY KEY, code TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  email TEXT PRIMARY KEY, code TEXT, attempts INTEGER DEFAULT 0, created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE TABLE IF NOT EXISTS contact_messages (
   id TEXT PRIMARY KEY,
@@ -442,4 +442,19 @@ CREATE TABLE IF NOT EXISTS staffing_placements (
 export function nextId(prefix, table) {
   const row = db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get();
   return `${prefix}${Number(row.n) + 1}_${Date.now().toString(36)}`;
+}
+
+/* SQLite's datetime('now') (and CURRENT_TIMESTAMP) return "YYYY-MM-DD HH:MM:SS" in UTC with no
+   timezone marker. JS's Date constructor treats a string in that shape as LOCAL time, not UTC -
+   on any server whose local time isn't UTC, every `new Date(row.created_at)` silently drifts by
+   the server's UTC offset, breaking real elapsed-time math (expiry windows, cooldowns, "N days
+   ago") even though it looks fine on a UTC machine. Every place that parses a datetime()-sourced
+   column for arithmetic or display should go through this instead of a bare `new Date(...)`.
+   (A plain `date('now')` column like "2026-09-04" has no time part and isn't affected - ISO
+   date-only strings are already parsed as UTC per spec.) */
+export function sqlTime(s) {
+  if (!s) return null;
+  if (!/[ T]\d{2}:\d{2}/.test(s)) return new Date(s); // date-only ("2026-09-18") - already correctly UTC per spec, untouched
+  if (/Z$|[+-]\d{2}:?\d{2}$/.test(s)) return new Date(s); // already has an explicit offset (e.g. JS toISOString())
+  return new Date(s.replace(" ", "T") + "Z");
 }

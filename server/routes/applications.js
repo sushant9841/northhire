@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, nextId } from "../db.js";
+import { db, nextId, sqlTime } from "../db.js";
 import { requireAuth, requireRole } from "../auth.js";
 import { serializeApplication } from "../serialize.js";
 
@@ -146,7 +146,7 @@ applicationsRouter.patch("/:id/withdraw", requireAuth, requireRole("seeker"), (r
 applicationsRouter.patch("/:id/restore", requireAuth, requireRole("seeker"), (req, res) => {
   const app = loadOwnedApplication(req.params.id, req, res, "seeker");
   if (!app) return;
-  if (!app.withdrawn_at || Date.now() - new Date(app.withdrawn_at).getTime() > 7 * 24 * 60 * 60 * 1000) {
+  if (!app.withdrawn_at || Date.now() - sqlTime(app.withdrawn_at).getTime() > 7 * 24 * 60 * 60 * 1000) {
     return res.status(400).json({ error: "This application can no longer be restored (past the 7-day window)." });
   }
   const restoredStage = app.previous_stage || "Applied";

@@ -1,13 +1,18 @@
+import { sqlTime } from "./db.js";
+
 // Real created_at/deadline_date timestamps replace the frontend seed data's frozen
 // "2 days ago" / dl-day-count strings, which never advanced once written - the same
 // "fake historical data" gap the productionization audit flagged repeatedly. Here the
 // display text is computed fresh on every read, so it's always actually correct.
+// (sqlTime, not a bare `new Date`, because SQLite's datetime('now') columns are naive UTC
+// strings with no timezone marker - the JS Date constructor would otherwise silently parse
+// them as local time and drift every comparison by the server's UTC offset.)
 function daysBetween(a, b) {
   return Math.round((b.getTime() - a.getTime()) / 86400000);
 }
 
 export function relativeDaysAgo(isoDate) {
-  const d = daysBetween(new Date(isoDate), new Date());
+  const d = daysBetween(sqlTime(isoDate), new Date());
   if (d <= 0) return "Today";
   if (d === 1) return "1 day ago";
   return `${d} days ago`;
@@ -15,13 +20,13 @@ export function relativeDaysAgo(isoDate) {
 
 export function daysUntil(isoDate) {
   if (!isoDate) return null;
-  return daysBetween(new Date(), new Date(isoDate));
+  return daysBetween(new Date(), sqlTime(isoDate));
 }
 
 // Finer-grained relative time for things stamped with a real timestamp shown at
 // minute/hour granularity (notifications) rather than day granularity (jobs/applications).
 export function relativeTime(isoDate) {
-  const ms = Date.now() - new Date(isoDate).getTime();
+  const ms = Date.now() - sqlTime(isoDate).getTime();
   const min = Math.floor(ms / 60000);
   if (min < 1) return "Just now";
   if (min < 60) return `${min} minute${min === 1 ? "" : "s"} ago`;
@@ -52,7 +57,7 @@ export function serializeJob(row) {
     dlDate: row.deadline_date,
     daysLeft: daysUntil(row.deadline_date),
     posted: relativeDaysAgo(row.created_at),
-    createdAt: new Date(row.created_at).getTime(),
+    createdAt: sqlTime(row.created_at).getTime(),
     views: row.views,
     urgent: !!row.urgent,
     featured: !!row.featured,
@@ -101,7 +106,7 @@ export function serializeApplication(row) {
     stage: row.stage,
     note: row.note,
     at: relativeDaysAgo(row.created_at),
-    createdAt: new Date(row.created_at).getTime(),
+    createdAt: sqlTime(row.created_at).getTime(),
     avail: row.availability,
     expect: row.pay_expectation,
     letter: row.cover_letter,
@@ -119,7 +124,7 @@ export function serializeBlog(row) {
   return {
     id: row.id, title: row.title, cat: row.cat, scene: row.scene, tone: row.tone,
     mins: row.mins, author: row.author, authorSeed: row.author_seed,
-    date: new Date(row.created_at).toLocaleDateString("en-CA", { day: "numeric", month: "short", year: "numeric" }),
+    date: sqlTime(row.created_at).toLocaleDateString("en-CA", { day: "numeric", month: "short", year: "numeric" }),
     excerpt: row.excerpt, body: JSON.parse(row.body_json || "[]"),
     owner: row.owner_employer_id || "admin",
     status: row.status, views: row.views, featured: !!row.featured,
@@ -155,24 +160,24 @@ export function serializeSavedSearch(row) {
     cats: JSON.parse(row.cats_json || "[]"), types: JSON.parse(row.types_json || "[]"),
     modes: JSON.parse(row.modes_json || "[]"), exps: JSON.parse(row.exps_json || "[]"),
     prov: row.prov, minPay: row.min_pay, alerts: !!row.alerts,
-    createdAt: new Date(row.created_at).getTime(), lastRun: row.last_run ? new Date(row.last_run).getTime() : null,
+    createdAt: sqlTime(row.created_at).getTime(), lastRun: row.last_run ? sqlTime(row.last_run).getTime() : null,
     lastCount: row.last_count,
   };
 }
 export function serializeMessage(row) {
   if (!row) return null;
   return { id: row.id, from: row.from_user_id, to: row.to_user_id, job: row.job_id, text: row.text,
-    read: !!row.read, at: new Date(row.created_at).getTime() };
+    read: !!row.read, at: sqlTime(row.created_at).getTime() };
 }
 export function serializeInterview(row) {
   if (!row) return null;
   return { id: row.id, app: row.application_id, candidate: row.candidate_id, job: row.job_id, employer: row.employer_id,
-    when: row.when_text, mode: row.mode, notes: row.notes, status: row.status, createdAt: new Date(row.created_at).getTime() };
+    when: row.when_text, mode: row.mode, notes: row.notes, status: row.status, createdAt: sqlTime(row.created_at).getTime() };
 }
 export function serializeReview(row) {
   if (!row) return null;
   return { id: row.id, employer: row.employer_id, user: row.user_id, rating: row.rating, text: row.text,
-    anon: !!row.anon, at: new Date(row.created_at).getTime() };
+    anon: !!row.anon, at: sqlTime(row.created_at).getTime() };
 }
 export function serializeNotification(row) {
   if (!row) return null;
@@ -182,7 +187,7 @@ export function serializeNotification(row) {
 export function serializeReference(row) {
   if (!row) return null;
   return { id: row.id, user: row.user_id, name: row.name, relation: row.relation, email: row.email, phone: row.phone,
-    addedAt: new Date(row.created_at).getTime() };
+    addedAt: sqlTime(row.created_at).getTime() };
 }
 export function serializePaymentMethod(row) {
   if (!row) return null;
@@ -211,13 +216,13 @@ export function serializeHrAttendance(row) {
 export function serializeHrLeave(row) {
   if (!row) return null;
   return { id: row.id, employee: row.employee_id, type: row.type, from: row.from_date, to: row.to_date, days: row.days,
-    status: row.status, reason: row.reason, approvedBy: row.approved_by, requestedAt: new Date(row.requested_at).getTime() };
+    status: row.status, reason: row.reason, approvedBy: row.approved_by, requestedAt: sqlTime(row.requested_at).getTime() };
 }
 export function serializeHrTask(row) {
   if (!row) return null;
   return { id: row.id, title: row.title, assignee: row.assignee, assignedBy: row.assigned_by, due: row.due,
     priority: row.priority, status: row.status, tags: JSON.parse(row.tags_json || "[]"),
-    created: new Date(row.created_at).getTime(), completed: row.completed_at ? new Date(row.completed_at).getTime() : null };
+    created: sqlTime(row.created_at).getTime(), completed: row.completed_at ? sqlTime(row.completed_at).getTime() : null };
 }
 export function serializeHrEvent(row) {
   if (!row) return null;
@@ -238,9 +243,9 @@ export function serializeHrExpense(row) {
   if (!row) return null;
   return { id: row.id, employee: row.employee_id, category: row.category, merchant: row.merchant, amount: row.amount,
     currency: row.currency, description: row.description, receiptUrl: row.receipt_url, date: row.date,
-    status: row.status, submitted: new Date(row.submitted_at).getTime(), approvedBy: row.approved_by,
-    approvedAt: row.approved_at ? new Date(row.approved_at).getTime() : null,
-    paidAt: row.paid_at ? new Date(row.paid_at).getTime() : null,
+    status: row.status, submitted: sqlTime(row.submitted_at).getTime(), approvedBy: row.approved_by,
+    approvedAt: row.approved_at ? sqlTime(row.approved_at).getTime() : null,
+    paidAt: row.paid_at ? sqlTime(row.paid_at).getTime() : null,
     rejectReason: row.reject_reason, reimburseVia: row.reimburse_via };
 }
 export function serializeHrPayrun(row) {
@@ -253,15 +258,15 @@ export function serializeHrPayrun(row) {
 export function serializeHrChat(row) {
   if (!row) return null;
   return { id: row.id, kind: row.kind, name: row.name, members: row.members, about: row.about,
-    createdBy: row.created_by, createdAt: new Date(row.created_at).getTime() };
+    createdBy: row.created_by, createdAt: sqlTime(row.created_at).getTime() };
 }
 export function serializeHrChatMessage(row) {
   if (!row) return null;
-  return { id: row.id, chat: row.chat_id, from: row.from_employee, text: row.text, at: new Date(row.created_at).getTime() };
+  return { id: row.id, chat: row.chat_id, from: row.from_employee, text: row.text, at: sqlTime(row.created_at).getTime() };
 }
 export function serializeHrAuditEntry(row) {
   if (!row) return null;
-  return { id: row.id, actor: row.actor_employee_id, action: row.action, detail: row.detail, at: new Date(row.created_at).getTime() };
+  return { id: row.id, actor: row.actor_employee_id, action: row.action, detail: row.detail, at: sqlTime(row.created_at).getTime() };
 }
 
 /* ═══════════════ STAFFING AGENCY ═══════════════ */
@@ -284,7 +289,7 @@ export function serializeStaffingClient(row) {
 }
 export function serializeJobOrder(row) {
   if (!row) return null;
-  return { id: row.id, client: row.client_id, createdAt: new Date(row.created_at).getTime(), status: row.status,
+  return { id: row.id, client: row.client_id, createdAt: sqlTime(row.created_at).getTime(), status: row.status,
     urgency: row.urgency, title: row.title, positions: row.positions, filled: row.filled,
     location: row.location, province: row.province, startDate: row.start_date, endDate: row.end_date,
     ongoing: !!row.ongoing, shiftPattern: row.shift_pattern, overtimeAvailable: !!row.overtime_available,
@@ -303,8 +308,8 @@ export function serializeStaffingTimesheet(row) {
   if (!row) return null;
   return { id: row.id, assignment: row.assignment_id, worker: row.worker_id, weekStart: row.week_start, status: row.status,
     hours: JSON.parse(row.hours_json || "{}"), otHours: row.ot_hours,
-    submittedAt: row.submitted_at ? new Date(row.submitted_at).getTime() : null,
-    approvedAt: row.approved_at ? new Date(row.approved_at).getTime() : null,
+    submittedAt: row.submitted_at ? sqlTime(row.submitted_at).getTime() : null,
+    approvedAt: row.approved_at ? sqlTime(row.approved_at).getTime() : null,
     approvedBy: row.approved_by, notes: row.notes };
 }
 export function serializeStaffingPayrun(row) {
@@ -323,11 +328,11 @@ export function serializeWsibClaim(row) {
   if (!row) return null;
   return { id: row.id, worker: row.worker_id, assignment: row.assignment_id, claimNumber: row.claim_number,
     filedDate: row.filed_date, incidentDate: row.incident_date, description: row.description,
-    status: row.status, notes: row.notes, createdAt: new Date(row.created_at).getTime() };
+    status: row.status, notes: row.notes, createdAt: sqlTime(row.created_at).getTime() };
 }
 export function serializeStaffingAuditEntry(row) {
   if (!row) return null;
-  return { id: row.id, actor: row.actor_staff_id, action: row.action, detail: row.detail, at: new Date(row.created_at).getTime() };
+  return { id: row.id, actor: row.actor_staff_id, action: row.action, detail: row.detail, at: sqlTime(row.created_at).getTime() };
 }
 export function serializePlacement(row) {
   if (!row) return null;
