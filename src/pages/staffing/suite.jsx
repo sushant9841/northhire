@@ -840,6 +840,7 @@ export function AgencyPayroll(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [showRun,setShowRun]=useState(false);
   const [finalizing,setFinalizing]=useState(null);
+  const [reversing,setReversing]=useState(null); const [reverseReason,setReverseReason]=useState("");
   /* The run only ever sweeps a rolling 14-day window — the "ready" count has to use the same
      window, or an approved timesheet older than that shows as ready forever but never actually
      gets paid. */
@@ -879,8 +880,11 @@ export function AgencyPayroll(){
           <td className={`${TD_CLS} text-sm text-text`}>{p.totalHours}</td>
           <td className={`${TD_CLS} text-sm text-text`}>${p.totalGross.toLocaleString()}</td>
           <td className={`${TD_CLS} text-sm text-brand font-semibold`}>${p.totalNet.toLocaleString()}</td>
-          <td className={TD_CLS}><Tag tone={p.status==="paid"?"ok":"warn"} sm>{p.status}</Tag></td>
-          <td className={TD_CLS}>{p.status==="pending"&&<Btn kind="primary" size="xs" onClick={()=>setFinalizing(p)}>Finalize</Btn>}</td>
+          <td className={TD_CLS}><Tag tone={p.status==="paid"?"ok":p.status==="reversed"?"neutral":"warn"} sm>{p.status}</Tag></td>
+          <td className={TD_CLS}>
+            {p.status==="pending"&&<Btn kind="primary" size="xs" onClick={()=>setFinalizing(p)}>Finalize</Btn>}
+            {p.status==="paid"&&<Btn kind="dangerSoft" size="xs" onClick={()=>{setReversing(p);setReverseReason("");}}>Reverse</Btn>}
+          </td>
         </tr>)}
         {A.staffingPayruns.length===0&&<tr><td colSpan={8} className="p-5"><Empty icon="wallet" title="No payroll runs yet" body="Run payroll once approved timesheets are ready."/></td></tr>}
         </tbody>
@@ -919,8 +923,18 @@ export function AgencyPayroll(){
     <ConfirmDialog open={!!finalizing} onClose={()=>setFinalizing(null)} kind="primary" confirmLabel="Finalize run"
       title={`Finalize the ${finalizing?.periodStart} → ${finalizing?.periodEnd} run?`}
       onConfirm={()=>A.finalizeStaffingPayrun(finalizing.id)}>
-      This marks the run and its {finalizing?.workers} worker payment{finalizing?.workers===1?"":"s"} as paid. This can't be undone from here.
+      This marks the run and its {finalizing?.workers} worker payment{finalizing?.workers===1?"":"s"} as paid. It can be reversed later from this page if needed.
     </ConfirmDialog>
+    <Modal open={!!reversing} onClose={()=>setReversing(null)} title={`Reverse the ${reversing?.periodStart} → ${reversing?.periodEnd} run?`}>
+      <div className="flex flex-col gap-3.5">
+        <Field label="Reason for reversal" required hint="Recorded in the staffing audit log.">
+          <Area rows={2} value={reverseReason} onChange={e=>setReverseReason(e.target.value)} placeholder="e.g. Finalized against the wrong period"/></Field>
+        <div className="flex gap-2.5 justify-end">
+          <Btn kind="ghost" onClick={()=>setReversing(null)}>Cancel</Btn>
+          <Btn kind="danger" disabled={!reverseReason.trim()} onClick={()=>{A.reverseStaffingPayrun(reversing.id,reverseReason.trim());setReversing(null);}}>Confirm reversal</Btn>
+        </div>
+      </div>
+    </Modal>
   </div>;
 }
 

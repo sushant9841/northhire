@@ -929,7 +929,13 @@ export function useStore(){
     const eligibilityCounts={};
     myApps.forEach(a=>{const el=person(a.user)?.eligible; const key=ELIG_LABEL[el]||"Not stated"; eligibilityCounts[key]=(eligibilityCounts[key]||0)+1;});
     const eligibilityMix=Object.entries(eligibilityCounts).map(([label,count])=>({label,count})).sort((a,b)=>b.count-a.count);
-    return {totalJobs:myJobs.length,liveJobs:myJobs.filter(j=>j.status==="live").length,totalViews,totalApps,conversion,byStage,topJob,avgScore,applicationTrend,eligibilityMix};
+    const byJob=myJobs.map(j=>{
+      const jApps=applications.filter(a=>a.job===j.id);
+      return {id:j.id,title:j.t,status:j.status,views:j.views,applications:jApps.length,
+        conversion:j.views?Math.min(100,Math.round((jApps.length/j.views)*100)):0,
+        offers:jApps.filter(a=>a.stage==="Offer").length};
+    }).sort((a,b)=>b.applications-a.applications);
+    return {totalJobs:myJobs.length,liveJobs:myJobs.filter(j=>j.status==="live").length,totalViews,totalApps,conversion,byStage,topJob,avgScore,applicationTrend,eligibilityMix,byJob};
   };
 
   /* --- fuzzy / synonym expansion for search queries --- */
@@ -1163,6 +1169,16 @@ export function useStore(){
       setJobs(l=>l.map(x=>x.id===id?mapApiJob(updated):x));
       log("job.status",`${nextStatus==="paused"?"Paused":"Reopened"} "${j.t}"`,"briefcase");
     }catch(err){toast(err.message,"danger");}};
+  const reportJob=async(id,reason)=>{
+    try{await api.post(`/jobs/${id}/report`,{reason}); return {ok:true};}
+    catch(err){return {ok:false,msg:err.message};}};
+  const [jobReports,setJobReports]=useState([]);
+  const loadJobReports=async()=>{
+    try{const {reports}=await api.get("/jobs/reports");setJobReports(reports);}
+    catch(err){toast(err.message,"danger");}};
+  const decideJobReport=async(id,status)=>{
+    try{await api.patch(`/jobs/reports/${id}`,{status});setJobReports(l=>l.map(r=>r.id===id?{...r,status}:r));}
+    catch(err){toast(err.message,"danger");}};
   const flagJob=async(id,reason)=>{
     const j=job(id);
     try{
@@ -1627,7 +1643,7 @@ export function useStore(){
     logout,completeSignup,saveProfile,deleteAccount,exportData,setUserSetting,
     toggleSave,followEmployer,openJob,openEmployer,openBlog,openTraining,openCandidate,
     beginApply,submitApply,withdraw,acceptOffer,moveApp,rejectApp,
-    publishJob,approveJob,toggleJobStatus,flagJob,setPipelineJob:setPipelineJobFn,saveCompany,verifyEmployer,holdEmployer,toggleSuspend,eraseUser,
+    publishJob,approveJob,toggleJobStatus,flagJob,reportJob,jobReports,loadJobReports,decideJobReport,setPipelineJob:setPipelineJobFn,saveCompany,verifyEmployer,holdEmployer,toggleSuspend,eraseUser,
     team,loadTeam,inviteTeammate,revokeInvite,removeTeammate,getInvite,acceptInvite,inviteToken,
     messageTemplates,saveMessageTemplate,deleteMessageTemplate,
     editBlog,editTraining,saveBlog,saveTraining,deleteBlog,deleteTraining,toggleBlogStatus,toggleTrainingStatus,

@@ -108,6 +108,7 @@ export function SearchPage(){
           <div className="flex-[1_1_180px] min-w-0"><Input icon="pin" placeholder="City or province" value={where} onChange={e=>setWhere(e.target.value)} style={{border:"none",boxShadow:"none",fontSize:15}}/></div>
           {mob&&<Btn kind="outline" icon="sliders" onClick={()=>setPanel(true)} full>Filters{n?` (${n})`:""}</Btn>}
         </div>
+        <div className="text-xs text-text-3 mt-2 max-w-3xl mx-auto text-center">Tip: add <strong>-word</strong> to exclude results, e.g. "electrician -apprentice"</div>
       </div>
     </section>
 

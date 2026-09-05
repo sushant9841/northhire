@@ -1313,6 +1313,32 @@ export function EmpAnalyticsPage(){
               <Btn kind="outline" size="sm" onClick={()=>{A.setPipelineJob(stats.topJob.j.id);A.go("empPipeline");}}>Open pipeline</Btn></Card>}
           </div>
         </div>
+        {stats.byJob?.length>0&&<Card pad={0} style={{borderRadius:20,marginTop:16,overflow:"hidden"}}>
+          <div className="flex justify-between items-center py-4 px-6 border-b border-line-soft">
+            <Lbl style={{margin:0}}>Per-job performance</Lbl>
+            <Btn kind="outline" size="sm" icon="download" onClick={()=>{
+              const rows=[["Job","Status","Views","Applications","View → apply","Offers made"],
+                ...stats.byJob.map(j=>[j.title,j.status,j.views,j.applications,`${j.conversion}%`,j.offers])];
+              const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
+              const blob=new Blob([csv],{type:"text/csv"}); const url=URL.createObjectURL(blob);
+              const a=document.createElement("a"); a.href=url; a.download="job-performance.csv"; a.click(); URL.revokeObjectURL(url);
+            }}>Export CSV</Btn>
+          </div>
+          <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:600}}>
+            <thead><tr className="border-b-2 border-line text-left">
+              {["Job","Status","Views","Applications","View → apply","Offers"].map(h=>
+                <th key={h} className="py-2.5 px-4 text-xs font-bold text-text-3 tracking-wide uppercase">{h}</th>)}
+            </tr></thead>
+            <tbody>{stats.byJob.map(j=><tr key={j.id} className="border-b border-line-soft hover:bg-bg cursor-pointer" onClick={()=>A.openJob(j.id)}>
+              <td className="py-2.5 px-4 text-sm font-semibold text-text">{j.title}</td>
+              <td className="py-2.5 px-4"><Tag tone={jobTone(j.status)} sm>{jobStatusLabel(j.status)}</Tag></td>
+              <td className="py-2.5 px-4 text-sm text-text-2">{j.views.toLocaleString()}</td>
+              <td className="py-2.5 px-4 text-sm text-text-2">{j.applications}</td>
+              <td className="py-2.5 px-4 text-sm text-text-2">{j.conversion}%</td>
+              <td className="py-2.5 px-4 text-sm text-text-2">{j.offers}</td>
+            </tr>)}</tbody>
+          </table></div>
+        </Card>}
         {stats.eligibilityMix?.length>0&&<Card pad={mob?24:32} style={{borderRadius:20,marginTop:16}}>
           <Lbl>Applicant work-authorization mix</Lbl>
           <p className="text-sm text-text-2 leading-snug mt-1 mb-4">From each applicant's own eligibility answer at signup — for compliance reporting, not a hiring filter.</p>

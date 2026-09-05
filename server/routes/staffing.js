@@ -381,6 +381,18 @@ staffingRouter.patch("/payruns/:id/finalize", requireAgencyAuth, (req, res) => {
   logStaffingAudit(req.agencyStaff.id, "payroll_finalized", `Finalized staffing payroll ${run.period_start} → ${run.period_end} (${run.workers} workers, $${run.total_net?.toLocaleString()} net)`);
   res.json({ ok: true });
 });
+// Same reversal pattern established for HR payroll/invoices: only valid from 'paid', requires a
+// reason, flips to 'reversed', logs to the audit trail.
+staffingRouter.patch("/payruns/:id/reverse", requireAgencyAuth, (req, res) => {
+  const run = db.prepare("SELECT * FROM staffing_payruns WHERE id = ?").get(req.params.id);
+  if (!run) return res.status(404).json({ error: "Not found." });
+  if (run.status !== "paid") return res.status(400).json({ error: "Only a finalized (paid) payroll run can be reversed." });
+  const reason = (req.body?.reason || "").trim();
+  if (!reason) return res.status(400).json({ error: "A reason is required to reverse a finalized payroll run." });
+  db.prepare("UPDATE staffing_payruns SET status = 'reversed' WHERE id = ?").run(req.params.id);
+  logStaffingAudit(req.agencyStaff.id, "payroll_reversed", `Reversed staffing payroll ${run.period_start} → ${run.period_end} ($${run.total_net?.toLocaleString()} net): ${reason}`);
+  res.json({ ok: true });
+});
 
 /* ─── Invoicing ─── */
 staffingRouter.post("/invoices/generate", requireAgencyAuth, (req, res) => {

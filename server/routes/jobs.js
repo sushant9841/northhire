@@ -31,6 +31,15 @@ jobsRouter.get("/", (req, res) => {
   res.json({ jobs: rows.map(serializeJob) });
 });
 
+jobsRouter.get("/reports", requireAuth, requireRole("admin"), (req, res) => {
+  const rows = db.prepare(
+    `SELECT job_reports.*, jobs.title AS job_title, users.name AS reporter_name
+     FROM job_reports JOIN jobs ON jobs.id = job_reports.job_id LEFT JOIN users ON users.id = job_reports.reporter_id
+     ORDER BY job_reports.created_at DESC`
+  ).all();
+  res.json({ reports: rows.map(r => ({ id: r.id, job: r.job_id, jobTitle: r.job_title, reporterName: r.reporter_name || "—", reason: r.reason, status: r.status, at: r.created_at })) });
+});
+
 jobsRouter.get("/:id", (req, res) => {
   const row = db.prepare("SELECT * FROM jobs WHERE id = ?").get(req.params.id);
   if (!row) return res.status(404).json({ error: "Job not found." });
@@ -45,6 +54,24 @@ jobsRouter.post("/:id/view", (req, res) => {
   if (!row) return res.status(404).json({ error: "Job not found." });
   db.prepare("UPDATE jobs SET views = views + 1 WHERE id = ?").run(req.params.id);
   res.json({ views: row.views + 1 });
+});
+
+// Seekers can't set the admin-only `flagged` field directly (see PATCH /:id below) - this is
+// their own real reporting path, landing in a separate queue an admin actually reviews.
+jobsRouter.post("/:id/report", requireAuth, requireRole("seeker"), (req, res) => {
+  const row = db.prepare("SELECT * FROM jobs WHERE id = ?").get(req.params.id);
+  if (!row) return res.status(404).json({ error: "Job not found." });
+  const reason = (req.body?.reason || "").trim();
+  if (!reason) return res.status(400).json({ error: "Tell us what's wrong with this listing." });
+  const id = nextId("jr", "job_reports");
+  db.prepare("INSERT INTO job_reports (id, job_id, reporter_id, reason) VALUES (?, ?, ?, ?)").run(id, req.params.id, req.user.id, reason);
+  res.status(201).json({ ok: true });
+});
+jobsRouter.patch("/reports/:id", requireAuth, requireRole("admin"), (req, res) => {
+  const { status } = req.body || {};
+  if (!["open", "dismissed", "actioned"].includes(status)) return res.status(400).json({ error: "Invalid status." });
+  db.prepare("UPDATE job_reports SET status = ? WHERE id = ?").run(status, req.params.id);
+  res.json({ ok: true });
 });
 
 jobsRouter.post("/", requireAuth, requireRole("employer"), (req, res) => {

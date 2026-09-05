@@ -301,6 +301,11 @@ export function useStaffingStore(user){
     setStaffingPayruns(p=>p.map(x=>x.id===id?{...x,status:"paid"}:x));
     refreshStaffingAuditLog();
   };
+  const reverseStaffingPayrun=async(id,reason)=>{
+    await api.patch(`/staffing/payruns/${id}/reverse`,{reason});
+    setStaffingPayruns(p=>p.map(x=>x.id===id?{...x,status:"reversed"}:x));
+    refreshStaffingAuditLog();
+  };
 
   /* ─── Invoicing (agency-only) ─── */
   const generateStaffingInvoices=async(weekStart)=>{
@@ -385,7 +390,7 @@ export function useStaffingStore(user){
     createAssignment,endAssignment,
     upsertTimesheetDraft,submitTimesheet,approveTimesheet,rejectTimesheet,
     timesheetTotal,timesheetGross,timesheetBill,
-    runStaffingPayroll,finalizeStaffingPayrun,
+    runStaffingPayroll,finalizeStaffingPayrun,reverseStaffingPayrun,
     generateStaffingInvoices,markStaffingInvoicePaid,
     createPlacement,acceptPlacement,invoicePlacement,clawbackPlacement,
     upsertStaffingClient,signMsa,

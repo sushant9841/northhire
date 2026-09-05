@@ -73,18 +73,29 @@ authRouter.get("/check-email", (req, res) => {
   res.json({ exists: !!row });
 });
 
+const LOGIN_LOCKOUT_MAX_ATTEMPTS = 5;
+const LOGIN_LOCKOUT_WINDOW_MIN = 15;
 authRouter.post("/login", (req, res) => {
   const { email, password } = req.body || {};
   if (!email || !password) return res.status(400).json({ error: "Email and password are required." });
+  const emailLower = email.toLowerCase();
 
-  const user = db.prepare("SELECT * FROM users WHERE email = ?").get(email.toLowerCase());
+  const recentFails = db.prepare(
+    `SELECT COUNT(*) AS n FROM failed_logins WHERE email = ? AND created_at >= datetime('now', ?)`
+  ).get(emailLower, `-${LOGIN_LOCKOUT_WINDOW_MIN} minutes`).n;
+  if (recentFails >= LOGIN_LOCKOUT_MAX_ATTEMPTS) {
+    return res.status(429).json({ error: `Too many failed attempts — try again in ${LOGIN_LOCKOUT_WINDOW_MIN} minutes.` });
+  }
+
+  const user = db.prepare("SELECT * FROM users WHERE email = ?").get(emailLower);
   if (!user || !verifyPassword(password, user.password_hash, user.password_salt)) {
-    db.prepare("INSERT INTO failed_logins (id, email) VALUES (?, ?)").run(nextId("fl", "failed_logins"), email.toLowerCase());
+    db.prepare("INSERT INTO failed_logins (id, email) VALUES (?, ?)").run(nextId("fl", "failed_logins"), emailLower);
     return res.status(401).json({ error: "Incorrect email or password." });
   }
   if (user.suspended) {
     return res.status(403).json({ error: "This account has been suspended. Contact support for help." });
   }
+  db.prepare("DELETE FROM failed_logins WHERE email = ?").run(emailLower);
   const tf = db.prepare("SELECT * FROM two_factor WHERE user_id = ?").get(user.id);
   if (tf?.enabled) {
     const code = Math.floor(100000 + Math.random() * 900000).toString();

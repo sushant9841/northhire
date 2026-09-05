@@ -1,17 +1,19 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
-import { Btn, Tag, Ring, Empty, Lbl, Banner, Page, HERO_TIGHT } from "../../design/primitives.jsx";
+import { Btn, Tag, Ring, Empty, Lbl, Banner, Page, Modal, Field, Area, HERO_TIGHT } from "../../design/primitives.jsx";
 import { pay, payUnit, annual, dlText, money } from "../../helpers/utils.js";
-import { EmpMark, HiringTypeBadge } from "./cards.jsx";
+import { EmpMark, HiringTypeBadge, JobCard } from "./cards.jsx";
 
 export function JobDetailPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
+  const [reporting,setReporting]=useState(false); const [reportReason,setReportReason]=useState(""); const [reportSent,setReportSent]=useState(false);
   const job=A.job(A.jobId); if(!job) return <Page><Empty icon="briefcase" title="Job not found" body="This listing may have been closed or removed."
     action={<Btn kind="primary" onClick={()=>A.go("search")}>Browse jobs</Btn>}/></Page>;
   const e=A.emp(job.e); const applied=A.appliedJobIds.has(job.id); const score=A.score(job);
+  const relatedJobs=A.jobs.filter(j=>j.id!==job.id&&j.status==="live"&&(j.cat===job.cat||(j.city===job.city&&j.prov===job.prov))).slice(0,3);
   useEffect(()=>{A.loadEmployerReviews(e.id);},[e.id]);
   const employerReviews=A.reviews.filter(r=>r.employer===e.id);
   const Meta=({icon,k,v})=><div className="flex gap-3 items-start">
@@ -153,9 +155,35 @@ export function JobDetailPage(){
               {applied?"Application sent":"Apply for this role"}</Btn>
             <Btn kind="outline" size="lg" onClick={()=>A.toggleSave(job.id)} icon="bookmark">{A.saved.has(job.id)?"Saved":"Save for later"}</Btn>
           </div>
+          {A.user?.role==="seeker"&&<button type="button" onClick={()=>{setReportReason("");setReportSent(false);setReporting(true);}}
+            className="bg-transparent border-0 p-0 mt-4 text-xs text-text-3 cursor-pointer underline">Report this listing</button>}
         </div>
       </div>
+
+      {relatedJobs.length>0&&<div className={`max-w-site mx-auto ${mob?"px-4 pb-8":"px-8 pb-10"}`}>
+        <Lbl>Similar roles</Lbl>
+        <div className="grid gap-3.5 mt-2" style={{gridTemplateColumns:mob?"1fr":"repeat(auto-fill,minmax(280px,1fr))"}}>
+          {relatedJobs.map(j=><JobCard key={j.id} job={j}/>)}
+        </div>
+      </div>}
     </section>
+
+    {reporting&&<Modal onClose={()=>setReporting(false)} title="Report this listing">
+      {reportSent?<div className="text-center py-4">
+        <div className="text-2xl mb-2">✓</div>
+        <div className="text-sm text-text-2">Thanks — an administrator will review this listing.</div>
+      </div>:<div className="flex flex-col gap-3.5">
+        <Field label="What's wrong with this listing?" required>
+          <Area rows={3} value={reportReason} onChange={e=>setReportReason(e.target.value)} placeholder="e.g. This looks like a scam / the pay doesn't match what's advertised / discriminatory requirements"/></Field>
+        <div className="flex gap-2.5 justify-end">
+          <Btn kind="ghost" onClick={()=>setReporting(false)}>Cancel</Btn>
+          <Btn kind="danger" disabled={!reportReason.trim()} onClick={async()=>{
+            const r=await A.reportJob(job.id,reportReason.trim());
+            if(r.ok)setReportSent(true); else A.toast(r.msg,"danger");
+          }}>Submit report</Btn>
+        </div>
+      </div>}
+    </Modal>}
 
     {mob&&<div className="sticky bottom-0 bg-white/97 backdrop-blur-md border-t border-line py-3 px-4 flex gap-2.5 z-300">
       <Btn kind="outline" onClick={()=>A.toggleSave(job.id)} icon="bookmark" style={{flexShrink:0}}>{A.saved.has(job.id)?"Saved":"Save"}</Btn>

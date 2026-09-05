@@ -7,15 +7,21 @@ import { annual } from "./utils.js";
 export function matchJobsToFilters(jobs, filters, { expandQuery, emp }) {
   const { q = "", where = "", cats = [], types = [], modes = [], exps = [], prov = "", minPay = "" } = filters || {};
   let o = jobs.filter(j => j.status === "live");
-  const s = q.trim().toLowerCase(), w = where.trim().toLowerCase();
+  // A "-word" token excludes any job matching that word, same field set positive terms match
+  // against (e.g. "electrician -apprentice" hides apprentice-level electrician roles).
+  const excludeTerms = (q.match(/(?:^|\s)-(\S+)/g) || []).map(t => t.trim().slice(1).toLowerCase());
+  const qWithoutExcludes = q.replace(/(?:^|\s)-(\S+)/g, " ");
+  const s = qWithoutExcludes.trim().toLowerCase(), w = where.trim().toLowerCase();
+  const matchesTerm = (j, t) =>
+    j.t.toLowerCase().includes(t) ||
+    emp(j.e).name.toLowerCase().includes(t) ||
+    j.skills.some(k => k.toLowerCase().includes(t)) ||
+    CATM[j.cat].label.toLowerCase().includes(t);
   if (s) {
     const terms = expandQuery(s);
-    o = o.filter(j => terms.some(t =>
-      j.t.toLowerCase().includes(t) ||
-      emp(j.e).name.toLowerCase().includes(t) ||
-      j.skills.some(k => k.toLowerCase().includes(t)) ||
-      CATM[j.cat].label.toLowerCase().includes(t)));
+    o = o.filter(j => terms.some(t => matchesTerm(j, t)));
   }
+  if (excludeTerms.length) o = o.filter(j => !excludeTerms.some(t => matchesTerm(j, t)));
   if (w) o = o.filter(j => j.city.toLowerCase().includes(w) || j.prov.toLowerCase() === w ||
     (PCODE[where.trim()] && j.prov === PCODE[where.trim()]) || j.mode.toLowerCase().includes(w));
   if (cats.length) o = o.filter(j => cats.includes(j.cat));

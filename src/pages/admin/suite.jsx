@@ -278,6 +278,8 @@ export function AdmJobs(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [tab,setTab]=useState("all"); const [q,setQ]=useState(""); const [sel,setSel]=useState(new Set());
   const [flagging,setFlagging]=useState(null); const [flagReason,setFlagReason]=useState(""); const [bulkFlagging,setBulkFlagging]=useState(false);
+  useEffect(()=>{A.loadJobReports();},[]);
+  const openReports=A.jobReports.filter(r=>r.status==="open");
   const base=tab==="flagged"?A.jobs.filter(j=>j.flagged):tab==="review"?A.jobs.filter(j=>j.status==="review"):tab==="paused"?A.jobs.filter(j=>j.status==="paused"):A.jobs;
   const list=base.filter(j=>!q||j.t.toLowerCase().includes(q.toLowerCase())||A.emp(j.e).name.toLowerCase().includes(q.toLowerCase()));
   const pg=usePagination(list,20);
@@ -323,6 +325,25 @@ export function AdmJobs(){
             }}>{j.flagged?"Unflag":"Flag"}</Btn></div></div>;})}
       {list.length===0&&<div className="p-5"><Empty icon="search" title="Nothing matches that filter" body="Try a different search term or switch tabs."/></div>}</Card>
     <Pagination {...pg}/>
+
+    <Card style={{marginTop:20}}>
+      <H2 sub={`${openReports.length} open`}>Seeker-submitted reports</H2>
+      {A.jobReports.length===0?<div className="text-sm text-text-3 py-3 text-center">No reports submitted yet.</div>
+        :<div className="flex flex-col gap-2">
+          {A.jobReports.slice(0,20).map(r=><div key={r.id} className="flex gap-3 items-start py-3 border-b border-line-soft flex-wrap">
+            <div className="grow shrink basis-60 min-w-0">
+              <div className="text-sm font-semibold text-text">{r.jobTitle}</div>
+              <div className="text-xs text-text-3 mt-0.5">Reported by {r.reporterName} • {r.reason}</div>
+            </div>
+            <Tag tone={r.status==="open"?"warn":r.status==="actioned"?"danger":"neutral"} sm>{r.status}</Tag>
+            {r.status==="open"&&<div className="flex gap-1.5">
+              <Btn kind="outline" size="xs" onClick={()=>A.decideJobReport(r.id,"dismissed")}>Dismiss</Btn>
+              <Btn kind="dangerSoft" size="xs" onClick={()=>{const j=A.jobs.find(x=>x.id===r.job); if(j&&!j.flagged){setFlagging(j);setFlagReason(r.reason);} A.decideJobReport(r.id,"actioned");}}>Flag listing</Btn>
+            </div>}
+          </div>)}
+        </div>}
+    </Card>
+
     {flagging&&<Modal onClose={()=>setFlagging(null)} title={`Flag "${flagging.t}"?`}>
       <div className="flex flex-col gap-3.5">
         <Field label="Reason" required hint="Recorded in the activity log for accountability.">
