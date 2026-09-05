@@ -2,7 +2,9 @@ import crypto from "node:crypto";
 import { db } from "./db.js";
 
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
-const COOKIE_OPTS = { httpOnly: true, sameSite: "lax", maxAge: SESSION_TTL_MS };
+// `secure` is conditional on NODE_ENV rather than always-on because local dev runs over plain
+// HTTP - a hardcoded `secure:true` would silently break every login outside production.
+const COOKIE_OPTS = { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: SESSION_TTL_MS };
 
 export function hashPassword(password) {
   const salt = crypto.randomBytes(16).toString("hex");

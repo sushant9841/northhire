@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Env files - none exist yet (no real secrets in this app), excluded preemptively
+# so a future real API key/credential never lands in git by accident.
+.env
+.env.*
+!.env.example
+
 # Local backend database (regenerate with `npm run server:seed`)
 server/data/*.sqlite
 server/data/*.sqlite-*

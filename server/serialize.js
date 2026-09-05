@@ -285,6 +285,15 @@ export function serializeWorker(row) {
     emergencyContact: JSON.parse(row.emergency_contact_json || "{}"), documents: JSON.parse(row.documents_json || "[]"),
     tickets: JSON.parse(row.tickets_json || "[]"), notes: row.notes, vacBalance: row.vac_balance };
 }
+// A client company only needs enough to identify/display the worker assigned to their site - the
+// agency's internal HR file on that worker (SIN, emergency contact, private pay-rate range,
+// documents, notes) has no business crossing to a third-party client, unlike serializeWorker()
+// which is for the agency's own back-office.
+export function serializeWorkerForClient(row) {
+  if (!row) return null;
+  return { id: row.id, personId: row.person_id, status: row.status, availability: row.availability,
+    province: row.province, city: row.city, tickets: JSON.parse(row.tickets_json || "[]") };
+}
 export function serializeStaffingClient(row) {
   if (!row) return null;
   return { id: row.id, employerId: row.employer_id, status: row.status, signedMsa: row.signed_msa,

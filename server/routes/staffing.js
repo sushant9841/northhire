@@ -4,7 +4,7 @@ import { verifyPassword, hashPassword, createSessionCookie, clearSessionCookie, 
 import { salesTaxRate } from "../../src/helpers/salesTax.js";
 import { calcNetPay } from "../../src/helpers/payrollTax.js";
 import {
-  serializeWorker, serializeStaffingClient, serializeJobOrder, serializeAssignment,
+  serializeWorker, serializeWorkerForClient, serializeStaffingClient, serializeJobOrder, serializeAssignment,
   serializeStaffingTimesheet, serializeStaffingPayrun, serializeStaffingInvoice, serializePlacement,
   serializeStaffingAuditEntry, serializeWsibClaim,
 } from "../serialize.js";
@@ -506,7 +506,7 @@ staffingRouter.get("/employer/data", requireAuth, requireRole("employer"), (req,
   res.json({
     client: serializeStaffingClient(client), jobOrders: jobOrders.map(serializeJobOrder),
     assignments: assignments.map(serializeAssignment), timesheets: timesheets.map(serializeStaffingTimesheet),
-    workers: workers.map(serializeWorker), invoices: invoices.map(serializeStaffingInvoice),
+    workers: workers.map(serializeWorkerForClient), invoices: invoices.map(serializeStaffingInvoice),
   });
 });
 staffingRouter.post("/employer/job-orders", requireAuth, requireRole("employer"), (req, res) => {

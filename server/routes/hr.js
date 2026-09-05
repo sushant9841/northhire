@@ -59,10 +59,27 @@ function canDecideFor(hrEmployee, targetEmployeeId) {
   return !!target && target.manager === hrEmployee.id;
 }
 
+// Each employee's own visibility_json (salary/phone/birthDate/email/manager) was previously only
+// enforced by a client-side helper (hrPublicProfile) run on data the browser already had in full -
+// any colleague could read the raw network response and see every hidden field regardless of the
+// UI. Privileged roles (owner/admin/hr) and an employee viewing their own record still see
+// everything; anyone else gets exactly what that person chose to show.
+function maskHrEmployeeForViewer(emp, viewerHrEmployee) {
+  if (isPriv(viewerHrEmployee) || emp.id === viewerHrEmployee.id) return emp;
+  const v = emp.visibility || {};
+  const masked = { ...emp };
+  if (v.salary === false) masked.salary = null;
+  if (v.phone === false) masked.phone = null;
+  if (v.birthDate === false) masked.birthDate = null;
+  if (v.email === false) masked.email = null;
+  if (v.manager === false) masked.manager = null;
+  return masked;
+}
+
 /* ─── Employees ─── */
 hrRouter.get("/employees", requireHrAuth, (req, res) => {
   const rows = db.prepare("SELECT * FROM hr_employees WHERE company_id = ?").all(req.hrEmployee.company_id);
-  res.json({ employees: rows.map(serializeHrEmployee) });
+  res.json({ employees: rows.map(r => maskHrEmployeeForViewer(serializeHrEmployee(r), req.hrEmployee)) });
 });
 hrRouter.post("/employees", requireHrAuth, requireHrPriv, (req, res) => {
   const d = req.body || {};
@@ -97,11 +114,14 @@ hrRouter.patch("/employees/:id", requireHrAuth, requireHrPriv, (req, res) => {
   res.json({ employee: serializeHrEmployee(db.prepare("SELECT * FROM hr_employees WHERE id = ?").get(req.params.id)) });
 });
 hrRouter.patch("/employees/:id/visibility", requireHrAuth, (req, res) => {
+  // Only the employee themself (or a privileged role) may change what's visible about them -
+  // previously any authenticated employee could PATCH anyone else's visibility_json by id.
+  if (req.params.id !== req.hrEmployee.id && !isPriv(req.hrEmployee)) return res.status(403).json({ error: "You can only change your own visibility settings." });
   const row = db.prepare("SELECT * FROM hr_employees WHERE id = ? AND company_id = ?").get(req.params.id, req.hrEmployee.company_id);
   if (!row) return res.status(404).json({ error: "Employee not found." });
   const visibility = { ...JSON.parse(row.visibility_json || "{}"), ...(req.body || {}) };
   db.prepare("UPDATE hr_employees SET visibility_json = ? WHERE id = ?").run(JSON.stringify(visibility), req.params.id);
-  res.json({ employee: serializeHrEmployee(db.prepare("SELECT * FROM hr_employees WHERE id = ?").get(req.params.id)) });
+  res.json({ employee: maskHrEmployeeForViewer(serializeHrEmployee(db.prepare("SELECT * FROM hr_employees WHERE id = ?").get(req.params.id)), req.hrEmployee) });
 });
 hrRouter.delete("/employees/:id", requireHrAuth, requireHrPriv, (req, res) => {
   const row = db.prepare("SELECT * FROM hr_employees WHERE id = ? AND company_id = ?").get(req.params.id, req.hrEmployee.company_id);
