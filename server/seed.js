@@ -194,7 +194,13 @@ for (const e of HR_EMPLOYEES) {
     id: e.id, company_id: e.companyId, name: e.name, email: e.email, password_hash: hash, password_salt: salt,
     role: e.role, dept: e.dept, title: e.title, hired: e.hired, seed: e.seed || 0, phone: e.phone || null,
     city: e.city || null, prov: e.prov || null, salary: e.salary || null, birth_date: e.birthDate || null,
-    manager: e.manager || null, skills_json: JSON.stringify(e.skills || []), badges_json: JSON.stringify(e.badges || []),
+    manager: e.manager || null, skills_json: JSON.stringify(e.skills || []),
+    // Seed data has badges as plain name strings - stagger plausible award dates backward from
+    // now (roughly one every 4 months) so the badge wall's date sort/filter has real variety
+    // instead of every badge sharing one identical seed timestamp.
+    badges_json: JSON.stringify((e.badges || []).map((name, i) => ({
+      name, awardedAt: new Date(Date.now() - (i + 1) * 120 * 864e5).toISOString(),
+    }))),
     visibility_json: JSON.stringify(e.visibility || {}),
   });
 }

@@ -362,7 +362,7 @@ export function HrProfile(){
             {publicView.badges?.length>0&&<div className="mt-2">
               <div className="text-xs text-text-3 mb-1.5">Recognitions:</div>
               <div className="flex flex-wrap gap-1">
-                {publicView.badges.map(b=><Tag key={b} tone="warn" sm icon="award">{b}</Tag>)}</div>
+                {publicView.badges.map(b=><Tag key={b.name} tone="warn" sm icon="award">{b.name}</Tag>)}</div>
             </div>}
             {publicView.phone&&<div className="mt-2">• Phone: {publicView.phone}</div>}
             {publicView.email&&<div>• Email: {publicView.email}</div>}
@@ -379,9 +379,12 @@ export function HrProfile(){
           {emp.badges.length===0
             ? <div className="text-sm text-text-3">No badges yet.</div>
             : <div className="flex flex-col gap-2">
-                {emp.badges.map(b=><div key={b} className="flex gap-3 items-center py-2.5 px-3 bg-bg rounded-lg">
+                {[...emp.badges].sort((a,b)=>new Date(b.awardedAt)-new Date(a.awardedAt)).map(b=><div key={b.name} className="flex gap-3 items-center py-2.5 px-3 bg-bg rounded-lg">
                   <div className="w-8 h-8 rounded-lg bg-warn-bg text-warn flex items-center justify-center"><I n="award" s={16}/></div>
-                  <div className="text-sm font-semibold text-text">{b}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-text">{b.name}</div>
+                    <div className="text-xs text-text-3 mt-0.5">{new Date(b.awardedAt).toLocaleDateString("en-CA",{year:"numeric",month:"long",day:"numeric"})}</div>
+                  </div>
                 </div>)}
               </div>}
         </Card>
@@ -1347,7 +1350,12 @@ export function HrBadges(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
   const all=A.hrEmpsAtCompany(company.id).filter(e=>e.status==="active");
-  const withBadges=all.filter(e=>(e.badges||[]).length>0).sort((a,b)=>(b.badges||[]).length-(a.badges||[]).length);
+  const [sortBy,setSortBy]=useState("count");
+  const mostRecentAward=e=>(e.badges||[]).reduce((max,b)=>Math.max(max,new Date(b.awardedAt||0).getTime()),0);
+  const withBadges=all.filter(e=>(e.badges||[]).length>0).sort((a,b)=>
+    sortBy==="recent"?mostRecentAward(b)-mostRecentAward(a):(b.badges||[]).length-(a.badges||[]).length);
+  const recentAwards=all.flatMap(e=>(e.badges||[]).map(b=>({...b,emp:e}))).filter(b=>b.awardedAt)
+    .sort((a,b)=>new Date(b.awardedAt)-new Date(a.awardedAt)).slice(0,8);
   const canAward=["owner","admin","hr"].includes(emp.role);
   const [showAward,setShowAward]=useState(false);
   const [selEmp,setSelEmp]=useState("");
@@ -1372,6 +1380,21 @@ export function HrBadges(){
         {canAward&&<Btn kind="primary" icon="plus" onClick={()=>setShowAward(true)} style={{background:C.warn,borderColor:C.warn}}>Award a badge</Btn>}
       </div>
     </Card>
+    {recentAwards.length>0&&<Card pad={mob?18:20} style={{borderRadius:14,marginBottom:16}}>
+      <Lbl>Recently awarded</Lbl>
+      <div className="flex flex-col gap-1.5">
+        {recentAwards.map((b,i)=><div key={i} className="flex justify-between items-center py-1.5 text-sm">
+          <span className="text-text"><strong className="font-semibold">{b.name}</strong> · {b.emp.name}</span>
+          <span className="text-xs text-text-3">{new Date(b.awardedAt).toLocaleDateString("en-CA",{month:"short",day:"numeric",year:"numeric"})}</span>
+        </div>)}
+      </div>
+    </Card>}
+    <div className="flex justify-end mb-3">
+      <Sel value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{maxWidth:200}}>
+        <option value="count">Sort: Most badges</option>
+        <option value="recent">Sort: Most recent award</option>
+      </Sel>
+    </div>
     <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
       {withBadges.map(e=><Card key={e.id} pad={16} style={{borderRadius:14}}>
         <div className="flex gap-3 items-center mb-3">
@@ -1383,9 +1406,11 @@ export function HrBadges(){
           <span className="text-xs font-semibold text-text-3 py-1 px-2 bg-bg rounded-full">{e.badges.length}</span>
         </div>
         <div className="flex flex-wrap gap-1.5">
-          {e.badges.map(b=><div key={b} className="inline-flex gap-1 items-center py-1 pr-2 pl-2.5 bg-warn-bg text-warn border border-warn-ln rounded-full text-xs font-semibold">
-            <I n="award" s={11}/>{b}
-            {canAward&&<button onClick={()=>setRemoving({emp:e,badge:b})} className="bg-transparent border-0 p-0 ml-1 cursor-pointer text-warn opacity-60 flex"><I n="x" s={11}/></button>}
+          {[...e.badges].sort((a,b)=>new Date(b.awardedAt||0)-new Date(a.awardedAt||0)).map(b=>
+            <div key={b.name} title={b.awardedAt?new Date(b.awardedAt).toLocaleDateString("en-CA"):undefined}
+              className="inline-flex gap-1 items-center py-1 pr-2 pl-2.5 bg-warn-bg text-warn border border-warn-ln rounded-full text-xs font-semibold">
+            <I n="award" s={11}/>{b.name}
+            {canAward&&<button onClick={()=>setRemoving({emp:e,badge:b.name})} className="bg-transparent border-0 p-0 ml-1 cursor-pointer text-warn opacity-60 flex"><I n="x" s={11}/></button>}
           </div>)}
         </div>
       </Card>)}

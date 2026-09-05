@@ -114,8 +114,10 @@ hrRouter.patch("/employees/:id/badges", requireHrAuth, requireHrPriv, (req, res)
   const row = db.prepare("SELECT * FROM hr_employees WHERE id = ? AND company_id = ?").get(req.params.id, req.hrEmployee.company_id);
   if (!row) return res.status(404).json({ error: "Employee not found." });
   const { badge, remove } = req.body || {};
-  const badges = JSON.parse(row.badges_json || "[]").filter(b => b !== badge);
-  if (!remove) badges.push(badge);
+  // Stored as {name, awardedAt} objects (not bare strings) so the badge wall can actually
+  // filter/sort by date and show a per-employee award timeline.
+  const badges = JSON.parse(row.badges_json || "[]").filter(b => b.name !== badge);
+  if (!remove) badges.push({ name: badge, awardedAt: new Date().toISOString() });
   db.prepare("UPDATE hr_employees SET badges_json = ? WHERE id = ?").run(JSON.stringify(badges), req.params.id);
   logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, remove ? "badge_removed" : "badge_awarded", `${remove ? "Removed" : "Awarded"} "${badge}" ${remove ? "from" : "to"} ${row.name}`);
   res.json({ employee: serializeHrEmployee(db.prepare("SELECT * FROM hr_employees WHERE id = ?").get(req.params.id)) });
