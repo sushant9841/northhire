@@ -988,12 +988,14 @@ export function HrInvoices(){
       </div>
     </Modal>}
 
-    {detail&&<InvoiceDetailModal invoice={detail} company={company} onClose={()=>setDetail(null)} canManage={canManage} onMarkPaid={()=>{A.markInvoicePaid(detail.id); setDetail({...detail,status:"paid"});}} onSend={()=>{A.sendInvoice(detail.id); setDetail({...detail,status:"pending"});}}/>}
+    {detail&&<InvoiceDetailModal invoice={detail} company={company} onClose={()=>setDetail(null)} canManage={canManage} onMarkPaid={()=>{A.markInvoicePaid(detail.id); setDetail({...detail,status:"paid"});}} onSend={()=>{A.sendInvoice(detail.id); setDetail({...detail,status:"pending"});}}
+      onReverse={async reason=>{try{await A.reverseInvoice(detail.id,reason);setDetail({...detail,status:"reversed"});A.toast("Invoice reversed","ok");}catch(e){A.toast(e.message,"danger");}}}/>}
   </div>;
 }
 
-function InvoiceDetailModal({invoice:inv,company,onClose,canManage,onMarkPaid,onSend}){
+function InvoiceDetailModal({invoice:inv,company,onClose,canManage,onMarkPaid,onSend,onReverse}){
   const A=use(); const mob=useMedia("(max-width: 900px)");
+  const [reversing,setReversing]=useState(false); const [reverseReason,setReverseReason]=useState("");
   const items=inv.items||[{desc:"Services",qty:1,unitPrice:inv.amount}];
   const subtotal=inv.subtotal||inv.amount;
   const hst=inv.hst||0;
@@ -1050,12 +1052,20 @@ function InvoiceDetailModal({invoice:inv,company,onClose,canManage,onMarkPaid,on
         </div>
       </div>
 
-      <div className="flex gap-2.5 justify-end pt-2 border-t border-line">
+      {reversing?<div className="flex flex-col gap-2.5 p-3 bg-red-bg rounded-lg border border-red-ln">
+        <Field label="Reason for reversal" required hint="Recorded in the audit log.">
+          <Area rows={2} value={reverseReason} onChange={e=>setReverseReason(e.target.value)} placeholder="e.g. Billed the wrong client"/></Field>
+        <div className="flex gap-2.5 justify-end">
+          <Btn kind="ghost" size="sm" onClick={()=>{setReversing(false);setReverseReason("");}}>Cancel</Btn>
+          <Btn kind="danger" size="sm" disabled={!reverseReason.trim()} onClick={()=>{onReverse(reverseReason.trim());setReversing(false);setReverseReason("");}}>Confirm reversal</Btn>
+        </div>
+      </div>:<div className="flex gap-2.5 justify-end pt-2 border-t border-line">
         <Btn kind="ghost" onClick={onClose}>Close</Btn>
         <Btn kind="ghost" icon="download" onClick={()=>A.printHrInvoice(inv,company)}>Download PDF</Btn>
         {canManage&&inv.status==="draft"&&<Btn kind="primary" onClick={onSend}>Send to client</Btn>}
         {canManage&&inv.status==="pending"&&<Btn kind="primary" icon="check" onClick={onMarkPaid}>Mark as paid</Btn>}
-      </div>
+        {canManage&&inv.status==="paid"&&<Btn kind="dangerSoft" onClick={()=>setReversing(true)}>Reverse</Btn>}
+      </div>}
     </div>
   </Modal>;
 }
@@ -1208,7 +1218,9 @@ export function HrPayroll(){
       </div>
     </Modal>}
 
-    {detail&&<PayrollDetailModal run={detail} onClose={()=>setDetail(null)} canApprove={isPayrollMgr} onApprove={()=>{A.approvePayroll(detail.id); setDetail({...detail,status:"approved"});}} onExecute={()=>setExecuting(detail)}/>}
+    {detail&&<PayrollDetailModal run={detail} onClose={()=>setDetail(null)} canApprove={isPayrollMgr} onApprove={()=>{A.approvePayroll(detail.id); setDetail({...detail,status:"approved"});}} onExecute={()=>setExecuting(detail)}
+      onReverse={async reason=>{const r=await A.reversePayroll(detail.id,reason).then(()=>({ok:true})).catch(e=>({ok:false,msg:e.message}));
+        if(r.ok){setDetail({...detail,status:"reversed"});A.toast("Payroll run reversed","ok");}else A.toast(r.msg,"danger");}}/>}
 
     <ConfirmDialog open={!!executing} onClose={()=>setExecuting(null)} confirmLabel="Execute payroll"
       title="Execute this payroll run?" onConfirm={()=>{A.executePayroll(executing.id); if(detail?.id===executing.id)setDetail(null);}}>
@@ -1217,8 +1229,9 @@ export function HrPayroll(){
   </div>;
 }
 
-function PayrollDetailModal({run,onClose,canApprove,onApprove,onExecute}){
+function PayrollDetailModal({run,onClose,canApprove,onApprove,onExecute,onReverse}){
   const A=use(); const mob=useMedia("(max-width: 900px)");
+  const [reversing,setReversing]=useState(false); const [reverseReason,setReverseReason]=useState("");
   const exportRegister=()=>{
     const rows=[["Employee","Gross","Unpaid leave","CPP","EI","Federal tax","Provincial tax","Reimbursement","Net"],
       ...run.lines.map(l=>[l.name,l.gross,l.unpaidDeduction||0,l.cpp,l.ei,l.fedTax,l.provTax,l.reimb||0,l.net])];
@@ -1260,12 +1273,20 @@ function PayrollDetailModal({run,onClose,canApprove,onApprove,onExecute}){
         <strong className="text-text-2">Status: {run.status}</strong> · Runs are draft when first created. Once approved, they can be executed (direct deposit initiated + expenses reconciled).
       </div>
 
-      <div className="flex gap-2.5 justify-end pt-2 border-t border-line">
+      {reversing?<div className="flex flex-col gap-2.5 p-3 bg-red-bg rounded-lg border border-red-ln">
+        <Field label="Reason for reversal" required hint="Recorded in the audit log. Reimbursed expenses go back to 'approved' status.">
+          <Area rows={2} value={reverseReason} onChange={e=>setReverseReason(e.target.value)} placeholder="e.g. Executed against the wrong pay period"/></Field>
+        <div className="flex gap-2.5 justify-end">
+          <Btn kind="ghost" size="sm" onClick={()=>{setReversing(false);setReverseReason("");}}>Cancel</Btn>
+          <Btn kind="danger" size="sm" disabled={!reverseReason.trim()} onClick={()=>{onReverse(reverseReason.trim());setReversing(false);setReverseReason("");}}>Confirm reversal</Btn>
+        </div>
+      </div>:<div className="flex gap-2.5 justify-end pt-2 border-t border-line">
         <Btn kind="outline" icon="download" onClick={exportRegister}>Export register</Btn>
         <Btn kind="ghost" onClick={onClose}>Close</Btn>
         {canApprove&&run.status==="draft"&&<Btn kind="primary" onClick={onApprove}>Approve run</Btn>}
         {canApprove&&run.status==="approved"&&<Btn kind="primary" icon="check" onClick={onExecute}>Execute payroll</Btn>}
-      </div>
+        {canApprove&&run.status==="paid"&&<Btn kind="dangerSoft" onClick={()=>setReversing(true)}>Reverse run</Btn>}
+      </div>}
     </div>
   </Modal>;
 }

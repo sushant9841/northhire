@@ -255,6 +255,18 @@ hrRouter.patch("/invoices/:id/paid", requireHrAuth, requireHrPriv, (req, res) =>
   db.prepare("UPDATE hr_invoices SET status = 'paid', paid = date('now') WHERE id = ?").run(req.params.id);
   res.json({ invoice: serializeHrInvoice(db.prepare("SELECT * FROM hr_invoices WHERE id = ?").get(req.params.id)) });
 });
+// A real reversal path (standard accounting practice: flip status + a logged reason, rather than
+// deleting or silently editing the paid record) instead of no undo path at all.
+hrRouter.patch("/invoices/:id/reverse", requireHrAuth, requireHrPriv, (req, res) => {
+  const inv = db.prepare("SELECT * FROM hr_invoices WHERE id = ?").get(req.params.id);
+  if (!inv) return res.status(404).json({ error: "Not found." });
+  if (inv.status !== "paid") return res.status(400).json({ error: "Only a paid invoice can be reversed." });
+  const reason = (req.body?.reason || "").trim();
+  if (!reason) return res.status(400).json({ error: "A reason is required to reverse a paid invoice." });
+  db.prepare("UPDATE hr_invoices SET status = 'reversed' WHERE id = ?").run(req.params.id);
+  logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "invoice_reversed", `Reversed invoice ${inv.number} ($${inv.total}): ${reason}`);
+  res.json({ invoice: serializeHrInvoice(db.prepare("SELECT * FROM hr_invoices WHERE id = ?").get(req.params.id)) });
+});
 
 /* ─── Departments ─── */
 hrRouter.get("/departments", requireHrAuth, (req, res) => {
@@ -402,6 +414,27 @@ hrRouter.patch("/payruns/:id/execute", requireHrAuth, requireHrPriv, (req, res) 
     }
   }
   logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "payroll_executed", `Executed payroll for ${run.period_start} → ${run.period_end} (${lines.length} employees, $${run.total_net?.toLocaleString()} net)`);
+  res.json({ ok: true });
+});
+// Same reversal pattern as invoices above - flip status + a logged, required reason. Also undoes
+// the expense side-effect execute() applied, so a reversed run doesn't leave those claims stuck
+// showing "paid" for reimbursements that (in a reversal) didn't happen.
+hrRouter.patch("/payruns/:id/reverse", requireHrAuth, requireHrPriv, (req, res) => {
+  const run = db.prepare("SELECT * FROM hr_payruns WHERE id = ?").get(req.params.id);
+  if (!run) return res.status(404).json({ error: "Not found." });
+  if (run.status !== "paid") return res.status(400).json({ error: "Only an executed (paid) payroll run can be reversed." });
+  const reason = (req.body?.reason || "").trim();
+  if (!reason) return res.status(400).json({ error: "A reason is required to reverse a paid payroll run." });
+  db.prepare("UPDATE hr_payruns SET status = 'reversed' WHERE id = ?").run(req.params.id);
+  const lines = JSON.parse(run.lines_json || "[]");
+  for (const line of lines) {
+    if (line.reimb > 0) {
+      db.prepare(
+        `UPDATE hr_expenses SET status = 'approved', paid_at = NULL WHERE employee_id = ? AND status = 'paid' AND reimburse_via = 'next-payroll'`
+      ).run(line.employee);
+    }
+  }
+  logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "payroll_reversed", `Reversed payroll for ${run.period_start} → ${run.period_end} ($${run.total_net?.toLocaleString()} net): ${reason}`);
   res.json({ ok: true });
 });
 hrRouter.get("/audit-log", requireHrAuth, (req, res) => {

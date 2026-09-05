@@ -365,6 +365,19 @@ export function useHrStore(){
     setHrExpenses(expenses);
     refreshAuditLog();
   };
+  const reversePayroll=async(id,reason)=>{
+    await api.patch(`/hr/payruns/${id}/reverse`,{reason});
+    setHrPayruns(l=>l.map(p=>p.id===id?{...p,status:"reversed"}:p));
+    const isPriv=hrEmployee&&["owner","admin","hr"].includes(hrEmployee.role);
+    const {expenses}=isPriv?await api.get("/hr/expenses/company"):await api.get("/hr/expenses/mine");
+    setHrExpenses(expenses);
+    refreshAuditLog();
+  };
+  const reverseInvoice=async(id,reason)=>{
+    const {invoice}=await api.patch(`/hr/invoices/${id}/reverse`,{reason});
+    setHrInvoices(l=>l.map(i=>i.id===id?invoice:i));
+    refreshAuditLog();
+  };
 
   /* --- Badges --- */
   const awardBadge=async(empId,badge)=>{
@@ -433,11 +446,11 @@ export function useHrStore(){
     hrPublicProfile,updateEmpVisibility,updateEmp,addEmployee,removeEmployee,
     punchIn,punchOut,requestLeave,decideLeave,
     addTask,updateTaskStatus,deleteTask,addEvent,deleteEvent,
-    addInvoice,markInvoicePaid,sendInvoice,printHrInvoice,
+    addInvoice,markInvoicePaid,sendInvoice,printHrInvoice,reverseInvoice,
     myPayslips,printPayslip,
     hrDeptsAtCompany,addDepartment,updateDepartment,removeDepartment,
     empExpenses,companyExpenses,submitExpense,decideExpense,payExpense,
-    runPayroll,approvePayroll,executePayroll,
+    runPayroll,approvePayroll,executePayroll,reversePayroll,
     awardBadge,removeBadge,
     sendHrMessage,createHrChat,updateCompanySettings,toggleModule,
     connectPunchMachine,connectPriorSystem,

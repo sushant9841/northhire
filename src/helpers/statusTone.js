@@ -2,7 +2,7 @@
    across staffing/suite.jsx, hr/suite.jsx, employer/staffing.jsx, employer/suite.jsx, admin/suite.jsx. */
 
 export const invoiceTone = (status) =>
-  status === "paid" ? "ok" : status === "overdue" ? "danger" : "warn";
+  status === "paid" ? "ok" : status === "overdue" ? "danger" : status === "reversed" ? "neutral" : "warn";
 
 export const timesheetTone = (status) =>
   status === "approved" ? "ok" : status === "submitted" ? "warn" : status === "paid" ? "brand" : "neutral";
