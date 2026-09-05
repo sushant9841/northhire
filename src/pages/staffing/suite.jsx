@@ -36,6 +36,17 @@ export function AgencyLoginPage(){
   };
 
   return <div className="bg-ink min-h-screen flex">
+    {!mob&&<div className="flex-1 min-w-0 relative overflow-hidden">
+      <SmartScene kind="road" tone="#F5A524" w="100%" h="100%" seed={6} style={{position:"absolute",inset:0}}/>
+      <div className="absolute inset-0" style={{background:"linear-gradient(180deg,rgba(11,18,32,.15) 0%,rgba(11,18,32,.75) 100%)"}}/>
+      <div className="absolute left-8 right-8 bottom-9 text-white">
+        <div className="text-2xl font-bold tracking-tight leading-snug mb-2">Your desk, staffed and running.</div>
+        <p className="text-sm text-white/80 leading-relaxed max-w-90">Workers, timesheets, payroll and client billing — one console for the whole book.</p></div>
+      <div className="absolute right-7 top-7 bg-white rounded-2xl py-3 px-4 shadow-lg flex items-center gap-2.5">
+        <div className="w-10 h-10 rounded-xl bg-[#FDF5E6] text-[#8F5B05] flex items-center justify-center"><I n="users" s={18}/></div>
+        <div><div className="text-sm font-bold text-text">7 workers</div>
+          <div className="text-xs text-text-2 mt-0.5">on assignment right now</div></div></div>
+    </div>}
     <div className={`flex-1 min-w-0 flex items-center justify-center ${mob?"p-4":"p-8"}`}>
       <div className="w-full max-w-110">
         <div className="flex items-center justify-between mb-6">
@@ -89,17 +100,6 @@ export function AgencyLoginPage(){
         </div>
       </div>
     </div>
-    {!mob&&<div className="flex-1 min-w-0 relative overflow-hidden">
-      <SmartScene kind="road" tone="#F5A524" w="100%" h="100%" seed={6} style={{position:"absolute",inset:0}}/>
-      <div className="absolute inset-0" style={{background:"linear-gradient(180deg,rgba(11,18,32,.15) 0%,rgba(11,18,32,.75) 100%)"}}/>
-      <div className="absolute left-8 right-8 bottom-9 text-white">
-        <div className="text-2xl font-bold tracking-tight leading-snug mb-2">Your desk, staffed and running.</div>
-        <p className="text-sm text-white/80 leading-relaxed max-w-90">Workers, timesheets, payroll and client billing — one console for the whole book.</p></div>
-      <div className="absolute right-7 top-7 bg-white rounded-2xl py-3 px-4 shadow-lg flex items-center gap-2.5">
-        <div className="w-10 h-10 rounded-xl bg-[#FDF5E6] text-[#8F5B05] flex items-center justify-center"><I n="users" s={18}/></div>
-        <div><div className="text-sm font-bold text-text">7 workers</div>
-          <div className="text-xs text-text-2 mt-0.5">on assignment right now</div></div></div>
-    </div>}
   </div>;
 }
 

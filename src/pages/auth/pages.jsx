@@ -323,7 +323,8 @@ export function LoginPage(){
   </div>;
 
   if(mfa){
-    return <div className="bg-white min-h-full flex">
+    return <div className="bg-white min-h-screen flex">
+      {illusCol}
       {formCol(<>
         <button onClick={()=>setMfa(null)} className="flex items-center gap-2 bg-transparent border-0 cursor-pointer p-0 text-text-2 text-sm font-semibold hover:text-text mb-6">
           <I n="chevL" s={16} w={2}/> Back to sign in</button>
@@ -338,10 +339,10 @@ export function LoginPage(){
           <Btn kind="primary" size="lg" full iconR="arrowR" onClick={verify} disabled={busy||code.length<6}>{busy?"Verifying…":"Verify & sign in"}</Btn>
         </div>
       </>)}
-      {illusCol}
     </div>;
   }
-  return <div className="bg-white min-h-full flex">
+  return <div className="bg-white min-h-screen flex">
+    {illusCol}
     {formCol(<>
       <div className="flex items-center justify-between mb-7">
         <button onClick={()=>A.go("home")} className="flex items-center gap-2 bg-transparent border-0 cursor-pointer p-0 text-text-2 text-sm font-semibold hover:text-text">
@@ -379,7 +380,6 @@ export function LoginPage(){
               <span className="text-xs text-brand font-semibold">Sign in →</span></button>)}</div>
       </Card>
     </>)}
-    {illusCol}
   </div>;
 }
 

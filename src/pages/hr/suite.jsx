@@ -5,7 +5,7 @@ import { C, SH } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
 import {
   Btn, Card, Tag, Field, Input, Sel, Area, CheckRow, Banner, Lbl, Modal, Switch, DatePicker,
-  SmartPortrait, Empty, ConfirmDialog, usePagination, Pagination, TH_CLASS as TH_CLS, TD_CLASS as TD_CLS,
+  SmartPortrait, SmartScene, Empty, ConfirmDialog, usePagination, Pagination, TH_CLASS as TH_CLS, TD_CLASS as TD_CLS,
 } from "../../design/primitives.jsx";
 import { _fmtDate } from "../../helpers/utils.js";
 import { invoiceTone } from "../../helpers/statusTone.js";
@@ -44,62 +44,56 @@ export function HrLoginPage(){
     if(!r.ok)setErr(r.msg); else A.go("hrDashboard");
   };
 
-  return <div className="min-h-screen flex flex-col text-white" style={{background:`linear-gradient(135deg,#0A1929 0%,${C.ink} 60%,#152538 100%)`}}>
-    <div className={`flex items-center justify-between ${mob?"py-6 px-5":"py-8 px-10"}`}>
-      <button onClick={()=>A.go("home")} className="flex items-center gap-2.5 bg-transparent border-0 text-white cursor-pointer">
-        <div className="w-9 h-9 rounded-lg bg-white/10 border border-white/15 flex items-center justify-center"><I n="sparkle" s={18} c="#fff"/></div>
-        <span className="font-bold tracking-tight" style={{fontSize:16.5}}>NorthHire <span className="text-accent font-semibold">HR Suite</span></span>
+  const formCol=(inner)=><div className={`flex-1 min-w-0 flex items-center justify-center bg-white ${mob?"px-4 py-8":"px-10 py-12"}`}>
+    <div className="w-full max-w-md">{inner}</div></div>;
+  const illusCol=!mob&&<div className="flex-1 min-w-0 relative overflow-hidden bg-wash">
+    <SmartScene kind="office" tone={C.ink} w="100%" h="100%" seed={2} style={{position:"absolute",inset:0}}/>
+    <div className="absolute inset-0" style={{background:"linear-gradient(180deg,rgba(10,25,41,0) 40%,rgba(10,25,41,.6) 100%)"}}/>
+    <div className="absolute left-8 right-8 bottom-9 text-white">
+      <div className="text-sm font-bold text-accent tracking-wide uppercase mb-3">Enterprise HR Suite</div>
+      <div className="text-2xl font-bold tracking-tight leading-snug mb-2">Your entire workforce.<br/>One place.</div>
+      <p className="text-sm text-white/80 leading-relaxed max-w-90">Directory, attendance, leave, tasks, chat, calendar, invoices and payroll — every record synced with each employee's public NorthHire profile.</p></div>
+    <div className="absolute right-7 top-7 bg-white rounded-2xl py-3 px-4 shadow-lg flex items-center gap-2.5">
+      <div className="flex">{[2,4,7].map((s,i)=><div key={s} className={`${i?"-ml-3":""} border-2 border-white rounded-full flex`}><SmartPortrait seed={s} size={28}/></div>)}</div>
+      <div><div className="text-sm font-bold text-text">Role-based access</div>
+        <div className="text-xs text-text-2 mt-0.5">Owner, Admin, HR, Finance, Employee</div></div></div>
+  </div>;
+
+  return <div className="bg-white min-h-screen flex flex-col">
+    <div className={`flex items-center justify-between border-b border-line-soft ${mob?"py-4 px-5":"py-5 px-10"}`}>
+      <button onClick={()=>A.go("home")} className="flex items-center gap-2.5 bg-transparent border-0 text-text cursor-pointer">
+        <div className="w-9 h-9 rounded-lg bg-wash border border-line-2 flex items-center justify-center"><I n="sparkle" s={18} c={C.brand}/></div>
+        <span className="font-bold tracking-tight" style={{fontSize:16.5}}>NorthHire <span className="text-brand font-semibold">HR Suite</span></span>
       </button>
-      <button onClick={()=>A.go("home")} className="bg-transparent border border-white/20 text-white py-1.5 px-3.5 rounded-lg cursor-pointer text-sm font-semibold">← Back to NorthHire</button>
+      <button onClick={()=>A.go("home")} className="bg-transparent border border-line text-text-2 py-1.5 px-3.5 rounded-lg cursor-pointer text-sm font-semibold hover:bg-bg">← Back to NorthHire</button>
     </div>
-    <div className={`flex-1 flex items-center justify-center ${mob?"pt-3 px-5 pb-8":"pt-5 px-10 pb-15"}`}>
-      <div className={`w-full grid items-center ${mob?"grid-cols-1 gap-6":"gap-11"}`} style={{maxWidth:mob?420:960,gridTemplateColumns:mob?undefined:"1.05fr .95fr"}}>
-        {!mob&&<div>
-          <div className="text-sm font-bold text-accent tracking-wide uppercase mb-4">Enterprise HR Suite</div>
-          <h1 className="text-5xl font-bold tracking-tight mb-4 leading-tight">
-            Your entire workforce.<br/>One place.</h1>
-          <p className="text-base text-white/65 leading-relaxed mb-6 max-w-100">
-            Directory, attendance, leave, tasks, chat, calendar, invoices, payroll — every employee record synced with their public NorthHire profile.</p>
-          <div className="flex flex-col gap-3 text-sm text-white/75">
-            {[["shield","Role-based access — Owner, Admin, HR, Finance, Employee"],
-              ["users","Directory synced with public NorthHire profiles"],
-              ["calendar","Attendance, leave, calendar & tasks in one flow"],
-              ["mail","Internal chat with 1:1 and group threads"]].map(([ic,txt])=>
-              <div key={txt} className="flex gap-2.5 items-center">
-                <span className="text-accent flex"><I n={ic} s={17}/></span>{txt}</div>)}
-          </div>
-          <div className="flex items-center gap-3 mt-8 pt-6 border-t border-white/10">
-            <div className="flex">{[2,4,7].map((s,i)=><div key={s} className={`${i?"-ml-3":""} border-2 border-[#0A1929] rounded-full flex`}><SmartPortrait seed={s} size={34}/></div>)}</div>
-            <div className="text-sm text-white/60">Trusted by HR teams at growing Canadian employers</div>
-          </div>
-        </div>}
-        <div className={`bg-white rounded-3xl text-text ${mob?"p-6":"p-9"}`} style={{boxShadow:"0 40px 80px -20px rgba(0,0,0,.5)"}}>
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold tracking-tight mb-2">Sign in to HR Suite</h2>
-            <p className="text-sm text-text-2 m-0">Your Enterprise workforce login.</p></div>
-          <div className="flex flex-col gap-3.5">
-            <Field label="Company"><Input icon="building" value={company} onChange={e=>{setCompany(e.target.value);setErr("");}}
-              placeholder="e.g. PCL Construction" onKeyDown={e=>e.key==="Enter"&&submit()}/></Field>
-            <Field label="Login ID" hint="Your work email or the part before @ (e.g. sofia.r).">
-              <Input icon="user" value={loginId} onChange={e=>{setLoginId(e.target.value);setErr("");}} placeholder="jean.dupuis"
-                onKeyDown={e=>e.key==="Enter"&&submit()}/></Field>
-            <Field label="Password"><Input icon="lock" type="password" value={pw} onChange={e=>{setPw(e.target.value);setErr("");}}
-              placeholder="Your password" onKeyDown={e=>e.key==="Enter"&&submit()}/></Field>
-            {err&&<Banner tone="danger" icon="alert" title="Sign-in failed">{err}</Banner>}
-            <Btn kind="primary" size="lg" full iconR="arrowR" onClick={submit} disabled={busy}>{busy?"Signing in…":"Enter HR Suite"}</Btn>
-          </div>
-          <div className="mt-4 p-3.5 bg-tint rounded-xl border border-line-2">
-            <div className="text-xs font-bold text-brand tracking-wide uppercase mb-2">Demo accounts — PCL Construction</div>
-            <div className="grid gap-1.5">
-              {[["rachel.martel","Owner"],["priya.r","Admin"],["linda.o","HR"],["isaac.c","Finance"],["daniel.k","Employee"]].map(([id,r])=>
-                <button key={id} onClick={()=>demoAs(id)} className="flex justify-between items-center bg-white border border-line rounded-lg py-2 px-3 cursor-pointer">
-                  <span className="text-xs font-semibold text-text">{id}</span>
-                  <span className="text-xs font-semibold text-brand">{r} →</span></button>)}
-              <div className="text-xs text-text-3 mt-1.5 text-center">Password for all demo accounts: <strong className="text-text">pcl2026</strong></div>
-            </div>
+    <div className="flex-1 flex min-h-0">
+      {illusCol}
+      {formCol(<>
+        <h2 className="text-2xl font-bold tracking-tight mb-2">Sign in to HR Suite</h2>
+        <p className="text-sm text-text-2 mb-6">Your Enterprise workforce login.</p>
+        <div className="flex flex-col gap-3.5">
+          <Field label="Company"><Input icon="building" value={company} onChange={e=>{setCompany(e.target.value);setErr("");}}
+            placeholder="e.g. PCL Construction" onKeyDown={e=>e.key==="Enter"&&submit()}/></Field>
+          <Field label="Login ID" hint="Your work email or the part before @ (e.g. sofia.r).">
+            <Input icon="user" value={loginId} onChange={e=>{setLoginId(e.target.value);setErr("");}} placeholder="jean.dupuis"
+              onKeyDown={e=>e.key==="Enter"&&submit()}/></Field>
+          <Field label="Password"><Input icon="lock" type="password" value={pw} onChange={e=>{setPw(e.target.value);setErr("");}}
+            placeholder="Your password" onKeyDown={e=>e.key==="Enter"&&submit()}/></Field>
+          {err&&<Banner tone="danger" icon="alert" title="Sign-in failed">{err}</Banner>}
+          <Btn kind="primary" size="lg" full iconR="arrowR" onClick={submit} disabled={busy}>{busy?"Signing in…":"Enter HR Suite"}</Btn>
+        </div>
+        <div className="mt-5 p-3.5 bg-tint rounded-xl border border-line-2">
+          <div className="text-xs font-bold text-brand tracking-wide uppercase mb-2">Demo accounts — PCL Construction</div>
+          <div className="grid gap-1.5">
+            {[["rachel.martel","Owner"],["priya.r","Admin"],["linda.o","HR"],["isaac.c","Finance"],["daniel.k","Employee"]].map(([id,r])=>
+              <button key={id} onClick={()=>demoAs(id)} className="flex justify-between items-center bg-white border border-line rounded-lg py-2 px-3 cursor-pointer">
+                <span className="text-xs font-semibold text-text">{id}</span>
+                <span className="text-xs font-semibold text-brand">{r} →</span></button>)}
+            <div className="text-xs text-text-3 mt-1.5 text-center">Password for all demo accounts: <strong className="text-text">pcl2026</strong></div>
           </div>
         </div>
-      </div>
+      </>)}
     </div>
   </div>;
 }
