@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { C, SH } from "./tokens.js";
 import { I } from "./icons.jsx";
 import { useMedia } from "../helpers/hooks.js";
@@ -516,6 +517,20 @@ export function Tabs({items,value,onChange,style}){
     {it.icon&&<I n={it.icon} s={15} w={on?2.1:1.8}/>}{it.label}
     {it.n>0&&<span className={`text-xs font-bold min-w-5 h-5 rounded-full flex items-center justify-center px-1.5 ${on?"bg-brand text-white":"bg-line-soft text-text-2"}`}>{it.n}</span>}
    </button>;})}</div>;}
+
+/* Shared floating tooltip - portals to <body> and positions via a fixed pixel offset so it
+   isn't clipped by an ancestor's own overflow:auto scroll box. Pass `top`/`left` computed from
+   the anchor's getBoundingClientRect() on hover/focus. Was previously hand-built once inline in
+   DashShell for the locked-nav-item case; now a real reusable primitive. */
+export function Tooltip({show,top,left,align="right",children}){
+  if(!show||typeof document==="undefined")return null;
+  return createPortal(
+    <div className="fixed bg-ink text-white py-2.5 px-3.5 rounded-xl text-xs leading-normal w-56 z-9999 shadow-[0_8px_24px_rgba(0,0,0,0.25)] pointer-events-none border border-line-soft"
+     style={{top,left,transform:"translateY(-50%)"}}>
+      {children}
+      <div className={`absolute top-1/2 -translate-y-1/2 w-0 h-0 border-t-8 border-t-transparent border-b-8 border-b-transparent ${align==="right"?"right-full border-r-8 border-r-ink":"left-full border-l-8 border-l-ink"}`}/>
+    </div>, document.body);
+}
 
 export function DatePicker({value,onChange,min,max}){
   /* Native <input type="date"> ignores the placeholder attribute in every major browser —

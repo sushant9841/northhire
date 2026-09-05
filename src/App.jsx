@@ -196,8 +196,12 @@ export default function NorthHire(){
               <span style={{display:"flex",alignItems:"center",gap:8}}><I n="eye" s={16}/>Viewing as {user?.name}</span>
               <button onClick={stopImpersonating} style={{background:"#fff",color:C.warn,border:"none",padding:"6px 14px",borderRadius:8,cursor:"pointer",fontWeight:700,fontSize:13,fontFamily:"inherit"}}>Return to admin</button>
             </div>}
+            <a href="#main-content" style={{position:"absolute",left:-9999,top:"auto",width:1,height:1,overflow:"hidden",zIndex:9999,
+              background:C.brand,color:"#fff",padding:"10px 16px",borderRadius:8,fontWeight:700,fontSize:14}}
+              onFocus={e=>Object.assign(e.currentTarget.style,{left:12,top:12,width:"auto",height:"auto",overflow:"visible"})}
+              onBlur={e=>Object.assign(e.currentTarget.style,{left:-9999,top:"auto",width:1,height:1,overflow:"hidden"})}>Skip to main content</a>
             {!_isBare&&<Header/>}
-            <main key={pg} style={{flex:1,display:"flex",flexDirection:"column",minWidth:0,animation:"rise .32s ease"}}>{view}</main>
+            <main id="main-content" tabIndex={-1} key={pg} style={{flex:1,display:"flex",flexDirection:"column",minWidth:0,animation:"rise .32s ease",outline:"none"}}>{view}</main>
             {showFooter&&<Footer/>}
             {showTabs&&<TabBar/>}
             {hireOnboarding&&<HireOnboardingModal payload={hireOnboarding} onClose={()=>setHireOnboarding(null)}/>}

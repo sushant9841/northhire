@@ -622,6 +622,16 @@ export function EmpCandidate(){
               [contact?.email,contact?.phone].filter(Boolean).join(" • ")||"Contact details hidden by this candidate"}</div>
           <div className="mt-2.5"><Tag tone={a.stage==="Offer"?"ok":a.stage==="Interview"?"warn":"brand"} sm>{a.stage}</Tag></div></div>
         <Ring v={s} size={62} label="Fit"/></div></Card>
+    <Card style={{marginBottom:16}}><Lbl>Why this score</Lbl>
+      <div className="flex flex-col gap-2.5">
+        {A.scoreBreakdown(u,job).map(b=><div key={b.label}>
+          <div className="flex justify-between text-sm mb-1">
+            <span className="text-text font-medium">{b.label} <span className="text-text-3 font-normal">— {b.detail}</span></span>
+            <span className="text-brand font-bold">{b.pct}%</span></div>
+          <div className="h-1.5 bg-bg rounded-full overflow-hidden"><div className="h-full bg-brand rounded-full" style={{width:`${b.pct}%`}}/></div>
+        </div>)}
+      </div>
+    </Card>
     <div className={`grid gap-4 mb-4 ${mob?"grid-cols-1":"grid-cols-2"}`}>
       <Card><Lbl>Skills against this role</Lbl>
         <div className="flex flex-wrap gap-1.5">

@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
-import { createPortal } from "react-dom";
 import { use } from "../store/context.js";
 import { useMedia } from "../helpers/hooks.js";
 import { C, SH } from "../design/tokens.js";
 import { I } from "../design/icons.jsx";
-import { Btn, SmartLogo, SmartPortrait } from "../design/primitives.jsx";
+import { Btn, SmartLogo, SmartPortrait, Tooltip } from "../design/primitives.jsx";
 import { ROUTES } from "../routes.js";
 
 export const EMP_MODULES=[
@@ -68,7 +67,7 @@ export function UpgradePromptModal({payload,onClose}){
     bulkActions:{title:"Bulk actions on candidates",why:"Move, reject, or message dozens of applicants at once. Essential for high-volume roles that get 100+ applicants.",bullets:["Multi-select in pipeline","Bulk move to any stage","Bulk reject with template email","Bulk export to CSV"]},
     branded:{title:"Branded career pages",why:"Your logo, colors, and copy on your public NorthHire profile. Custom URL like northhire.ca/careers/your-company.",bullets:["Custom branding on job listings","Company colors and typography","Custom URL slug","Remove NorthHire watermark"]},
     messages:{title:"Unlimited messaging",why:"Free plan is limited to 20 messages per month. Growth removes the cap so you never lose a great candidate to a slow reply.",bullets:["Unlimited candidate messaging","Templates and canned responses","Read receipts","Team-shared inbox"]},
-    hrSuite:{title:"NorthHire HR Suite — 16 modules",why:"After you hire, HR Suite runs everything. Attendance, leave, payroll, reviews, tasks, chat, calendar, invoices. Bundled with Enterprise, or standalone at $8/employee/month.",bullets:["Full org chart with reporting lines","Payroll, time off, attendance and punch-in","Employee recognition badges","Team chat and shared calendar","Reports on headcount, cost, turnover"]},
+    hrSuite:{title:"NorthHire HR Suite — 16 modules",why:"After you hire, HR Suite runs everything. Attendance, leave, payroll, tasks, chat, calendar, invoices. Bundled with Enterprise, or standalone at $8/employee/month.",bullets:["Full org chart with reporting lines","Payroll, time off, attendance and punch-in","Employee recognition badges","Team chat and shared calendar","Reports on headcount, cost, turnover"]},
     api:{title:"REST API + Zapier integration",why:"Push jobs from your careers site to NorthHire, pull applicants into your data warehouse, sync with Slack — anything you can script.",bullets:["Full REST API with OpenAPI docs","Webhooks for every event","Native Zapier integration","Rate limits: 10k requests/hr"]},
     sso:{title:"Single sign-on and SAML",why:"Enterprise identity providers only. Okta, Azure AD, Google Workspace, one-click provisioning through SCIM.",bullets:["SAML 2.0 with Okta / Azure AD","SCIM for auto-provisioning","Enforce SSO across team","Session policy control"]},
     manager:{title:"Dedicated success manager",why:"A named Canadian account manager, quarterly business reviews, and a private Slack channel for urgent issues.",bullets:["Named account manager","Quarterly review calls","Private Slack support","Priority response SLA"]},
@@ -229,20 +228,14 @@ export function DashShell({modules,children,brandKind}){
               <span className="flex-1">{m.label}</span>
               {locked&&<I n="lock" s={13} c="rgba(245,165,36,.85)"/>}
               </button>
-              {/* Floating tooltip, portaled to <body> and positioned via a fixed pixel offset so it
-                  isn't clipped by this nav's own overflow-y:auto scroll box */}
-              {locked&&lockHover?.key===m.k&&typeof document!=="undefined"&&createPortal(
-                <div className="fixed bg-ink text-white py-2.5 px-3.5 rounded-xl text-xs leading-normal w-56 z-9999 shadow-[0_8px_24px_rgba(0,0,0,0.25)] pointer-events-none border border-amber/30"
-                 style={{top:lockHover.top,left:lockHover.left,transform:"translateY(-50%)"}}>
-                  <div className="flex gap-1.5 items-center mb-1.5">
-                    <I n="lock" s={13} c="#F5A524"/>
-                    <span className="text-xs font-bold text-amber tracking-wide uppercase">Locked</span>
-                  </div>
-                  <div className="text-white/90">This feature is only available on {planPhrase}.</div>
-                  <div className="mt-1.5 text-xs text-white/55">Click to see upgrade options.</div>
-                  {/* Arrow pointing left toward the sidebar item */}
-                  <div className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-t-8 border-t-transparent border-b-8 border-b-transparent border-r-8 border-r-ink"/>
-                </div>, document.body)}
+              <Tooltip show={locked&&lockHover?.key===m.k} top={lockHover?.top} left={lockHover?.left}>
+                <div className="flex gap-1.5 items-center mb-1.5">
+                  <I n="lock" s={13} c="#F5A524"/>
+                  <span className="text-xs font-bold text-amber tracking-wide uppercase">Locked</span>
+                </div>
+                <div className="text-white/90">This feature is only available on {planPhrase}.</div>
+                <div className="mt-1.5 text-xs text-white/55">Click to see upgrade options.</div>
+              </Tooltip>
             </div>;})}
         </div>;})}
     </nav>

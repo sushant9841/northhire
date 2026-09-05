@@ -227,11 +227,22 @@ export function EmpStaffingInvoices(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const client=A.staffingClientByEmployerId(A.company?.id);
   if(!client)return <Page><Empty icon="file" title="Not a staffing client" body="Contact us to set up staffing services."/></Page>;
-  const invoices=A.staffingInvoices.filter(i=>i.client===client.id).sort((a,b)=>b.issued.localeCompare(a.issued));
+  const allInvoices=A.staffingInvoices.filter(i=>i.client===client.id).sort((a,b)=>b.issued.localeCompare(a.issued));
+  const [fromDate,setFromDate]=useState(""); const [toDate,setToDate]=useState("");
+  const invoices=allInvoices.filter(i=>(!fromDate||i.issued>=fromDate)&&(!toDate||i.issued<=toDate));
+  const rangeTotal=invoices.reduce((s,i)=>s+i.total,0);
   const pg=usePagination(invoices,20);
 
   return <Page wide>
     <H1 sub="From NorthHire Staffing. Weekly cycle. HST included per province.">Staffing invoices</H1>
+
+    <div className="flex gap-2.5 items-center mb-3.5 flex-wrap">
+      <Input type="date" value={fromDate} onChange={e=>setFromDate(e.target.value)} style={{maxWidth:170}}/>
+      <span className="text-xs text-text-3">to</span>
+      <Input type="date" value={toDate} onChange={e=>setToDate(e.target.value)} style={{maxWidth:170}}/>
+      {(fromDate||toDate)&&<button onClick={()=>{setFromDate("");setToDate("");}} className="bg-transparent border-0 p-0 cursor-pointer text-sm text-brand font-semibold">Clear dates</button>}
+      {(fromDate||toDate)&&<span className="text-sm text-text-2 ml-auto">{invoices.length} invoice{invoices.length===1?"":"s"} · <strong className="text-text">${rangeTotal.toLocaleString()}</strong> total</span>}
+    </div>
 
     <Card pad={0} style={{borderRadius:14,overflow:"hidden"}}>
       <div className="overflow-x-auto"><table className="w-full border-collapse min-w-160">
@@ -249,7 +260,8 @@ export function EmpStaffingInvoices(){
             <td className={`${TD_CLASS} text-xs`} style={{color:daysOverdue>0?C.danger:C.text3}}>{inv.due}{daysOverdue>0?` (+${daysOverdue}d)`:""}</td>
             <td className={TD_CLASS}><Tag tone={invoiceTone(inv.status)} sm>{inv.status}</Tag></td>
           </tr>;})}
-          {invoices.length===0&&<tr><td colSpan={7} className="p-5"><Empty icon="file" title="No invoices yet" body="Invoices appear here once your recruiter generates the weekly billing run."/></td></tr>}
+          {invoices.length===0&&<tr><td colSpan={7} className="p-5"><Empty icon="file" title={allInvoices.length?"No invoices in this range":"No invoices yet"}
+            body={allInvoices.length?"Try clearing the date filter above.":"Invoices appear here once your recruiter generates the weekly billing run."}/></td></tr>}
         </tbody>
       </table></div>
     </Card>

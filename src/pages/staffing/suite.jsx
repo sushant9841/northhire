@@ -990,7 +990,7 @@ export function AgencyInvoicing(){
     {showGen&&<Modal onClose={()=>setShowGen(false)} title="Generate weekly invoices">
       <div className="flex flex-col gap-3.5">
         <Banner tone="brand" icon="info" title="Weekly cycle">
-          This will batch all approved timesheets for a given week into per-client invoices. HST/GST added per province. Emailed to each client's billing contact.
+          This will batch all approved timesheets for a given week into per-client invoices. HST/GST added per province. A notification is logged to each client's billing contact on file (clients with no contact email set won't get one).
         </Banner>
         <Field label="Week starting" required>
           <DatePicker value={genWeek} onChange={setGenWeek}/>

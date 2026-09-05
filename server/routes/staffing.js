@@ -414,7 +414,17 @@ staffingRouter.post("/invoices/generate", requireAgencyAuth, (req, res) => {
       `INSERT INTO staffing_invoices (id, number, client_id, week_start, issued, due, status, lines_json, subtotal, gst, hst, total, po)
        VALUES (?, ?, ?, ?, date('now'), ?, 'pending', ?, ?, 0, ?, ?, ?)`
     ).run(id, nextNumber(), cid, weekStart, due.toISOString().slice(0, 10), JSON.stringify(d.lines), subtotal, hst, total, client?.po_number || "—");
-    created.push(serializeStaffingInvoice(db.prepare("SELECT * FROM staffing_invoices WHERE id = ?").get(id)));
+    const invoice = serializeStaffingInvoice(db.prepare("SELECT * FROM staffing_invoices WHERE id = ?").get(id));
+    // Real simulated delivery: a genuine outbox row (same table/pattern reset-codes use), not just
+    // a UI claim with nothing to back it - only written when the client actually has a billing
+    // contact on file, since sending to no one isn't "emailed" either.
+    if (client?.default_supervisor_email) {
+      db.prepare("INSERT INTO outbox (id, to_email, subject, body) VALUES (?, ?, ?, ?)").run(
+        nextId("m", "outbox"), client.default_supervisor_email, `Invoice ${invoice.number} from your staffing agency`,
+        `Invoice ${invoice.number} for the week of ${weekStart} is ready: $${total.toFixed(2)} total, due ${invoice.due}.`
+      );
+    }
+    created.push(invoice);
   }
   if (created.length) logStaffingAudit(req.agencyStaff.id, "invoices_generated", `Generated ${created.length} invoice${created.length === 1 ? "" : "s"} for week of ${weekStart}`);
   res.status(201).json({ invoices: created });
