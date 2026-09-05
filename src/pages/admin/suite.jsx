@@ -3,7 +3,7 @@ import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
-import { Page, Btn, Banner, Stat, Card, Switch, Input, Sel, SmartPortrait, Tag, Tabs, Empty, Bar, H1, H2, Modal, Field, Area, usePagination, Pagination } from "../../design/primitives.jsx";
+import { Page, Btn, Banner, Stat, Card, Switch, Input, Sel, SmartPortrait, Tag, Tabs, Empty, Bar, H1, H2, Modal, ConfirmDialog, Field, Area, usePagination, Pagination } from "../../design/primitives.jsx";
 import { pay, payShort } from "../../helpers/utils.js";
 import { CATS, STAGES } from "../../store/seed/constants.js";
 import { jobTone, jobStatusLabel } from "../../helpers/statusTone.js";
