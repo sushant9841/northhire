@@ -18,6 +18,8 @@ const TONE_CLS={
 
 export function EmpStaffing(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
+  const [showReq,setShowReq]=useState(false);
+  const [req,setReq]=useState({title:"",positions:1,location:"",province:"Alberta",mustHave:"",urgency:"medium"});
   const client=A.staffingClientByEmployerId(A.company?.id);
   if(!client){
     /* Non-clients get a sales page with contact CTA — no redirect loop */
@@ -43,8 +45,6 @@ export function EmpStaffing(){
   const pendingTs=A.clientTimesheets(client.id).filter(t=>t.status==="submitted");
   const invoices=A.staffingInvoices.filter(i=>i.client===client.id);
   const openInvTotal=invoices.filter(i=>i.status==="pending"||i.status==="overdue").reduce((s,i)=>s+i.total,0);
-  const [showReq,setShowReq]=useState(false);
-  const [req,setReq]=useState({title:"",positions:1,location:"",province:"Alberta",mustHave:"",urgency:"medium"});
   const submitReq=async()=>{
     if(!req.title.trim()||!req.location.trim())return;
     try{
@@ -168,11 +168,11 @@ export function EmpStaffingTimesheets(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [returning,setReturning]=useState(null); const [reason,setReason]=useState("");
   const client=A.staffingClientByEmployerId(A.company?.id);
-  if(!client)return <Page><Empty icon="clock" title="Not a staffing client" body="Contact us to set up staffing services."/></Page>;
-  const asns=A.clientAssignments(client.id).map(a=>a.id);
+  const asns=client?A.clientAssignments(client.id).map(a=>a.id):[];
   const list=A.timesheets.filter(t=>asns.includes(t.assignment)).sort((a,b)=>b.weekStart.localeCompare(a.weekStart));
   const pending=list.filter(t=>t.status==="submitted");
   const pg=usePagination(list,20);
+  if(!client)return <Page><Empty icon="clock" title="Not a staffing client" body="Contact us to set up staffing services."/></Page>;
 
   return <Page wide>
     <H1 sub={`${pending.length} submitted, ${list.filter(t=>t.status==="approved").length} approved`}>Timesheets to review</H1>
@@ -225,13 +225,13 @@ export function EmpStaffingTimesheets(){
 /* ─── Client: view invoices ─── */
 export function EmpStaffingInvoices(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
-  const client=A.staffingClientByEmployerId(A.company?.id);
-  if(!client)return <Page><Empty icon="file" title="Not a staffing client" body="Contact us to set up staffing services."/></Page>;
-  const allInvoices=A.staffingInvoices.filter(i=>i.client===client.id).sort((a,b)=>b.issued.localeCompare(a.issued));
   const [fromDate,setFromDate]=useState(""); const [toDate,setToDate]=useState("");
+  const client=A.staffingClientByEmployerId(A.company?.id);
+  const allInvoices=client?A.staffingInvoices.filter(i=>i.client===client.id).sort((a,b)=>b.issued.localeCompare(a.issued)):[];
   const invoices=allInvoices.filter(i=>(!fromDate||i.issued>=fromDate)&&(!toDate||i.issued<=toDate));
   const rangeTotal=invoices.reduce((s,i)=>s+i.total,0);
   const pg=usePagination(invoices,20);
+  if(!client)return <Page><Empty icon="file" title="Not a staffing client" body="Contact us to set up staffing services."/></Page>;
 
   return <Page wide>
     <H1 sub="From NorthHire Staffing. Weekly cycle. HST included per province.">Staffing invoices</H1>
@@ -273,9 +273,9 @@ export function EmpStaffingInvoices(){
 export function EmpStaffingAssignments(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const client=A.staffingClientByEmployerId(A.company?.id);
-  if(!client)return <Page><Empty icon="activity" title="Not a staffing client" body="Contact us to set up staffing services."/></Page>;
-  const list=A.clientAssignments(client.id).sort((a,b)=>b.startDate.localeCompare(a.startDate));
+  const list=client?A.clientAssignments(client.id).sort((a,b)=>b.startDate.localeCompare(a.startDate)):[];
   const pg=usePagination(list,18);
+  if(!client)return <Page><Empty icon="activity" title="Not a staffing client" body="Contact us to set up staffing services."/></Page>;
 
   return <Page wide>
     <H1 sub="Every worker deployed to your site — active and past.">Active assignments</H1>
@@ -306,9 +306,9 @@ export function EmpStaffingAssignments(){
 export function EmpStaffingRequests(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const client=A.staffingClientByEmployerId(A.company?.id);
-  if(!client)return <Page><Empty icon="plus" title="Not a staffing client" body="Contact us to set up staffing services."/></Page>;
-  const orders=A.jobOrders.filter(j=>j.client===client.id).sort((a,b)=>b.createdAt-a.createdAt);
+  const orders=client?A.jobOrders.filter(j=>j.client===client.id).sort((a,b)=>b.createdAt-a.createdAt):[];
   const pg=usePagination(orders,18);
+  if(!client)return <Page><Empty icon="plus" title="Not a staffing client" body="Contact us to set up staffing services."/></Page>;
 
   return <Page wide>
     <H1 sub="Your requests for workers. NorthHire Staffing fills these from our bench.">Job order history</H1>
