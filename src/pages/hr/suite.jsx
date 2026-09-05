@@ -960,8 +960,8 @@ export function HrInvoices(){
             </div>
             {nInv.items.map((it,i)=><div key={i} className="grid gap-2 py-2 px-3 border-t border-line-soft items-center" style={{gridTemplateColumns:"3fr 60px 100px 90px 32px"}}>
               <Input value={it.desc} onChange={e=>updateItem(i,{desc:e.target.value})} placeholder="Consulting services · June 2026"/>
-              <Input type="number" min="0" value={it.qty} onChange={e=>updateItem(i,{qty:Number(e.target.value)||0})}/>
-              <Input type="number" min="0" step="0.01" value={it.unitPrice} onChange={e=>updateItem(i,{unitPrice:Number(e.target.value)||0})}/>
+              <Input type="number" min="0" value={it.qty} onChange={e=>updateItem(i,{qty:Math.max(0,Number(e.target.value)||0)})}/>
+              <Input type="number" min="0" step="0.01" value={it.unitPrice} onChange={e=>updateItem(i,{unitPrice:Math.max(0,Number(e.target.value)||0)})}/>
               <div className="text-sm font-semibold text-text text-right">${(it.qty*it.unitPrice||0).toLocaleString()}</div>
               <button onClick={()=>removeItem(i)} disabled={nInv.items.length===1} className="bg-transparent border-0 p-1" style={{cursor:nInv.items.length===1?"default":"pointer",color:nInv.items.length===1?C.text3:C.danger,opacity:nInv.items.length===1?0.3:1}}><I n="x" s={16}/></button>
             </div>)}

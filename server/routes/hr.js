@@ -236,13 +236,15 @@ hrRouter.get("/invoices", requireHrAuth, (req, res) => {
 });
 hrRouter.post("/invoices", requireHrAuth, requireHrPriv, (req, res) => {
   const d = req.body || {};
+  const items = (d.items || []).filter(it => (it.qty || 0) >= 0 && (it.unitPrice || 0) >= 0);
+  if (items.length !== (d.items || []).length) return res.status(400).json({ error: "Invoice line items can't have a negative quantity or price." });
   const next = 1042 + db.prepare("SELECT COUNT(*) AS n FROM hr_invoices WHERE company_id = ?").get(req.hrEmployee.company_id).n + 1;
   const id = nextId("inv", "hr_invoices");
   db.prepare(
     `INSERT INTO hr_invoices (id, company_id, number, client, amount, subtotal, hst, tax_label, po, status, issued, due, created_by, items_json)
      VALUES (?,?,?,?,?,?,?,?,?, 'draft', date('now'), ?, ?, ?)`
   ).run(id, req.hrEmployee.company_id, `INV-2026-${next}`, d.client, d.amount, d.subtotal, d.hst, d.taxLabel, d.po || "",
-    d.due, req.hrEmployee.id, JSON.stringify(d.items || []));
+    d.due, req.hrEmployee.id, JSON.stringify(items));
   res.status(201).json({ invoice: serializeHrInvoice(db.prepare("SELECT * FROM hr_invoices WHERE id = ?").get(id)) });
 });
 hrRouter.patch("/invoices/:id/send", requireHrAuth, requireHrPriv, (req, res) => {
