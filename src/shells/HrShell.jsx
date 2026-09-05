@@ -74,6 +74,15 @@ export function HrShell({children}){
 
   useEffect(()=>{setNavOpen(!mob);},[mob]);
 
+  const currentModuleEntry=HR_MODULES.find(m=>m.k===A.pg);
+  const moduleBlocked=!!(emp&&currentModuleEntry&&
+    (!A.canAccessModule(emp.role,currentModuleEntry.module) || settings.modules[currentModuleEntry.module]===false));
+
+  /* Sidebar already hides modules a role can't reach, but the URL/route to a page it maps to
+     was never actually gated - typing/pasting the path (or having it in history) let anyone
+     render a module's full page regardless of role. Bounce back to the dashboard instead. */
+  useEffect(()=>{if(moduleBlocked)A.go("hrDashboard");},[moduleBlocked]);
+
   /* Not signed into HR — route to HR login instead of crashing, unless a bridge login from
      the employer console is in flight, or the initial /hr/me check hasn't resolved yet, in
      which case just wait. Without the hrAuthChecked gate, refreshing on any HR Suite page
@@ -140,7 +149,7 @@ export function HrShell({children}){
     {sidebar}
     <div className="flex-1 min-w-0 flex flex-col">
       {topbar}
-      <main className={`w-full max-w-wide mx-auto ${mob?"pt-5 px-4 pb-10":"pt-8 px-8 pb-15"}`}>{children}</main>
+      <main className={`w-full max-w-wide mx-auto ${mob?"pt-5 px-4 pb-10":"pt-8 px-8 pb-15"}`}>{moduleBlocked?null:children}</main>
     </div>
   </div>;
 }

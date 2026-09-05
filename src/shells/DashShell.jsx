@@ -136,7 +136,7 @@ export function UpgradePromptModal({payload,onClose}){
 export function DashShell({modules,children,brandKind}){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [navOpen,setNavOpen]=useState(!mob);
-  const [upgradeModal,setUpgradeModal]=useState(null); /* {feature, requiredPlan, label} */
+  const {upgradeModal,setUpgradeModal}=A; /* lifted to the store so pages nested under this shell can also trigger it */
   const [accountMenu,setAccountMenu]=useState(false);
   const [lockHover,setLockHover]=useState(null); /* {key, top, left} of currently-hovered locked item, for the portaled tooltip */
   useEffect(()=>{setNavOpen(!mob);},[mob]);

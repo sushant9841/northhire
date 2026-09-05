@@ -102,6 +102,10 @@ export function useStore(){
   /* Same idea for the pricing-page CTAs: which tier a prospect picked before signing up,
      previously discarded entirely — every signup landed on Free regardless of the button clicked. */
   const [pendingPlan,setPendingPlan]=useState(null);
+  /* Feature-gated pages a plan blocks (sidebar nav items) trigger this rich upgrade modal
+     directly in DashShell; pages nested under it (e.g. EmpCompany's branded-logo editor)
+     need the same modal but live outside DashShell's own local state, so it's lifted here. */
+  const [upgradeModal,setUpgradeModal]=useState(null);
   /* Same carry pattern for the "Verified employers only" browse-jobs dropdown link, which
      previously called the identical A.go("employers") as "Browse all companies" - no filter
      ever actually reached the destination page. */
@@ -1535,6 +1539,7 @@ export function useStore(){
   };
   const limitOf=(feature)=>{const p=currentPlan(); if(!p)return 0; return p[feature];};
   const planRequires=(feature)=>PLAN_REQUIRES[feature]||"Growth";
+  const requestUpgrade=(feature,label,icon)=>setUpgradeModal({feature,requiredPlan:planRequires(feature),label,icon});
   const updateCard=()=>log("billing.card","Updated the payment method","wallet");
   const setSetting=async(k,v)=>{
     setSettings(s=>({...s,[k]:v}));
@@ -1557,7 +1562,7 @@ export function useStore(){
     salaryInsight,skillsGap,expandQuery,restoreApp,notifyFollowers,
     sendMessage,markMessageRead,scheduleInterview,cancelInterview,bulkMove,bulkReject,reverseMatch,inviteToApply,importJobsCSV,employerAnalytics,
     impersonate,stopImpersonating,
-    PLANS,PLAN_ORDER,currentPlan,planName,can,limitOf,planRequires,
+    PLANS,PLAN_ORDER,currentPlan,planName,can,limitOf,planRequires,upgradeModal,setUpgradeModal,requestUpgrade,
     paymentMethods,addPaymentMethod,removePaymentMethod,setDefaultPayment,
     twoFactor,enable2FA,disable2FA,
     references,addReference,removeReference,

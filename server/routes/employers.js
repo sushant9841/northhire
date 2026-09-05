@@ -131,10 +131,19 @@ employersRouter.patch("/:id", requireAuth, (req, res) => {
     if (!isOwner && !isAdmin) return res.status(403).json({ error: "Not your company." });
     db.prepare("UPDATE employers SET plan = ? WHERE id = ?").run(plan, req.params.id);
   }
-  const fieldMap = { name: "name", industry: "industry", city: "city", prov: "prov", size: "size", about: "about", site: "site", businessNumber: "business_number" };
-  const setCols = Object.keys(profileFields).filter(k => fieldMap[k]);
+  const fieldMap = { name: "name", industry: "industry", city: "city", prov: "prov", size: "size", about: "about", site: "site", businessNumber: "business_number", founded: "founded", mark: "mark", a: "a", b: "b" };
+  const BRAND_FIELDS = ["mark", "a", "b"];
+  let setCols = Object.keys(profileFields).filter(k => fieldMap[k]);
   if (setCols.length) {
     if (!isOwner && !isAdmin) return res.status(403).json({ error: "Not your company." });
+    // Custom logo mark / brand colour is a Growth+ feature — silently drop those fields for a
+    // Free-plan company instead of erroring, so the rest of the profile save still succeeds.
+    if (!isAdmin && BRAND_FIELDS.some(k => setCols.includes(k))) {
+      const plan = PLANS[row.plan] || PLANS.Free;
+      if (!plan.branded) setCols = setCols.filter(k => !BRAND_FIELDS.includes(k));
+    }
+  }
+  if (setCols.length) {
     const stmt = db.prepare(`UPDATE employers SET ${setCols.map(k => `${fieldMap[k]} = ?`).join(", ")} WHERE id = ?`);
     stmt.run(...setCols.map(k => profileFields[k]), req.params.id);
   }

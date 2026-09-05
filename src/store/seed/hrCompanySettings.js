@@ -12,7 +12,7 @@ export const HR_ROLES=[
 /* Company-level HR settings — feature toggles per module */
 export const HR_COMPANY_SETTINGS_DEFAULT={
   modules:{directory:true,attendance:true,leave:true,tasks:true,calendar:true,chat:true,invoices:true,payroll:true,trainings:true,badges:true},
-  attendance:{allowRemotePunch:true,requirePinForPunch:false,workingHoursStart:"08:00",workingHoursEnd:"17:00",lateThresholdMin:15},
+  attendance:{allowRemotePunch:true,workingHoursStart:"08:00",workingHoursEnd:"17:00",lateThresholdMin:15},
   leave:{annualVacationDays:15,sickDays:10,personalDays:3,requireApproval:true,advanceNoticeDays:14},
   chat:{allowEmployeeInitiate:true,allowDirectMessages:true,allowGroupCreation:false,allowFileShare:true,allowCalls:true},
   privacy:{

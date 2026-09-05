@@ -100,18 +100,7 @@ export function HrLoginPage(){
 
 /* ═════════════ HR Shell — sidebar + top bar + main slot ═════════════ */
 
-
-/* Placeholder for each HR module — Round C/D will replace with real content */
-function _HrPlaceholder({title,body,icon="sparkle"}){
-  return <Card pad={40} style={{borderRadius:20,textAlign:"center",maxWidth:600,margin:"0 auto"}}>
-    <div className="w-16 h-16 rounded-2xl bg-wash text-brand flex items-center justify-center mx-auto mb-5">
-      <I n={icon} s={32}/></div>
-    <h2 className="text-2xl font-bold tracking-tight text-text mb-2.5">{title}</h2>
-    <p className="text-sm text-text-2 leading-relaxed m-0">{body}</p>
-  </Card>;
-}
-
-/* ═════ Dashboard — real content for Round B; each module gets its own function ═════ */
+/* ═════ Dashboard — each module gets its own function ═════ */
 
 export function HrDashboard(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
@@ -186,7 +175,7 @@ export function HrDashboard(){
           </div>:!todayAttendance.clockOut?<div>
             <div className="text-base text-text mb-2">Punched in at <strong>{todayAttendance.clockIn}</strong></div>
             <p className="text-sm text-text-2 mb-3.5">Have a great day. Punch out when you're wrapping up.</p>
-            <Btn kind="outline" icon="clock" onClick={async()=>{const r=await A.punchOut(emp.id); if(!r.ok)A.toast(r.msg,"danger");}}>Punch out</Btn>
+            <Btn kind="outline" icon="clock" onClick={async()=>{const r=await A.punchOut(emp.id); if(!r.ok)A.toast(r.msg,"danger"); else if(r.earlyLeave)A.toast("Punched out before end of day","warn");}}>Punch out</Btn>
           </div>:<div>
             <div className="text-sm text-text">In: <strong>{todayAttendance.clockIn}</strong> · Out: <strong>{todayAttendance.clockOut}</strong> · Total: <strong className="text-brand">{todayAttendance.hours}h</strong></div>
             <p className="text-sm text-text-2 mt-2">Good work today. See you tomorrow.</p></div>}
@@ -533,7 +522,7 @@ export function HrAttendance(){
         :!todayRecord.clockOut?
         <div className="flex gap-3 flex-wrap items-center">
           <div className="text-base text-text-2">Punched in at <strong className="text-text">{todayRecord.clockIn}</strong> via {todayRecord.source}</div>
-          <Btn kind="outline" icon="clock" onClick={async()=>{const r=await A.punchOut(emp.id); if(!r.ok)A.toast(r.msg,"danger");}}>Punch out</Btn>
+          <Btn kind="outline" icon="clock" onClick={async()=>{const r=await A.punchOut(emp.id); if(!r.ok)A.toast(r.msg,"danger"); else if(r.earlyLeave)A.toast("Punched out before end of day","warn");}}>Punch out</Btn>
         </div>
         :
         <div className="text-base text-text-2">In: <strong>{todayRecord.clockIn}</strong> · Out: <strong>{todayRecord.clockOut}</strong> · Total: <strong className="text-brand">{todayRecord.hours}h</strong></div>}
@@ -1411,8 +1400,8 @@ export function HrPayroll(){
 function PayrollDetailModal({run,onClose,canApprove,onApprove,onExecute}){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const exportRegister=()=>{
-    const rows=[["Employee","Gross","CPP","EI","Federal tax","Provincial tax","Reimbursement","Net"],
-      ...run.lines.map(l=>[l.name,l.gross,l.cpp,l.ei,l.fedTax,l.provTax,l.reimb||0,l.net])];
+    const rows=[["Employee","Gross","Unpaid leave","CPP","EI","Federal tax","Provincial tax","Reimbursement","Net"],
+      ...run.lines.map(l=>[l.name,l.gross,l.unpaidDeduction||0,l.cpp,l.ei,l.fedTax,l.provTax,l.reimb||0,l.net])];
     const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
     const blob=new Blob([csv],{type:"text/csv"}); const url=URL.createObjectURL(blob);
     const a=document.createElement("a"); a.href=url; a.download=`payroll-register-${run.period.replace(/[^\w-]/g,"_")}.csv`; a.click(); URL.revokeObjectURL(url);
@@ -1430,12 +1419,13 @@ function PayrollDetailModal({run,onClose,canApprove,onApprove,onExecute}){
       <div className="overflow-y-auto border border-line rounded-lg" style={{maxHeight:400}}>
         <table className="w-full border-collapse text-xs">
           <thead style={{position:"sticky",top:0,background:C.bg,zIndex:1}}><tr>
-            {["Employee","Gross","CPP","EI","Fed","Prov","Reimb.","Net"].map(h=>
+            {["Employee","Gross","Unpaid","CPP","EI","Fed","Prov","Reimb.","Net"].map(h=>
               <th key={h} className="py-2.5 px-2.5 text-left font-bold text-text-3 tracking-wide uppercase border-b border-line" style={{fontSize:10.5}}>{h}</th>)}
           </tr></thead>
           <tbody>{run.lines.map(l=><tr key={l.employee} className="border-b border-line-soft">
             <td className="py-2.5 px-2.5 font-semibold text-text">{l.name}</td>
             <td className="py-2.5 px-2.5 text-text">${l.gross.toLocaleString()}</td>
+            <td className="py-2.5 px-2.5" style={{color:l.unpaidDeduction>0?C.red:C.text3}}>{l.unpaidDeduction>0?`-$${l.unpaidDeduction.toLocaleString()}`:"—"}</td>
             <td className="py-2.5 px-2.5 text-text-3">-${l.cpp.toLocaleString()}</td>
             <td className="py-2.5 px-2.5 text-text-3">-${l.ei.toLocaleString()}</td>
             <td className="py-2.5 px-2.5 text-text-3">-${l.fedTax.toLocaleString()}</td>

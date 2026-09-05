@@ -1030,6 +1030,7 @@ export function EmpCompany(){
   useEffect(()=>setD({...A.company}),[A.company]);
   const dirty=JSON.stringify(d)!==JSON.stringify(A.company);
   const set=(k,v)=>setD(p=>({...p,[k]:v}));
+  const branded=A.can("branded");
   return <Page narrow>
     <H1 sub="What candidates see on your company page"
       action={<Btn kind="outline" size="sm" iconR="chevR" onClick={()=>A.openEmployer(A.company.id)}>View public page</Btn>}>Company profile</H1>
@@ -1037,13 +1038,17 @@ export function EmpCompany(){
       <div className="flex gap-4 items-center mb-6 flex-wrap">
         <SmartLogo e={d} size={72} radius={18}/>
         <div className="flex-1" style={{minWidth:180}}>
-          <Lbl>Logo mark</Lbl>
-          <div className="flex gap-2 flex-wrap mb-3">
+          <div className="flex items-center justify-between gap-2">
+            <Lbl>Logo mark</Lbl>
+            {!branded&&<button type="button" onClick={()=>A.requestUpgrade("branded","Branded logo & colours","building")}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-brand bg-transparent border-0 cursor-pointer p-0"><I n="lock" s={12}/>Growth+</button>}
+          </div>
+          <div className={`flex gap-2 flex-wrap mb-3 ${branded?"":"opacity-45 pointer-events-none"}`}>
             {Object.keys(MARKS).map(k=><button key={k} onClick={()=>set("mark",k)} className="p-0 rounded-xl overflow-hidden cursor-pointer bg-transparent"
               style={{border:`2px solid ${d.mark===k?C.brand:C.line}`,lineHeight:0}}>
               <Mark kind={k} a={d.a} b={d.b} size={38}/></button>)}</div>
           <Lbl>Brand colour</Lbl>
-          <div className="flex gap-2 flex-wrap">
+          <div className={`flex gap-2 flex-wrap ${branded?"":"opacity-45 pointer-events-none"}`}>
             {["#005CCC","#B45309","#0F5C8C","#B02A26","#0B6B3A","#5B2E8C","#28404F","#A14A18"].map(c=>
               <button key={c} onClick={()=>set("a",c)} className="w-7 h-7 rounded-lg cursor-pointer" style={{background:c,
                 border:d.a===c?`3px solid ${C.text}`:`1px solid ${C.line}`}}/>)}</div></div></div>

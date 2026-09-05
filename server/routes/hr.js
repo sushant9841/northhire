@@ -136,12 +136,18 @@ hrRouter.post("/attendance/punch-in", requireHrAuth, (req, res) => {
   const now = new Date(); const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
   const settingsRow = db.prepare("SELECT settings_json FROM hr_company_settings WHERE company_id = ?").get(req.hrEmployee.company_id);
   const settings = settingsRow ? JSON.parse(settingsRow.settings_json) : null;
-  const att = settings?.attendance || { workingHoursStart: "08:00", lateThresholdMin: 15 };
+  const att = settings?.attendance || { workingHoursStart: "08:00", lateThresholdMin: 15, allowRemotePunch: true };
+  const source = req.body?.source || "web";
+  // The app itself only ever punches in over the web (there's no separate office-terminal
+  // client) — so with remote punch-in disabled, a "web" source is exactly what should be blocked.
+  if (att.allowRemotePunch === false && source === "web") {
+    return res.status(403).json({ error: "Remote punch-in is disabled for this company — use the office time clock." });
+  }
   const [sh, sm] = att.workingHoursStart.split(":").map(Number);
   const late = (now.getHours() * 60 + now.getMinutes()) > (sh * 60 + sm + (att.lateThresholdMin || 0));
   const id = `att_${empId}_${today}`;
   db.prepare("INSERT INTO hr_attendance (id, employee_id, date, clock_in, source, site, late) VALUES (?, ?, ?, ?, ?, 'Head Office', ?)")
-    .run(id, empId, today, time, req.body?.source || "web", late ? 1 : 0);
+    .run(id, empId, today, time, source, late ? 1 : 0);
   res.status(201).json({ record: serializeHrAttendance(db.prepare("SELECT * FROM hr_attendance WHERE id = ?").get(id)) });
 });
 hrRouter.post("/attendance/punch-out", requireHrAuth, (req, res) => {
@@ -152,7 +158,12 @@ hrRouter.post("/attendance/punch-out", requireHrAuth, (req, res) => {
   const clockInAt = new Date(`${existing.date}T${existing.clock_in}:00`);
   const hours = Math.max(0, Math.round((now - clockInAt) / 36000) / 100);
   db.prepare("UPDATE hr_attendance SET clock_out = ?, hours = ? WHERE id = ?").run(time, hours, existing.id);
-  res.json({ hours, record: serializeHrAttendance(db.prepare("SELECT * FROM hr_attendance WHERE id = ?").get(existing.id)) });
+  const settingsRow = db.prepare("SELECT settings_json FROM hr_company_settings WHERE company_id = ?").get(req.hrEmployee.company_id);
+  const settings = settingsRow ? JSON.parse(settingsRow.settings_json) : null;
+  const att = settings?.attendance || { workingHoursEnd: "17:00" };
+  const [eh, em] = (att.workingHoursEnd || "17:00").split(":").map(Number);
+  const earlyLeave = (now.getHours() * 60 + now.getMinutes()) < (eh * 60 + em);
+  res.json({ hours, earlyLeave, record: serializeHrAttendance(db.prepare("SELECT * FROM hr_attendance WHERE id = ?").get(existing.id)) });
 });
 
 /* ─── Leave ─── */
@@ -337,13 +348,30 @@ hrRouter.post("/payruns", requireHrAuth, requireHrPriv, (req, res) => {
      AND employee_id IN (${emps.map(() => "?").join(",") || "''"})`
   ).all(...emps.map(e => e.id));
   const expByEmp = {}; dueExpenses.forEach(x => { expByEmp[x.employee_id] = (expByEmp[x.employee_id] || 0) + x.amount; });
+  // Approved unpaid leave overlapping this pay period reduces salary - otherwise "Unpaid" leave
+  // (a real, selectable leave type) has no actual effect on pay, which defeats the point of it.
+  const approvedUnpaid = db.prepare(
+    `SELECT * FROM hr_leave WHERE status = 'approved' AND type = 'Unpaid'
+     AND employee_id IN (${emps.map(() => "?").join(",") || "''"})`
+  ).all(...emps.map(e => e.id));
+  const periodStartDate = new Date(periodStart), periodEndDate = new Date(periodEnd);
+  const unpaidDaysByEmp = {};
+  approvedUnpaid.forEach(l => {
+    const from = new Date(l.from_date), to = new Date(l.to_date);
+    const overlapStart = from > periodStartDate ? from : periodStartDate;
+    const overlapEnd = to < periodEndDate ? to : periodEndDate;
+    if (overlapEnd < overlapStart) return;
+    const overlapDays = Math.round((overlapEnd - overlapStart) / 86400000) + 1;
+    unpaidDaysByEmp[l.employee_id] = (unpaidDaysByEmp[l.employee_id] || 0) + Math.min(l.days || overlapDays, overlapDays);
+  });
   const lines = emps.map(e => {
-    const grossPeriod = Math.round((e.salary || 0) / 26);
+    const unpaidDeduction = Math.round((unpaidDaysByEmp[e.id] || 0) * ((e.salary || 0) / 260));
+    const grossPeriod = Math.max(0, Math.round((e.salary || 0) / 26) - unpaidDeduction);
     const reimb = expByEmp[e.id] || 0;
     const cpp = Math.round(grossPeriod * 0.0595), ei = Math.round(grossPeriod * 0.0221);
     const fedTax = Math.round(grossPeriod * 0.145), provTax = Math.round(grossPeriod * 0.075);
     const net = grossPeriod - (cpp + ei + fedTax + provTax) + reimb;
-    return { employee: e.id, name: e.name, gross: grossPeriod, cpp, ei, fedTax, provTax, reimb, net };
+    return { employee: e.id, name: e.name, gross: grossPeriod, unpaidDeduction, cpp, ei, fedTax, provTax, reimb, net };
   });
   const id = nextId("pr", "hr_payruns");
   db.prepare(

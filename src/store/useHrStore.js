@@ -190,9 +190,9 @@ export function useHrStore(){
   };
   const punchOut=async(empId)=>{
     try{
-      const {hours,record}=await api.post("/hr/attendance/punch-out",{employeeId:empId});
+      const {hours,earlyLeave,record}=await api.post("/hr/attendance/punch-out",{employeeId:empId});
       if(record)setHrAttendance(l=>l.map(a=>a.id===record.id?record:a));
-      return {ok:true,hours};
+      return {ok:true,hours,earlyLeave};
     }catch(e){return {ok:false,msg:e.message};}
   };
 
