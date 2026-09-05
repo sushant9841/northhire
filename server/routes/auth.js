@@ -38,6 +38,34 @@ authRouter.post("/signup", (req, res) => {
   res.status(201).json({ user: publicUser(user) });
 });
 
+// Accepting a teammate invite (public - the invited person has no account, and therefore no
+// session, yet). See employers.js's /team/invite for how the invite/token gets created.
+authRouter.get("/invites/:token", (req, res) => {
+  const invite = db.prepare("SELECT * FROM employer_invites WHERE token = ? AND status = 'pending'").get(req.params.token);
+  if (!invite) return res.status(404).json({ error: "This invite is invalid or has already been used." });
+  const employer = db.prepare("SELECT name FROM employers WHERE id = ?").get(invite.employer_id);
+  res.json({ email: invite.email, companyName: employer?.name || "" });
+});
+authRouter.post("/invites/:token/accept", (req, res) => {
+  const invite = db.prepare("SELECT * FROM employer_invites WHERE token = ? AND status = 'pending'").get(req.params.token);
+  if (!invite) return res.status(404).json({ error: "This invite is invalid or has already been used." });
+  const { name, password } = req.body || {};
+  if (!name || !password) return res.status(400).json({ error: "Name and password are required." });
+  if (password.length < 8) return res.status(400).json({ error: "Password must be at least 8 characters." });
+  if (db.prepare("SELECT id FROM users WHERE email = ?").get(invite.email)) return res.status(409).json({ error: "An account with that email already exists." });
+  const { hash, salt } = hashPassword(password);
+  const id = nextId("u", "users");
+  db.prepare(
+    `INSERT INTO users (id, role, name, email, password_hash, password_salt, employer_id, employer_role, seed)
+     VALUES (?, 'employer', ?, ?, ?, ?, ?, 'member', ?)`
+  ).run(id, name, invite.email, hash, salt, invite.employer_id, Math.floor(Math.random() * 12));
+  db.prepare("INSERT INTO user_settings (user_id) VALUES (?)").run(id);
+  db.prepare("UPDATE employer_invites SET status = 'accepted' WHERE id = ?").run(invite.id);
+  createSessionCookie(res, "session", "main", id);
+  const user = db.prepare("SELECT * FROM users WHERE id = ?").get(id);
+  res.status(201).json({ user: publicUser(user) });
+});
+
 authRouter.get("/check-email", (req, res) => {
   const email = (req.query.email || "").toLowerCase().trim();
   if (!email) return res.json({ exists: false });

@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash TEXT NOT NULL,
   password_salt TEXT NOT NULL,
   employer_id TEXT REFERENCES employers(id),
+  employer_role TEXT DEFAULT 'owner' CHECK(employer_role IN ('owner','member')),
   seed INTEGER DEFAULT 0,
   title TEXT, cat TEXT, city TEXT, prov TEXT, years INTEGER, phone TEXT,
   skills_json TEXT DEFAULT '[]',
@@ -28,6 +29,16 @@ CREATE TABLE IF NOT EXISTS users (
   suspended INTEGER DEFAULT 0, suspension_reason TEXT, suspended_at TEXT,
   default_cv TEXT, start_when TEXT, joined TEXT,
   visibility_json TEXT DEFAULT '{}',
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS employer_invites (
+  id TEXT PRIMARY KEY,
+  employer_id TEXT NOT NULL REFERENCES employers(id),
+  email TEXT NOT NULL,
+  invited_by TEXT REFERENCES users(id),
+  token TEXT NOT NULL UNIQUE,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','accepted','revoked')),
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

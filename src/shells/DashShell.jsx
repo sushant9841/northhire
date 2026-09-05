@@ -33,6 +33,7 @@ export const EMP_MODULES=[
   {k:"empArticles",label:"Articles",icon:"book",section:"content",feature:"articles"},
   {k:"empTrainings",label:"Trainings",icon:"cap",section:"content",feature:"trainings"},
   {k:"empCompany",label:"Company profile",icon:"building",section:"account"},
+  {k:"empTeam",label:"Team",icon:"users",section:"account"},
   {k:"empBilling",label:"Billing & plan",icon:"wallet",section:"account"},
   {k:"settings",label:"Settings",icon:"gear",section:"account"},
 ];
@@ -283,7 +284,7 @@ export function DashShell({modules,children,brandKind}){
               <div className="text-xs text-text-3">{user?.role==="employer"?"Employer":"Administrator"}</div></div></div>
           <div className="p-1.5">
             {(user?.role==="employer"
-              ?[["empHome","Dashboard","home"],["empPost","Post a job","plus"],["empPipeline","Candidates","users"],["empCompany","Company profile","building"],["empBilling","Billing","wallet"],["settings","Settings","gear"]]
+              ?[["empHome","Dashboard","home"],["empPost","Post a job","plus"],["empPipeline","Candidates","users"],["empCompany","Company profile","building"],["empTeam","Team","users"],["empBilling","Billing","wallet"],["settings","Settings","gear"]]
               :[["admHome","Overview","home"],["admSettings","Platform settings","gear"],["admLog","Activity log","file"],["admStats","Statistics","trend"]]
             ).map(([p,l,ic])=>
               <button key={p} onClick={()=>{A.go(p);setAccountMenu(false);}} className="w-full flex items-center gap-3 py-2.5 px-3 border-0 bg-transparent cursor-pointer text-sm text-text rounded-xl text-left hover:bg-bg">

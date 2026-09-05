@@ -26,7 +26,7 @@ import { InterviewsPage } from "./pages/shared/InterviewsPage.jsx";
 import { WorkerDashboard, WorkerTimesheet, WorkerPayStubs, WorkerDocuments } from "./pages/seeker/worker.jsx";
 import {
   EmpHome, EmpJobs, EmpPost, EmpPipeline, EmpCandidate, ContentManager, EmpArticlesPage,
-  EmpTrainingsAdminPage, BlogEditor, TrainingEditor, EmpCompany, EmpBilling, EmpAnalyticsPage,
+  EmpTrainingsAdminPage, BlogEditor, TrainingEditor, EmpCompany, EmpTeam, EmpBilling, EmpAnalyticsPage,
 } from "./pages/employer/suite.jsx";
 import {
   EmpStaffing, EmpStaffingTimesheets, EmpStaffingInvoices, EmpStaffingAssignments, EmpStaffingRequests,
@@ -49,7 +49,7 @@ import {
   PricingPage, AccessibilityPage, PipedaPage,
 } from "./pages/marketing/pages.jsx";
 import { ForEmployersPage, HowItWorksPage } from "./pages/marketing/forEmployers.jsx";
-import { SignupPage, LoginPage, ForgotPasswordPage, WelcomeTourPage } from "./pages/auth/pages.jsx";
+import { SignupPage, LoginPage, ForgotPasswordPage, WelcomeTourPage, InviteAcceptPage } from "./pages/auth/pages.jsx";
 import { ROUTES } from "./routes.js";
 import { C, FONT, SH } from "./design/tokens.js";
 import { I } from "./design/icons.jsx";
@@ -78,12 +78,12 @@ export default function NorthHire(){
     apply1:<Apply1/>,apply2:<Apply2/>,apply3:<Apply3/>,applyDone:<ApplyDone/>,
     blogs:<BlogsPage/>,blog:<BlogPage/>,trainings:<TrainingsPage/>,training:<TrainingPage/>,
     about:<AboutPage/>,contact:<ContactPage/>,privacy:<LegalPage kind="privacy"/>,terms:<LegalPage kind="terms"/>,
-    pricing:<PricingPage/>,forEmployers:<ForEmployersPage/>,howItWorks:<HowItWorksPage/>,login:<LoginPage/>,signup:<SignupPage/>,forgot:<ForgotPasswordPage/>,denied:<DeniedPage/>,
+    pricing:<PricingPage/>,forEmployers:<ForEmployersPage/>,howItWorks:<HowItWorksPage/>,login:<LoginPage/>,signup:<SignupPage/>,forgot:<ForgotPasswordPage/>,invite:<InviteAcceptPage/>,denied:<DeniedPage/>,
     welcome:<WelcomeTourPage kind="seeker"/>,welcomeEmp:<WelcomeTourPage kind="employer"/>,
     empHome:<EmpShell><EmpHome/></EmpShell>,empJobs:<EmpShell><EmpJobs/></EmpShell>,empPost:<EmpShell><EmpPost/></EmpShell>,empPipeline:<EmpShell><EmpPipeline/></EmpShell>,empCandidate:<EmpShell><EmpCandidate/></EmpShell>,
     empContent:<EmpShell><ContentManager scope="employer"/></EmpShell>,
     empArticles:<EmpShell><EmpArticlesPage/></EmpShell>,empTrainings:<EmpShell><EmpTrainingsAdminPage/></EmpShell>,empBlogEdit:_roleWrap(<BlogEditor/>),empTrainEdit:_roleWrap(<TrainingEditor/>),
-    empCompany:<EmpShell><EmpCompany/></EmpShell>,empBilling:<EmpShell><EmpBilling/></EmpShell>,empAnalytics:<EmpShell><EmpAnalyticsPage/></EmpShell>,
+    empCompany:<EmpShell><EmpCompany/></EmpShell>,empTeam:<EmpShell><EmpTeam/></EmpShell>,empBilling:<EmpShell><EmpBilling/></EmpShell>,empAnalytics:<EmpShell><EmpAnalyticsPage/></EmpShell>,
     admHome:<AdmShell><AdmHome/></AdmShell>,admUsers:<AdmShell><AdmUsers/></AdmShell>,admEmployers:<AdmShell><AdmEmployers/></AdmShell>,admJobs:<AdmShell><AdmJobs/></AdmShell>,
     account:<AccountMenuPage/>,
     accessibility:<AccessibilityPage/>,pipeda:<PipedaPage/>,

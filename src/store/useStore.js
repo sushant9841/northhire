@@ -89,6 +89,7 @@ export function useStore(){
   const [jobId,setJobId]=useState(()=>_idFor("jobId")),[empId,setEmpId]=useState(()=>_idFor("empId")),[blogId,setBlogId]=useState(()=>_idFor("blogId"));
   const [trainingId,setTrainingId]=useState(()=>_idFor("trainingId")),[cvId,setCvId]=useState(()=>_idFor("cvId")),[editId,setEditId]=useState(()=>_idFor("editId"));
   const [candidateId,setCandidateId]=useState(()=>_idFor("candidateId")),[pipelineJob,setPipelineJob]=useState(null);
+  const [inviteToken,setInviteToken]=useState(()=>_idFor("inviteToken"));
   const [applyDraft,setApplyDraft]=useState({job:null,avail:"Within 2 weeks",expect:"",letter:"",meets:"Yes"});
   /* Lightweight prefill for ContactPage — there's no real URL/param passing between pages, so
      this is the same pattern as applyDraft: a small piece of shared state a page reads and
@@ -311,7 +312,7 @@ export function useStore(){
      explicitly (idOverride exists for callers like openJob/openBlog that set the id state and
      navigate in the same tick — reading the id back from state would still see the stale
      pre-update value, since state setters don't apply mid-render). */
-  const _idStateValues={jobId,empId,blogId,trainingId,candidateId,cvId,editId};
+  const _idStateValues={jobId,empId,blogId,trainingId,candidateId,cvId,editId,inviteToken};
   const go=(p,title,idOverride)=>{
     const r=ROUTES[p];
     if(r?.roles&&(!user||!r.roles.includes(user.role))){setStack(s=>[...s,pg]);setPg("denied");setPageTitle(null);return;}
@@ -346,7 +347,7 @@ export function useStore(){
        homePg fallback instead of trying to unwind a history entry that doesn't carry our
        {depth,pg,id} shape (e.g. whatever the browser had before this page ever loaded). */
     if(!window.history.state)window.history.replaceState({depth:0,pg,id:null},"",window.location.pathname+window.location.search);
-    const SETTER_FOR_ID_KEY={jobId:setJobId,empId:setEmpId,blogId:setBlogId,trainingId:setTrainingId,candidateId:setCandidateId,cvId:setCvId,editId:setEditId};
+    const SETTER_FOR_ID_KEY={jobId:setJobId,empId:setEmpId,blogId:setBlogId,trainingId:setTrainingId,candidateId:setCandidateId,cvId:setCvId,editId:setEditId,inviteToken:setInviteToken};
     const onPopState=()=>{
       const state=window.history.state;
       let pg2,id2;
@@ -1127,6 +1128,35 @@ export function useStore(){
       setEmployers(l=>l.map(e=>e.id===d.id?{...d,...mapApiEmployer(employer)}:e));
       log("company.update",`Updated ${d.name} profile`,"building");
     }catch(err){toast(err.message,"danger");}};
+
+  /* --- teammate seats ---
+     users.employer_id already allowed more than one login per company - what was actually
+     missing was the invite/seat-limit application layer. */
+  const [team,setTeam]=useState({members:[],invites:[],seatLimit:1,seatsUsed:0});
+  const loadTeam=async()=>{
+    try{const t=await api.get("/employers/team");setTeam(t);}
+    catch(err){toast(err.message,"danger");}};
+  const inviteTeammate=async email=>{
+    try{const r=await api.post("/employers/team/invite",{email});await loadTeam();
+      log("team.invite",`Invited ${email} to the team`,"mail");return {ok:true,token:r.inviteToken};}
+    catch(err){toast(err.message,"danger");return {ok:false,msg:err.message};}};
+  const revokeInvite=async id=>{
+    try{await api.del(`/employers/team/invite/${id}`);await loadTeam();}
+    catch(err){toast(err.message,"danger");}};
+  const removeTeammate=async userId=>{
+    try{await api.del(`/employers/team/${userId}`);await loadTeam();log("team.remove","Removed a teammate","trash");}
+    catch(err){toast(err.message,"danger");}};
+  const getInvite=async token=>{
+    try{return {ok:true,...(await api.get(`/auth/invites/${token}`))};}
+    catch(err){return {ok:false,msg:err.message};}};
+  const acceptInvite=async(token,name,password)=>{
+    try{const {user:apiUser}=await api.post(`/auth/invites/${token}/accept`,{name,password});
+      setUser(mapApiUser(apiUser)); return {ok:true};}
+    catch(err){return {ok:false,msg:err.message};}};
+  useEffect(()=>{
+    if(user?.role!=="employer"){setTeam({members:[],invites:[],seatLimit:1,seatsUsed:0});return;}
+    loadTeam();
+  },[user?.id,user?.role]);
   const verifyEmployer=async(id,v)=>{
     try{
       const {employer}=await api.patch(`/employers/${id}`,{verified:v});
@@ -1532,6 +1562,7 @@ export function useStore(){
     toggleSave,followEmployer,openJob,openEmployer,openBlog,openTraining,openCandidate,
     beginApply,submitApply,withdraw,acceptOffer,moveApp,rejectApp,
     publishJob,toggleJobStatus,flagJob,setPipelineJob:setPipelineJobFn,saveCompany,verifyEmployer,holdEmployer,toggleSuspend,eraseUser,
+    team,loadTeam,inviteTeammate,revokeInvite,removeTeammate,getInvite,acceptInvite,inviteToken,
     editBlog,editTraining,saveBlog,saveTraining,deleteBlog,deleteTraining,toggleBlogStatus,toggleTrainingStatus,
     enrol,confirmPaidEnrol,advanceTraining,paidTrainings,newCv,editCv,saveCv,duplicateCv,deleteCv,setDefaultCv,
     printCv,printCert,printInvoice,printOfferLetter,exportApplicants,exportLog,exportUsers,exportEmployers,share,choosePlan,updateCard,setSetting,

@@ -110,7 +110,10 @@ export const ROUTES = {
   empBlogEdit: {title:"Edit article", tab:"matched", roles:["employer","admin"], path:"/employer/content/articles/:id/edit"},
   empTrainEdit:{title:"Edit training", tab:"matched", roles:["employer","admin"], path:"/employer/content/trainings/:id/edit"},
   empCompany:  {title:"Company profile", tab:"profile", roles:["employer"], bare:true, root:true, path:"/employer/company"},
+  empTeam:     {title:"Team", tab:"profile", roles:["employer"], bare:true, root:true, path:"/employer/team"},
   empBilling:  {title:"Billing", tab:"profile", roles:["employer"], bare:true, root:true, path:"/employer/billing"},
+
+  invite:      {title:"Join your team", tab:"home", bare:true, path:"/invite/:id"},
 
   admHome:     {title:"Admin overview", tab:"home", roles:["admin"], root:true, bare:true, path:"/admin"},
   admUsers:    {title:"Users", tab:"search", roles:["admin"], bare:true, root:true, path:"/admin/users"},

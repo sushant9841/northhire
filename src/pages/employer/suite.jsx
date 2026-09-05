@@ -1063,6 +1063,76 @@ export function EmpCompany(){
   </Page>;
 }
 
+export function EmpTeam(){
+  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const isOwner=A.user?.employerRole==="owner";
+  const {members,invites,seatLimit,seatsUsed}=A.team;
+  const [inviteEmail,setInviteEmail]=useState(""); const [inviting,setInviting]=useState(false); const [err,setErr]=useState("");
+  const [removing,setRemoving]=useState(null); const [lastInviteLink,setLastInviteLink]=useState(null);
+  const unlimited=seatLimit==null; // server sends null for Infinity - JSON has no Infinity of its own
+  const atLimit=!unlimited&&seatsUsed>=seatLimit;
+  const send=async()=>{
+    setErr(""); setLastInviteLink(null); if(!inviteEmail.trim())return;
+    setInviting(true); const r=await A.inviteTeammate(inviteEmail.trim()); setInviting(false);
+    if(!r.ok){setErr(r.msg);return;}
+    setLastInviteLink(`${window.location.origin}/invite/${r.token}`);
+    setInviteEmail("");
+  };
+  return <Page narrow>
+    <H1 sub="Who has access to your NorthHire employer account">Team</H1>
+    <Card pad={mob?20:26} style={{marginBottom:16}}>
+      <div className="flex justify-between items-center mb-4">
+        <Lbl style={{marginBottom:0}}>Seats</Lbl>
+        <Tag tone={atLimit?"warn":"neutral"} sm>{seatsUsed} of {unlimited?"unlimited":seatLimit} used</Tag>
+      </div>
+      {isOwner&&<>
+        <div className="flex gap-2.5 flex-wrap">
+          <div className="flex-1 min-w-50"><Input icon="mail" type="email" value={inviteEmail} onChange={e=>{setInviteEmail(e.target.value);setErr("");}} placeholder="teammate@yourcompany.ca" disabled={atLimit}/></div>
+          <Btn kind="primary" icon="mail" onClick={send} disabled={inviting||!inviteEmail.trim()||atLimit}>{inviting?"Sending…":"Send invite"}</Btn>
+        </div>
+        {err&&<div className="text-sm mt-2" style={{color:C.danger}}>{err}</div>}
+        {lastInviteLink&&<Banner tone="ok" icon="mail" style={{marginTop:12}} title="Invite created — no real email delivery exists yet, so copy this link and send it yourself">
+          <div className="flex gap-2 items-center flex-wrap">
+            <code className="text-xs bg-white border border-line-2 rounded-lg py-1.5 px-2.5 break-all">{lastInviteLink}</code>
+            <Btn kind="outline" size="sm" icon="copy" onClick={()=>{navigator.clipboard?.writeText(lastInviteLink);A.toast("Invite link copied");}}>Copy</Btn>
+          </div>
+        </Banner>}
+        {atLimit&&<Banner tone="warn" icon="alert" style={{marginTop:12}} title="You're at your plan's seat limit"
+          action={<Btn kind="primary" size="sm" onClick={()=>A.go("pricing")}>See plans</Btn>}>
+          Remove a teammate, or upgrade to invite more people.</Banner>}
+      </>}
+    </Card>
+    <Card pad={mob?20:26} style={{marginBottom:16}}>
+      <Lbl>People with access</Lbl>
+      <div className="flex flex-col gap-2">
+        {members.map(m=><div key={m.id} className="flex items-center gap-3 py-2.5 border-b border-line-soft">
+          <SmartPortrait seed={0} size={36} radius={10}/>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold text-text">{m.name}{m.id===A.user?.id&&<span className="text-text-3 font-normal"> (you)</span>}</div>
+            <div className="text-xs text-text-3 overflow-hidden text-ellipsis whitespace-nowrap">{m.email}</div></div>
+          <Tag tone={m.role==="owner"?"brand":"neutral"} sm>{m.role==="owner"?"Owner":"Member"}</Tag>
+          {isOwner&&m.role!=="owner"&&<Btn kind="ghost" size="xs" icon="trash" onClick={()=>setRemoving(m)}/>}
+        </div>)}
+      </div>
+    </Card>
+    {isOwner&&invites.length>0&&<Card pad={mob?20:26}>
+      <Lbl>Pending invites</Lbl>
+      <div className="flex flex-col gap-2">
+        {invites.map(inv=><div key={inv.id} className="flex items-center gap-3 py-2.5 border-b border-line-soft">
+          <div className="w-9 h-9 rounded-lg bg-wash text-brand flex items-center justify-center shrink-0"><I n="mail" s={16}/></div>
+          <div className="flex-1 min-w-0 text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap">{inv.email}</div>
+          <Tag tone="warn" sm>Pending</Tag>
+          <Btn kind="ghost" size="xs" icon="x" onClick={()=>A.revokeInvite(inv.id)}/>
+        </div>)}
+      </div>
+    </Card>}
+    <ConfirmDialog open={!!removing} onClose={()=>setRemoving(null)} confirmLabel="Remove"
+      title={`Remove ${removing?.name}?`} onConfirm={()=>{A.removeTeammate(removing.id);setRemoving(null);}}>
+      They'll immediately lose access to this employer account. This can't be undone from here.
+    </ConfirmDialog>
+  </Page>;
+}
+
 export function EmpBilling(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const live=A.jobs.filter(j=>j.e===A.company.id&&j.status==="live").length;

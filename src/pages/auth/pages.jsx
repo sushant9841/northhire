@@ -242,6 +242,53 @@ export function SignupPage(){
     </div></div>;
 }
 
+export function InviteAcceptPage(){
+  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const [invite,setInvite]=useState(undefined); // undefined = loading, null = invalid
+  const [name,setName]=useState(""); const [pw,setPw]=useState("");
+  const [err,setErr]=useState(""); const [busy,setBusy]=useState(false); const [done,setDone]=useState(false);
+  useEffect(()=>{let cancelled=false;(async()=>{
+    const r=await A.getInvite(A.inviteToken);
+    if(!cancelled)setInvite(r.ok?r:null);
+  })();return()=>{cancelled=true;};},[A.inviteToken]);
+  const submit=async()=>{setErr("");
+    if(!name.trim()){setErr("Enter your name");return;}
+    if(pw.length<8){setErr("Password must be at least 8 characters");return;}
+    setBusy(true); const r=await A.acceptInvite(A.inviteToken,name.trim(),pw); setBusy(false);
+    if(!r.ok){setErr(r.msg);return;} setDone(true);
+    setTimeout(()=>A.go("empHome"),1200);
+  };
+  return <div className={`bg-bg min-h-full flex justify-center ${mob?"pt-6 px-4 pb-10":"pt-12 px-6 pb-20"}`}>
+    <div className="w-full max-w-md">
+      <div className="flex items-center mb-5">
+        <button onClick={()=>A.go("home")} className="flex items-center gap-2 bg-transparent border-0 cursor-pointer p-0 text-text-2 text-sm font-semibold hover:text-text">
+          <I n="chevL" s={16} w={2}/> Back to NorthHire</button>
+      </div>
+      <Card pad={mob?24:34} style={{borderRadius:20}}>
+        {invite===undefined?<p className="text-base text-text-2 m-0">Checking your invite…</p>
+        :invite===null?<>
+          <h1 className={`${HERO_QUIET} text-2xl mb-2`}>Invite not found</h1>
+          <p className="text-base text-text-2 mb-6">This invite link is invalid or has already been used. Ask your account owner to send a new one.</p>
+          <Btn kind="primary" full onClick={()=>A.go("login")}>Go to sign in</Btn>
+        </>:done?<>
+          <h1 className={`${HERO_QUIET} text-2xl mb-2`}>You're in</h1>
+          <p className="text-base text-text-2">Taking you to the employer dashboard…</p>
+        </>:<>
+          <Tag tone="brand" icon="users">Team invite</Tag>
+          <h1 className={`${HERO_QUIET} text-3xl mt-4 mb-2`}>Join {invite.companyName}</h1>
+          <p className="text-base text-text-2 mb-6">Set your name and a password for {invite.email}.</p>
+          <div className="flex flex-col gap-3.5">
+            <Field label="Your name"><Input icon="user" value={name} onChange={e=>{setName(e.target.value);setErr("");}} placeholder="Jean Tremblay"/></Field>
+            <Field label="Create a password" hint="At least 8 characters.">
+              <Input icon="lock" type="password" value={pw} onChange={e=>{setPw(e.target.value);setErr("");}} placeholder="At least 8 characters"/></Field>
+            {err&&<Banner tone="danger" icon="alert">{err}</Banner>}
+            <Btn kind="primary" size="lg" full iconR="arrowR" onClick={submit} disabled={busy}>{busy?"Joining…":"Join the team"}</Btn>
+          </div>
+        </>}
+      </Card>
+    </div></div>;
+}
+
 export function LoginPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [email,setEmail]=useState(""); const [pw,setPw]=useState("");

@@ -107,7 +107,7 @@ export function Header(){
                 <div className="text-xs text-text-3">{A.user.role==="seeker"?"Job seeker":A.user.role==="employer"?"Employer":"Administrator"}</div></div></div>
             <div className="p-1.5">
               {(A.user.role==="seeker"?[["account","My account","user"],["profile","Edit profile","edit"],["cvs","My CVs","file"],["status","Applications","activity"],["saved","Saved jobs","bookmark"],["settings","Settings","gear"]]
-                :A.user.role==="employer"?[["empHome","Dashboard","home"],["empPost","Post a job","plus"],["empPipeline","Candidates","users"],["empCompany","Company profile","building"],["empBilling","Billing","wallet"],["settings","Settings","gear"]]
+                :A.user.role==="employer"?[["empHome","Dashboard","home"],["empPost","Post a job","plus"],["empPipeline","Candidates","users"],["empCompany","Company profile","building"],["empTeam","Team","users"],["empBilling","Billing","wallet"],["settings","Settings","gear"]]
                 :[["admHome","Overview","home"],["admSettings","Platform settings","gear"],["admLog","Activity log","file"],["admStats","Statistics","trend"]]
               ).map(([p,l,ic])=>
                 <button key={p} onClick={()=>{A.go(p);setMenu(false);}} className="w-full flex items-center gap-3 py-2.5 px-3 border-0 bg-transparent cursor-pointer text-sm text-text rounded-xl text-left hover:bg-bg">
