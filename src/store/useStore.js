@@ -2,7 +2,8 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { ROUTES } from "../routes.js";
 import { uid, money, pay, payUnit, payShort, annual, nowStamp, _fmtDate } from "../helpers/utils.js";
 import { sanitizeHtml } from "../helpers/sanitize.js";
-import { CATM, PCODE, STAGES, PLANS, PLAN_REQUIRES, PLAN_ORDER } from "./seed/constants.js";
+import { CATM, PCODE, STAGES, PLANS as DEFAULT_PLANS, PLAN_REQUIRES, PLAN_ORDER } from "./seed/constants.js";
+import { DEFAULT_PAYROLL_TAX_CONFIG } from "../helpers/payrollTax.js";
 import { SEED_EMPLOYERS } from "./seed/employers.js";
 import { SEED_JOBS } from "./seed/jobs.js";
 import { SEED_PEOPLE } from "./seed/people.js";
@@ -83,6 +84,7 @@ export function useStore(){
   const [impersonating,setImpersonating]=useState(null);
   const [activity,setActivity]=useState([]);
   const [securitySignals,setSecuritySignals]=useState(null);
+  const [platformConfig,setPlatformConfig]=useState(null); // {plans, payrollTax, staffingRates, staffingAgency} - fetched from the backend; null until loaded
   const [settings,setSettings]=useState({employerBlogs:true,employerTrainings:true,employerFeature:true,
     autoApproveJobs:true,publicSignup:true,cvBuilder:true,matching:true,enrolments:true,payTransparency:true,maintenance:false});
   const [userSettings,setUserSettings]=useState({matchAlerts:true,appAlerts:true,marketing:false,discoverable:true,hideEmployer:false,reducedMotion:false,lang:"en"});
@@ -261,6 +263,21 @@ export function useStore(){
         if(!cancelled)setSettings(s);
       }catch(e){
         if(typeof console!=="undefined")console.warn(`[NorthHire] Platform settings sync failed: ${e.message}`);
+      }
+    })();
+    return ()=>{cancelled=true;};
+  },[]);
+  /* Business config (plan limits, payroll tax brackets, staffing burden rates/agency policy) -
+     admin-editable on the backend now instead of hardcoded bundled constants, so every client
+     fetches the live values once at load instead of trusting whatever shipped in the JS bundle. */
+  useEffect(()=>{
+    let cancelled=false;
+    (async()=>{
+      try{
+        const cfg=await api.get("/platform/config");
+        if(!cancelled)setPlatformConfig(cfg);
+      }catch(e){
+        if(typeof console!=="undefined")console.warn(`[NorthHire] Platform config sync failed: ${e.message}`);
       }
     })();
     return ()=>{cancelled=true;};
@@ -693,7 +710,7 @@ export function useStore(){
   const [references,setReferences]=useState([]);
   /* --- HR SUITE store composition --- */
   const HR=useHrStore();
-  const STF=useStaffingStore(user);
+  const STF=useStaffingStore(user,platformConfig);
 
   const addReference=async(ref)=>{
     if(!user||user.role!=="seeker")return;
@@ -733,6 +750,21 @@ export function useStore(){
   const resolveContactMessage=async(id)=>{
     try{await api.patch(`/platform/contact/${id}`,{status:"resolved"});return {ok:true};}
     catch(err){return {ok:false,msg:err.message};}
+  };
+  const listAdmins=async()=>{
+    try{const {admins}=await api.get("/users/admins");return admins;}catch{return [];}
+  };
+  const setAdminScope=async(id,scope)=>{
+    try{await api.patch(`/users/${id}/admin-scope`,{scope});return {ok:true};}
+    catch(err){return {ok:false,msg:err.message};}
+  };
+  const updatePlatformConfig=async(key,value)=>{
+    try{
+      const updated=await api.patch(`/platform/config/${key}`,{value});
+      setPlatformConfig(c=>({...c,[key]:updated[key]}));
+      log("config.change",`Updated ${key} config`,"gear");
+      return {ok:true};
+    }catch(err){return {ok:false,msg:err.message};}
   };
   const loadCandidateContact=async(applicationId)=>{
     try{const {candidate}=await api.get(`/applications/${applicationId}/candidate`);return candidate;}
@@ -1592,6 +1624,8 @@ export function useStore(){
     } else toast("Sharing isn't supported in this browser","warn");
     log("share",`Shared "${title}"`,"share");
   };
+  const PLANS=platformConfig?.plans||DEFAULT_PLANS;
+  const payrollTaxConfig=platformConfig?.payrollTax||DEFAULT_PAYROLL_TAX_CONFIG;
   const choosePlan=async n=>{
     if(!PLANS[n])return;
     if(user?.role==="employer"){
@@ -1640,12 +1674,12 @@ export function useStore(){
     salaryInsight,skillsGap,expandQuery,restoreApp,notifyFollowers,
     sendMessage,markMessageRead,scheduleInterview,cancelInterview,bulkMove,bulkReject,reverseMatch,inviteToApply,importJobsCSV,employerAnalytics,
     impersonate,stopImpersonating,
-    PLANS,PLAN_ORDER,currentPlan,planName,can,limitOf,planRequires,upgradeModal,setUpgradeModal,requestUpgrade,
+    PLANS,PLAN_ORDER,payrollTaxConfig,platformConfig,currentPlan,planName,can,limitOf,planRequires,upgradeModal,setUpgradeModal,requestUpgrade,
     paymentMethods,addPaymentMethod,removePaymentMethod,setDefaultPayment,
     twoFactor,enable2FA,disable2FA,
     references,addReference,removeReference,
     addReview,deleteReview,loadEmployerReviews,loadCandidateContact,candidateNotes,saveCandidateNote,loadScorecards,submitScorecard,
-    submitContact,loadContactInbox,resolveContactMessage,
+    submitContact,loadContactInbox,resolveContactMessage,listAdmins,setAdminScope,updatePlatformConfig,
     saved,following,enrolled,trainingProgress,suspended,suspensionInfo,invitedCandidates,notifications,activity,securitySignals,settings,userSettings,search,setSearch,
     toasts,toast,dismissToast,
     jobId,empId,blogId,trainingId,cvId,editId,candidateId,pipelineJob,applyDraft,setApplyDraft,

@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS users (
   password_salt TEXT NOT NULL,
   employer_id TEXT REFERENCES employers(id),
   employer_role TEXT DEFAULT 'owner' CHECK(employer_role IN ('owner','member')),
+  admin_scope TEXT DEFAULT 'full' CHECK(admin_scope IN ('full','support','moderator','finance','readonly')),
   seed INTEGER DEFAULT 0,
   title TEXT, cat TEXT, city TEXT, prov TEXT, years INTEGER, phone TEXT,
   skills_json TEXT DEFAULT '[]',
@@ -30,6 +31,19 @@ CREATE TABLE IF NOT EXISTS users (
   default_cv TEXT, start_when TEXT, joined TEXT,
   visibility_json TEXT DEFAULT '{}',
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+/* Admin-editable business config (payroll tax brackets, plan limits, staffing burden rates,
+   agency policy numbers) that used to be hardcoded JS constants baked into the bundle - moved
+   here so a finance-scope admin can actually change them at runtime instead of needing a code
+   deploy, and so the "source of truth" for money-relevant numbers is the backend, not a file
+   shipped to every browser. Rows are seeded lazily on first read (see platformConfig.js) rather
+   than in this schema, so the JS-side defaults stay the single place those numbers are authored. */
+CREATE TABLE IF NOT EXISTS platform_config (
+  key TEXT PRIMARY KEY,
+  value_json TEXT NOT NULL,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_by TEXT
 );
 
 CREATE TABLE IF NOT EXISTS employer_invites (
@@ -293,6 +307,9 @@ CREATE TABLE IF NOT EXISTS hr_employees (
   manager TEXT, skills_json TEXT DEFAULT '[]', badges_json TEXT DEFAULT '[]', certifications_json TEXT DEFAULT '[]',
   status TEXT NOT NULL DEFAULT 'active',
   terminated_at TEXT,
+  td1_on_file INTEGER DEFAULT 1,
+  benefits_per_pay REAL DEFAULT 0, benefits_plan TEXT,
+  erased INTEGER DEFAULT 0, erased_at TEXT,
   visibility_json TEXT DEFAULT '{}',
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE(company_id, email)
@@ -419,7 +436,8 @@ CREATE TABLE IF NOT EXISTS staffing_workers (
   sin_last3 TEXT, td_on_file INTEGER DEFAULT 0, direct_deposit_on_file INTEGER DEFAULT 0,
   work_eligibility TEXT, we_expiry TEXT,
   emergency_contact_json TEXT DEFAULT '{}', documents_json TEXT DEFAULT '[]',
-  tickets_json TEXT DEFAULT '[]', notes TEXT, vac_balance REAL DEFAULT 0
+  tickets_json TEXT DEFAULT '[]', notes TEXT, vac_balance REAL DEFAULT 0,
+  default_benefits_per_hr REAL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS staffing_clients (
@@ -451,7 +469,8 @@ CREATE TABLE IF NOT EXISTS staffing_assignments (
   client_id TEXT NOT NULL REFERENCES staffing_clients(id),
   job_order_id TEXT REFERENCES staffing_job_orders(id),
   status TEXT DEFAULT 'active', start_date TEXT, end_date TEXT, ongoing INTEGER DEFAULT 1,
-  pay_rate REAL, bill_rate REAL, supervisor TEXT, supervisor_email TEXT, site TEXT, shift_pattern TEXT, notes TEXT
+  pay_rate REAL, bill_rate REAL, benefits_per_hr REAL DEFAULT 0,
+  supervisor TEXT, supervisor_email TEXT, site TEXT, shift_pattern TEXT, notes TEXT
 );
 
 CREATE TABLE IF NOT EXISTS staffing_timesheets (

@@ -3,7 +3,7 @@ import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C, SH } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
-import { Btn, Card, Tag, Field, Input, Sel, Area, Banner, Modal, SmartPortrait, Empty, Stat, ConfirmDialog, Lbl, usePagination, Pagination, TH_CLASS, TD_CLASS } from "../../design/primitives.jsx";
+import { Btn, Card, Tag, Field, Input, Sel, Area, Banner, Modal, SmartPortrait, Empty, Stat, ConfirmDialog, Lbl, Switch, usePagination, Pagination, TH_CLASS, TD_CLASS } from "../../design/primitives.jsx";
 import { _fmtDate } from "../../helpers/utils.js";
 import { HR_ROLES } from "../../store/seed/hrCompanySettings.js";
 import { HR_DEPARTMENTS } from "../../store/seed/hrDepartments.js";
@@ -336,6 +336,7 @@ function HrPeople_Manage(){
   const [showAdd,setShowAdd]=useState(false);
   const [editing,setEditing]=useState(null);
   const [offboarding,setOffboarding]=useState(null);
+  const [erasing,setErasing]=useState(null);
   const OFFBOARD_ITEMS=[["equipment","Equipment returned (laptop, badge, tools, PPE)"],["access","System and building access revoked"],["finalPay","Final pay and any outstanding expenses processed"],["exitInterview","Exit interview completed"]];
   const [offboardChecked,setOffboardChecked]=useState({});
   const startOffboarding=e=>{setOffboarding(e);setOffboardChecked({});};
@@ -361,7 +362,8 @@ function HrPeople_Manage(){
       return;
     }
     if(!(Number(editing.salary)>0)){A.toast("Enter a salary greater than $0.","danger");return;}
-    A.updateEmp(editing.id,{name:editing.name,title:editing.title,role:editing.role,dept:editing.dept,manager:editing.manager||null,phone:editing.phone,salary:editing.salary,certifications:editing.certifications||[]});
+    A.updateEmp(editing.id,{name:editing.name,title:editing.title,role:editing.role,dept:editing.dept,manager:editing.manager||null,phone:editing.phone,salary:editing.salary,certifications:editing.certifications||[],
+      td1OnFile:editing.td1OnFile,benefitsPerPay:Number(editing.benefitsPerPay)||0,benefitsPlan:editing.benefitsPlan||null});
     setEditing(null);};
   const addCert=()=>setEditing(p=>({...p,certifications:[...(p.certifications||[]),{name:"",issued:"",expires:""}]}));
   const updateCert=(i,patch)=>setEditing(p=>({...p,certifications:p.certifications.map((c,j)=>j===i?{...c,...patch}:c)}));
@@ -395,10 +397,11 @@ function HrPeople_Manage(){
             <td className={TD_CLASS}>{d?<Tag sm style={{background:d.color+"22",color:d.color,border:"1px solid "+d.color+"55"}}>{d.name}</Tag>:<span className="text-xs text-text-3">—</span>}</td>
             <td className={`${TD_CLASS} text-xs text-text-2`}>{A.HR_ROLES.find(r=>r.k===e.role)?.label||e.role}</td>
             <td className={`${TD_CLASS} text-xs text-text-2`}>{mgr?.name||<span className="text-text-3">—</span>}</td>
-            <td className={TD_CLASS}><Tag tone={e.status==="active"?"ok":"neutral"} sm>{e.status}</Tag></td>
+            <td className={TD_CLASS}><Tag tone={e.status==="active"?"ok":"neutral"} sm>{e.status}</Tag>{e.erased&&<Tag tone="neutral" sm style={{marginLeft:6}}>Erased</Tag>}</td>
             <td className={TD_CLASS}><div className="flex gap-1">
-              <Btn kind="ghost" size="xs" icon="edit" onClick={()=>setEditing({...e})}>Edit</Btn>
+              {!e.erased&&<Btn kind="ghost" size="xs" icon="edit" onClick={()=>setEditing({...e})}>Edit</Btn>}
               {e.status==="active"&&e.id!==emp.id&&<Btn kind="dangerSoft" size="xs" onClick={()=>startOffboarding(e)}>Offboard</Btn>}
+              {e.status==="terminated"&&!e.erased&&<Btn kind="dangerSoft" size="xs" icon="trash" onClick={()=>setErasing(e)}>Erase data</Btn>}
             </div></td>
           </tr>;})}</tbody>
       </table></div>
@@ -452,6 +455,25 @@ function HrPeople_Manage(){
           <Field label="Annual salary (CAD)"><Input type="number" value={editing.salary||0} onChange={e=>setEditing({...editing,salary:Number(e.target.value)||0})}/></Field>
         </div>
         <div>
+          <Lbl>Payroll</Lbl>
+          <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-3"}`}>
+            <Field label="TD1 on file" hint="No TD1 means no basic personal tax credit — higher withholding, same as CRA's real rule.">
+              <Switch on={!!editing.td1OnFile} onChange={v=>setEditing({...editing,td1OnFile:v})}/>
+            </Field>
+            <Field label="Benefits plan">
+              <Sel value={editing.benefitsPlan||""} onChange={e=>setEditing({...editing,benefitsPlan:e.target.value||null,benefitsPerPay:e.target.value?editing.benefitsPerPay||42:0})}>
+                <option value="">Not enrolled</option>
+                <option value="Health + Dental">Health + Dental</option>
+                <option value="Health + Dental + RRSP 3% match">Health + Dental + RRSP 3% match</option>
+                <option value="RRSP 3% match">RRSP 3% match</option>
+              </Sel>
+            </Field>
+            <Field label="Benefits deduction/pay" hint="Deducted from net pay each run.">
+              <Input type="number" min="0" disabled={!editing.benefitsPlan} value={editing.benefitsPerPay||0} onChange={e=>setEditing({...editing,benefitsPerPay:Number(e.target.value)||0})}/>
+            </Field>
+          </div>
+        </div>
+        <div>
           <div className="flex justify-between items-center mb-2">
             <Lbl>Certifications</Lbl>
             <Btn kind="ghost" size="xs" icon="plus" onClick={addCert}>Add</Btn>
@@ -478,6 +500,14 @@ function HrPeople_Manage(){
         </div>
       </div>
     </Modal>}
+
+    <ConfirmDialog open={!!erasing}
+      title={erasing?`Erase ${erasing.name}'s personal data?`:""}
+      confirmLabel="Erase data" kind="danger"
+      onConfirm={()=>{const target=erasing; A.eraseHrEmployee(target.id).then(r=>{if(r.ok)A.toast("Employee data erased","ok"); else A.toast(r.msg,"danger");});}}
+      onClose={()=>setErasing(null)}>
+      This scrubs their name, contact details, birth date, skills, badges, certifications, visibility settings, and stored documents — permanently. Payroll and expense history is kept, same as this company's tax/accounting retention requirements. This can't be undone.
+    </ConfirmDialog>
 
     {offboarding&&<Modal onClose={()=>setOffboarding(null)} title={`Offboard ${offboarding.name}`}>
       <div className="flex flex-col gap-3.5">

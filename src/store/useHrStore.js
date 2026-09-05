@@ -186,6 +186,15 @@ export function useHrStore(){
       if(patch.salary!==undefined||patch.role!==undefined)refreshAuditLog();
     }catch(e){/* surfaced via the calling page's own error handling, if any */}
   };
+  const eraseHrEmployee=async(empId)=>{
+    try{
+      await api.post(`/hr/employees/${empId}/erase`);
+      const {employees}=await api.get("/hr/employees");
+      setHrEmployees(employees);
+      refreshAuditLog();
+      return {ok:true};
+    }catch(e){return {ok:false,msg:e.message};}
+  };
   const addEmployee=async(data)=>{
     /* Reachable from the employer console right after a hire, before the employer has ever
        opened HR Suite in this session - bridge into an HR session first if one isn't active yet. */
@@ -472,7 +481,7 @@ export function useHrStore(){
     hrEmployees,hrAttendance,hrLeave,hrTasks,hrEvents,hrInvoices,hrChats,hrChatMsgs,
     hrPayruns,hrCompanySettings,hrDepartments,hrExpenses,hrAuditLog,
     hrEmp,hrEmpsAtCompany,hrCurrentEmp,hrCurrentCompany,hrLogin,hrLogout,hrAutoLogin,
-    hrPublicProfile,updateEmpVisibility,updateEmp,addEmployee,removeEmployee,
+    hrPublicProfile,updateEmpVisibility,updateEmp,eraseHrEmployee,addEmployee,removeEmployee,
     punchIn,punchOut,requestLeave,decideLeave,
     addTask,updateTaskStatus,deleteTask,addEvent,deleteEvent,
     addInvoice,markInvoicePaid,sendInvoice,printHrInvoice,reverseInvoice,

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db, nextId, sqlTime } from "../db.js";
-import { requireAuth, requireRole } from "../auth.js";
+import { requireAuth, requireAdminScope } from "../auth.js";
+import { getAllConfig, setConfig, CONFIG_KEYS } from "../platformConfig.js";
 
 export const platformRouter = Router();
 
@@ -15,12 +16,25 @@ function serializeSettings(row) {
   return out;
 }
 
+// Business config (plan limits, payroll tax brackets, staffing burden rates/agency policy) - public
+// GET because even a logged-out visitor's pricing page or a payslip preview needs these numbers,
+// same as the static JS constant this replaced. Only a finance-scope (or full) admin can change
+// them, and every change is attributed in the audit log since these numbers affect real money math.
+platformRouter.get("/config", (req, res) => { res.json(getAllConfig()); });
+platformRouter.patch("/config/:key", requireAuth, requireAdminScope("finance"), (req, res) => {
+  if (!CONFIG_KEYS.includes(req.params.key)) return res.status(400).json({ error: "Unknown config key." });
+  const updated = setConfig(req.params.key, req.body?.value, `${req.user.name} (${req.user.role})`);
+  db.prepare("INSERT INTO activity_log (id, action, text, icon, actor) VALUES (?, 'config.change', ?, 'gear', ?)")
+    .run(nextId("l", "activity_log"), `Updated ${req.params.key} config`, `${req.user.name} (${req.user.role})`);
+  res.json({ [req.params.key]: updated });
+});
+
 platformRouter.get("/settings", (req, res) => {
   let row = db.prepare("SELECT * FROM platform_settings WHERE id = 1").get();
   if (!row) { db.prepare("INSERT INTO platform_settings (id) VALUES (1)").run(); row = db.prepare("SELECT * FROM platform_settings WHERE id = 1").get(); }
   res.json({ settings: serializeSettings(row) });
 });
-platformRouter.patch("/settings", requireAuth, requireRole("admin"), (req, res) => {
+platformRouter.patch("/settings", requireAuth, requireAdminScope(), (req, res) => {
   const { key, value } = req.body || {};
   const col = SETTINGS_FIELDS[key];
   if (!col) return res.status(400).json({ error: "Unknown setting." });
@@ -33,7 +47,7 @@ platformRouter.patch("/settings", requireAuth, requireRole("admin"), (req, res) 
 
 // Real abuse-visibility signals for AdmHome - previously nothing tracked failed logins or
 // spam-pattern signups at all, so an admin had no way to notice brute-forcing or bot signups.
-platformRouter.get("/security-signals", requireAuth, requireRole("admin"), (req, res) => {
+platformRouter.get("/security-signals", requireAuth, requireAdminScope("support", "moderator", "finance"), (req, res) => {
   const since24h = "datetime('now','-1 day')";
   const failedLogins24h = db.prepare(`SELECT COUNT(*) AS n FROM failed_logins WHERE created_at >= ${since24h}`).get().n;
   const topOffenders = db.prepare(
@@ -53,14 +67,14 @@ platformRouter.get("/security-signals", requireAuth, requireRole("admin"), (req,
   res.json({ failedLogins24h, topOffenders, signups24h, spamDomains, applications24h, floodingApplicants });
 });
 
-platformRouter.get("/activity", requireAuth, requireRole("admin"), (req, res) => {
+platformRouter.get("/activity", requireAuth, requireAdminScope("support", "moderator", "finance"), (req, res) => {
   const rows = db.prepare("SELECT * FROM activity_log ORDER BY created_at DESC LIMIT 1000").all();
   res.json({ activity: rows.map(r => ({ id: r.id, action: r.action, text: r.text, icon: r.icon, actor: r.actor, at: sqlTime(r.created_at).getTime() })) });
 });
 // No frontend call site actually uses this (the client-side activity feed is optimistic/local-
 // only via useStore.js's log() helper) - restricting to admin closes an open door for any
 // authenticated user to inject spoofed entries into the admin-facing audit log for free.
-platformRouter.post("/activity", requireAuth, requireRole("admin"), (req, res) => {
+platformRouter.post("/activity", requireAuth, requireAdminScope(), (req, res) => {
   const { action, text, icon } = req.body || {};
   const id = nextId("l", "activity_log");
   db.prepare("INSERT INTO activity_log (id, action, text, icon, actor) VALUES (?, ?, ?, ?, ?)")
@@ -82,11 +96,11 @@ platformRouter.post("/contact", (req, res) => {
   db.prepare("INSERT INTO contact_messages (id, name, email, topic, message) VALUES (?, ?, ?, ?, ?)").run(id, name || "", email, topic || "", message);
   res.status(201).json({ ticket: id });
 });
-platformRouter.get("/contact", requireAuth, requireRole("admin"), (req, res) => {
+platformRouter.get("/contact", requireAuth, requireAdminScope("support"), (req, res) => {
   const rows = db.prepare("SELECT * FROM contact_messages ORDER BY created_at DESC").all();
   res.json({ messages: rows.map(serializeContactMessage) });
 });
-platformRouter.patch("/contact/:id", requireAuth, requireRole("admin"), (req, res) => {
+platformRouter.patch("/contact/:id", requireAuth, requireAdminScope("support"), (req, res) => {
   const { status } = req.body || {};
   db.prepare("UPDATE contact_messages SET status = ? WHERE id = ?").run(status, req.params.id);
   res.json({ message: serializeContactMessage(db.prepare("SELECT * FROM contact_messages WHERE id = ?").get(req.params.id)) });

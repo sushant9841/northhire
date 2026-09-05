@@ -37,19 +37,24 @@ export const EMP_MODULES=[
   {k:"settings",label:"Settings",icon:"gear",section:"account"},
 ];
 
+/* adminScope: which scoped admin roles see this section - undefined means every admin scope
+   (including readonly) sees it, since these are pure visibility gates matching the server-side
+   requireAdminScope() checks in server/routes/*.js; "full" always sees everything regardless. */
 export const ADM_MODULES=[
   {k:"admHome",label:"Overview",icon:"activity",section:"main"},
   {k:"admStats",label:"Statistics",icon:"trend",section:"main"},
   {k:"admLog",label:"Activity log",icon:"file",section:"main"},
-  {k:"admUsers",label:"Users",icon:"users",section:"manage"},
-  {k:"admEmployers",label:"Employers",icon:"building",section:"manage"},
-  {k:"admJobs",label:"Jobs",icon:"briefcase",section:"manage"},
-  {k:"admBlogs",label:"Articles",icon:"book",section:"content"},
-  {k:"admTrainings",label:"Trainings",icon:"cap",section:"content"},
-  {k:"admSettings",label:"Platform settings",icon:"gear",section:"account"},
+  {k:"admUsers",label:"Users",icon:"users",section:"manage",adminScope:["support","moderator"]},
+  {k:"admEmployers",label:"Employers",icon:"building",section:"manage",adminScope:["moderator"]},
+  {k:"admJobs",label:"Jobs",icon:"briefcase",section:"manage",adminScope:["moderator"]},
+  {k:"admBlogs",label:"Articles",icon:"book",section:"content",adminScope:["moderator"]},
+  {k:"admTrainings",label:"Trainings",icon:"cap",section:"content",adminScope:["moderator"]},
+  {k:"admConfig",label:"Business config",icon:"wallet",section:"finance",adminScope:["finance"]},
+  {k:"admAdmins",label:"Admin accounts",icon:"shield",section:"account",adminScope:[]},
+  {k:"admSettings",label:"Platform settings",icon:"gear",section:"account",adminScope:[]},
 ];
 
-export const SECTION_LABELS={main:"Hiring",staffing:"Staffing services",hrsuite:"HR Suite",content:"Content",manage:"Manage",account:"Account"};
+export const SECTION_LABELS={main:"Hiring",staffing:"Staffing services",hrsuite:"HR Suite",content:"Content",finance:"Finance",manage:"Manage",account:"Account"};
 
 /* ─── Feature-specific upgrade prompt ─── */
 export function UpgradePromptModal({payload,onClose}){
@@ -147,8 +152,14 @@ export function DashShell({modules,children,brandKind}){
   },[accountMenu]);
 
   const user=A.user; const company=A.company;
-  const currentModule=modules.find(m=>m.k===A.pg);
-  const sections=Array.from(new Set(modules.map(m=>m.section)));
+  // A scoped admin (support/moderator/finance/readonly) only sees the sections its scope covers -
+  // "full" (or a non-admin console) sees everything; a section with no adminScope list is visible
+  // to every admin scope (matching server routes that don't gate that GET by scope at all).
+  const visibleModules=user?.role==="admin"&&(user.adminScope||"full")!=="full"
+    ?modules.filter(m=>!m.adminScope||m.adminScope.includes(user.adminScope))
+    :modules;
+  const currentModule=visibleModules.find(m=>m.k===A.pg);
+  const sections=Array.from(new Set(visibleModules.map(m=>m.section)));
 
   /* Stats block for sidebar top */
   const empStats=user?.role==="employer"&&company?(()=>{
@@ -205,7 +216,7 @@ export function DashShell({modules,children,brandKind}){
     </div>
 
     <nav className="flex-1 overflow-y-auto py-2.5 px-2">
-      {sections.map(sec=>{const items=modules.filter(m=>m.section===sec);
+      {sections.map(sec=>{const items=visibleModules.filter(m=>m.section===sec);
         return <div key={sec} className="mb-2.5">
           <div className="text-xs font-bold text-white/35 tracking-widest uppercase pt-2 px-3 pb-1.5">{SECTION_LABELS[sec]}</div>
           {items.map(m=>{const active=A.pg===m.k;
@@ -279,6 +290,7 @@ export function DashShell({modules,children,brandKind}){
             {(user?.role==="employer"
               ?[["empHome","Dashboard","home"],["empPost","Post a job","plus"],["empPipeline","Candidates","users"],["empCompany","Company profile","building"],["empTeam","Team","users"],["empBilling","Billing","wallet"],["settings","Settings","gear"]]
               :[["admHome","Overview","home"],["admSettings","Platform settings","gear"],["admLog","Activity log","file"],["admStats","Statistics","trend"]]
+                  .filter(([p])=>visibleModules.some(m=>m.k===p)||p==="admHome"||p==="admLog"||p==="admStats")
             ).map(([p,l,ic])=>
               <button key={p} onClick={()=>{A.go(p);setAccountMenu(false);}} className="w-full flex items-center gap-3 py-2.5 px-3 border-0 bg-transparent cursor-pointer text-sm text-text rounded-xl text-left hover:bg-bg">
                 <I n={ic} s={17} c={C.text2}/>{l}</button>)}

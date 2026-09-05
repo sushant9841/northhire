@@ -1,7 +1,7 @@
 import { Router } from "express";
 import crypto from "node:crypto";
 import { db, nextId } from "../db.js";
-import { requireAuth, requireRole, publicUser, hashPassword } from "../auth.js";
+import { requireAuth, requireAdminScope, publicUser, hashPassword } from "../auth.js";
 
 export const usersRouter = Router();
 
@@ -30,12 +30,32 @@ usersRouter.patch("/me", requireAuth, (req, res) => {
   res.json({ user: publicUser(updated) });
 });
 
-usersRouter.get("/", requireAuth, requireRole("admin"), (req, res) => {
+usersRouter.get("/", requireAuth, requireAdminScope("support", "moderator"), (req, res) => {
   const rows = db.prepare("SELECT * FROM users WHERE role = 'seeker' ORDER BY created_at DESC").all();
   res.json({ users: rows.map(publicUser) });
 });
 
-usersRouter.patch("/:id/suspend", requireAuth, requireRole("admin"), (req, res) => {
+const ADMIN_SCOPES = ["full", "support", "moderator", "finance", "readonly"];
+// Only a full admin manages other admins' scopes - a scoped admin escalating its own or another
+// account's access would defeat the entire point of scoping. Restricted with requireAdminScope()
+// (no scopes listed) rather than requireRole("admin"), so a support/moderator/finance/readonly
+// admin gets the same 403 a non-admin would.
+usersRouter.get("/admins", requireAuth, requireAdminScope(), (req, res) => {
+  const rows = db.prepare("SELECT id, name, email, admin_scope, created_at FROM users WHERE role = 'admin' ORDER BY created_at ASC").all();
+  res.json({ admins: rows.map(r => ({ id: r.id, name: r.name, email: r.email, adminScope: r.admin_scope || "full", createdAt: r.created_at })) });
+});
+usersRouter.patch("/:id/admin-scope", requireAuth, requireAdminScope(), (req, res) => {
+  const row = db.prepare("SELECT * FROM users WHERE id = ? AND role = 'admin'").get(req.params.id);
+  if (!row) return res.status(404).json({ error: "Admin account not found." });
+  const { scope } = req.body || {};
+  if (!ADMIN_SCOPES.includes(scope)) return res.status(400).json({ error: "Invalid admin scope." });
+  db.prepare("UPDATE users SET admin_scope = ? WHERE id = ?").run(scope, req.params.id);
+  db.prepare("INSERT INTO activity_log (id, action, text, icon, actor) VALUES (?, 'admin.scope_change', ?, 'shield', ?)")
+    .run(nextId("l", "activity_log"), `Set ${row.name}'s admin scope to ${scope}`, `${req.user.name} (${req.user.role})`);
+  res.json({ admin: { id: row.id, name: row.name, email: row.email, adminScope: scope } });
+});
+
+usersRouter.patch("/:id/suspend", requireAuth, requireAdminScope("support", "moderator"), (req, res) => {
   const row = db.prepare("SELECT * FROM users WHERE id = ?").get(req.params.id);
   if (!row) return res.status(404).json({ error: "User not found." });
   const suspend = !row.suspended;
@@ -52,7 +72,7 @@ usersRouter.patch("/:id/suspend", requireAuth, requireRole("admin"), (req, res) 
    users row is kept rather than actually dropped, so applications/interviews an employer
    already has on file don't dangle - this mirrors how real erasure requests are handled when
    another party has a legitimate retained copy of a transaction record. */
-usersRouter.delete("/:id", requireAuth, requireRole("admin"), (req, res) => {
+usersRouter.delete("/:id", requireAuth, requireAdminScope(), (req, res) => {
   const row = db.prepare("SELECT * FROM users WHERE id = ? AND role = 'seeker'").get(req.params.id);
   if (!row) return res.status(404).json({ error: "User not found." });
   const id = req.params.id;

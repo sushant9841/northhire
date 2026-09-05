@@ -452,17 +452,18 @@ function _PlaceWorkerModal({jobOrder,onClose,onPlace}){
   const [workerId,setWorkerId]=useState("");
   const [payRate,setPayRate]=useState(jobOrder.payRate);
   const [billRate,setBillRate]=useState(jobOrder.billRate);
+  const [benefitsPerHr,setBenefitsPerHr]=useState(0);
   const availableWorkers=A.workers.filter(w=>w.status==="active"&&w.availability==="available");
   const selectedW=availableWorkers.find(w=>w.id===workerId);
   const person=selectedW?(A.people||[]).find(p=>p.id===selectedW.personId):null;
-  const econ=A.calcStaffingEconomics(Number(payRate)||0,Number(billRate)||0,selectedW?.province||"ON",0);
+  const econ=A.calcStaffingEconomics(Number(payRate)||0,Number(billRate)||0,selectedW?.province||"ON",Number(benefitsPerHr)||0);
   const marginOk=econ.markupPct>=A.STAFFING_AGENCY.markupFloor;
   const rateInvalid=Number(billRate)>0&&Number(payRate)>0&&Number(billRate)<Number(payRate);
 
   const place=()=>{
     if(!workerId||rateInvalid)return;
     A.createAssignment({worker:workerId,client:jobOrder.client,jobOrder:jobOrder.id,
-      payRate:Number(payRate),billRate:Number(billRate),
+      payRate:Number(payRate),billRate:Number(billRate),benefitsPerHr:Number(benefitsPerHr)||0,
       startDate:jobOrder.startDate,endDate:jobOrder.endDate,ongoing:jobOrder.ongoing,
       supervisor:jobOrder.supervisor,supervisorEmail:jobOrder.supervisorEmail,
       site:jobOrder.location,shiftPattern:jobOrder.shiftPattern,notes:""});
@@ -472,7 +473,7 @@ function _PlaceWorkerModal({jobOrder,onClose,onPlace}){
   return <Modal onClose={onClose} title="Place a worker">
     <div className="flex flex-col gap-3.5">
       <Field label="Worker" required>
-        <Sel value={workerId} onChange={e=>{setWorkerId(e.target.value); const w=availableWorkers.find(x=>x.id===e.target.value); if(w){setPayRate(w.payRateTarget||jobOrder.payRate);}}}>
+        <Sel value={workerId} onChange={e=>{setWorkerId(e.target.value); const w=availableWorkers.find(x=>x.id===e.target.value); if(w){setPayRate(w.payRateTarget||jobOrder.payRate); setBenefitsPerHr(w.defaultBenefitsPerHr||0);}}}>
           <option value="">Select from bench…</option>
           {availableWorkers.map(w=>{const p=(A.people||[]).find(pp=>pp.id===w.personId);
             return <option key={w.id} value={w.id}>{p?.name||w.id} — {w.city}, {w.province}</option>;})}
@@ -491,6 +492,9 @@ function _PlaceWorkerModal({jobOrder,onClose,onPlace}){
         <Field label="Pay rate ($/hr)" required><Input type="number" min="0" step="0.5" value={payRate} onChange={e=>setPayRate(e.target.value)}/></Field>
         <Field label="Bill rate ($/hr)" required><Input type="number" min="0" step="0.5" value={billRate} onChange={e=>setBillRate(e.target.value)}/></Field>
       </div>
+      <Field label="Benefits/hr" hint="Health/dental/RRSP burden for this placement — defaults to the worker's profile default.">
+        <Input type="number" min="0" step="0.05" value={benefitsPerHr} onChange={e=>setBenefitsPerHr(e.target.value)}/>
+      </Field>
       {rateInvalid&&<Banner tone="danger" icon="alert">Bill rate can't be below pay rate — that's a guaranteed loss before burden is even added.</Banner>}
       {selectedW&&<Card pad={14} style={{borderRadius:11,background:marginOk?C.okBg:C.warnBg,border:`1px solid ${marginOk?C.okLn:C.warnLn}`}}>
         <div className="flex justify-between text-xs mb-1.5">
@@ -533,14 +537,15 @@ function _PlaceFromBenchModal({worker:w,onClose,onPlace}){
   const jobOrder=openOrders.find(j=>j.id===orderId);
   const [payRate,setPayRate]=useState(w.payRateTarget||0);
   const [billRate,setBillRate]=useState(jobOrder?.billRate||0);
-  const econ=A.calcStaffingEconomics(Number(payRate)||0,Number(billRate)||0,w.province,0);
+  const [benefitsPerHr,setBenefitsPerHr]=useState(w.defaultBenefitsPerHr||0);
+  const econ=A.calcStaffingEconomics(Number(payRate)||0,Number(billRate)||0,w.province,Number(benefitsPerHr)||0);
   const marginOk=econ.markupPct>=A.STAFFING_AGENCY.markupFloor;
   const rateInvalid=Number(billRate)>0&&Number(payRate)>0&&Number(billRate)<Number(payRate);
 
   const place=()=>{
     if(!jobOrder||rateInvalid)return;
     A.createAssignment({worker:w.id,client:jobOrder.client,jobOrder:jobOrder.id,
-      payRate:Number(payRate),billRate:Number(billRate),
+      payRate:Number(payRate),billRate:Number(billRate),benefitsPerHr:Number(benefitsPerHr)||0,
       startDate:jobOrder.startDate,endDate:jobOrder.endDate,ongoing:jobOrder.ongoing,
       supervisor:jobOrder.supervisor,supervisorEmail:jobOrder.supervisorEmail,
       site:jobOrder.location,shiftPattern:jobOrder.shiftPattern,notes:""});
@@ -560,6 +565,7 @@ function _PlaceFromBenchModal({worker:w,onClose,onPlace}){
         <Field label="Pay rate ($/hr)" required><Input type="number" min="0" step="0.5" value={payRate} onChange={e=>setPayRate(e.target.value)}/></Field>
         <Field label="Bill rate ($/hr)" required><Input type="number" min="0" step="0.5" value={billRate} onChange={e=>setBillRate(e.target.value)}/></Field>
       </div>}
+      {jobOrder&&<Field label="Benefits/hr" hint="Defaults to this worker's profile default."><Input type="number" min="0" step="0.05" value={benefitsPerHr} onChange={e=>setBenefitsPerHr(e.target.value)}/></Field>}
       {rateInvalid&&<Banner tone="danger" icon="alert">Bill rate can't be below pay rate.</Banner>}
       {jobOrder&&<Card pad={14} style={{borderRadius:11,background:marginOk?C.okBg:C.warnBg,border:`1px solid ${marginOk?C.okLn:C.warnLn}`}}>
         <div className="flex justify-between text-xs mb-1.5">
@@ -1253,6 +1259,11 @@ export function AgencyWorkers(){
             ["Vacation accrued",`$${w.vacBalance.toFixed(2)}`]].map(([l,v])=>
             <div key={l}><div className="text-xs font-bold text-text-3 tracking-wide uppercase mb-1">{l}</div>
               <div className="text-text">{v}</div></div>)}
+          <div>
+            <div className="text-xs font-bold text-text-3 tracking-wide uppercase mb-1">Default benefits/hr</div>
+            <Input type="number" min="0" step="0.05" value={w.defaultBenefitsPerHr||0}
+              onChange={e=>A.updateWorker(w.id,{defaultBenefitsPerHr:Number(e.target.value)||0})} style={{maxWidth:120}}/>
+          </div>
         </div>
         {w.vacBalance>0&&<Btn kind="outline" size="sm" icon="wallet" style={{marginTop:14}}
           onClick={async()=>{const r=await A.payoutVacation(w.id);if(r.ok)A.toast(`Paid out $${r.amount.toFixed(2)} vacation to ${person?.name||"worker"}`,"ok");}}>

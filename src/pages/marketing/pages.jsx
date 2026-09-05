@@ -11,7 +11,7 @@ import {
 } from "../../design/primitives.jsx";
 import { money, pay, payShort, matchesQuery } from "../../helpers/utils.js";
 import { sanitizeHtml } from "../../helpers/sanitize.js";
-import { CATS, PLANS } from "../../store/seed/constants.js";
+import { CATS } from "../../store/seed/constants.js";
 import { SEED_BLOGS } from "../../store/seed/blogs.js";
 import { JobCard, TrainingCard, BlogCard, EmpMark } from "../shared/cards.jsx";
 
@@ -944,11 +944,11 @@ export function LegalPage({kind}){
 export function PricingPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const plans=[
-    {n:"Free",p:PLANS.Free.price,best:false,tag:"Try it out",summary:"For solo hiring or trying NorthHire before committing.",
+    {n:"Free",p:A.PLANS.Free.price,best:false,tag:"Try it out",summary:"For solo hiring or trying NorthHire before committing.",
      f:["1 active job posting","Applicant pipeline with match scoring","Basic analytics","Verified employer badge","Email support"]},
-    {n:"Growth",p:PLANS.Growth.price,best:true,tag:"Recommended for most",summary:"Everything a growing team needs to run a real hiring pipeline.",
+    {n:"Growth",p:A.PLANS.Growth.price,best:true,tag:"Recommended for most",summary:"Everything a growing team needs to run a real hiring pipeline.",
      f:["10 active job postings","Unlimited applications","Direct candidate messaging","Interview scheduling","Talent pool (reverse match)","CSV bulk job import","Full analytics dashboard","2 featured job upgrades per month","Employer branded page","5 recruiter seats","Priority support"]},
-    {n:"Enterprise",p:PLANS.Enterprise.price,best:false,tag:"For large teams",summary:"Unlimited hiring + the full NorthHire HR Suite for running your whole workforce.",
+    {n:"Enterprise",p:A.PLANS.Enterprise.price,best:false,tag:"For large teams",summary:"Unlimited hiring + the full NorthHire HR Suite for running your whole workforce.",
      f:["Unlimited job postings & applications","Unlimited featured upgrades","Unlimited recruiter seats","Full analytics with trend history","Custom employer branding (colors, hero)","API access","Single Sign-On (SAML / OIDC)","Dedicated account manager","","NorthHire HR Suite included:","• Employee directory & profiles","• Attendance & punch-in/out","• Leave management & approvals","• Tasks, calendar, events & trainings","• Internal chat (1:1 & groups)","• Invoices, salary, notifications","• Role management (Admin/HR/Finance/Employee)","• Feature toggles per module","• Sync with public NorthHire profiles"]}
   ];
   const faq=[

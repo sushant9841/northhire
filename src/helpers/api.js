@@ -1,5 +1,6 @@
 /* Thin fetch wrapper for the real backend at server/. Session state lives entirely in an
    httpOnly cookie the browser manages itself - nothing here reads or writes localStorage. */
+import { infinityReviver } from "./jsonInfinity.js";
 
 const API_BASE = "http://localhost:8787/api";
 
@@ -19,7 +20,10 @@ async function request(method, path, body) {
     throw new ApiUnreachableError("Can't reach the NorthHire API — is `npm run server` running?");
   }
   let data = null;
-  try { data = await res.json(); } catch { /* empty body */ }
+  // Parsed via text+reviver (not res.json()) so a real Infinity the server sent as the
+  // "__Infinity__" sentinel (see jsonInfinity.js) comes back as an actual Infinity, not null -
+  // harmless for every other response, since that sentinel string never appears in real data.
+  try { data = JSON.parse(await res.text(), infinityReviver); } catch { /* empty body */ }
   if (!res.ok) throw new Error(data?.error || `Request failed (${res.status})`);
   return data;
 }

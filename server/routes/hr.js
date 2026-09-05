@@ -1,6 +1,8 @@
 import { Router } from "express";
+import crypto from "node:crypto";
 import { db, nextId, sqlTime } from "../db.js";
 import { calcNetPay } from "../../src/helpers/payrollTax.js";
+import { getConfig } from "../platformConfig.js";
 import { hashPassword, verifyPassword, createSessionCookie, clearSessionCookie, requireHrAuth, hrEmployeeFromRequest, requireAuth, requireRole } from "../auth.js";
 import {
   serializeHrEmployee, serializeHrAttendance, serializeHrLeave, serializeHrTask, serializeHrEvent,
@@ -115,9 +117,10 @@ hrRouter.patch("/employees/:id", requireHrAuth, requireHrPriv, (req, res) => {
   const row = db.prepare("SELECT * FROM hr_employees WHERE id = ? AND company_id = ?").get(req.params.id, req.hrEmployee.company_id);
   if (!row) return res.status(404).json({ error: "Employee not found." });
   const d = req.body || {};
-  const fields = { name: "name", title: "title", role: "role", dept: "dept", manager: "manager", phone: "phone", salary: "salary" };
+  const fields = { name: "name", title: "title", role: "role", dept: "dept", manager: "manager", phone: "phone", salary: "salary", benefitsPerPay: "benefits_per_pay", benefitsPlan: "benefits_plan" };
   const setCols = []; const params = [];
   for (const [key, col] of Object.entries(fields)) if (d[key] !== undefined) { setCols.push(`${col} = ?`); params.push(d[key]); }
+  if (d.td1OnFile !== undefined) { setCols.push("td1_on_file = ?"); params.push(d.td1OnFile ? 1 : 0); }
   if (d.certifications !== undefined) {
     setCols.push("certifications_json = ?");
     params.push(JSON.stringify((d.certifications || []).filter(c => c && c.name).map(c => ({ name: c.name, issued: c.issued || null, expires: c.expires || null }))));
@@ -146,6 +149,30 @@ hrRouter.delete("/employees/:id", requireHrAuth, requireHrPriv, (req, res) => {
   if (!row) return res.status(404).json({ error: "Employee not found." });
   db.prepare("UPDATE hr_employees SET status = 'terminated', terminated_at = date('now') WHERE id = ?").run(req.params.id);
   db.prepare("UPDATE hr_employees SET manager = ? WHERE manager = ?").run(row.manager, req.params.id);
+  res.json({ ok: true });
+});
+/* Real erasure for an HR employee, mirroring the seeker GDPR-erasure route in users.js: scrubs
+   every piece of personal data this app actually stores, but keeps the row (so payroll/expense
+   history a company is required to retain doesn't dangle) and never touches payroll/expense
+   money records - "terminated" already means "off the books going forward"; "erased" means the
+   personal-data trail is gone, not that financial history was rewritten. Restricted to a
+   terminated employee only - erasing an active employee's own login/profile makes no sense. */
+hrRouter.post("/employees/:id/erase", requireHrAuth, requireHrPriv, (req, res) => {
+  const row = db.prepare("SELECT * FROM hr_employees WHERE id = ? AND company_id = ?").get(req.params.id, req.hrEmployee.company_id);
+  if (!row) return res.status(404).json({ error: "Employee not found." });
+  if (row.status !== "terminated") return res.status(400).json({ error: "Only a terminated employee's data can be erased." });
+  const id = req.params.id;
+  db.prepare("DELETE FROM hr_documents WHERE employee_id = ?").run(id);
+  db.prepare("DELETE FROM hr_chat_reads WHERE employee_id = ?").run(id);
+  db.prepare("UPDATE hr_chat_messages SET text = '[message removed]' WHERE from_employee = ?").run(id);
+  const { hash, salt } = hashPassword(crypto.randomBytes(24).toString("hex"));
+  db.prepare(
+    `UPDATE hr_employees SET name = 'Erased employee', email = ?, password_hash = ?, password_salt = ?,
+       phone = NULL, birth_date = NULL, manager = NULL, skills_json = '[]', badges_json = '[]', certifications_json = '[]',
+       visibility_json = '{}', erased = 1, erased_at = datetime('now')
+     WHERE id = ?`
+  ).run(`erased-${id}@erased.northhire.ca`, hash, salt, id);
+  logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "employee_erased", `Erased personal data for ${row.name}`);
   res.json({ ok: true });
 });
 hrRouter.patch("/employees/:id/badges", requireHrAuth, requireHrPriv, (req, res) => {
@@ -464,6 +491,7 @@ hrRouter.get("/payslips/mine", requireHrAuth, (req, res) => {
 });
 hrRouter.post("/payruns", requireHrAuth, requireHrPriv, (req, res) => {
   const { periodStart, periodEnd } = req.body || {};
+  const taxConfig = getConfig("payrollTax");
   const emps = db.prepare("SELECT * FROM hr_employees WHERE company_id = ? AND status = 'active'").all(req.hrEmployee.company_id);
   const dueExpenses = db.prepare(
     `SELECT * FROM hr_expenses WHERE status = 'approved' AND reimburse_via = 'next-payroll'
@@ -490,9 +518,10 @@ hrRouter.post("/payruns", requireHrAuth, requireHrPriv, (req, res) => {
     const unpaidDeduction = Math.round((unpaidDaysByEmp[e.id] || 0) * ((e.salary || 0) / 260));
     const grossPeriod = Math.max(0, Math.round((e.salary || 0) / 26) - unpaidDeduction);
     const reimb = expByEmp[e.id] || 0;
-    const { cpp, ei, fedTax, provTax, net: netBeforeReimb } = calcNetPay(grossPeriod);
-    const net = netBeforeReimb + reimb;
-    return { employee: e.id, name: e.name, gross: grossPeriod, unpaidDeduction, cpp, ei, fedTax, provTax, reimb, net };
+    const { cpp, ei, fedTax, provTax, net: netBeforeReimb } = calcNetPay(grossPeriod, { province: e.prov, payPeriodsPerYear: 26, td1OnFile: !!e.td1_on_file }, taxConfig);
+    const benefits = e.benefits_per_pay || 0;
+    const net = netBeforeReimb + reimb - benefits;
+    return { employee: e.id, name: e.name, gross: grossPeriod, unpaidDeduction, cpp, ei, fedTax, provTax, benefits, reimb, net };
   });
   const id = nextId("pr", "hr_payruns");
   db.prepare(

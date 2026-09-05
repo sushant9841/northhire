@@ -12,9 +12,14 @@ import { seekerMiscRouter } from "./routes/seekerMisc.js";
 import { platformRouter } from "./routes/platform.js";
 import { hrRouter } from "./routes/hr.js";
 import { staffingRouter } from "./routes/staffing.js";
+import { infinityReplacer } from "../src/helpers/jsonInfinity.js";
 
 const app = express();
 const PORT = process.env.PORT || 8787;
+// Every res.json() call in this app goes through this replacer, so a real Infinity (an
+// "unlimited" plan quota, an open-ended tax bracket) survives the trip to the client instead of
+// silently becoming null - see src/helpers/jsonInfinity.js and the matching reviver in api.js.
+app.set("json replacer", infinityReplacer);
 
 // Session lives in an httpOnly cookie, not anything the frontend can read/write itself (no
 // localStorage/sessionStorage token anywhere) - `credentials: true` + an explicit origin

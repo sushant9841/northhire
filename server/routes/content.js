@@ -2,15 +2,17 @@ import { Router } from "express";
 import { db, nextId, sqlTime } from "../db.js";
 import { requireAuth, requireRole } from "../auth.js";
 import { serializeBlog, serializeTraining } from "../serialize.js";
-import { PLANS } from "../../src/store/seed/constants.js";
+import { getConfig } from "../platformConfig.js";
 
 export const contentRouter = Router();
 
 // Publishing (not drafting) articles/trainings is a Growth+ plan feature per the UI's own gate -
-// nothing stopped calling the API directly with status:"published" on a Free plan.
+// nothing stopped calling the API directly with status:"published" on a Free plan. Plan limits are
+// admin-editable business config (see platformConfig.js), not a hardcoded constant.
 function employerPlan(employerId) {
   const employer = db.prepare("SELECT plan FROM employers WHERE id = ?").get(employerId);
-  return PLANS[employer?.plan] || PLANS.Free;
+  const plans = getConfig("plans");
+  return plans[employer?.plan] || plans.Free;
 }
 
 function ownerFilter(req) {

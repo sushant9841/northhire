@@ -4,7 +4,7 @@ import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
 import { Page, Card, Btn, Bar, Field, Input, Banner, Sel, Area, CheckRow, Lbl, Ring, Tag, SmartScene, SmartPortrait, HERO_QUIET } from "../../design/primitives.jsx";
-import { CATS, CATM, PROVS, PLANS } from "../../store/seed/constants.js";
+import { CATS, CATM, PROVS } from "../../store/seed/constants.js";
 
 /* ═══════════════ SIGN UP · SIGN IN · FORGOT PASSWORD ═══════════════ */
 const SU_STEPS_SEEKER=[{k:"role",t:"Get started",d:"Are you looking for work, or hiring?"},
@@ -122,7 +122,7 @@ export function SignupPage(){
 
           {step.k==="role"&&<div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
             {[{k:"seeker",ic:"user",t:"I'm looking for work",d:"Build a profile, browse jobs, apply in one tap. Free forever."},
-              {k:"employer",ic:"building",t:"I'm hiring",d:`Post jobs, review scored applicants, manage your pipeline. Free to start, or from $${PLANS.Growth.price}/mo.`}].map(r=>{
+              {k:"employer",ic:"building",t:"I'm hiring",d:`Post jobs, review scored applicants, manage your pipeline. Free to start, or from $${A.PLANS.Growth.price}/mo.`}].map(r=>{
               const on=d.role===r.k;
               return <button key={r.k} onClick={()=>set("role",r.k)}
                 className={`rounded-2xl cursor-pointer text-left transition duration-200 border-2 ${mob?"py-6 px-5":"py-7 px-6"} ${on?"border-brand bg-tint":"border-line bg-white"}`}>

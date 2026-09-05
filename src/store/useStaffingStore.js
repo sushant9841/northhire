@@ -1,45 +1,7 @@
 import { useState, useEffect } from "react";
 import { _fmtDate } from "../helpers/utils.js";
 import { api } from "../helpers/api.js";
-
-const STAFFING_RATES = {
-  ON: {cpp:0.0595,ei:0.0221,eht:0.0195,wsib:0.028,vac:0.04,stat:0.0384,label:"Ontario"},
-  AB: {cpp:0.0595,ei:0.0221,eht:0,   wsib:0.024,vac:0.04,stat:0.0384,label:"Alberta"},
-  BC: {cpp:0.0595,ei:0.0221,eht:0.0195,wsib:0.026,vac:0.04,stat:0.0384,label:"British Columbia"},
-  QC: {cpp:0.064, ei:0.0192,eht:0.0206,wsib:0.021,vac:0.04,stat:0.0384,label:"Québec"},
-  MB: {cpp:0.0595,ei:0.0221,eht:0.0215,wsib:0.019,vac:0.04,stat:0.0384,label:"Manitoba"},
-  SK: {cpp:0.0595,ei:0.0221,eht:0,   wsib:0.021,vac:0.04,stat:0.0384,label:"Saskatchewan"},
-  NS: {cpp:0.0595,ei:0.0221,eht:0,   wsib:0.024,vac:0.04,stat:0.0384,label:"Nova Scotia"},
-  NB: {cpp:0.0595,ei:0.0221,eht:0,   wsib:0.021,vac:0.04,stat:0.0384,label:"New Brunswick"},
-};
-
-/* Given a pay rate and province, compute true cost and margin at a bill rate - a pure client-side
-   calculation (no DB access needed), so it stays a plain function unlike everything else here. */
-function calcStaffingEconomics(pay,bill,prov,benefitsPerHr=0){
-  const r=STAFFING_RATES[prov]||STAFFING_RATES.ON;
-  const cpp=pay*r.cpp; const ei=pay*r.ei*1.4; const eht=pay*r.eht;
-  const wsib=pay*r.wsib; const vac=pay*r.vac; const stat=pay*r.stat;
-  const admin=1.00;
-  const burden=cpp+ei+eht+wsib+vac+stat+admin+benefitsPerHr;
-  const trueCost=pay+burden;
-  const margin=bill-trueCost;
-  const marginPct=bill>0?(margin/bill)*100:0;
-  const markupPct=pay>0?((bill-pay)/pay)*100:0;
-  return {pay,bill,burden:round2(burden),trueCost:round2(trueCost),
-    margin:round2(margin),marginPct:round1(marginPct),markupPct:round1(markupPct),
-    breakdown:{cpp:round2(cpp),ei:round2(ei),eht:round2(eht),wsib:round2(wsib),vac:round2(vac),stat:round2(stat),admin:round2(admin),benefits:round2(benefitsPerHr)}};
-}
-function round2(n){return Math.round(n*100)/100;}
-function round1(n){return Math.round(n*10)/10;}
-
-const STAFFING_AGENCY = {
-  id:"stf1", name:"NorthHire Staffing", tagline:"Canadian workers, Canadian workplaces",
-  license:"ON-THA-2026-4471", licenseExpiry:"2027-01-01", licenseLocAmount:25000,
-  wsibProvinces:["ON","AB","BC"], wsibRateGroup:"3 (Staffing)",
-  provinces:["ON","AB","BC","QC","MB","SK","NS","NB"], founded:"2026-01-01",
-  markupFloor:25, markupTarget:38, markupCeiling:65,
-  payPeriodDays:14, invoiceCycleDays:7, paymentTermsDefaultDays:30, vacationPayMode:"accrue",
-};
+import { calcStaffingEconomics, DEFAULT_STAFFING_RATES, DEFAULT_STAFFING_AGENCY } from "../helpers/staffingEconomics.js";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    STAFFING AGENCY — Store hook, exported into main A context.
@@ -54,7 +16,9 @@ const STAFFING_AGENCY = {
    reads or writes localStorage; every list is fetched fresh from the server.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-export function useStaffingStore(user){
+export function useStaffingStore(user,platformConfig){
+  const STAFFING_RATES=platformConfig?.staffingRates||DEFAULT_STAFFING_RATES;
+  const STAFFING_AGENCY=platformConfig?.staffingAgency||DEFAULT_STAFFING_AGENCY;
   const [agencyStaff,setAgencyStaff]=useState(null);
   /* Distinguishes "still checking for a session" from "confirmed signed out" - see the matching
      hrAuthChecked note in useHrStore.js for why this matters: without it, refreshing on any
@@ -377,7 +341,7 @@ export function useStaffingStore(user){
   const assignmentMargin=(id)=>{
     const a=assignment(id); if(!a)return null;
     const w=worker(a.worker);
-    return calcStaffingEconomics(a.payRate,a.billRate,w?.province||"ON",0);
+    return calcStaffingEconomics(a.payRate,a.billRate,w?.province||"ON",a.benefitsPerHr||0,STAFFING_RATES);
   };
 
   return {workers,staffingClients,jobOrders,assignments,timesheets,staffingPayruns,staffingInvoices,placements,staffingAuditLog,
@@ -394,6 +358,7 @@ export function useStaffingStore(user){
     generateStaffingInvoices,markStaffingInvoicePaid,
     createPlacement,acceptPlacement,invoicePlacement,clawbackPlacement,
     upsertStaffingClient,signMsa,
-    agencyKPIs,assignmentMargin,calcStaffingEconomics
+    agencyKPIs,assignmentMargin,
+    calcStaffingEconomics:(pay,bill,prov,benefitsPerHr)=>calcStaffingEconomics(pay,bill,prov,benefitsPerHr,STAFFING_RATES),
   };
 }

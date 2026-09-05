@@ -1,9 +1,9 @@
 import crypto from "node:crypto";
 import { Router } from "express";
 import { db, nextId, sqlTime } from "../db.js";
-import { requireAuth, requireRole, hashPassword, createSessionCookie, publicUser } from "../auth.js";
+import { requireAuth, requireRole, hashPassword, createSessionCookie, publicUser, hasAdminScope } from "../auth.js";
 import { serializeEmployer } from "../serialize.js";
-import { PLANS } from "../../src/store/seed/constants.js";
+import { getConfig } from "../platformConfig.js";
 
 export const employersRouter = Router();
 
@@ -80,7 +80,7 @@ employersRouter.get("/team", requireAuth, requireRole("employer"), (req, res) =>
   const invites = db.prepare("SELECT * FROM employer_invites WHERE employer_id = ? AND status = 'pending' ORDER BY created_at DESC")
     .all(req.user.employer_id).map(serializeInvite);
   const employer = db.prepare("SELECT plan FROM employers WHERE id = ?").get(req.user.employer_id);
-  const rawLimit = PLANS[employer?.plan || "Free"]?.seats ?? 1;
+  const rawLimit = getConfig("plans")[employer?.plan || "Free"]?.seats ?? 1;
   // Infinity (Enterprise's unlimited seats) silently serializes to null over JSON - send null
   // deliberately as the "unlimited" sentinel instead of letting that happen by accident.
   res.json({ members, invites, seatLimit: rawLimit === Infinity ? null : rawLimit, seatsUsed: members.length + invites.length });
@@ -93,7 +93,7 @@ employersRouter.post("/team/invite", requireAuth, requireRole("employer"), (req,
   if (db.prepare("SELECT id FROM employer_invites WHERE employer_id = ? AND email = ? AND status = 'pending'").get(req.user.employer_id, email))
     return res.status(409).json({ error: "There's already a pending invite for that email." });
   const employer = db.prepare("SELECT plan FROM employers WHERE id = ?").get(req.user.employer_id);
-  const seatLimit = PLANS[employer?.plan || "Free"]?.seats ?? 1;
+  const seatLimit = getConfig("plans")[employer?.plan || "Free"]?.seats ?? 1;
   const seatsUsed = db.prepare("SELECT COUNT(*) AS n FROM users WHERE employer_id = ?").get(req.user.employer_id).n
     + db.prepare("SELECT COUNT(*) AS n FROM employer_invites WHERE employer_id = ? AND status = 'pending'").get(req.user.employer_id).n;
   if (seatsUsed >= seatLimit) return res.status(403).json({ error: `Your plan includes ${seatLimit} seat${seatLimit === 1 ? "" : "s"}. Remove a teammate or upgrade to invite another.` });
@@ -140,15 +140,18 @@ employersRouter.patch("/:id", requireAuth, (req, res) => {
 
   if (verified !== undefined) {
     if (!isAdmin) return res.status(403).json({ error: "Only an administrator can verify a company." });
+    if (!hasAdminScope(req.user, "moderator")) return res.status(403).json({ error: "This admin account doesn't have access to employer verification." });
     db.prepare("UPDATE employers SET verified = ?, hold = CASE WHEN ? THEN 0 ELSE hold END WHERE id = ?")
       .run(verified ? 1 : 0, verified ? 1 : 0, req.params.id);
   }
   if (hold !== undefined) {
     if (!isAdmin) return res.status(403).json({ error: "Only an administrator can hold a company." });
+    if (!hasAdminScope(req.user, "moderator")) return res.status(403).json({ error: "This admin account doesn't have access to employer holds." });
     db.prepare("UPDATE employers SET hold = ? WHERE id = ?").run(hold ? 1 : 0, req.params.id);
   }
   if (plan !== undefined) {
     if (!isOwner && !isAdmin) return res.status(403).json({ error: "Not your company." });
+    if (isAdmin && !hasAdminScope(req.user, "finance")) return res.status(403).json({ error: "This admin account doesn't have access to plan changes." });
     db.prepare("UPDATE employers SET plan = ? WHERE id = ?").run(plan, req.params.id);
   }
   const fieldMap = { name: "name", industry: "industry", city: "city", prov: "prov", size: "size", about: "about", site: "site", businessNumber: "business_number", founded: "founded", mark: "mark", a: "a", b: "b" };
@@ -159,7 +162,8 @@ employersRouter.patch("/:id", requireAuth, (req, res) => {
     // Custom logo mark / brand colour is a Growth+ feature — silently drop those fields for a
     // Free-plan company instead of erroring, so the rest of the profile save still succeeds.
     if (!isAdmin && BRAND_FIELDS.some(k => setCols.includes(k))) {
-      const plan = PLANS[row.plan] || PLANS.Free;
+      const plans = getConfig("plans");
+      const plan = plans[row.plan] || plans.Free;
       if (!plan.branded) setCols = setCols.filter(k => !BRAND_FIELDS.includes(k));
     }
   }

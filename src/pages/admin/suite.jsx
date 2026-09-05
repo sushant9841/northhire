@@ -509,3 +509,89 @@ export function AdmStats(){
     </Card>
   </Page>;
 }
+
+const ADMIN_SCOPE_INFO={
+  full:{label:"Full",desc:"Sees and can change everything."},
+  support:{label:"Support",desc:"Users, suspensions, contact inbox."},
+  moderator:{label:"Moderator",desc:"Employer verification, job moderation, content."},
+  finance:{label:"Finance",desc:"Plan limits, payroll tax brackets, staffing rates."},
+  readonly:{label:"Read-only",desc:"Sees every section, can't change anything."},
+};
+/* Only a full admin can reach this page at all (server-enforced by requireAdminScope() with no
+   scopes listed) - scoping who can grant scopes is what keeps a support/moderator/finance account
+   from ever escalating itself or another account. */
+export function AdmAdmins(){
+  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const [admins,setAdmins]=useState([]); const [loading,setLoading]=useState(true);
+  const load=()=>A.listAdmins().then(l=>{setAdmins(l);setLoading(false);});
+  useEffect(()=>{load();},[]);
+  const change=async(id,scope)=>{
+    const r=await A.setAdminScope(id,scope);
+    if(r.ok){A.toast("Admin scope updated","ok");load();}else A.toast(r.msg,"danger");
+  };
+  return <Page narrow>
+    <H1 sub="Every admin account and what section of the console it can reach. Scope changes take effect immediately.">Admin accounts</H1>
+    {loading?<div className="text-sm text-text-3">Loading…</div>
+    :<div className="flex flex-col gap-2.5">
+      {admins.map(a=><Card key={a.id} pad={mob?16:20} style={{borderRadius:14}}>
+        <div className="flex justify-between items-center gap-3 flex-wrap">
+          <div className="min-w-0">
+            <div className="text-sm font-bold text-text">{a.name}</div>
+            <div className="text-xs text-text-3 mt-0.5">{a.email}</div>
+          </div>
+          <div className="flex items-center gap-2.5">
+            <Sel value={a.adminScope} onChange={e=>change(a.id,e.target.value)} disabled={a.id===A.user?.id}>
+              {Object.entries(ADMIN_SCOPE_INFO).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
+            </Sel>
+            <Tag tone={a.adminScope==="full"?"brand":a.adminScope==="readonly"?"neutral":"ok"} sm>{ADMIN_SCOPE_INFO[a.adminScope]?.label}</Tag>
+          </div>
+        </div>
+        <div className="text-xs text-text-3 mt-2 pt-2 border-t border-line-soft">{ADMIN_SCOPE_INFO[a.adminScope]?.desc}</div>
+        {a.id===A.user?.id&&<div className="text-xs text-warn mt-1.5">You can't change your own scope — ask another full admin.</div>}
+      </Card>)}
+    </div>}
+  </Page>;
+}
+
+/* Business config that used to be hardcoded JS constants (plan limits, payroll tax brackets,
+   staffing burden rates/agency policy) - now lives in the backend and is editable here as raw
+   JSON per section, gated to the finance scope server-side. A JSON textarea per key is a
+   deliberately blunt editor (these are nested rate tables, not a handful of flat fields) but it's
+   real: validated before submit, diffed against the live value, and every save is audit-logged. */
+function ConfigSection({title,desc,configKey,value,onSave}){
+  const A=use();
+  const [text,setText]=useState(()=>JSON.stringify(value,null,2));
+  const [error,setError]=useState("");
+  const [saving,setSaving]=useState(false);
+  const dirty=text!==JSON.stringify(value,null,2);
+  const save=async()=>{
+    let parsed;
+    try{parsed=JSON.parse(text);}catch{setError("Not valid JSON.");return;}
+    setError(""); setSaving(true);
+    const r=await onSave(configKey,parsed);
+    setSaving(false);
+    if(!r.ok)setError(r.msg||"Save failed.");
+    else A.toast(`${title} updated`,"ok");
+  };
+  return <Card pad={20} style={{marginBottom:16}}>
+    <div className="flex justify-between items-start gap-3 mb-2.5">
+      <div><H2 sub={desc} style={{margin:0}}>{title}</H2></div>
+      <Btn kind="primary" size="sm" disabled={!dirty||saving} onClick={save}>{saving?"Saving…":"Save"}</Btn>
+    </div>
+    <Area rows={12} value={text} onChange={e=>setText(e.target.value)}
+      style={{fontFamily:"monospace",fontSize:12,whiteSpace:"pre"}}/>
+    {error&&<Banner tone="danger" icon="alert" style={{marginTop:10}}>{error}</Banner>}
+  </Card>;
+}
+export function AdmConfig(){
+  const A=use();
+  const cfg=A.platformConfig;
+  if(!cfg)return <Page narrow><div className="text-sm text-text-3">Loading…</div></Page>;
+  return <Page narrow>
+    <H1 sub="The real numbers behind pricing, payroll withholding, and staffing burden math — changing these takes effect immediately for every account, no deploy.">Business config</H1>
+    <ConfigSection title="Plan limits" desc="Free / Growth / Enterprise feature gates and quotas." configKey="plans" value={cfg.plans} onSave={A.updatePlatformConfig}/>
+    <ConfigSection title="Payroll tax brackets" desc="Federal + provincial income tax brackets, basic personal amounts, CPP/EI rates." configKey="payrollTax" value={cfg.payrollTax} onSave={A.updatePlatformConfig}/>
+    <ConfigSection title="Staffing burden rates" desc="Per-province CPP/EI/EHT/WSIB/vacation/stat-holiday rates used in placement margin math." configKey="staffingRates" value={cfg.staffingRates} onSave={A.updatePlatformConfig}/>
+    <ConfigSection title="Staffing agency policy" desc="Markup floor/target/ceiling, pay period length, invoice cycle, licensing." configKey="staffingAgency" value={cfg.staffingAgency} onSave={A.updatePlatformConfig}/>
+  </Page>;
+}

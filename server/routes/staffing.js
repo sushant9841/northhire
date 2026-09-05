@@ -4,6 +4,8 @@ import { db, nextId, sqlTime } from "../db.js";
 import { verifyPassword, hashPassword, createSessionCookie, clearSessionCookie, requireAgencyAuth, requireAuth, requireRole } from "../auth.js";
 import { salesTaxRate } from "../../src/helpers/salesTax.js";
 import { calcNetPay } from "../../src/helpers/payrollTax.js";
+import { calcStaffingEconomics } from "../../src/helpers/staffingEconomics.js";
+import { getConfig } from "../platformConfig.js";
 import {
   serializeWorker, serializeWorkerForClient, serializeStaffingClient, serializeJobOrder, serializeAssignment,
   serializeStaffingTimesheet, serializeStaffingPayrun, serializeStaffingInvoice, serializePlacement,
@@ -20,32 +22,9 @@ function logStaffingAudit(actorStaffId, action, detail) {
 function round2(n) { return Math.round(n * 100) / 100; }
 function round1(n) { return Math.round(n * 10) / 10; }
 
-const STAFFING_RATES = {
-  ON: { cpp: 0.0595, ei: 0.0221, eht: 0.0195, wsib: 0.028, vac: 0.04, stat: 0.0384 },
-  AB: { cpp: 0.0595, ei: 0.0221, eht: 0, wsib: 0.024, vac: 0.04, stat: 0.0384 },
-  BC: { cpp: 0.0595, ei: 0.0221, eht: 0.0195, wsib: 0.026, vac: 0.04, stat: 0.0384 },
-  QC: { cpp: 0.064, ei: 0.0192, eht: 0.0206, wsib: 0.021, vac: 0.04, stat: 0.0384 },
-  MB: { cpp: 0.0595, ei: 0.0221, eht: 0.0215, wsib: 0.019, vac: 0.04, stat: 0.0384 },
-  SK: { cpp: 0.0595, ei: 0.0221, eht: 0, wsib: 0.021, vac: 0.04, stat: 0.0384 },
-  NS: { cpp: 0.0595, ei: 0.0221, eht: 0, wsib: 0.024, vac: 0.04, stat: 0.0384 },
-  NB: { cpp: 0.0595, ei: 0.0221, eht: 0, wsib: 0.021, vac: 0.04, stat: 0.0384 },
-};
-function calcStaffingEconomics(pay, bill, prov, benefitsPerHr = 0) {
-  const r = STAFFING_RATES[prov] || STAFFING_RATES.ON;
-  const cpp = pay * r.cpp, ei = pay * r.ei * 1.4, eht = pay * r.eht;
-  const wsib = pay * r.wsib, vac = pay * r.vac, stat = pay * r.stat;
-  const admin = 1.0;
-  const burden = cpp + ei + eht + wsib + vac + stat + admin + benefitsPerHr;
-  const trueCost = pay + burden;
-  const margin = bill - trueCost;
-  const marginPct = bill > 0 ? (margin / bill) * 100 : 0;
-  const markupPct = pay > 0 ? ((bill - pay) / pay) * 100 : 0;
-  return {
-    pay, bill, burden: round2(burden), trueCost: round2(trueCost), margin: round2(margin),
-    marginPct: round1(marginPct), markupPct: round1(markupPct),
-    breakdown: { cpp: round2(cpp), ei: round2(ei), eht: round2(eht), wsib: round2(wsib), vac: round2(vac), stat: round2(stat), admin: round2(admin), benefits: round2(benefitsPerHr) },
-  };
-}
+/* Burden rates come from the admin-editable platform_config now (see platformConfig.js) instead
+   of a hardcoded table - calcStaffingEconomics is imported from the shared helper and called with
+   getConfig("staffingRates") at each call site below. */
 
 /* ─── Agency auth ─── */
 const AGENCY_LOGIN_LOCKOUT_MAX_ATTEMPTS = 5;
@@ -161,6 +140,7 @@ staffingRouter.patch("/workers/:id", requireAgencyAuth, (req, res) => {
     status: "status", availability: "availability", province: "province", city: "city",
     payRateFloor: "pay_rate_floor", payRateTarget: "pay_rate_target", sinLast3: "sin_last3",
     workEligibility: "work_eligibility", weExpiry: "we_expiry", notes: "notes", vacBalance: "vac_balance",
+    defaultBenefitsPerHr: "default_benefits_per_hr",
   };
   const setCols = []; const params = [];
   for (const [key, col] of Object.entries(fields)) if (d[key] !== undefined) { setCols.push(`${col} = ?`); params.push(d[key]); }
@@ -278,12 +258,17 @@ staffingRouter.get("/assignments", requireAgencyAuth, (req, res) => {
 staffingRouter.post("/assignments", requireAgencyAuth, (req, res) => {
   const d = req.body || {};
   const id = nextId("a", "staffing_assignments");
+  // Benefits/hr defaults to the worker's own default (set on their profile) when the placement
+  // form doesn't override it, so every new assignment carries a real burden figure instead of the
+  // permanently-dead 0 this used to always pass.
+  const worker = d.worker ? db.prepare("SELECT default_benefits_per_hr FROM staffing_workers WHERE id = ?").get(d.worker) : null;
+  const benefitsPerHr = d.benefitsPerHr !== undefined ? d.benefitsPerHr : (worker?.default_benefits_per_hr || 0);
   db.prepare(
     `INSERT INTO staffing_assignments
-      (id, worker_id, client_id, job_order_id, status, start_date, ongoing, pay_rate, bill_rate, supervisor, supervisor_email, site, shift_pattern, notes)
-     VALUES (?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      (id, worker_id, client_id, job_order_id, status, start_date, ongoing, pay_rate, bill_rate, benefits_per_hr, supervisor, supervisor_email, site, shift_pattern, notes)
+     VALUES (?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(id, d.worker, d.client, d.jobOrder || null, d.startDate || new Date().toISOString().slice(0, 10),
-    d.ongoing !== false ? 1 : 0, d.payRate, d.billRate, d.supervisor || null, d.supervisorEmail || null,
+    d.ongoing !== false ? 1 : 0, d.payRate, d.billRate, benefitsPerHr, d.supervisor || null, d.supervisorEmail || null,
     d.site || null, d.shiftPattern || null, d.notes || null);
   if (d.jobOrder) {
     const jo = db.prepare("SELECT * FROM staffing_job_orders WHERE id = ?").get(d.jobOrder);
@@ -308,7 +293,7 @@ staffingRouter.get("/assignments/:id/margin", requireAgencyAuth, (req, res) => {
   const a = db.prepare("SELECT * FROM staffing_assignments WHERE id = ?").get(req.params.id);
   if (!a) return res.status(404).json({ error: "Not found." });
   const w = db.prepare("SELECT * FROM staffing_workers WHERE id = ?").get(a.worker_id);
-  res.json(calcStaffingEconomics(a.pay_rate, a.bill_rate, w?.province || "ON", 0));
+  res.json(calcStaffingEconomics(a.pay_rate, a.bill_rate, w?.province || "ON", a.benefits_per_hr || 0, getConfig("staffingRates")));
 });
 
 /* ─── Timesheets ─── */
@@ -361,6 +346,7 @@ staffingRouter.patch("/timesheets/:id/reject", requireAgencyAuth, (req, res) => 
 /* ─── Payroll ─── */
 staffingRouter.post("/payroll/run", requireAgencyAuth, (req, res) => {
   const { periodStart, periodEnd } = req.body || {};
+  const taxConfig = getConfig("payrollTax");
   const inPeriod = db.prepare("SELECT * FROM staffing_timesheets WHERE status = 'approved' AND week_start >= ? AND week_start < ?").all(periodStart, periodEnd);
   const byWorker = {};
   for (const t of inPeriod) {
@@ -371,9 +357,9 @@ staffingRouter.post("/payroll/run", requireAgencyAuth, (req, res) => {
   }
   const lines = Object.entries(byWorker).map(([wid, d]) => {
     const gross = round2(d.gross);
-    // Same shared flat-rate CPP/EI/fed+prov-tax approximation HR payroll uses, instead of a
-    // separately-hardcoded multiplier that quietly implied a different (and undocumented) rate.
-    return { worker: wid, hours: d.hours, gross, net: round2(calcNetPay(gross).net), otHrs: d.otHrs };
+    const w = db.prepare("SELECT province, td_on_file FROM staffing_workers WHERE id = ?").get(wid);
+    const net = calcNetPay(gross, { province: w?.province, payPeriodsPerYear: 26, td1OnFile: !!w?.td_on_file }, taxConfig).net;
+    return { worker: wid, hours: d.hours, gross, net: round2(net), otHrs: d.otHrs };
   });
   const totalHours = lines.reduce((s, l) => s + l.hours, 0);
   const totalGross = round2(lines.reduce((s, l) => s + l.gross, 0));

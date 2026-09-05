@@ -66,6 +66,28 @@ export function requireRole(...roles) {
   };
 }
 
+/* Scoped admin roles - previously every admin account was a single flat "can do anything" role.
+   `admin_scope` on the users row is 'full' (sees/does everything, the only pre-existing
+   behavior), 'readonly' (sees everything, writes nothing), or one of the named domain scopes
+   below, which only unlocks the specific admin sections listed at each call site. */
+export function hasAdminScope(user, ...scopes) {
+  if (user.role !== "admin") return false;
+  const s = user.admin_scope || "full";
+  if (s === "full") return true;
+  if (s === "readonly") return false; // read-only never satisfies a write-capability check
+  return scopes.includes(s);
+}
+export function requireAdminScope(...scopes) {
+  return (req, res, next) => {
+    if (req.user.role !== "admin") return res.status(403).json({ error: "Not allowed for this account type." });
+    const s = req.user.admin_scope || "full";
+    if (s === "full") return next();
+    if (s === "readonly") return req.method === "GET" ? next() : res.status(403).json({ error: "This is a read-only admin account — it can't make changes." });
+    if (scopes.includes(s)) return next();
+    return res.status(403).json({ error: "This admin account doesn't have access to that section." });
+  };
+}
+
 /* HR Suite session - subject_id is an hr_employees.id */
 export function hrEmployeeFromRequest(req) {
   const id = subjectIdFromCookie(req, "hr_session", "hr");

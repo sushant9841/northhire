@@ -228,7 +228,7 @@ export function WorkerPayStubs(){
             <Tag tone={run.status==="paid"?"ok":"warn"} sm>{run.status}</Tag>
           </div>
         </div>
-        {(()=>{const d=calcNetPay(line.gross);
+        {(()=>{const d=calcNetPay(line.gross, {province:worker.province, payPeriodsPerYear:26, td1OnFile:worker.tdOnFile}, A.payrollTaxConfig);
         return <div className={`mt-3 pt-3 border-t border-line-soft grid gap-2.5 text-xs ${mob?"grid-cols-2":"grid-cols-4"}`}>
           {[["Gross",`$${line.gross.toFixed(2)}`],["CPP",`-$${d.cpp.toFixed(2)}`],["EI",`-$${d.ei.toFixed(2)}`],["Fed+Prov tax",`-$${(d.fedTax+d.provTax).toFixed(2)}`]].map(([l,v])=>
             <div key={l}><div className="text-text-3">{l}</div><div className="text-text font-semibold mt-0.5">{v}</div></div>)}

@@ -130,9 +130,21 @@ console.log(`Seeded ${SEED_APPS.length} applications.`);
 const ADMIN_PASSWORD = "Admin1234";
 const { hash: adminHash, salt: adminSalt } = hashPassword(ADMIN_PASSWORD);
 db.prepare(
-  `INSERT INTO users (id, role, name, email, password_hash, password_salt) VALUES ('adm1','admin','Platform Admin','admin@northhire.ca',?,?)`
+  `INSERT INTO users (id, role, name, email, password_hash, password_salt, admin_scope) VALUES ('adm1','admin','Platform Admin','admin@northhire.ca',?,?,'full')`
 ).run(adminHash, adminSalt);
-console.log(`Seeded 1 admin account (admin@northhire.ca / "${ADMIN_PASSWORD}").`);
+// Scoped admin demo accounts - one per named scope, so a reviewer can log in as each and see the
+// admin panel actually shrink to that scope's sections instead of taking the flat-role claim on faith.
+const SCOPED_ADMINS = [
+  { id: "adm2", name: "Support Admin", email: "support-admin@northhire.ca", scope: "support" },
+  { id: "adm3", name: "Moderator Admin", email: "moderator-admin@northhire.ca", scope: "moderator" },
+  { id: "adm4", name: "Finance Admin", email: "finance-admin@northhire.ca", scope: "finance" },
+  { id: "adm5", name: "Read-Only Admin", email: "readonly-admin@northhire.ca", scope: "readonly" },
+];
+const insertScopedAdmin = db.prepare(
+  `INSERT INTO users (id, role, name, email, password_hash, password_salt, admin_scope) VALUES (?, 'admin', ?, ?, ?, ?, ?)`
+);
+for (const a of SCOPED_ADMINS) insertScopedAdmin.run(a.id, a.name, a.email, adminHash, adminSalt, a.scope);
+console.log(`Seeded 1 full admin + ${SCOPED_ADMINS.length} scoped admin accounts (all password "${ADMIN_PASSWORD}").`);
 
 // Mark the seed jobs the agency has placed permanently - matches AGENCY_PERM_JOB_IDS from the
 // frontend's old client-side Set, now a real relational column instead of a hardcoded id list.
@@ -183,13 +195,18 @@ console.log(`Seeded ${HR_DEPARTMENTS_SEED.length} HR departments.`);
 
 const insertHrEmployee = db.prepare(
   `INSERT INTO hr_employees (id, company_id, name, email, password_hash, password_salt, role, dept, title, hired, seed,
-     phone, city, prov, salary, birth_date, manager, skills_json, badges_json, status, visibility_json)
+     phone, city, prov, salary, birth_date, manager, skills_json, badges_json, status, td1_on_file, benefits_per_pay, benefits_plan, visibility_json)
    VALUES (@id,@company_id,@name,@email,@password_hash,@password_salt,@role,@dept,@title,@hired,@seed,
-     @phone,@city,@prov,@salary,@birth_date,@manager,@skills_json,@badges_json,'active',@visibility_json)`
+     @phone,@city,@prov,@salary,@birth_date,@manager,@skills_json,@badges_json,'active',@td1_on_file,@benefits_per_pay,@benefits_plan,@visibility_json)`
 );
 const HR_DEMO_PASSWORD = "pcl2026"; // matches the demo password the old client-only HR Suite login advertised
-for (const e of HR_EMPLOYEES) {
+const BENEFITS_PLANS = ["Health + Dental", "Health + Dental + RRSP 3% match", "RRSP 3% match"];
+for (const [i, e] of HR_EMPLOYEES.entries()) {
   const { hash, salt } = hashPassword(HR_DEMO_PASSWORD);
+  // Most seeded employees have a TD1 on file and are enrolled in some benefits plan, like a real
+  // established workforce would be - a handful are deliberately left without either, so the
+  // TD1-aware tax withholding and the benefits deduction both have a real "missing" case to show.
+  const enrolled = i % 5 !== 0;
   insertHrEmployee.run({
     id: e.id, company_id: e.companyId, name: e.name, email: e.email, password_hash: hash, password_salt: salt,
     role: e.role, dept: e.dept, title: e.title, hired: e.hired, seed: e.seed || 0, phone: e.phone || null,
@@ -201,6 +218,9 @@ for (const e of HR_EMPLOYEES) {
     badges_json: JSON.stringify((e.badges || []).map((name, i) => ({
       name, awardedAt: new Date(Date.now() - (i + 1) * 120 * 864e5).toISOString(),
     }))),
+    td1_on_file: i % 7 === 0 ? 0 : 1,
+    benefits_per_pay: enrolled ? [42, 68, 25][i % 3] : 0,
+    benefits_plan: enrolled ? BENEFITS_PLANS[i % 3] : null,
     visibility_json: JSON.stringify(e.visibility || {}),
   });
 }
@@ -337,11 +357,13 @@ console.log(`Seeded ${AGENCY_STAFF_SEED.length} agency staff accounts (demo pass
 
 const insertWorker = db.prepare(
   `INSERT INTO staffing_workers (id, person_id, status, availability, onboarded, province, city, pay_rate_floor, pay_rate_target,
-     sin_last3, td_on_file, direct_deposit_on_file, work_eligibility, we_expiry, emergency_contact_json, documents_json, tickets_json, notes, vac_balance)
+     sin_last3, td_on_file, direct_deposit_on_file, work_eligibility, we_expiry, emergency_contact_json, documents_json, tickets_json, notes, vac_balance, default_benefits_per_hr)
    VALUES (@id,@person_id,@status,@availability,@onboarded,@province,@city,@pay_rate_floor,@pay_rate_target,
-     @sin_last3,@td_on_file,@direct_deposit_on_file,@work_eligibility,@we_expiry,@emergency_contact_json,@documents_json,@tickets_json,@notes,@vac_balance)`
+     @sin_last3,@td_on_file,@direct_deposit_on_file,@work_eligibility,@we_expiry,@emergency_contact_json,@documents_json,@tickets_json,@notes,@vac_balance,@default_benefits_per_hr)`
 );
-for (const w of SEED_WORKERS) {
+const workerDefaultBenefitsById = {};
+for (const [i, w] of SEED_WORKERS.entries()) {
+  workerDefaultBenefitsById[w.id] = i % 2 === 0 ? 0 : 1.25;
   insertWorker.run({
     id: w.id, person_id: w.personId, status: w.status, availability: w.availability, onboarded: w.onboarded,
     province: w.province, city: w.city, pay_rate_floor: w.payRateFloor, pay_rate_target: w.payRateTarget,
@@ -349,6 +371,9 @@ for (const w of SEED_WORKERS) {
     work_eligibility: w.workEligibility || null, we_expiry: w.weExpiry || null,
     emergency_contact_json: JSON.stringify(w.emergencyContact || {}), documents_json: JSON.stringify(w.documents || []),
     tickets_json: JSON.stringify(w.tickets || []), notes: w.notes || "", vac_balance: w.vacBalance || 0,
+    // Roughly half of the bench is enrolled in a benefits package - real staffing agencies only
+    // extend benefits to workers past a tenure/hours threshold, not every casual placement.
+    default_benefits_per_hr: i % 2 === 0 ? 0 : 1.25,
   });
 }
 console.log(`Seeded ${SEED_WORKERS.length} staffing workers.`);
@@ -392,15 +417,16 @@ console.log(`Seeded ${SEED_JOB_ORDERS.length} staffing job orders.`);
 
 const insertAssignment = db.prepare(
   `INSERT INTO staffing_assignments (id, worker_id, client_id, job_order_id, status, start_date, end_date, ongoing,
-     pay_rate, bill_rate, supervisor, supervisor_email, site, shift_pattern, notes)
+     pay_rate, bill_rate, benefits_per_hr, supervisor, supervisor_email, site, shift_pattern, notes)
    VALUES (@id,@worker_id,@client_id,@job_order_id,@status,@start_date,@end_date,@ongoing,
-     @pay_rate,@bill_rate,@supervisor,@supervisor_email,@site,@shift_pattern,@notes)`
+     @pay_rate,@bill_rate,@benefits_per_hr,@supervisor,@supervisor_email,@site,@shift_pattern,@notes)`
 );
 for (const a of SEED_ASSIGNMENTS) {
   insertAssignment.run({
     id: a.id, worker_id: a.worker, client_id: a.client, job_order_id: a.jobOrder || null, status: a.status,
     start_date: a.startDate, end_date: a.endDate || null, ongoing: a.ongoing ? 1 : 0,
-    pay_rate: a.payRate, bill_rate: a.billRate, supervisor: a.supervisor, supervisor_email: a.supervisorEmail,
+    pay_rate: a.payRate, bill_rate: a.billRate, benefits_per_hr: workerDefaultBenefitsById[a.worker] || 0,
+    supervisor: a.supervisor, supervisor_email: a.supervisorEmail,
     site: a.site, shift_pattern: a.shiftPattern, notes: a.notes || "",
   });
 }

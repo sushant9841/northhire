@@ -209,6 +209,8 @@ export function serializeHrEmployee(row) {
     skills: JSON.parse(rest.skills_json || "[]"), badges: JSON.parse(rest.badges_json || "[]"),
     certifications: JSON.parse(rest.certifications_json || "[]"),
     status: rest.status, terminatedAt: rest.terminated_at,
+    td1OnFile: !!rest.td1_on_file, benefitsPerPay: rest.benefits_per_pay, benefitsPlan: rest.benefits_plan,
+    erased: !!rest.erased, erasedAt: rest.erased_at,
     visibility: JSON.parse(rest.visibility_json || "{}"),
     joinedDate: rest.hired,
   };
@@ -283,7 +285,8 @@ export function serializeWorker(row) {
     sinLast3: row.sin_last3, tdOnFile: !!row.td_on_file, directDepositOnFile: !!row.direct_deposit_on_file,
     workEligibility: row.work_eligibility, weExpiry: row.we_expiry,
     emergencyContact: JSON.parse(row.emergency_contact_json || "{}"), documents: JSON.parse(row.documents_json || "[]"),
-    tickets: JSON.parse(row.tickets_json || "[]"), notes: row.notes, vacBalance: row.vac_balance };
+    tickets: JSON.parse(row.tickets_json || "[]"), notes: row.notes, vacBalance: row.vac_balance,
+    defaultBenefitsPerHr: row.default_benefits_per_hr };
 }
 // A client company only needs enough to identify/display the worker assigned to their site - the
 // agency's internal HR file on that worker (SIN, emergency contact, private pay-rate range,
@@ -316,6 +319,7 @@ export function serializeAssignment(row) {
   if (!row) return null;
   return { id: row.id, worker: row.worker_id, client: row.client_id, jobOrder: row.job_order_id, status: row.status,
     startDate: row.start_date, endDate: row.end_date, ongoing: !!row.ongoing, payRate: row.pay_rate, billRate: row.bill_rate,
+    benefitsPerHr: row.benefits_per_hr,
     supervisor: row.supervisor, supervisorEmail: row.supervisor_email, site: row.site, shiftPattern: row.shift_pattern, notes: row.notes };
 }
 export function serializeStaffingTimesheet(row) {

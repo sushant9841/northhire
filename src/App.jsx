@@ -43,7 +43,7 @@ import {
   AgencyTimesheets, AgencyPayroll, AgencyInvoicing, AgencyPlacements, AgencyClients,
   AgencyWorkers, AgencyMargins, AgencyCompliance,
 } from "./pages/staffing/suite.jsx";
-import { AdmHome, AdmUsers, AdmEmployers, AdmJobs, AdmSettings, AdmLog, AdmStats } from "./pages/admin/suite.jsx";
+import { AdmHome, AdmUsers, AdmEmployers, AdmJobs, AdmSettings, AdmLog, AdmStats, AdmConfig, AdmAdmins } from "./pages/admin/suite.jsx";
 import {
   HomePage, BlogsPage, BlogPage, TrainingsPage, TrainingPage, AboutPage, ContactPage, LegalPage,
   PricingPage, AccessibilityPage, PipedaPage,
@@ -89,6 +89,7 @@ export default function NorthHire(){
     accessibility:<AccessibilityPage/>,pipeda:<PipedaPage/>,
     admBlogs:<AdmShell><ContentManager scope="admin"/></AdmShell>,admTrainings:<AdmShell><ContentManager scope="admin"/></AdmShell>,
     admSettings:<AdmShell><AdmSettings/></AdmShell>,admLog:<AdmShell><AdmLog/></AdmShell>,admStats:<AdmShell><AdmStats/></AdmShell>,
+    admConfig:<AdmShell><AdmConfig/></AdmShell>,admAdmins:<AdmShell><AdmAdmins/></AdmShell>,
     /* HR Suite */
     hrLogin:<HrLoginPage/>,
     hrDashboard:<HrShell><HrDashboard/></HrShell>,

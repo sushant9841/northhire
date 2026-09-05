@@ -124,6 +124,8 @@ export const ROUTES = {
   admSettings: {title:"Platform settings", tab:"profile", roles:["admin"], bare:true, root:true, path:"/admin/settings"},
   admLog:      {title:"Activity log", tab:"profile", roles:["admin"], bare:true, root:true, path:"/admin/log"},
   admStats:    {title:"Platform statistics", tab:"profile", roles:["admin"], bare:true, root:true, path:"/admin/stats"},
+  admConfig:   {title:"Business config", tab:"profile", roles:["admin"], bare:true, root:true, path:"/admin/config"},
+  admAdmins:   {title:"Admin accounts", tab:"profile", roles:["admin"], bare:true, root:true, path:"/admin/admins"},
 
   denied:      {title:"Not available", tab:"home", path:"/denied"},
 };

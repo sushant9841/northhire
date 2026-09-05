@@ -1,17 +1,19 @@
 import { Router } from "express";
 import { db, nextId } from "../db.js";
-import { requireAuth, requireRole } from "../auth.js";
+import { requireAuth, requireRole, requireAdminScope, hasAdminScope } from "../auth.js";
 import { serializeJob } from "../serialize.js";
-import { PLANS } from "../../src/store/seed/constants.js";
+import { getConfig } from "../platformConfig.js";
 
 export const jobsRouter = Router();
 
 // The UI already gates job-count/featured quotas and CSV-import against the employer's plan, but
 // nothing stopped calling the API directly to bypass that check entirely - these mirror the same
-// PLANS-derived limits server-side, the actual enforcement boundary.
+// plan-derived limits server-side, the actual enforcement boundary. Plan limits are admin-editable
+// business config (see platformConfig.js), not a hardcoded constant.
 function employerPlan(employerId) {
   const employer = db.prepare("SELECT plan FROM employers WHERE id = ?").get(employerId);
-  return PLANS[employer?.plan] || PLANS.Free;
+  const plans = getConfig("plans");
+  return plans[employer?.plan] || plans.Free;
 }
 
 jobsRouter.get("/", (req, res) => {
@@ -40,7 +42,7 @@ jobsRouter.get("/", (req, res) => {
   res.json({ jobs: rows.map(serializeJob) });
 });
 
-jobsRouter.get("/reports", requireAuth, requireRole("admin"), (req, res) => {
+jobsRouter.get("/reports", requireAuth, requireAdminScope("moderator"), (req, res) => {
   const rows = db.prepare(
     `SELECT job_reports.*, jobs.title AS job_title, users.name AS reporter_name
      FROM job_reports JOIN jobs ON jobs.id = job_reports.job_id LEFT JOIN users ON users.id = job_reports.reporter_id
@@ -76,7 +78,7 @@ jobsRouter.post("/:id/report", requireAuth, requireRole("seeker"), (req, res) =>
   db.prepare("INSERT INTO job_reports (id, job_id, reporter_id, reason) VALUES (?, ?, ?, ?)").run(id, req.params.id, req.user.id, reason);
   res.status(201).json({ ok: true });
 });
-jobsRouter.patch("/reports/:id", requireAuth, requireRole("admin"), (req, res) => {
+jobsRouter.patch("/reports/:id", requireAuth, requireAdminScope("moderator"), (req, res) => {
   const { status } = req.body || {};
   if (!["open", "dismissed", "actioned"].includes(status)) return res.status(400).json({ error: "Invalid status." });
   db.prepare("UPDATE job_reports SET status = ? WHERE id = ?").run(status, req.params.id);
@@ -130,6 +132,7 @@ jobsRouter.patch("/:id", requireAuth, requireRole("employer", "admin"), (req, re
   const { status, flagged, approve } = req.body || {};
   if (status !== undefined) {
     if (!["live", "paused", "review", "closed"].includes(status)) return res.status(400).json({ error: "Invalid status." });
+    if (isAdmin && !hasAdminScope(req.user, "moderator")) return res.status(403).json({ error: "This admin account doesn't have access to listing moderation." });
     if (status === "live" && job.status !== "live" && !isAdmin) {
       const plan = employerPlan(job.employer_id);
       const liveCount = db.prepare("SELECT COUNT(*) AS n FROM jobs WHERE employer_id = ? AND status = 'live' AND id != ?").get(job.employer_id, req.params.id).n;
@@ -139,6 +142,7 @@ jobsRouter.patch("/:id", requireAuth, requireRole("employer", "admin"), (req, re
   }
   if (flagged !== undefined) {
     if (!isAdmin) return res.status(403).json({ error: "Only an administrator can flag a listing." });
+    if (!hasAdminScope(req.user, "moderator")) return res.status(403).json({ error: "This admin account doesn't have access to listing moderation." });
     db.prepare("UPDATE jobs SET flagged = ? WHERE id = ?").run(flagged ? 1 : 0, req.params.id);
   }
   if (approve !== undefined) {
