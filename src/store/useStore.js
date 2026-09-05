@@ -81,6 +81,7 @@ export function useStore(){
   const [outbox,setOutbox]=useState([]);
   const [impersonating,setImpersonating]=useState(null);
   const [activity,setActivity]=useState([]);
+  const [securitySignals,setSecuritySignals]=useState(null);
   const [settings,setSettings]=useState({employerBlogs:true,employerTrainings:true,employerFeature:true,
     autoApproveJobs:true,publicSignup:true,cvBuilder:true,matching:true,enrolments:true,payTransparency:true,maintenance:false});
   const [userSettings,setUserSettings]=useState({matchAlerts:true,appAlerts:true,marketing:false,discoverable:true,hideEmployer:false,reducedMotion:false,lang:"en"});
@@ -272,6 +273,19 @@ export function useStore(){
         if(!cancelled)setActivity(a.map(e=>({id:e.id,action:e.action,text:e.text,icon:e.icon,actor:e.actor,at:new Date(e.at).toLocaleString("en-CA")})));
       }catch(e){
         if(typeof console!=="undefined")console.warn(`[NorthHire] Activity log sync failed: ${e.message}`);
+      }
+    })();
+    return ()=>{cancelled=true;};
+  },[user?.id,user?.role]);
+  useEffect(()=>{
+    if(user?.role!=="admin")return;
+    let cancelled=false;
+    (async()=>{
+      try{
+        const signals=await api.get("/platform/security-signals");
+        if(!cancelled)setSecuritySignals(signals);
+      }catch(e){
+        if(typeof console!=="undefined")console.warn(`[NorthHire] Security signals sync failed: ${e.message}`);
       }
     })();
     return ()=>{cancelled=true;};
@@ -1587,7 +1601,7 @@ export function useStore(){
     references,addReference,removeReference,
     addReview,deleteReview,loadEmployerReviews,loadCandidateContact,candidateNotes,saveCandidateNote,
     submitContact,loadContactInbox,resolveContactMessage,
-    saved,following,enrolled,trainingProgress,suspended,suspensionInfo,invitedCandidates,notifications,activity,settings,userSettings,search,setSearch,
+    saved,following,enrolled,trainingProgress,suspended,suspensionInfo,invitedCandidates,notifications,activity,securitySignals,settings,userSettings,search,setSearch,
     toasts,toast,dismissToast,
     jobId,empId,blogId,trainingId,cvId,editId,candidateId,pipelineJob,applyDraft,setApplyDraft,
     contactPrefill,setContactPrefill,pendingPlan,setPendingPlan,employersPrefill,setEmployersPrefill,

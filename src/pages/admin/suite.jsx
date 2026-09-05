@@ -55,7 +55,28 @@ export function AdmHome(){
             <div key={k} className="flex items-center justify-between gap-3 py-3 border-b border-line-soft">
               <span className="text-sm text-text">{l}</span>
               <Switch on={A.settings[k]} onChange={v=>A.setSetting(k,v)}/></div>)}
-          <Btn kind="ghost" size="sm" full style={{marginTop:12}} iconR="chevR" onClick={()=>A.go("admSettings")}>All platform settings</Btn></Card></div></div>
+          <Btn kind="ghost" size="sm" full style={{marginTop:12}} iconR="chevR" onClick={()=>A.go("admSettings")}>All platform settings</Btn></Card>
+        {A.securitySignals&&(()=>{const sig=A.securitySignals;
+          const hasSignal=sig.failedLogins24h>0||sig.spamDomains.length>0||sig.floodingApplicants.length>0;
+          return <Card><H2 sub="Last 24 hours — a lightweight abuse check, not a full security dashboard.">Security signals</H2>
+            <div className="grid grid-cols-2 gap-2.5 mb-3.5">
+              <div className="p-3 bg-bg rounded-lg text-center">
+                <div className="text-lg font-bold text-text">{sig.failedLogins24h}</div>
+                <div className="text-xs text-text-3 mt-1">Failed logins</div></div>
+              <div className="p-3 bg-bg rounded-lg text-center">
+                <div className="text-lg font-bold text-text">{sig.signups24h}</div>
+                <div className="text-xs text-text-3 mt-1">New signups</div></div>
+            </div>
+            {!hasSignal?<div className="text-sm text-text-3 py-2 text-center">Nothing unusual in the last 24h.</div>:<div className="flex flex-col gap-1.5">
+              {sig.topOffenders.slice(0,3).map(o=><div key={o.email} className="flex justify-between text-xs py-1.5 px-2.5 bg-warn-bg rounded-lg">
+                <span className="text-text-2">{o.email}</span><span className="font-bold text-warn">{o.attempts} failed attempts</span></div>)}
+              {sig.spamDomains.map(d=><div key={d.domain} className="flex justify-between text-xs py-1.5 px-2.5 bg-warn-bg rounded-lg">
+                <span className="text-text-2">{d.n} signups from @{d.domain}</span><span className="font-bold text-warn">same day</span></div>)}
+              {sig.floodingApplicants.map(f=><div key={f.user_id} className="flex justify-between text-xs py-1.5 px-2.5 bg-warn-bg rounded-lg">
+                <span className="text-text-2">User {f.user_id}</span><span className="font-bold text-warn">{f.n} applications</span></div>)}
+            </div>}
+          </Card>;})()}
+        </div></div>
   </Page>;
 }
 

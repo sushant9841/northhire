@@ -31,6 +31,28 @@ platformRouter.patch("/settings", requireAuth, requireRole("admin"), (req, res) 
   res.json({ settings: serializeSettings(db.prepare("SELECT * FROM platform_settings WHERE id = 1").get()) });
 });
 
+// Real abuse-visibility signals for AdmHome - previously nothing tracked failed logins or
+// spam-pattern signups at all, so an admin had no way to notice brute-forcing or bot signups.
+platformRouter.get("/security-signals", requireAuth, requireRole("admin"), (req, res) => {
+  const since24h = "datetime('now','-1 day')";
+  const failedLogins24h = db.prepare(`SELECT COUNT(*) AS n FROM failed_logins WHERE created_at >= ${since24h}`).get().n;
+  const topOffenders = db.prepare(
+    `SELECT email, COUNT(*) AS attempts FROM failed_logins WHERE created_at >= ${since24h} GROUP BY email ORDER BY attempts DESC LIMIT 5`
+  ).all();
+  const signups24h = db.prepare(`SELECT COUNT(*) AS n FROM users WHERE created_at >= ${since24h}`).get().n;
+  // A crude but real signal: an email domain that produced 3+ new signups in the last 24h is
+  // worth a human glance (legitimate companies inviting a team rarely all sign up same-day).
+  const spamDomains = db.prepare(
+    `SELECT SUBSTR(email, INSTR(email,'@')+1) AS domain, COUNT(*) AS n FROM users
+     WHERE created_at >= ${since24h} GROUP BY domain HAVING n >= 3 ORDER BY n DESC LIMIT 5`
+  ).all();
+  const applications24h = db.prepare(`SELECT COUNT(*) AS n FROM applications WHERE created_at >= ${since24h}`).get().n;
+  const floodingApplicants = db.prepare(
+    `SELECT user_id, COUNT(*) AS n FROM applications WHERE created_at >= ${since24h} GROUP BY user_id HAVING n >= 10 ORDER BY n DESC LIMIT 5`
+  ).all();
+  res.json({ failedLogins24h, topOffenders, signups24h, spamDomains, applications24h, floodingApplicants });
+});
+
 platformRouter.get("/activity", requireAuth, requireRole("admin"), (req, res) => {
   const rows = db.prepare("SELECT * FROM activity_log ORDER BY created_at DESC LIMIT 1000").all();
   res.json({ activity: rows.map(r => ({ id: r.id, action: r.action, text: r.text, icon: r.icon, actor: r.actor, at: sqlTime(r.created_at).getTime() })) });

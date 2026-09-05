@@ -79,6 +79,7 @@ authRouter.post("/login", (req, res) => {
 
   const user = db.prepare("SELECT * FROM users WHERE email = ?").get(email.toLowerCase());
   if (!user || !verifyPassword(password, user.password_hash, user.password_salt)) {
+    db.prepare("INSERT INTO failed_logins (id, email) VALUES (?, ?)").run(nextId("fl", "failed_logins"), email.toLowerCase());
     return res.status(401).json({ error: "Incorrect email or password." });
   }
   if (user.suspended) {

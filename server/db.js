@@ -231,6 +231,10 @@ CREATE TABLE IF NOT EXISTS activity_log (
   id TEXT PRIMARY KEY, action TEXT, text TEXT, icon TEXT, actor TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+CREATE TABLE IF NOT EXISTS failed_logins (
+  id TEXT PRIMARY KEY, email TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 CREATE TABLE IF NOT EXISTS platform_settings (
   id INTEGER PRIMARY KEY CHECK (id = 1),
   employer_blogs INTEGER DEFAULT 1, employer_trainings INTEGER DEFAULT 1, employer_feature INTEGER DEFAULT 1,
