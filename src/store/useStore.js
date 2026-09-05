@@ -737,6 +737,14 @@ export function useStore(){
     try{const {candidate}=await api.get(`/applications/${applicationId}/candidate`);return candidate;}
     catch{return null;}
   };
+  const loadScorecards=async(applicationId)=>{
+    try{const {scorecards}=await api.get(`/applications/${applicationId}/scorecards`);return scorecards;}
+    catch{return [];}
+  };
+  const submitScorecard=async(applicationId,rating,notes)=>{
+    try{const {scorecard}=await api.post(`/applications/${applicationId}/scorecards`,{rating,notes});return {ok:true,scorecard};}
+    catch(err){return {ok:false,msg:err.message};}
+  };
   const loadEmployerReviews=async(employerId)=>{
     try{
       const {reviews:fresh}=await api.get(`/seeker/reviews/employer/${employerId}`);
@@ -1630,7 +1638,7 @@ export function useStore(){
     paymentMethods,addPaymentMethod,removePaymentMethod,setDefaultPayment,
     twoFactor,enable2FA,disable2FA,
     references,addReference,removeReference,
-    addReview,deleteReview,loadEmployerReviews,loadCandidateContact,candidateNotes,saveCandidateNote,
+    addReview,deleteReview,loadEmployerReviews,loadCandidateContact,candidateNotes,saveCandidateNote,loadScorecards,submitScorecard,
     submitContact,loadContactInbox,resolveContactMessage,
     saved,following,enrolled,trainingProgress,suspended,suspensionInfo,invitedCandidates,notifications,activity,securitySignals,settings,userSettings,search,setSearch,
     toasts,toast,dismissToast,

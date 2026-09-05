@@ -603,12 +603,16 @@ export function EmpCandidate(){
   const [confirmReject,setConfirmReject]=useState(false); const [rejectReason,setRejectReason]=useState("");
   const [showOfferLetter,setShowOfferLetter]=useState(false);
   const [offerDraft,setOfferDraft]=useState({startDate:"",salary:"",manager:"",deadline:""});
+  const [contact,setContact]=useState(undefined); // undefined = loading, null = load failed
+  const [scorecards,setScorecards]=useState([]);
+  const [showScorecard,setShowScorecard]=useState(false); const [scRating,setScRating]=useState(0); const [scNotes,setScNotes]=useState("");
   const a=A.applications.find(x=>x.id===A.candidateId);
+  useEffect(()=>{if(!a)return; let cancelled=false;A.loadCandidateContact(a.id).then(c=>{if(!cancelled)setContact(c);});return()=>{cancelled=true;};},[a?.id]);
+  const refreshScorecards=()=>{if(a)A.loadScorecards(a.id).then(setScorecards);};
+  useEffect(()=>{refreshScorecards();},[a?.id]);
   if(!a) return <Page><Empty icon="users" title="Candidate not found" body="This application may have been withdrawn."
     action={<Btn kind="primary" onClick={()=>A.go("empPipeline")}>Back to pipeline</Btn>}/></Page>;
   const u=A.person(a.user), job=A.job(a.job), s=A.scoreCandidate(u,job), idx=STAGES.indexOf(a.stage);
-  const [contact,setContact]=useState(undefined); // undefined = loading, null = load failed
-  useEffect(()=>{let cancelled=false;A.loadCandidateContact(a.id).then(c=>{if(!cancelled)setContact(c);});return()=>{cancelled=true;};},[a.id]);
   const threadMessages=A.messages.filter(m=>(m.from===u.id&&m.to===A.user?.id)||(m.to===u.id&&m.from===A.user?.id)).slice().reverse();
   const upcomingInterviews=A.interviews.filter(iv=>iv.app===a.id&&iv.status==="scheduled");
   return <Page narrow>
@@ -623,6 +627,23 @@ export function EmpCandidate(){
               [contact?.email,contact?.phone].filter(Boolean).join(" • ")||"Contact details hidden by this candidate"}</div>
           <div className="mt-2.5"><Tag tone={a.stage==="Offer"?"ok":a.stage==="Interview"?"warn":"brand"} sm>{a.stage}</Tag></div></div>
         <Ring v={s} size={62} label="Fit"/></div></Card>
+    <Card style={{marginBottom:16}}>
+      <div className="flex justify-between items-center mb-3">
+        <Lbl style={{margin:0}}>Hiring team scorecards {scorecards.length>0&&`(avg ${(scorecards.reduce((s,c)=>s+c.rating,0)/scorecards.length).toFixed(1)}/5)`}</Lbl>
+        <Btn kind="outline" size="xs" icon="plus" onClick={()=>{setScRating(0);setScNotes("");setShowScorecard(true);}}>Add scorecard</Btn>
+      </div>
+      {scorecards.length===0?<div className="text-sm text-text-3">No scorecards yet — the first interviewer to weigh in starts the record.</div>
+        :<div className="flex flex-col gap-2.5">
+          {scorecards.map(c=><div key={c.id} className="py-2.5 px-3 bg-bg rounded-lg">
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-sm font-semibold text-text">{c.author}</span>
+              <span className="text-sm text-warn font-bold">{"★".repeat(c.rating)}{"☆".repeat(5-c.rating)}</span>
+            </div>
+            {c.notes&&<div className="text-sm text-text-2">{c.notes}</div>}
+            <div className="text-xs text-text-3 mt-1">{new Date(c.at).toLocaleDateString("en-CA")}</div>
+          </div>)}
+        </div>}
+    </Card>
     <Card style={{marginBottom:16}}><Lbl>Why this score</Lbl>
       <div className="flex flex-col gap-2.5">
         {A.scoreBreakdown(u,job).map(b=><div key={b.label}>
@@ -682,6 +703,25 @@ export function EmpCandidate(){
         <div className="flex gap-2.5 justify-end">
           <Btn kind="ghost" onClick={()=>setShowOfferLetter(false)}>Cancel</Btn>
           <Btn kind="primary" icon="file" onClick={()=>{A.printOfferLetter(u,job,A.company,offerDraft);setShowOfferLetter(false);}}>Generate &amp; print</Btn>
+        </div>
+      </div>
+    </Modal>}
+
+    {showScorecard&&<Modal onClose={()=>setShowScorecard(false)} title={`Scorecard for ${u.name}`}>
+      <div className="flex flex-col gap-3.5">
+        <Field label="Rating" required>
+          <div className="flex gap-1.5">
+            {[1,2,3,4,5].map(n=><button key={n} type="button" onClick={()=>setScRating(n)}
+              className="bg-transparent border-0 p-0 cursor-pointer text-2xl" style={{color:n<=scRating?C.warn:C.line}}>★</button>)}
+          </div>
+        </Field>
+        <Field label="Notes (optional)"><Area rows={4} value={scNotes} onChange={e=>setScNotes(e.target.value)} placeholder="Strengths, concerns, how they compared to the role's requirements…"/></Field>
+        <div className="flex gap-2.5 justify-end">
+          <Btn kind="ghost" onClick={()=>setShowScorecard(false)}>Cancel</Btn>
+          <Btn kind="primary" disabled={!scRating} onClick={async()=>{
+            const r=await A.submitScorecard(a.id,scRating,scNotes.trim());
+            if(r.ok){refreshScorecards();setShowScorecard(false);} else A.toast(r.msg,"danger");
+          }}>Submit scorecard</Btn>
         </div>
       </div>
     </Modal>}

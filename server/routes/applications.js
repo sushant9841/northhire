@@ -41,6 +41,27 @@ applicationsRouter.get("/:id/candidate", requireAuth, requireRole("employer"), (
   });
 });
 
+// Structured hiring-team feedback beyond the single auto-computed fit percentage - any teammate
+// on the employer account can leave one scorecard per application; all of them show, not just
+// the latest, since that's the point of a multi-interviewer scorecard.
+applicationsRouter.get("/:id/scorecards", requireAuth, requireRole("employer"), (req, res) => {
+  const app = loadOwnedApplication(req.params.id, req, res, "employer");
+  if (!app) return;
+  const rows = db.prepare("SELECT * FROM interview_scorecards WHERE application_id = ? ORDER BY created_at DESC").all(req.params.id);
+  res.json({ scorecards: rows.map(r => ({ id: r.id, application: r.application_id, author: r.author_name, rating: r.rating, notes: r.notes, at: sqlTime(r.created_at).getTime() })) });
+});
+applicationsRouter.post("/:id/scorecards", requireAuth, requireRole("employer"), (req, res) => {
+  const app = loadOwnedApplication(req.params.id, req, res, "employer");
+  if (!app) return;
+  const { rating, notes } = req.body || {};
+  const r = Number(rating);
+  if (!(r >= 1 && r <= 5)) return res.status(400).json({ error: "Rating must be 1-5." });
+  const id = nextId("sc", "interview_scorecards");
+  db.prepare("INSERT INTO interview_scorecards (id, application_id, author_id, author_name, rating, notes) VALUES (?, ?, ?, ?, ?, ?)")
+    .run(id, req.params.id, req.user.id, req.user.name, r, (notes || "").trim());
+  res.status(201).json({ scorecard: { id, application: req.params.id, author: req.user.name, rating: r, notes: (notes || "").trim(), at: Date.now() } });
+});
+
 applicationsRouter.get("/mine", requireAuth, requireRole("seeker"), (req, res) => {
   const rows = db.prepare("SELECT * FROM applications WHERE user_id = ? ORDER BY created_at DESC").all(req.user.id);
   res.json({ applications: rows.map(serializeApplication) });

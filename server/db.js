@@ -259,6 +259,16 @@ CREATE TABLE IF NOT EXISTS platform_settings (
   matching INTEGER DEFAULT 1, enrolments INTEGER DEFAULT 1, pay_transparency INTEGER DEFAULT 1, maintenance INTEGER DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS interview_scorecards (
+  id TEXT PRIMARY KEY,
+  application_id TEXT NOT NULL REFERENCES applications(id),
+  author_id TEXT NOT NULL REFERENCES users(id),
+  author_name TEXT NOT NULL,
+  rating INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),
+  notes TEXT DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS candidate_notes (
   id TEXT PRIMARY KEY,
   employer_id TEXT NOT NULL REFERENCES employers(id),
