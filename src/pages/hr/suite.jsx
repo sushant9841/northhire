@@ -778,6 +778,8 @@ export function HrChat(){
   const [showNew,setShowNew]=useState(false);
   const [showThreads,setShowThreads]=useState(!mob);
   useEffect(()=>{if(!mob)setShowThreads(true);},[mob]);
+  useEffect(()=>{if(selected)A.markHrChatRead(selected);},[selected]);
+  const selectChat=id=>{setSelected(id); if(mob)setShowThreads(false);};
 
   const myChats=A.hrChats.filter(c=>{
     if(c.members==="all")return true;
@@ -798,15 +800,18 @@ export function HrChat(){
         {(chatSettings.allowDirectMessages||chatSettings.allowGroupCreation)&&<Btn kind="ghost" size="xs" icon="plus" onClick={()=>setShowNew(true)}/>}
       </div>
       <div className="flex-1 overflow-y-auto">
-        {myChats.map(c=>{const isActive=selected===c.id;
+        {myChats.map(c=>{const isActive=selected===c.id; const unread=!isActive&&c.unreadCount>0;
           const lastMsg=A.hrChatMsgs.filter(m=>m.chat===c.id).sort((a,b)=>b.at-a.at)[0];
-          return <button key={c.id} onClick={()=>{setSelected(c.id); if(mob)setShowThreads(false);}}
+          return <button key={c.id} onClick={()=>selectChat(c.id)}
             className={`w-full py-3 px-3.5 border-0 border-b border-line-soft cursor-pointer text-left transition-colors duration-150 ${isActive?"bg-tint":"bg-transparent"}`}>
             <div className="flex justify-between items-baseline gap-2 mb-1">
-              <div className={`text-sm overflow-hidden text-ellipsis whitespace-nowrap ${isActive?"font-bold":"font-semibold"} text-text`}>{c.name}</div>
-              {lastMsg&&<div className="text-xs text-text-3 shrink-0" style={{fontSize:10.5}}>{new Date(lastMsg.at).toLocaleDateString("en-CA",{month:"short",day:"numeric"})}</div>}
+              <div className={`text-sm overflow-hidden text-ellipsis whitespace-nowrap ${isActive||unread?"font-bold":"font-semibold"} text-text`}>{c.name}</div>
+              <div className="flex gap-1.5 items-center shrink-0">
+                {lastMsg&&<div className="text-xs text-text-3" style={{fontSize:10.5}}>{new Date(lastMsg.at).toLocaleDateString("en-CA",{month:"short",day:"numeric"})}</div>}
+                {unread&&<span className="min-w-4.5 h-4.5 px-1 rounded-full bg-brand text-white text-xs font-bold flex items-center justify-center" style={{fontSize:10}}>{c.unreadCount}</span>}
+              </div>
             </div>
-            <div className="text-xs text-text-3 overflow-hidden text-ellipsis whitespace-nowrap">{lastMsg?lastMsg.text:c.about}</div>
+            <div className={`text-xs overflow-hidden text-ellipsis whitespace-nowrap ${unread?"text-text font-semibold":"text-text-3"}`}>{lastMsg?lastMsg.text:c.about}</div>
           </button>;})}
       </div>
     </Card>}

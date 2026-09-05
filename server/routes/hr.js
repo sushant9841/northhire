@@ -488,7 +488,15 @@ hrRouter.get("/audit-log", requireHrAuth, (req, res) => {
 /* ─── Chat ─── */
 hrRouter.get("/chats", requireHrAuth, (req, res) => {
   const rows = db.prepare("SELECT * FROM hr_chats WHERE company_id = ?").all(req.hrEmployee.company_id);
-  res.json({ chats: rows.map(serializeHrChat) });
+  res.json({ chats: rows.map(row => {
+    const chat = serializeHrChat(row);
+    const read = db.prepare("SELECT last_read_at FROM hr_chat_reads WHERE chat_id = ? AND employee_id = ?").get(row.id, req.hrEmployee.id);
+    const unreadCount = db.prepare(
+      `SELECT COUNT(*) AS n FROM hr_chat_messages WHERE chat_id = ? AND from_employee != ?
+       AND created_at > ?`
+    ).get(row.id, req.hrEmployee.id, read?.last_read_at || "1970-01-01").n;
+    return { ...chat, unreadCount };
+  }) });
 });
 hrRouter.post("/chats", requireHrAuth, (req, res) => {
   const d = req.body || {};
@@ -500,6 +508,17 @@ hrRouter.post("/chats", requireHrAuth, (req, res) => {
 hrRouter.get("/chats/:id/messages", requireHrAuth, (req, res) => {
   const rows = db.prepare("SELECT * FROM hr_chat_messages WHERE chat_id = ? ORDER BY created_at").all(req.params.id);
   res.json({ messages: rows.map(serializeHrChatMessage) });
+});
+// A separate explicit action, NOT fired on the message fetch above - the frontend bulk-loads
+// every chat's messages upfront on sync, so tying "read" to that GET would mark everything read
+// instantly and the unread badge could never show anything. Only the UI actually opening a
+// specific chat calls this.
+hrRouter.patch("/chats/:id/read", requireHrAuth, (req, res) => {
+  db.prepare(
+    `INSERT INTO hr_chat_reads (chat_id, employee_id, last_read_at) VALUES (?, ?, datetime('now'))
+     ON CONFLICT(chat_id, employee_id) DO UPDATE SET last_read_at = excluded.last_read_at`
+  ).run(req.params.id, req.hrEmployee.id);
+  res.json({ ok: true });
 });
 hrRouter.post("/chats/:id/messages", requireHrAuth, (req, res) => {
   const id = nextId("hm", "hr_chat_messages");

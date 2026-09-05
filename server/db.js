@@ -360,6 +360,12 @@ CREATE TABLE IF NOT EXISTS hr_chat_messages (
   from_employee TEXT, text TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+CREATE TABLE IF NOT EXISTS hr_chat_reads (
+  chat_id TEXT NOT NULL REFERENCES hr_chats(id),
+  employee_id TEXT NOT NULL REFERENCES hr_employees(id),
+  last_read_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (chat_id, employee_id)
+);
 CREATE TABLE IF NOT EXISTS hr_company_settings (
   company_id TEXT PRIMARY KEY REFERENCES employers(id),
   settings_json TEXT NOT NULL DEFAULT '{}'

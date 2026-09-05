@@ -417,6 +417,10 @@ export function useHrStore(){
     setHrChatMsgs(l=>[...l,message]);
     return message;
   };
+  const markHrChatRead=async(chatId)=>{
+    await api.patch(`/hr/chats/${chatId}/read`);
+    setHrChats(l=>l.map(c=>c.id===chatId?{...c,unreadCount:0}:c));
+  };
   const createHrChat=async(data)=>{
     const {chat}=await api.post("/hr/chats",data);
     setHrChats(l=>[chat,...l]);
@@ -472,7 +476,7 @@ export function useHrStore(){
     empExpenses,companyExpenses,submitExpense,decideExpense,payExpense,
     runPayroll,approvePayroll,executePayroll,reversePayroll,
     awardBadge,removeBadge,
-    sendHrMessage,createHrChat,updateCompanySettings,toggleModule,
+    sendHrMessage,createHrChat,markHrChatRead,updateCompanySettings,toggleModule,
     connectPunchMachine,connectPriorSystem,
     loadEmployeeDocuments,uploadEmployeeDocument,downloadEmployeeDocument,deleteEmployeeDocument,
     modulesForRole,canAccessModule,
