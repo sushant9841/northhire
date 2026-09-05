@@ -1093,19 +1093,32 @@ export function useStore(){
     }
     setJobs(l=>[nj,...l]);
     log("job.publish",`Published "${nj.t}"`,"briefcase");
-    notifyFollowers(nj,company);
-    /* auto-alert on matching saved searches for all seekers */
-    savedSearches.forEach(s=>{
-      if(!s.alerts)return;
-      const qHit=!s.q||nj.t.toLowerCase().includes(s.q.toLowerCase())||nj.skills.some(k=>k.toLowerCase().includes(s.q.toLowerCase()));
-      const catHit=!s.cats?.length||s.cats.includes(nj.cat);
-      const whereHit=!s.where||nj.city.toLowerCase().includes(s.where.toLowerCase())||nj.prov.toLowerCase()===s.where.toLowerCase();
-      if(qHit&&catHit&&whereHit){
-        notify({icon:"target",title:`New match: ${nj.t}`,body:`Matches your saved search "${s.name}" — ${pay(nj)}${payShort(nj)}`,for:s.user,link:"job"});
-      }
-    });
+    if(nj.pendingOwnerApproval){
+      /* A teammate's posting doesn't actually go out to candidates (or count toward
+         followers/saved-search alerts below) until the account owner signs off. */
+      const owner=team.members.find(m=>m.role==="owner");
+      if(owner)notify({icon:"shield",title:`"${nj.t}" needs your approval`,body:`${user.name} posted a job that's waiting for your sign-off before it goes live.`,for:owner.id,link:"empJobs"});
+    }else{
+      notifyFollowers(nj,company);
+      /* auto-alert on matching saved searches for all seekers */
+      savedSearches.forEach(s=>{
+        if(!s.alerts)return;
+        const qHit=!s.q||nj.t.toLowerCase().includes(s.q.toLowerCase())||nj.skills.some(k=>k.toLowerCase().includes(s.q.toLowerCase()));
+        const catHit=!s.cats?.length||s.cats.includes(nj.cat);
+        const whereHit=!s.where||nj.city.toLowerCase().includes(s.where.toLowerCase())||nj.prov.toLowerCase()===s.where.toLowerCase();
+        if(qHit&&catHit&&whereHit){
+          notify({icon:"target",title:`New match: ${nj.t}`,body:`Matches your saved search "${s.name}" — ${pay(nj)}${payShort(nj)}`,for:s.user,link:"job"});
+        }
+      });
+    }
     setPipelineJob(nj.id); go("empJobs"); return {ok:true};
   };
+  const approveJob=async id=>{
+    try{const {job:updated}=await api.patch(`/jobs/${id}`,{approve:true});
+      setJobs(l=>l.map(x=>x.id===id?mapApiJob(updated):x));
+      log("job.approve",`Approved "${updated.t}"`,"check");
+      notifyFollowers(mapApiJob(updated),company);
+    }catch(err){toast(err.message,"danger");}};
   const toggleJobStatus=async id=>{
     const j=job(id); const nextStatus=j.status==="live"?"paused":"live";
     try{
@@ -1561,7 +1574,7 @@ export function useStore(){
     logout,completeSignup,saveProfile,deleteAccount,exportData,setUserSetting,
     toggleSave,followEmployer,openJob,openEmployer,openBlog,openTraining,openCandidate,
     beginApply,submitApply,withdraw,acceptOffer,moveApp,rejectApp,
-    publishJob,toggleJobStatus,flagJob,setPipelineJob:setPipelineJobFn,saveCompany,verifyEmployer,holdEmployer,toggleSuspend,eraseUser,
+    publishJob,approveJob,toggleJobStatus,flagJob,setPipelineJob:setPipelineJobFn,saveCompany,verifyEmployer,holdEmployer,toggleSuspend,eraseUser,
     team,loadTeam,inviteTeammate,revokeInvite,removeTeammate,getInvite,acceptInvite,inviteToken,
     editBlog,editTraining,saveBlog,saveTraining,deleteBlog,deleteTraining,toggleBlogStatus,toggleTrainingStatus,
     enrol,confirmPaidEnrol,advanceTraining,paidTrainings,newCv,editCv,saveCv,duplicateCv,deleteCv,setDefaultCv,

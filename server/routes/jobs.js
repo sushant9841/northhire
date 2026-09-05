@@ -11,9 +11,11 @@ jobsRouter.get("/", (req, res) => {
   const params = [];
 
   if (status && status !== "all") { clauses.push("status = ?"); params.push(status); }
-  else if (!status) { clauses.push("status = 'live'"); }
+  else if (!status) { clauses.push("status = 'live' AND pending_owner_approval = 0"); }
   // status === "all" applies no status filter - used by an owning employer's "my jobs" list
-  // and admin moderation, both of which need to see paused/review/closed listings too.
+  // and admin moderation, both of which need to see paused/review/closed/pending-approval
+  // listings too. The default (public search) view excludes anything still awaiting the
+  // account owner's sign-off, even if it already cleared admin moderation to "live".
 
   if (employerId) { clauses.push("employer_id = ?"); params.push(employerId); }
   if (cat) { clauses.push("cat = ?"); params.push(cat); }
@@ -49,12 +51,16 @@ jobsRouter.post("/", requireAuth, requireRole("employer"), (req, res) => {
   const b = req.body || {};
   if (!b.title || !b.desc) return res.status(400).json({ error: "Title and description are required." });
   const initialStatus = b.status === "live" ? "live" : "review";
+  // A teammate (employer_role 'member') can post, but it doesn't go out to candidates until the
+  // account owner signs off - independent of admin's own platform-moderation status above, which
+  // is a different gate for a different reason.
+  const needsOwnerApproval = req.user.employer_role === "member";
   const id = nextId("j", "jobs");
   db.prepare(
     `INSERT INTO jobs (id, employer_id, title, cat, city, prov, type, mode, pay_lo, pay_hi, pay_unit,
        vacancies, experience, education, deadline_date, urgent, featured, skills_json, perks_json,
-       description, duties_json, requirements_json, how_to_apply, screening_questions_json, status)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+       description, duties_json, requirements_json, how_to_apply, screening_questions_json, status, pending_owner_approval)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
   ).run(
     id, req.user.employer_id, b.title, b.cat || null, b.city || null, b.prov || null, b.type || null, b.mode || null,
     b.lo ?? null, b.hi ?? null, b.unit || null, b.vac ?? 1, b.exp || null, b.edu || null, b.dlDate || null,
@@ -64,7 +70,7 @@ jobsRouter.post("/", requireAuth, requireRole("employer"), (req, res) => {
     // keep only the fields the applicant-facing form actually needs, capped at a sane count.
     JSON.stringify((b.questions || []).filter(q => q && q.prompt && q.prompt.trim()).slice(0, 10)
       .map(q => ({ id: q.id, type: q.type, prompt: q.prompt.trim(), required: !!q.required, options: Array.isArray(q.options) ? q.options : [] }))),
-    initialStatus
+    initialStatus, needsOwnerApproval ? 1 : 0
   );
   const row = db.prepare("SELECT * FROM jobs WHERE id = ?").get(id);
   res.status(201).json({ job: serializeJob(row) });
@@ -76,7 +82,7 @@ jobsRouter.patch("/:id", requireAuth, requireRole("employer", "admin"), (req, re
   const isAdmin = req.user.role === "admin";
   if (!isAdmin && job.employer_id !== req.user.employer_id) return res.status(403).json({ error: "Not your listing." });
 
-  const { status, flagged } = req.body || {};
+  const { status, flagged, approve } = req.body || {};
   if (status !== undefined) {
     if (!["live", "paused", "review", "closed"].includes(status)) return res.status(400).json({ error: "Invalid status." });
     db.prepare("UPDATE jobs SET status = ? WHERE id = ?").run(status, req.params.id);
@@ -84,6 +90,10 @@ jobsRouter.patch("/:id", requireAuth, requireRole("employer", "admin"), (req, re
   if (flagged !== undefined) {
     if (!isAdmin) return res.status(403).json({ error: "Only an administrator can flag a listing." });
     db.prepare("UPDATE jobs SET flagged = ? WHERE id = ?").run(flagged ? 1 : 0, req.params.id);
+  }
+  if (approve !== undefined) {
+    if (!isAdmin && req.user.employer_role !== "owner") return res.status(403).json({ error: "Only the account owner can approve a teammate's job posting." });
+    db.prepare("UPDATE jobs SET pending_owner_approval = 0 WHERE id = ?").run(req.params.id);
   }
   const row = db.prepare("SELECT * FROM jobs WHERE id = ?").get(req.params.id);
   res.json({ job: serializeJob(row) });

@@ -70,6 +70,7 @@ CREATE TABLE IF NOT EXISTS jobs (
   status TEXT NOT NULL DEFAULT 'live' CHECK(status IN ('live','paused','review','closed')),
   flagged INTEGER DEFAULT 0,
   hiring_type TEXT NOT NULL DEFAULT 'direct' CHECK(hiring_type IN ('direct','agency-contract','agency-perm')),
+  pending_owner_approval INTEGER DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

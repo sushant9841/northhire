@@ -30,6 +30,10 @@ export function EmpHome(){
       An administrator is reviewing your company. Verified employers get a badge on every listing and around 40% more applicants.</Banner>}
     {!canContent&&<Banner tone="neutral" icon="lock" title="Content publishing is currently off" style={{marginBottom:18}}>
       Publishing articles and trainings has been disabled platform-wide by an administrator. Your existing content stays visible.</Banner>}
+    {A.user?.employerRole==="owner"&&jobs.some(j=>j.pendingOwnerApproval)&&
+      <Banner tone="warn" icon="shield" title="A teammate posted a job that needs your approval" style={{marginBottom:18}}
+        action={<Btn kind="primary" size="sm" onClick={()=>A.go("empJobs")}>Review</Btn>}>
+        {jobs.filter(j=>j.pendingOwnerApproval).length} listing{jobs.filter(j=>j.pendingOwnerApproval).length===1?"":"s"} won't go live until you sign off.</Banner>}
     <div className="grid gap-3 mb-5" style={{gridTemplateColumns:`repeat(auto-fit,minmax(${mob?140:170}px,1fr))`}}>
       <Stat icon="briefcase" label="Live listings" value={jobs.filter(j=>j.status==="live").length} tone={C.brand} onClick={()=>A.go("empJobs")}/>
       <Stat icon="users" label="Total applicants" value={apps.length} onClick={()=>A.go("empPipeline")}/>
@@ -96,7 +100,8 @@ export function EmpJobs(){
                 <div className="flex items-center gap-2.5 flex-wrap">
                   <span className="font-bold text-text tracking-tight" style={{fontSize:16.5}}>{j.t}</span>
                   <Tag tone={jobTone(j.status)} sm>{jobStatusLabel(j.status)}</Tag>
-                  {j.flagged&&<Tag tone="danger" sm icon="alert">Flagged by admin</Tag>}</div>
+                  {j.flagged&&<Tag tone="danger" sm icon="alert">Flagged by admin</Tag>}
+                  {j.pendingOwnerApproval&&<Tag tone="warn" sm icon="shield">Needs owner approval</Tag>}</div>
                 <div className="text-sm text-text-2 mt-1.5">{j.city}, {j.prov} • {j.mode} • {j.type} • {pay(j)}{payShort(j)}</div>
                 <div className="flex gap-5 mt-3 flex-wrap">
                   {[["Applicants",apps.length],["Views",j.views.toLocaleString()],["Posted",j.posted],["Closes",dlText(j.dl)]].map(([k,v])=>
@@ -104,6 +109,8 @@ export function EmpJobs(){
                       <div className="text-base font-bold text-text mt-0.5">{v}</div></div>)}</div></div>
               <div className="flex gap-2 flex-wrap items-center">
                 <Btn kind="outline" size="sm" onClick={()=>A.openJob(j.id,{preview:true})}>Preview</Btn>
+                {j.pendingOwnerApproval&&A.user?.employerRole==="owner"&&
+                  <Btn kind="ok" size="sm" icon="check" onClick={()=>A.approveJob(j.id)}>Approve</Btn>}
                 <Btn kind="outline" size="sm" onClick={()=>A.toggleJobStatus(j.id)}>{j.status==="live"?"Pause":"Reopen"}</Btn>
                 <Btn kind="primary" size="sm" onClick={()=>{A.setPipelineJob(j.id);A.go("empPipeline");}}>Candidates ({apps.length})</Btn></div></div></Card>;})}</div>
       <Pagination {...pg}/></>}

@@ -71,6 +71,7 @@ export function serializeJob(row) {
     status: row.status,
     flagged: !!row.flagged,
     hiringType: row.hiring_type,
+    pendingOwnerApproval: !!row.pending_owner_approval,
   };
 }
 
