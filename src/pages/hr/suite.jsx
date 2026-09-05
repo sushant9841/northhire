@@ -249,6 +249,22 @@ export function HrDashboard(){
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /* ─── Profile: edit own details + visibility toggles for public NorthHire ─── */
+/* Read-only view for an employee's own Documents card - uploading is an HR/admin/owner action
+   from the People page's edit modal, not a self-service one. */
+function _MyDocuments({empId}){
+  const A=use();
+  const [docs,setDocs]=useState(null);
+  useEffect(()=>{A.loadEmployeeDocuments(empId).then(setDocs);},[empId]);
+  if(!docs?.length)return <div className="text-sm text-text-3">No documents on file.</div>;
+  return <div className="flex flex-col gap-2">
+    {docs.map(d=><button key={d.id} onClick={()=>A.downloadEmployeeDocument(d.id)}
+      className="flex gap-3 items-center py-2.5 px-3 bg-bg rounded-lg border-0 cursor-pointer text-left w-full">
+      <div className="w-8 h-8 rounded-lg bg-wash text-brand flex items-center justify-center"><I n="file" s={16}/></div>
+      <div className="text-sm font-semibold text-text">{d.name}</div>
+    </button>)}
+  </div>;
+}
+
 export function HrProfile(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const emp=A.hrCurrentEmp();
@@ -260,6 +276,10 @@ export function HrProfile(){
   const save=()=>{A.updateEmp(emp.id,d);};
   const dept=A.HR_DEPARTMENTS.find(x=>x.id===emp.dept);
   const publicView=A.hrPublicProfile(emp.id);
+  /* On a hard refresh landing directly on this real URL, hrEmployee/hrCompany can resolve before
+     the full hrEmployees roster finishes loading - hrPublicProfile (which looks emp.id up in that
+     roster) briefly returns null in that window. Wait rather than crash on publicView.tenureYears. */
+  if(!publicView)return null;
 
   const visItems=[
     {k:"title",l:"Job title",v:emp.title},
@@ -347,6 +367,11 @@ export function HrProfile(){
             {publicView.phone&&<div className="mt-2">• Phone: {publicView.phone}</div>}
             {publicView.email&&<div>• Email: {publicView.email}</div>}
           </div>
+        </Card>
+
+        <Card pad={20} style={{borderRadius:16}}>
+          <Lbl>Your documents</Lbl>
+          <_MyDocuments empId={emp.id}/>
         </Card>
 
         <Card pad={20} style={{borderRadius:16}}>

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, nextId } from "../db.js";
+import { db, nextId, sqlTime } from "../db.js";
 import { calcNetPay } from "../../src/helpers/payrollTax.js";
 import { hashPassword, verifyPassword, createSessionCookie, clearSessionCookie, requireHrAuth, hrEmployeeFromRequest, requireAuth, requireRole } from "../auth.js";
 import {
@@ -119,6 +119,48 @@ hrRouter.patch("/employees/:id/badges", requireHrAuth, requireHrPriv, (req, res)
   db.prepare("UPDATE hr_employees SET badges_json = ? WHERE id = ?").run(JSON.stringify(badges), req.params.id);
   logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, remove ? "badge_removed" : "badge_awarded", `${remove ? "Removed" : "Awarded"} "${badge}" ${remove ? "from" : "to"} ${row.name}`);
   res.json({ employee: serializeHrEmployee(db.prepare("SELECT * FROM hr_employees WHERE id = ?").get(req.params.id)) });
+});
+
+/* ─── Documents ─── */
+// No file-hosting backend exists, so an upload embeds the file as a base64 data: URI in the DB -
+// the same "honest ceiling" the RichText image-insert and print-to-PDF helpers already settled
+// on elsewhere in this app. Capped well under SQLite's practical row-size comfort zone.
+const MAX_DOC_BYTES = 3 * 1024 * 1024;
+hrRouter.get("/employees/:id/documents", requireHrAuth, (req, res) => {
+  const emp = db.prepare("SELECT * FROM hr_employees WHERE id = ? AND company_id = ?").get(req.params.id, req.hrEmployee.company_id);
+  if (!emp) return res.status(404).json({ error: "Employee not found." });
+  if (!isPriv(req.hrEmployee) && req.hrEmployee.id !== emp.id) return res.status(403).json({ error: "Only this employee or HR/admin/owner can view these documents." });
+  const rows = db.prepare("SELECT id, employee_id, name, size, uploaded_by, created_at FROM hr_documents WHERE employee_id = ? ORDER BY created_at DESC").all(req.params.id);
+  res.json({ documents: rows.map(r => ({ id: r.id, employee: r.employee_id, name: r.name, size: r.size, uploadedBy: r.uploaded_by, at: sqlTime(r.created_at).getTime() })) });
+});
+hrRouter.get("/documents/:id", requireHrAuth, (req, res) => {
+  const row = db.prepare("SELECT * FROM hr_documents WHERE id = ?").get(req.params.id);
+  if (!row) return res.status(404).json({ error: "Not found." });
+  const emp = db.prepare("SELECT * FROM hr_employees WHERE id = ?").get(row.employee_id);
+  if (!emp || emp.company_id !== req.hrEmployee.company_id) return res.status(404).json({ error: "Not found." });
+  if (!isPriv(req.hrEmployee) && req.hrEmployee.id !== emp.id) return res.status(403).json({ error: "Only this employee or HR/admin/owner can view this document." });
+  res.json({ id: row.id, name: row.name, dataUrl: row.data_url });
+});
+hrRouter.post("/employees/:id/documents", requireHrAuth, requireHrPriv, (req, res) => {
+  const emp = db.prepare("SELECT * FROM hr_employees WHERE id = ? AND company_id = ?").get(req.params.id, req.hrEmployee.company_id);
+  if (!emp) return res.status(404).json({ error: "Employee not found." });
+  const { name, dataUrl } = req.body || {};
+  if (!name?.trim() || !dataUrl) return res.status(400).json({ error: "A file name and file are required." });
+  if (dataUrl.length > MAX_DOC_BYTES * 1.4) return res.status(413).json({ error: "File is too large — please use one under 3 MB." });
+  const id = nextId("doc", "hr_documents");
+  db.prepare("INSERT INTO hr_documents (id, employee_id, name, data_url, size, uploaded_by) VALUES (?, ?, ?, ?, ?, ?)")
+    .run(id, req.params.id, name.trim(), dataUrl, dataUrl.length, req.hrEmployee.name);
+  logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "document_uploaded", `Uploaded "${name.trim()}" for ${emp.name}`);
+  res.status(201).json({ document: { id, employee: req.params.id, name: name.trim(), size: dataUrl.length, uploadedBy: req.hrEmployee.name, at: Date.now() } });
+});
+hrRouter.delete("/documents/:id", requireHrAuth, requireHrPriv, (req, res) => {
+  const row = db.prepare("SELECT * FROM hr_documents WHERE id = ?").get(req.params.id);
+  if (!row) return res.status(404).json({ error: "Not found." });
+  const emp = db.prepare("SELECT * FROM hr_employees WHERE id = ?").get(row.employee_id);
+  if (!emp || emp.company_id !== req.hrEmployee.company_id) return res.status(404).json({ error: "Not found." });
+  db.prepare("DELETE FROM hr_documents WHERE id = ?").run(req.params.id);
+  logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "document_removed", `Removed "${row.name}" from ${emp.name}`);
+  res.json({ ok: true });
 });
 
 /* ─── Attendance ─── */

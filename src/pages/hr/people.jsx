@@ -295,6 +295,41 @@ function descendantIds(id,all,seen=new Set()){
   return seen;
 }
 
+const MAX_DOC_BYTES=3*1024*1024;
+function _EmployeeDocuments({empId}){
+  const A=use();
+  const [docs,setDocs]=useState(null); const [err,setErr]=useState("");
+  const refresh=()=>A.loadEmployeeDocuments(empId).then(setDocs);
+  useEffect(()=>{refresh();},[empId]);
+  const handleFile=file=>{
+    if(!file)return;
+    if(file.size>MAX_DOC_BYTES){setErr("File is too large — please use one under 3 MB.");return;}
+    setErr("");
+    const reader=new FileReader();
+    reader.onload=async()=>{
+      const r=await A.uploadEmployeeDocument(empId,file.name,String(reader.result||""));
+      if(r.ok)refresh(); else setErr(r.msg);
+    };
+    reader.readAsDataURL(file);
+  };
+  return <div>
+    <div className="flex justify-between items-center mb-2">
+      <Lbl>Documents</Lbl>
+      <label className="text-xs font-semibold text-brand cursor-pointer">
+        + Upload<input type="file" hidden onChange={e=>handleFile(e.target.files?.[0])}/></label>
+    </div>
+    {err&&<div className="text-xs text-red mb-2">{err}</div>}
+    {!docs?.length?<div className="text-xs text-text-3">No documents on file.</div>
+      :<div className="flex flex-col gap-1.5">
+        {docs.map(d=><div key={d.id} className="flex justify-between items-center py-2 px-3 bg-bg rounded-lg">
+          <button type="button" onClick={()=>A.downloadEmployeeDocument(d.id)} className="bg-transparent border-0 p-0 text-xs font-semibold text-text cursor-pointer text-left flex-1">{d.name}</button>
+          <span className="text-xs text-text-3 mr-2">{(d.size/1024/1024*0.75).toFixed(1)} MB</span>
+          <Btn kind="ghost" size="xs" icon="trash" onClick={async()=>{await A.deleteEmployeeDocument(d.id);refresh();}}/>
+        </div>)}
+      </div>}
+  </div>;
+}
+
 /* ─── Manage: add/edit/offboard employees ─── */
 function HrPeople_Manage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
@@ -436,6 +471,7 @@ function HrPeople_Manage(){
                       <Btn kind="ghost" size="xs" icon="trash" onClick={()=>removeCert(i)}/></div></div>;})}
               </div>}
         </div>
+        <_EmployeeDocuments empId={editing.id}/>
         <div className="flex gap-2.5 justify-end">
           <Btn kind="ghost" onClick={()=>setEditing(null)}>Cancel</Btn>
           <Btn kind="primary" onClick={saveEdit}>Save changes</Btn>

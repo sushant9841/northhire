@@ -278,6 +278,13 @@ CREATE TABLE IF NOT EXISTS hr_employees (
   UNIQUE(company_id, email)
 );
 
+CREATE TABLE IF NOT EXISTS hr_documents (
+  id TEXT PRIMARY KEY,
+  employee_id TEXT NOT NULL REFERENCES hr_employees(id),
+  name TEXT NOT NULL, data_url TEXT NOT NULL, size INTEGER, uploaded_by TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS hr_attendance (
   id TEXT PRIMARY KEY,
   employee_id TEXT NOT NULL REFERENCES hr_employees(id),

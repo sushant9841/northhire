@@ -105,6 +105,26 @@ export function useHrStore(){
   const hrCurrentEmp=()=>hrEmployee;
   const hrCurrentCompany=()=>hrCompany;
 
+  /* --- Employee documents (no file-hosting backend - see server route comment) --- */
+  const loadEmployeeDocuments=async(empId)=>{
+    try{const {documents}=await api.get(`/hr/employees/${empId}/documents`);return documents;}
+    catch(e){return [];}
+  };
+  const uploadEmployeeDocument=async(empId,name,dataUrl)=>{
+    try{const {document}=await api.post(`/hr/employees/${empId}/documents`,{name,dataUrl});return {ok:true,document};}
+    catch(e){return {ok:false,msg:e.message};}
+  };
+  const downloadEmployeeDocument=async(docId)=>{
+    try{
+      const {name,dataUrl}=await api.get(`/hr/documents/${docId}`);
+      const a=document.createElement("a"); a.href=dataUrl; a.download=name; a.click();
+    }catch(e){/* surfaced via the caller's own toast if needed */}
+  };
+  const deleteEmployeeDocument=async(docId)=>{
+    try{await api.del(`/hr/documents/${docId}`);return {ok:true};}
+    catch(e){return {ok:false,msg:e.message};}
+  };
+
   /* --- HR authentication --- */
   const hrLogin=async(companyName,loginId,password)=>{
     try{
@@ -454,6 +474,7 @@ export function useHrStore(){
     awardBadge,removeBadge,
     sendHrMessage,createHrChat,updateCompanySettings,toggleModule,
     connectPunchMachine,connectPriorSystem,
+    loadEmployeeDocuments,uploadEmployeeDocument,downloadEmployeeDocument,deleteEmployeeDocument,
     modulesForRole,canAccessModule,
     HR_DEPARTMENTS,HR_ROLES,PUNCH_VENDORS,PRIOR_HR_VENDORS,
   };
