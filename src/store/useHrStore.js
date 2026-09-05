@@ -291,7 +291,12 @@ export function useHrStore(){
   const myPayslips=()=>myPayslipsList;
   const printPayslip=(run,line,employee,company)=>{
     if(typeof window==="undefined")return;
-    const html=`<!DOCTYPE html><html><head><title>Payslip — ${line.name} — ${run.period}</title>
+    // Reachable from an owner/admin/finance view of OTHER employees' payslips, so an employee's
+    // own name (settable via POST /hr/employees) landing here unescaped was real stored XSS
+    // against whichever privileged colleague later printed it - company?.name below was already
+    // escaped, the rest of the interpolated fields weren't.
+    const esc=s=>String(s??"").replace(/[<>]/g,"");
+    const html=`<!DOCTYPE html><html><head><title>Payslip — ${esc(line.name)} — ${esc(run.period)}</title>
       <style>body{font-family:Arial,Helvetica,sans-serif;max-width:680px;margin:40px auto;padding:0 30px;color:#111;line-height:1.5}
         .brand{font-size:20pt;font-weight:700;color:#B45309;margin-bottom:2px}.sub{font-size:9pt;color:#888;margin-bottom:24px}
         h1{font-size:15pt;margin:0 0 4px}table{width:100%;border-collapse:collapse;margin-top:18px}
@@ -301,10 +306,10 @@ export function useHrStore(){
         .totals .grand{font-weight:700;font-size:13pt;border-top:2px solid #111;padding-top:8px;margin-top:4px}
         .meta{display:flex;justify-content:space-between;margin:20px 0;font-size:10pt;color:#555}
         @media print{@page{margin:1.5cm}}</style></head><body>
-      <div class="brand">${(company?.name||"Your company").replace(/[<>]/g,"")}</div><div class="sub">Statement of earnings and deductions</div>
-      <h1>Payslip — ${line.name}</h1>
-      <div class="meta"><div>Employee<br><strong>${line.name}</strong><br>${(employee?.title||"")}</div>
-        <div style="text-align:right">Pay period<br><strong>${run.period}</strong><br>Pay date: ${run.runDate}</div></div>
+      <div class="brand">${esc(company?.name||"Your company")}</div><div class="sub">Statement of earnings and deductions</div>
+      <h1>Payslip — ${esc(line.name)}</h1>
+      <div class="meta"><div>Employee<br><strong>${esc(line.name)}</strong><br>${esc(employee?.title)}</div>
+        <div style="text-align:right">Pay period<br><strong>${esc(run.period)}</strong><br>Pay date: ${esc(run.runDate)}</div></div>
       <table><thead><tr><th>Earnings / Deductions</th><th class="right">Amount</th></tr></thead>
         <tbody>
           <tr><td>Gross pay</td><td class="right">$${line.gross.toLocaleString()}</td></tr>

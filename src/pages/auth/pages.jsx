@@ -417,8 +417,8 @@ export function ForgotPasswordPage(){
           <h1 className={`${HERO_QUIET} text-2xl mb-2`}>Enter your code</h1>
           <p className="text-sm text-text-2 mb-5 leading-normal">
             We sent a 6-digit code to <strong className="text-text">{email}</strong>. Check your inbox.</p>
-          <Banner tone="brand" icon="sparkle" title="Demo mode" style={{marginBottom:18}}>
-            No email is really sent — your code is <strong className="text-brand tracking-widest">{sentCode}</strong>. In production this is emailed. See Settings → Outbox to inspect all "sent" messages.</Banner>
+          {sentCode&&<Banner tone="brand" icon="sparkle" title="Demo mode" style={{marginBottom:18}}>
+            No email is really sent — your code is <strong className="text-brand tracking-widest">{sentCode}</strong>. In production this is emailed. See Settings → Outbox to inspect all "sent" messages.</Banner>}
           <div className="flex flex-col gap-3.5">
             <Field label="6-digit code"><Input value={code} onChange={e=>{setCode(e.target.value.replace(/\D/g,"").slice(0,6));setErr("");}}
               placeholder="000000" style={{letterSpacing:".15em",fontWeight:640}}/></Field>

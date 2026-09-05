@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { ROUTES } from "../routes.js";
 import { uid, money, pay, payUnit, payShort, annual, nowStamp, _fmtDate } from "../helpers/utils.js";
+import { sanitizeHtml } from "../helpers/sanitize.js";
 import { CATM, PCODE, STAGES, PLANS, PLAN_REQUIRES, PLAN_ORDER } from "./seed/constants.js";
 import { SEED_EMPLOYERS } from "./seed/employers.js";
 import { SEED_JOBS } from "./seed/jobs.js";
@@ -1409,22 +1410,27 @@ export function useStore(){
     const a=document.createElement("a"); a.href=url; a.download=name; a.click(); URL.revokeObjectURL(url);};
   const printCv=cv=>{
     if(typeof window==="undefined")return;
-    /* Build a print-friendly page and open it. Real PDF would require a lib on server. */
-    const html=`<!DOCTYPE html><html><head><title>${cv.name}</title>
+    /* Build a print-friendly page and open it. Real PDF would require a lib on server.
+       Plain-text fields are escaped (matching printCert's convention); summary/detail are real
+       RichText HTML, so they go through the same sanitizeHtml() every other render site uses
+       instead of being escaped (which would show raw tags) or left raw (which was a real XSS gap
+       - this print path was the one place RichText output skipped sanitization entirely). */
+    const esc=s=>String(s??"").replace(/[<>]/g,"");
+    const html=`<!DOCTYPE html><html><head><title>${esc(cv.name)}</title>
       <style>body{font-family:Georgia,serif;max-width:720px;margin:40px auto;padding:0 30px;color:#111;line-height:1.5}
         h1{font-size:26pt;margin:0;letter-spacing:-.02em}h2{font-size:12pt;text-transform:uppercase;letter-spacing:.06em;
         color:#555;border-bottom:1px solid #ccc;padding-bottom:4px;margin:24px 0 12px}h3{font-size:11pt;margin:0}
         .h{color:#555;font-size:10pt;margin-top:4px}.sm{font-size:10pt;color:#666}.chip{display:inline-block;padding:3px 9px;
         background:#eef2ff;color:#334;border-radius:99px;font-size:9pt;margin:2px 4px 2px 0}
         @media print{@page{margin:1.5cm}}</style></head><body>
-      <h1>${cv.name0||user?.name||""}</h1>
-      <div class="h">${cv.title||user?.title||""} — ${cv.city||""}, ${cv.prov||""}</div>
-      <div class="h">${cv.email||""} · ${cv.phone||""}</div>
-      ${cv.summary?`<h2>Summary</h2><p>${cv.summary}</p>`:""}
-      ${cv.exp?.length?`<h2>Experience</h2>${cv.exp.map(x=>`<div style="margin-bottom:14px"><h3>${x.role||""}</h3><div class="h">${x.org||""} · ${x.place||""} · ${x.from||""} – ${x.to||""}</div>${x.detail?`<p style="margin:6px 0 0">${x.detail}</p>`:""}</div>`).join("")}`:""}
-      ${cv.edu?.length?`<h2>Education</h2>${cv.edu.map(x=>`<div style="margin-bottom:10px"><h3>${x.qual||""}</h3><div class="h">${x.org||""} · ${x.year||""}</div></div>`).join("")}`:""}
-      ${cv.skills?.length?`<h2>Skills</h2><div>${cv.skills.map(s=>`<span class="chip">${s}</span>`).join("")}</div>`:""}
-      ${cv.certs?.length?`<h2>Certifications</h2><div>${cv.certs.map(c=>`<span class="chip">${c}</span>`).join("")}</div>`:""}
+      <h1>${esc(cv.name0||user?.name)}</h1>
+      <div class="h">${esc(cv.title||user?.title)} — ${esc(cv.city)}, ${esc(cv.prov)}</div>
+      <div class="h">${esc(cv.email)} · ${esc(cv.phone)}</div>
+      ${cv.summary?`<h2>Summary</h2><p>${sanitizeHtml(cv.summary)}</p>`:""}
+      ${cv.exp?.length?`<h2>Experience</h2>${cv.exp.map(x=>`<div style="margin-bottom:14px"><h3>${esc(x.role)}</h3><div class="h">${esc(x.org)} · ${esc(x.place)} · ${esc(x.from)} – ${esc(x.to)}</div>${x.detail?`<p style="margin:6px 0 0">${sanitizeHtml(x.detail)}</p>`:""}</div>`).join("")}`:""}
+      ${cv.edu?.length?`<h2>Education</h2>${cv.edu.map(x=>`<div style="margin-bottom:10px"><h3>${esc(x.qual)}</h3><div class="h">${esc(x.org)} · ${esc(x.year)}</div></div>`).join("")}`:""}
+      ${cv.skills?.length?`<h2>Skills</h2><div>${cv.skills.map(s=>`<span class="chip">${esc(s)}</span>`).join("")}</div>`:""}
+      ${cv.certs?.length?`<h2>Certifications</h2><div>${cv.certs.map(c=>`<span class="chip">${esc(c)}</span>`).join("")}</div>`:""}
       <script>window.onload=()=>setTimeout(()=>window.print(),300);</script>
       </body></html>`;
     const w=window.open("","_blank"); if(!w){toast("Enable pop-ups to download your CV as a PDF","danger");return;}

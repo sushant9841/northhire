@@ -170,6 +170,9 @@ seekerMiscRouter.get("/notifications", requireAuth, (req, res) => {
   res.json({ notifications: rows.map(serializeNotification) });
 });
 seekerMiscRouter.patch("/notifications/:id/read", requireAuth, (req, res) => {
+  const notif = db.prepare("SELECT * FROM notifications WHERE id = ?").get(req.params.id);
+  const visible = notif && (notif.for_value === null || notif.for_value === req.user.id || notif.for_value === req.user.role);
+  if (!visible) return res.status(404).json({ error: "Notification not found." });
   db.prepare("UPDATE notifications SET read = 1 WHERE id = ?").run(req.params.id);
   res.json({ ok: true });
 });
@@ -201,6 +204,8 @@ seekerMiscRouter.post("/followed-employers/:employerId/toggle", requireAuth, (re
 });
 seekerMiscRouter.post("/invited-candidates", requireAuth, requireRole("employer"), (req, res) => {
   const { jobId, candidateId } = req.body || {};
+  const job = db.prepare("SELECT employer_id FROM jobs WHERE id = ?").get(jobId);
+  if (!job || job.employer_id !== req.user.employer_id) return res.status(403).json({ error: "Not your listing." });
   db.prepare("INSERT OR IGNORE INTO invited_candidates (job_id, candidate_id) VALUES (?, ?)").run(jobId, candidateId);
   res.status(201).json({ ok: true });
 });

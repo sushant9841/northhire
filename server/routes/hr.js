@@ -49,6 +49,10 @@ hrRouter.post("/logout", (req, res) => { clearSessionCookie(req, res, "hr_sessio
    navigating into HR Suite from the employer console doesn't demand a second, separate login -
    only valid for the employer's own Enterprise company, never any other. */
 hrRouter.post("/auto-login", requireAuth, requireRole("employer"), (req, res) => {
+  // Only the account owner bridges into HR Suite this way - without this check, any invited
+  // "member" teammate could call this route and be logged in as the company's HR owner/admin,
+  // gaining salary/payroll/termination access they were never granted.
+  if (req.user.employer_role !== "owner") return res.status(403).json({ error: "Only the account owner can open HR Suite this way." });
   const company = db.prepare("SELECT * FROM employers WHERE id = ?").get(req.user.employer_id);
   if (!company || company.plan !== "Enterprise") return res.status(403).json({ error: "HR Suite is Enterprise-only." });
   const emps = db.prepare("SELECT * FROM hr_employees WHERE company_id = ? AND status = 'active'").all(company.id);
@@ -68,9 +72,9 @@ function requireHrPriv(req, res, next) { if (!isPriv(req.hrEmployee)) return res
 // previously only owner/admin/hr could approve anyone's, bypassing the real reporting chain
 // (hr_employees.manager) entirely.
 function canDecideFor(hrEmployee, targetEmployeeId) {
-  if (isPriv(hrEmployee)) return true;
-  const target = db.prepare("SELECT manager FROM hr_employees WHERE id = ?").get(targetEmployeeId);
-  return !!target && target.manager === hrEmployee.id;
+  const target = db.prepare("SELECT manager, company_id FROM hr_employees WHERE id = ?").get(targetEmployeeId);
+  if (!target || target.company_id !== hrEmployee.company_id) return false;
+  return isPriv(hrEmployee) || target.manager === hrEmployee.id;
 }
 
 // Each employee's own visibility_json (salary/phone/birthDate/email/manager) was previously only
@@ -183,6 +187,11 @@ hrRouter.post("/employees/:id/documents", requireHrAuth, requireHrPriv, (req, re
   const { name, dataUrl } = req.body || {};
   if (!name?.trim() || !dataUrl) return res.status(400).json({ error: "A file name and file are required." });
   if (dataUrl.length > MAX_DOC_BYTES * 1.4) return res.status(413).json({ error: "File is too large — please use one under 3 MB." });
+  // Only accept a data: URI whose declared MIME type is on the allowlist - a real content
+  // sniff isn't practical without a file-inspection library, but this at least blocks storing
+  // (and later force-downloading with the browser choosing how to open) text/html content.
+  const ALLOWED_DOC_MIME = /^data:(application\/pdf|image\/(png|jpe?g|webp)|text\/plain);base64,/i;
+  if (!ALLOWED_DOC_MIME.test(dataUrl)) return res.status(400).json({ error: "Only PDF, image, or plain text files are allowed." });
   const id = nextId("doc", "hr_documents");
   db.prepare("INSERT INTO hr_documents (id, employee_id, name, data_url, size, uploaded_by) VALUES (?, ?, ?, ?, ?, ?)")
     .run(id, req.params.id, name.trim(), dataUrl, dataUrl.length, req.hrEmployee.name);
@@ -208,7 +217,10 @@ hrRouter.get("/attendance", requireHrAuth, (req, res) => {
   res.json({ attendance: rows.map(serializeHrAttendance) });
 });
 hrRouter.post("/attendance/punch-in", requireHrAuth, (req, res) => {
-  const empId = req.body?.employeeId || req.hrEmployee.id;
+  // No caller-supplied employeeId override - nothing in the app ever legitimately punches in on
+  // someone else's behalf, and honoring one let any employee forge a colleague's attendance
+  // (which feeds directly into lateness/payroll deductions).
+  const empId = req.hrEmployee.id;
   const today = new Date().toISOString().slice(0, 10);
   const existing = db.prepare("SELECT * FROM hr_attendance WHERE employee_id = ? AND date = ?").get(empId, today);
   if (existing) return res.status(409).json({ error: `Already punched in today at ${existing.clock_in}` });
@@ -230,7 +242,7 @@ hrRouter.post("/attendance/punch-in", requireHrAuth, (req, res) => {
   res.status(201).json({ record: serializeHrAttendance(db.prepare("SELECT * FROM hr_attendance WHERE id = ?").get(id)) });
 });
 hrRouter.post("/attendance/punch-out", requireHrAuth, (req, res) => {
-  const empId = req.body?.employeeId || req.hrEmployee.id;
+  const empId = req.hrEmployee.id;
   const existing = db.prepare("SELECT * FROM hr_attendance WHERE employee_id = ? AND clock_out IS NULL ORDER BY date DESC LIMIT 1").get(empId);
   if (!existing) return res.status(400).json({ error: "You haven't punched in" });
   const now = new Date(); const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
@@ -281,6 +293,8 @@ hrRouter.post("/tasks", requireHrAuth, (req, res) => {
   res.status(201).json({ task: serializeHrTask(db.prepare("SELECT * FROM hr_tasks WHERE id = ?").get(id)) });
 });
 hrRouter.patch("/tasks/:id/status", requireHrAuth, (req, res) => {
+  const task = db.prepare("SELECT * FROM hr_tasks WHERE id = ?").get(req.params.id);
+  if (!task || task.company_id !== req.hrEmployee.company_id) return res.status(404).json({ error: "Task not found." });
   const { status } = req.body || {};
   db.prepare("UPDATE hr_tasks SET status = ?, completed_at = CASE WHEN ? = 'done' THEN datetime('now') ELSE NULL END WHERE id = ?").run(status, status, req.params.id);
   res.json({ task: serializeHrTask(db.prepare("SELECT * FROM hr_tasks WHERE id = ?").get(req.params.id)) });
@@ -325,19 +339,25 @@ hrRouter.post("/invoices", requireHrAuth, requireHrPriv, (req, res) => {
     d.due, req.hrEmployee.id, JSON.stringify(items));
   res.status(201).json({ invoice: serializeHrInvoice(db.prepare("SELECT * FROM hr_invoices WHERE id = ?").get(id)) });
 });
+function resolveOwnHrInvoice(req, res) {
+  const inv = db.prepare("SELECT * FROM hr_invoices WHERE id = ?").get(req.params.id);
+  if (!inv || inv.company_id !== req.hrEmployee.company_id) { res.status(404).json({ error: "Invoice not found." }); return null; }
+  return inv;
+}
 hrRouter.patch("/invoices/:id/send", requireHrAuth, requireHrPriv, (req, res) => {
+  if (!resolveOwnHrInvoice(req, res)) return;
   db.prepare("UPDATE hr_invoices SET status = 'pending' WHERE id = ?").run(req.params.id);
   res.json({ invoice: serializeHrInvoice(db.prepare("SELECT * FROM hr_invoices WHERE id = ?").get(req.params.id)) });
 });
 hrRouter.patch("/invoices/:id/paid", requireHrAuth, requireHrPriv, (req, res) => {
+  if (!resolveOwnHrInvoice(req, res)) return;
   db.prepare("UPDATE hr_invoices SET status = 'paid', paid = date('now') WHERE id = ?").run(req.params.id);
   res.json({ invoice: serializeHrInvoice(db.prepare("SELECT * FROM hr_invoices WHERE id = ?").get(req.params.id)) });
 });
 // A real reversal path (standard accounting practice: flip status + a logged reason, rather than
 // deleting or silently editing the paid record) instead of no undo path at all.
 hrRouter.patch("/invoices/:id/reverse", requireHrAuth, requireHrPriv, (req, res) => {
-  const inv = db.prepare("SELECT * FROM hr_invoices WHERE id = ?").get(req.params.id);
-  if (!inv) return res.status(404).json({ error: "Not found." });
+  const inv = resolveOwnHrInvoice(req, res); if (!inv) return;
   if (inv.status !== "paid") return res.status(400).json({ error: "Only a paid invoice can be reversed." });
   const reason = (req.body?.reason || "").trim();
   if (!reason) return res.status(400).json({ error: "A reason is required to reverse a paid invoice." });
@@ -359,6 +379,8 @@ hrRouter.post("/departments", requireHrAuth, requireHrPriv, (req, res) => {
   res.status(201).json({ department: serializeHrDepartment(db.prepare("SELECT * FROM hr_departments WHERE id = ?").get(id)) });
 });
 hrRouter.patch("/departments/:id", requireHrAuth, requireHrPriv, (req, res) => {
+  const dept = db.prepare("SELECT * FROM hr_departments WHERE id = ?").get(req.params.id);
+  if (!dept || dept.company_id !== req.hrEmployee.company_id) return res.status(404).json({ error: "Department not found." });
   const d = req.body || {};
   const fields = { name: "name", lead: "lead", color: "color", about: "about" };
   const setCols = []; const params = [];
@@ -367,6 +389,8 @@ hrRouter.patch("/departments/:id", requireHrAuth, requireHrPriv, (req, res) => {
   res.json({ department: serializeHrDepartment(db.prepare("SELECT * FROM hr_departments WHERE id = ?").get(req.params.id)) });
 });
 hrRouter.delete("/departments/:id", requireHrAuth, requireHrPriv, (req, res) => {
+  const dept = db.prepare("SELECT * FROM hr_departments WHERE id = ?").get(req.params.id);
+  if (!dept || dept.company_id !== req.hrEmployee.company_id) return res.status(404).json({ error: "Department not found." });
   const assigned = db.prepare("SELECT COUNT(*) AS n FROM hr_employees WHERE dept = ?").get(req.params.id).n;
   if (assigned > 0) return res.status(409).json({ error: `${assigned} employees are in this department. Move them first.` });
   db.prepare("DELETE FROM hr_departments WHERE id = ?").run(req.params.id);
@@ -414,6 +438,11 @@ hrRouter.patch("/expenses/:id/decide", requireHrAuth, (req, res) => {
   res.json({ expense: serializeHrExpense(db.prepare("SELECT * FROM hr_expenses WHERE id = ?").get(req.params.id)) });
 });
 hrRouter.patch("/expenses/:id/pay", requireHrAuth, requireHrPriv, (req, res) => {
+  const row = db.prepare(
+    `SELECT hr_expenses.* FROM hr_expenses JOIN hr_employees ON hr_employees.id = hr_expenses.employee_id
+     WHERE hr_expenses.id = ? AND hr_employees.company_id = ?`
+  ).get(req.params.id, req.hrEmployee.company_id);
+  if (!row) return res.status(404).json({ error: "Expense claim not found." });
   db.prepare("UPDATE hr_expenses SET status = 'paid', paid_at = datetime('now') WHERE id = ?").run(req.params.id);
   res.json({ expense: serializeHrExpense(db.prepare("SELECT * FROM hr_expenses WHERE id = ?").get(req.params.id)) });
 });
@@ -474,13 +503,18 @@ hrRouter.post("/payruns", requireHrAuth, requireHrPriv, (req, res) => {
     JSON.stringify(lines));
   res.status(201).json({ payrun: serializeHrPayrun(db.prepare("SELECT * FROM hr_payruns WHERE id = ?").get(id)) });
 });
+function resolveOwnHrPayrun(req, res) {
+  const run = db.prepare("SELECT * FROM hr_payruns WHERE id = ?").get(req.params.id);
+  if (!run || run.company_id !== req.hrEmployee.company_id) { res.status(404).json({ error: "Not found." }); return null; }
+  return run;
+}
 hrRouter.patch("/payruns/:id/approve", requireHrAuth, requireHrPriv, (req, res) => {
+  if (!resolveOwnHrPayrun(req, res)) return;
   db.prepare("UPDATE hr_payruns SET status = 'approved', approved_at = datetime('now') WHERE id = ?").run(req.params.id);
   res.json({ payrun: serializeHrPayrun(db.prepare("SELECT * FROM hr_payruns WHERE id = ?").get(req.params.id)) });
 });
 hrRouter.patch("/payruns/:id/execute", requireHrAuth, requireHrPriv, (req, res) => {
-  const run = db.prepare("SELECT * FROM hr_payruns WHERE id = ?").get(req.params.id);
-  if (!run) return res.status(404).json({ error: "Not found." });
+  const run = resolveOwnHrPayrun(req, res); if (!run) return;
   db.prepare("UPDATE hr_payruns SET status = 'paid', paid_at = datetime('now') WHERE id = ?").run(req.params.id);
   const lines = JSON.parse(run.lines_json || "[]");
   for (const line of lines) {
@@ -498,8 +532,7 @@ hrRouter.patch("/payruns/:id/execute", requireHrAuth, requireHrPriv, (req, res) 
 // the expense side-effect execute() applied, so a reversed run doesn't leave those claims stuck
 // showing "paid" for reimbursements that (in a reversal) didn't happen.
 hrRouter.patch("/payruns/:id/reverse", requireHrAuth, requireHrPriv, (req, res) => {
-  const run = db.prepare("SELECT * FROM hr_payruns WHERE id = ?").get(req.params.id);
-  if (!run) return res.status(404).json({ error: "Not found." });
+  const run = resolveOwnHrPayrun(req, res); if (!run) return;
   if (run.status !== "paid") return res.status(400).json({ error: "Only an executed (paid) payroll run can be reversed." });
   const reason = (req.body?.reason || "").trim();
   if (!reason) return res.status(400).json({ error: "A reason is required to reverse a paid payroll run." });
@@ -541,7 +574,16 @@ hrRouter.post("/chats", requireHrAuth, (req, res) => {
     .run(id, req.hrEmployee.company_id, d.kind || "group", d.name, d.members, d.about || "", req.hrEmployee.id);
   res.status(201).json({ chat: serializeHrChat(db.prepare("SELECT * FROM hr_chats WHERE id = ?").get(id)) });
 });
+// Every route below trusted a bare chat id with no check that the chat belongs to the caller's
+// own company - any HR employee at any company could read/post into another company's internal
+// chat by guessing or observing an id.
+function resolveOwnHrChat(req, res) {
+  const chat = db.prepare("SELECT * FROM hr_chats WHERE id = ?").get(req.params.id);
+  if (!chat || chat.company_id !== req.hrEmployee.company_id) { res.status(404).json({ error: "Chat not found." }); return null; }
+  return chat;
+}
 hrRouter.get("/chats/:id/messages", requireHrAuth, (req, res) => {
+  if (!resolveOwnHrChat(req, res)) return;
   const rows = db.prepare("SELECT * FROM hr_chat_messages WHERE chat_id = ? ORDER BY created_at").all(req.params.id);
   res.json({ messages: rows.map(serializeHrChatMessage) });
 });
@@ -550,6 +592,7 @@ hrRouter.get("/chats/:id/messages", requireHrAuth, (req, res) => {
 // instantly and the unread badge could never show anything. Only the UI actually opening a
 // specific chat calls this.
 hrRouter.patch("/chats/:id/read", requireHrAuth, (req, res) => {
+  if (!resolveOwnHrChat(req, res)) return;
   db.prepare(
     `INSERT INTO hr_chat_reads (chat_id, employee_id, last_read_at) VALUES (?, ?, datetime('now'))
      ON CONFLICT(chat_id, employee_id) DO UPDATE SET last_read_at = excluded.last_read_at`
@@ -557,6 +600,7 @@ hrRouter.patch("/chats/:id/read", requireHrAuth, (req, res) => {
   res.json({ ok: true });
 });
 hrRouter.post("/chats/:id/messages", requireHrAuth, (req, res) => {
+  if (!resolveOwnHrChat(req, res)) return;
   const id = nextId("hm", "hr_chat_messages");
   db.prepare("INSERT INTO hr_chat_messages (id, chat_id, from_employee, text) VALUES (?, ?, ?, ?)")
     .run(id, req.params.id, req.hrEmployee.id, req.body?.text);

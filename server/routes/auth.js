@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { Router } from "express";
 import { db, nextId, sqlTime } from "../db.js";
 import { hashPassword, verifyPassword, createSessionCookie, clearSessionCookie, publicUser, requireAuth } from "../auth.js";
@@ -112,10 +113,15 @@ authRouter.post("/login", (req, res) => {
   db.prepare("DELETE FROM failed_logins WHERE email = ? AND kind = 'main'").run(emailLower);
   const tf = db.prepare("SELECT * FROM two_factor WHERE user_id = ?").get(user.id);
   if (tf?.enabled) {
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const code = crypto.randomInt(100000, 1000000).toString();
     db.prepare("INSERT INTO login_2fa_codes (email, code) VALUES (?, ?) ON CONFLICT(email) DO UPDATE SET code = excluded.code, created_at = datetime('now')")
       .run(user.email, code);
-    return res.json({ mfaRequired: true, email: user.email, code }); // dev returns code for demo visibility, same as password reset
+    db.prepare("INSERT INTO outbox (id, to_email, subject, body) VALUES (?, ?, 'Your NorthHire sign-in code', ?)")
+      .run(nextId("m", "outbox"), user.email, `Your sign-in code is ${code}. It expires in 15 minutes.`);
+    // Returning the code in the response defeats 2FA entirely for anyone who already has the
+    // password (the whole point of a second factor) - only ever expose it outside production,
+    // where there's no real SMS/email delivery to demo the flow with otherwise.
+    return res.json({ mfaRequired: true, email: user.email, code: process.env.NODE_ENV === "production" ? undefined : code });
   }
   createSessionCookie(res, "session", "main", user.id);
   res.json({ user: publicUser(user) });
@@ -172,11 +178,14 @@ authRouter.post("/reset/request", (req, res) => {
       return res.status(429).json({ error: `Please wait ${Math.ceil((CODE_COOLDOWN_MS - sinceLast) / 1000)} more seconds before requesting another code.` });
     }
   }
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const code = crypto.randomInt(100000, 1000000).toString();
   db.prepare("INSERT INTO reset_codes (email, code, attempts) VALUES (?, ?, 0) ON CONFLICT(email) DO UPDATE SET code = excluded.code, attempts = 0, created_at = datetime('now')").run(email, code);
   db.prepare("INSERT INTO outbox (id, to_email, subject, body) VALUES (?, ?, 'Reset your NorthHire password', ?)")
     .run(nextId("m", "outbox"), email, `Your reset code is ${code}. It expires in 15 minutes.`);
-  res.json({ ok: true, code }); // dev returns code for demo visibility, matching the old local-only behavior
+  // Returning the code to whoever merely knows the target email defeats password reset entirely -
+  // anyone could take over any account, admin included, without ever touching the real inbox.
+  // Only exposed outside production, where there's no real email delivery to demo the flow with.
+  res.json({ ok: true, code: process.env.NODE_ENV === "production" ? undefined : code });
 });
 
 authRouter.post("/reset/confirm", (req, res) => {

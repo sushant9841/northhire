@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { Router } from "express";
 import { db, nextId, sqlTime } from "../db.js";
 import { verifyPassword, hashPassword, createSessionCookie, clearSessionCookie, requireAgencyAuth, requireAuth, requireRole } from "../auth.js";
@@ -91,11 +92,13 @@ staffingRouter.post("/reset/request", (req, res) => {
       return res.status(429).json({ error: `Please wait ${Math.ceil((AGENCY_RESET_COOLDOWN_MS - sinceLast) / 1000)} more seconds before requesting another code.` });
     }
   }
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const code = crypto.randomInt(100000, 1000000).toString();
   db.prepare("INSERT INTO agency_reset_codes (email, code, attempts) VALUES (?, ?, 0) ON CONFLICT(email) DO UPDATE SET code = excluded.code, attempts = 0, created_at = datetime('now')").run(email, code);
   db.prepare("INSERT INTO outbox (id, to_email, subject, body) VALUES (?, ?, 'Reset your NorthHire Staffing password', ?)")
     .run(nextId("m", "outbox"), email, `Your reset code is ${code}. It expires in 15 minutes.`);
-  res.json({ ok: true, code }); // dev returns code for demo visibility, matching the main site's reset flow
+  // Same fix as the main site's reset flow (auth.js) - never hand the code back to whoever merely
+  // knows the target email, only outside production where there's no real email to demo with.
+  res.json({ ok: true, code: process.env.NODE_ENV === "production" ? undefined : code });
 });
 staffingRouter.post("/reset/confirm", (req, res) => {
   const email = (req.body?.email || "").toLowerCase().trim();
