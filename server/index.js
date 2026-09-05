@@ -17,11 +17,37 @@ const app = express();
 const PORT = process.env.PORT || 8787;
 
 // Session lives in an httpOnly cookie, not anything the frontend can read/write itself (no
-// localStorage/sessionStorage token anywhere) - `credentials: true` + reflecting the request's
-// own origin (rather than "*") is required for a cross-origin cookie to be sent/accepted at all.
-app.use(cors({ origin: (origin, cb) => cb(null, origin || true), credentials: true }));
+// localStorage/sessionStorage token anywhere) - `credentials: true` + an explicit origin
+// allowlist (never "*", and never reflecting an arbitrary caller's Origin back) is what's
+// required for a cross-origin cookie to be sent/accepted at all without also letting any
+// website ride a visitor's session. Defaults cover the Vite dev server; a real deployment sets
+// ALLOWED_ORIGINS to its actual frontend origin(s), comma-separated.
+const DEFAULT_DEV_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"];
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",").map(o => o.trim())
+  : DEFAULT_DEV_ORIGINS;
+app.use(cors({
+  origin: (origin, cb) => {
+    // No Origin header at all means a same-origin or non-browser caller (curl, server-to-server) -
+    // only cross-origin browser requests carry one, and those are the ones this allowlist gates.
+    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+    cb(new Error("Not allowed by CORS"));
+  },
+  credentials: true,
+}));
 app.use(cookieParser());
 app.use(express.json());
+
+// Baseline security headers - no helmet dependency needed for a handful of static values.
+app.use((req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  if (process.env.NODE_ENV === "production") {
+    res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  }
+  next();
+});
 
 app.get("/api/health", (req, res) => res.json({ ok: true }));
 app.use("/api/auth", authRouter);

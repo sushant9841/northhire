@@ -7,7 +7,21 @@ export const authRouter = Router();
 const CODE_COOLDOWN_MS = 60 * 1000; // shared by reset-password and login-2FA code requests
 const CODE_MAX_ATTEMPTS = 5;
 
+// Simple in-memory per-IP sliding window against mass account creation - no persistence needed
+// (resets on restart, and a single-process deployment doesn't need it shared across instances).
+const SIGNUP_LIMIT_MAX = 10;
+const SIGNUP_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+const signupAttemptsByIp = new Map();
+function signupRateLimited(ip) {
+  const now = Date.now();
+  const recent = (signupAttemptsByIp.get(ip) || []).filter(t => now - t < SIGNUP_LIMIT_WINDOW_MS);
+  recent.push(now);
+  signupAttemptsByIp.set(ip, recent);
+  return recent.length > SIGNUP_LIMIT_MAX;
+}
+
 authRouter.post("/signup", (req, res) => {
+  if (signupRateLimited(req.ip)) return res.status(429).json({ error: "Too many accounts created from this network — try again later." });
   const { name, email, password, role = "seeker", companyName } = req.body || {};
   if (!name || !email || !password) return res.status(400).json({ error: "Name, email and password are required." });
   if (password.length < 8) return res.status(400).json({ error: "Password must be at least 8 characters." });
@@ -81,7 +95,7 @@ authRouter.post("/login", (req, res) => {
   const emailLower = email.toLowerCase();
 
   const recentFails = db.prepare(
-    `SELECT COUNT(*) AS n FROM failed_logins WHERE email = ? AND created_at >= datetime('now', ?)`
+    `SELECT COUNT(*) AS n FROM failed_logins WHERE email = ? AND kind = 'main' AND created_at >= datetime('now', ?)`
   ).get(emailLower, `-${LOGIN_LOCKOUT_WINDOW_MIN} minutes`).n;
   if (recentFails >= LOGIN_LOCKOUT_MAX_ATTEMPTS) {
     return res.status(429).json({ error: `Too many failed attempts — try again in ${LOGIN_LOCKOUT_WINDOW_MIN} minutes.` });
@@ -89,13 +103,13 @@ authRouter.post("/login", (req, res) => {
 
   const user = db.prepare("SELECT * FROM users WHERE email = ?").get(emailLower);
   if (!user || !verifyPassword(password, user.password_hash, user.password_salt)) {
-    db.prepare("INSERT INTO failed_logins (id, email) VALUES (?, ?)").run(nextId("fl", "failed_logins"), emailLower);
+    db.prepare("INSERT INTO failed_logins (id, email, kind) VALUES (?, ?, 'main')").run(nextId("fl", "failed_logins"), emailLower);
     return res.status(401).json({ error: "Incorrect email or password." });
   }
   if (user.suspended) {
     return res.status(403).json({ error: "This account has been suspended. Contact support for help." });
   }
-  db.prepare("DELETE FROM failed_logins WHERE email = ?").run(emailLower);
+  db.prepare("DELETE FROM failed_logins WHERE email = ? AND kind = 'main'").run(emailLower);
   const tf = db.prepare("SELECT * FROM two_factor WHERE user_id = ?").get(user.id);
   if (tf?.enabled) {
     const code = Math.floor(100000 + Math.random() * 900000).toString();

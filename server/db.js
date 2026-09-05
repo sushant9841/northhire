@@ -250,6 +250,7 @@ CREATE TABLE IF NOT EXISTS activity_log (
 );
 CREATE TABLE IF NOT EXISTS failed_logins (
   id TEXT PRIMARY KEY, email TEXT NOT NULL,
+  kind TEXT NOT NULL DEFAULT 'main', -- 'main' | 'hr' | 'agency' - each login surface is its own account space
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE TABLE IF NOT EXISTS platform_settings (

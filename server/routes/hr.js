@@ -16,17 +16,31 @@ function logHrAudit(companyId, actorEmployeeId, action, detail) {
 }
 
 /* ─── Auth ─── */
+const HR_LOGIN_LOCKOUT_MAX_ATTEMPTS = 5;
+const HR_LOGIN_LOCKOUT_WINDOW_MIN = 15;
 hrRouter.post("/login", (req, res) => {
   const { companyName, loginId, password } = req.body || {};
-  const company = db.prepare("SELECT * FROM employers WHERE lower(name) = lower(?)").get((companyName || "").trim());
-  if (!company) return res.status(404).json({ error: `No company named "${companyName}"` });
-  if (company.plan !== "Enterprise") return res.status(403).json({ error: `${company.name} does not have an Enterprise plan. HR Suite is Enterprise-only.` });
   const id = (loginId || "").toLowerCase().trim();
+  // Keyed on company+loginId (not a real email necessarily) since the lockout has to apply
+  // before the employee is even resolved, to slow down guessing the login ID itself too.
+  const lockoutKey = `hr:${(companyName || "").trim().toLowerCase()}:${id}`;
+  const recentFails = db.prepare(
+    `SELECT COUNT(*) AS n FROM failed_logins WHERE email = ? AND kind = 'hr' AND created_at >= datetime('now', ?)`
+  ).get(lockoutKey, `-${HR_LOGIN_LOCKOUT_WINDOW_MIN} minutes`).n;
+  if (recentFails >= HR_LOGIN_LOCKOUT_MAX_ATTEMPTS) {
+    return res.status(429).json({ error: `Too many failed attempts — try again in ${HR_LOGIN_LOCKOUT_WINDOW_MIN} minutes.` });
+  }
+  const fail = () => db.prepare("INSERT INTO failed_logins (id, email, kind) VALUES (?, ?, 'hr')").run(nextId("fl", "failed_logins"), lockoutKey);
+
+  const company = db.prepare("SELECT * FROM employers WHERE lower(name) = lower(?)").get((companyName || "").trim());
+  if (!company) { fail(); return res.status(404).json({ error: `No company named "${companyName}"` }); }
+  if (company.plan !== "Enterprise") return res.status(403).json({ error: `${company.name} does not have an Enterprise plan. HR Suite is Enterprise-only.` });
   const emp = db.prepare("SELECT * FROM hr_employees WHERE company_id = ?").all(company.id)
     .find(e => e.email.toLowerCase() === id || e.email.toLowerCase().split("@")[0] === id || e.name.toLowerCase() === id);
-  if (!emp) return res.status(404).json({ error: `No employee with that login ID at ${company.name}` });
+  if (!emp) { fail(); return res.status(404).json({ error: `No employee with that login ID at ${company.name}` }); }
   if (emp.status === "terminated") return res.status(403).json({ error: "This employee account is not active" });
-  if (!verifyPassword(password, emp.password_hash, emp.password_salt)) return res.status(401).json({ error: "Password does not match" });
+  if (!verifyPassword(password, emp.password_hash, emp.password_salt)) { fail(); return res.status(401).json({ error: "Password does not match" }); }
+  db.prepare("DELETE FROM failed_logins WHERE email = ? AND kind = 'hr'").run(lockoutKey);
   createSessionCookie(res, "hr_session", "hr", emp.id);
   res.json({ employee: serializeHrEmployee(emp), company: { id: company.id, name: company.name, plan: company.plan } });
 });

@@ -47,12 +47,23 @@ function calcStaffingEconomics(pay, bill, prov, benefitsPerHr = 0) {
 }
 
 /* ─── Agency auth ─── */
+const AGENCY_LOGIN_LOCKOUT_MAX_ATTEMPTS = 5;
+const AGENCY_LOGIN_LOCKOUT_WINDOW_MIN = 15;
 staffingRouter.post("/login", (req, res) => {
   const { loginId, password } = req.body || {};
   const id = (loginId || "").toLowerCase().trim();
+  const recentFails = db.prepare(
+    `SELECT COUNT(*) AS n FROM failed_logins WHERE email = ? AND kind = 'agency' AND created_at >= datetime('now', ?)`
+  ).get(id, `-${AGENCY_LOGIN_LOCKOUT_WINDOW_MIN} minutes`).n;
+  if (recentFails >= AGENCY_LOGIN_LOCKOUT_MAX_ATTEMPTS) {
+    return res.status(429).json({ error: `Too many failed attempts — try again in ${AGENCY_LOGIN_LOCKOUT_WINDOW_MIN} minutes.` });
+  }
   const staff = db.prepare("SELECT * FROM agency_staff WHERE login_id = ?").get(id);
-  if (!staff) return res.status(404).json({ error: "No agency account with that login ID" });
-  if (!verifyPassword(password, staff.password_hash, staff.password_salt)) return res.status(401).json({ error: "Password does not match" });
+  if (!staff || !verifyPassword(password, staff.password_hash, staff.password_salt)) {
+    db.prepare("INSERT INTO failed_logins (id, email, kind) VALUES (?, ?, 'agency')").run(nextId("fl", "failed_logins"), id);
+    return res.status(staff ? 401 : 404).json({ error: staff ? "Password does not match" : "No agency account with that login ID" });
+  }
+  db.prepare("DELETE FROM failed_logins WHERE email = ? AND kind = 'agency'").run(id);
   createSessionCookie(res, "agency_session", "agency", staff.id);
   const { password_hash, password_salt, ...pub } = staff;
   res.json({ staff: { id: pub.id, loginId: pub.login_id, name: pub.name, role: pub.role, title: pub.title, seed: pub.seed, email: pub.email } });
