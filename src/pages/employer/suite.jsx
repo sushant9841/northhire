@@ -597,6 +597,7 @@ export function EmpPipeline(){
 export function EmpCandidate(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [showMsg,setShowMsg]=useState(false); const [msgText,setMsgText]=useState("");
+  const [savingTemplate,setSavingTemplate]=useState(false); const [templateName,setTemplateName]=useState("");
   const [showSched,setShowSched]=useState(false);
   const [ivDate,setIvDate]=useState(""); const [ivTime,setIvTime]=useState(""); const [ivMode,setIvMode]=useState("video"); const [ivNotes,setIvNotes]=useState("");
   const [confirmReject,setConfirmReject]=useState(false); const [rejectReason,setRejectReason]=useState("");
@@ -703,12 +704,26 @@ export function EmpCandidate(){
             {iv.notes&&<div className="text-xs text-text-2 mt-1">{iv.notes}</div>}</div>
           <Btn kind="ghost" size="xs" icon="x" onClick={()=>A.cancelInterview(iv.id)}/></div>)}</div></Card>}
 
-    {showMsg&&<Modal onClose={()=>setShowMsg(false)} title={`Message ${u.name}`}>
-      <Field label="Your message" hint={`Sent through NorthHire — ${u.name} sees it on their status page.`}>
+    {showMsg&&<Modal onClose={()=>{setShowMsg(false);setSavingTemplate(false);}} title={`Message ${u.name}`}>
+      {A.messageTemplates.length>0&&<Field label="Start from a template">
+        <Sel value="" onChange={e=>{const t=A.messageTemplates.find(x=>x.id===e.target.value); if(t)setMsgText(t.body
+          .replace(/\{\{name\}\}/gi,u.name.split(" ")[0]).replace(/\{\{job\}\}/gi,job.t).replace(/\{\{company\}\}/gi,A.company.name));}}>
+          <option value="">Choose a saved template…</option>
+          {A.messageTemplates.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
+        </Sel></Field>}
+      <Field label="Your message" hint={`Sent through NorthHire — ${u.name} sees it on their status page. Merge fields: {{name}}, {{job}}, {{company}}.`}>
         <Area rows={5} value={msgText} onChange={e=>setMsgText(e.target.value)} placeholder="Hi Jean, thanks for applying…"/></Field>
+      {savingTemplate?<div className="flex gap-2 items-center mt-2.5">
+        <Input value={templateName} onChange={e=>setTemplateName(e.target.value)} placeholder="Template name, e.g. Interview invite" style={{flex:1}}/>
+        <Btn kind="outline" size="sm" disabled={!templateName.trim()||!msgText.trim()} onClick={async()=>{
+          const r=await A.saveMessageTemplate(templateName.trim(),msgText.trim());
+          if(r.ok){setSavingTemplate(false);setTemplateName("");A.toast("Template saved","ok");}}}>Save</Btn>
+        <Btn kind="ghost" size="sm" onClick={()=>setSavingTemplate(false)}>Cancel</Btn>
+      </div>:<button type="button" onClick={()=>setSavingTemplate(true)} disabled={!msgText.trim()}
+        className="bg-transparent border-0 p-0 mt-2.5 text-xs font-semibold text-brand cursor-pointer disabled:text-text-3 disabled:cursor-default">+ Save this message as a template</button>}
       <div className="flex gap-2.5 justify-end mt-3.5">
-        <Btn kind="ghost" onClick={()=>setShowMsg(false)}>Cancel</Btn>
-        <Btn kind="primary" icon="send" disabled={!msgText.trim()} onClick={()=>{A.sendMessage(u.id,job.id,msgText.trim());setMsgText("");setShowMsg(false);}}>Send message</Btn></div></Modal>}
+        <Btn kind="ghost" onClick={()=>{setShowMsg(false);setSavingTemplate(false);}}>Cancel</Btn>
+        <Btn kind="primary" icon="send" disabled={!msgText.trim()} onClick={()=>{A.sendMessage(u.id,job.id,msgText.trim());setMsgText("");setShowMsg(false);setSavingTemplate(false);}}>Send message</Btn></div></Modal>}
 
     {showSched&&<Modal onClose={()=>setShowSched(false)} title={`Schedule interview with ${u.name}`}>
       <div className="flex flex-col gap-3.5">

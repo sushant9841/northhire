@@ -1207,6 +1207,21 @@ export function useStore(){
     if(user?.role!=="employer"){setTeam({members:[],invites:[],seatLimit:1,seatsUsed:0});return;}
     loadTeam();
   },[user?.id,user?.role]);
+
+  const [messageTemplates,setMessageTemplates]=useState([]);
+  const loadMessageTemplates=async()=>{
+    try{const {templates}=await api.get("/employers/templates");setMessageTemplates(templates);}
+    catch(err){/* best-effort - a message can still be sent freehand if this fails */}};
+  const saveMessageTemplate=async(name,body)=>{
+    try{const {template}=await api.post("/employers/templates",{name,body});setMessageTemplates(l=>[template,...l]);return {ok:true};}
+    catch(err){toast(err.message,"danger");return {ok:false,msg:err.message};}};
+  const deleteMessageTemplate=async id=>{
+    try{await api.del(`/employers/templates/${id}`);setMessageTemplates(l=>l.filter(t=>t.id!==id));}
+    catch(err){toast(err.message,"danger");}};
+  useEffect(()=>{
+    if(user?.role!=="employer"){setMessageTemplates([]);return;}
+    loadMessageTemplates();
+  },[user?.id,user?.role]);
   const verifyEmployer=async(id,v)=>{
     try{
       const {employer}=await api.patch(`/employers/${id}`,{verified:v});
@@ -1614,6 +1629,7 @@ export function useStore(){
     beginApply,submitApply,withdraw,acceptOffer,moveApp,rejectApp,
     publishJob,approveJob,toggleJobStatus,flagJob,setPipelineJob:setPipelineJobFn,saveCompany,verifyEmployer,holdEmployer,toggleSuspend,eraseUser,
     team,loadTeam,inviteTeammate,revokeInvite,removeTeammate,getInvite,acceptInvite,inviteToken,
+    messageTemplates,saveMessageTemplate,deleteMessageTemplate,
     editBlog,editTraining,saveBlog,saveTraining,deleteBlog,deleteTraining,toggleBlogStatus,toggleTrainingStatus,
     enrol,confirmPaidEnrol,advanceTraining,paidTrainings,newCv,editCv,saveCv,duplicateCv,deleteCv,setDefaultCv,
     printCv,printCert,printInvoice,printOfferLetter,exportApplicants,exportLog,exportUsers,exportEmployers,share,choosePlan,updateCard,setSetting,

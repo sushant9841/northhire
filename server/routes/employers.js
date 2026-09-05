@@ -53,6 +53,26 @@ function serializeInvite(row) {
   if (!row) return null;
   return { id: row.id, email: row.email, status: row.status, createdAt: sqlTime(row.created_at).getTime() };
 }
+// Message templates / canned responses - contained to the employer's own account, no cross-tenant
+// sharing, so any teammate on the account sees and can use every template.
+employersRouter.get("/templates", requireAuth, requireRole("employer"), (req, res) => {
+  const rows = db.prepare("SELECT * FROM message_templates WHERE employer_id = ? ORDER BY created_at DESC").all(req.user.employer_id);
+  res.json({ templates: rows.map(r => ({ id: r.id, name: r.name, body: r.body })) });
+});
+employersRouter.post("/templates", requireAuth, requireRole("employer"), (req, res) => {
+  const { name, body } = req.body || {};
+  if (!name?.trim() || !body?.trim()) return res.status(400).json({ error: "Name and message body are required." });
+  const id = nextId("mt", "message_templates");
+  db.prepare("INSERT INTO message_templates (id, employer_id, name, body) VALUES (?, ?, ?, ?)").run(id, req.user.employer_id, name.trim(), body.trim());
+  res.status(201).json({ template: { id, name: name.trim(), body: body.trim() } });
+});
+employersRouter.delete("/templates/:id", requireAuth, requireRole("employer"), (req, res) => {
+  const row = db.prepare("SELECT * FROM message_templates WHERE id = ?").get(req.params.id);
+  if (!row || row.employer_id !== req.user.employer_id) return res.status(404).json({ error: "Template not found." });
+  db.prepare("DELETE FROM message_templates WHERE id = ?").run(req.params.id);
+  res.json({ ok: true });
+});
+
 employersRouter.get("/team", requireAuth, requireRole("employer"), (req, res) => {
   const members = db.prepare("SELECT id, name, email, employer_role, created_at FROM users WHERE employer_id = ? ORDER BY created_at ASC")
     .all(req.user.employer_id)

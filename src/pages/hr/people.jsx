@@ -467,16 +467,20 @@ function HrPeople_Manage(){
    EXPENSES — reimbursement claims
    ═══════════════════════════════════════════════════════════════════════════ */
 
+/* glCode is a plain label, not a real accounting-system integration (no accounting backend
+   exists to integrate with) - it just makes each category export-ready for a bookkeeper to
+   map into their own chart of accounts, instead of leaving that mapping entirely manual. */
 const EXPENSE_CATEGORIES=[
-  {k:"Travel",icon:"globe",about:"Flights, trains, taxis, rideshare, hotel"},
-  {k:"Meals",icon:"cap",about:"Client meals, per diem, working lunches"},
-  {k:"Mileage",icon:"activity",about:"Personal vehicle km at CRA rate"},
-  {k:"Training",icon:"cap",about:"Courses, certifications, conferences"},
-  {k:"Tools & Equipment",icon:"gear",about:"Trade tools, uniforms, PPE"},
-  {k:"Software",icon:"hex",about:"Licenses, subscriptions, plugins"},
-  {k:"Home Office",icon:"building",about:"Furniture, monitor, internet share"},
-  {k:"Other",icon:"file",about:"Anything else — describe in notes"},
+  {k:"Travel",icon:"globe",about:"Flights, trains, taxis, rideshare, hotel",glCode:"6100"},
+  {k:"Meals",icon:"cap",about:"Client meals, per diem, working lunches",glCode:"6110"},
+  {k:"Mileage",icon:"activity",about:"Personal vehicle km at CRA rate",glCode:"6120"},
+  {k:"Training",icon:"cap",about:"Courses, certifications, conferences",glCode:"6200"},
+  {k:"Tools & Equipment",icon:"gear",about:"Trade tools, uniforms, PPE",glCode:"6300"},
+  {k:"Software",icon:"hex",about:"Licenses, subscriptions, plugins",glCode:"6310"},
+  {k:"Home Office",icon:"building",about:"Furniture, monitor, internet share",glCode:"6400"},
+  {k:"Other",icon:"file",about:"Anything else — describe in notes",glCode:"6900"},
 ];
+const glCodeFor=cat=>EXPENSE_CATEGORIES.find(c=>c.k===cat)?.glCode||"—";
 
 export function HrExpensesPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
@@ -517,7 +521,16 @@ export function HrExpensesPage(){
         <div className="text-xl font-bold text-text tracking-tight">Expense claims</div>
         <div className="text-sm text-text-3 mt-0.5">Submit receipts, get reimbursed on next payroll.</div>
       </div>
-      <Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowSubmit(true)}>Submit expense</Btn>
+      <div className="flex gap-2.5">
+        {isApprover&&allExp.length>0&&<Btn kind="outline" size="sm" icon="download" onClick={()=>{
+          const rows=[["Date","Employee","Category","GL code","Merchant","Amount","Status"],
+            ...allExp.map(x=>[x.date,A.hrEmp(x.employee)?.name||"",x.category,glCodeFor(x.category),x.merchant,x.amount.toFixed(2),x.status])];
+          const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
+          const blob=new Blob([csv],{type:"text/csv"}); const url=URL.createObjectURL(blob);
+          const a=document.createElement("a"); a.href=url; a.download="expenses.csv"; a.click(); URL.revokeObjectURL(url);
+        }}>Export CSV</Btn>}
+        <Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowSubmit(true)}>Submit expense</Btn>
+      </div>
     </div>
 
     {isApprover&&allExp.length>0&&<div className={`grid gap-3 mb-5 ${mob?"grid-cols-2":"grid-cols-4"}`}>
@@ -613,7 +626,7 @@ function ExpenseDetailModal({expense:x,onClose,isApprover,isPriv,currentEmpId}){
       </div>
 
       <div className={`grid gap-3 text-sm ${mob?"grid-cols-1":"grid-cols-2"}`}>
-        {[["Category",x.category],["Merchant",x.merchant],["Date",x.date],["Amount",`$${x.amount.toFixed(2)} ${x.currency}`],["Reimburse via",x.reimburseVia==="next-payroll"?"Next payroll":x.reimburseVia],["Submitted",new Date(x.submitted).toLocaleDateString("en-CA")]].map(([l,v])=>
+        {[["Category",x.category],["GL code",glCodeFor(x.category)],["Merchant",x.merchant],["Date",x.date],["Amount",`$${x.amount.toFixed(2)} ${x.currency}`],["Reimburse via",x.reimburseVia==="next-payroll"?"Next payroll":x.reimburseVia],["Submitted",new Date(x.submitted).toLocaleDateString("en-CA")]].map(([l,v])=>
           <div key={l}><div className="text-xs text-text-3 font-semibold uppercase tracking-wide mb-1">{l}</div><div className="text-text font-medium">{v}</div></div>)}
       </div>
 
