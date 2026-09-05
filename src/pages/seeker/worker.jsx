@@ -5,6 +5,7 @@ import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
 import { Btn, Card, Tag, Field, Input, Sel, Banner, Empty, H1, Lbl, Stat, SmartLogo, Page, HERO_QUIET } from "../../design/primitives.jsx";
 import { _weekStart } from "../../helpers/utils.js";
+import { calcNetPay } from "../../helpers/payrollTax.js";
 
 /* ─── Worker dashboard ─── */
 export function WorkerDashboard(){
@@ -227,10 +228,11 @@ export function WorkerPayStubs(){
             <Tag tone={run.status==="paid"?"ok":"warn"} sm>{run.status}</Tag>
           </div>
         </div>
-        <div className={`mt-3 pt-3 border-t border-line-soft grid gap-2.5 text-xs ${mob?"grid-cols-2":"grid-cols-4"}`}>
-          {[["Gross",`$${line.gross.toFixed(2)}`],["CPP",`-$${(line.gross*0.0595).toFixed(2)}`],["EI",`-$${(line.gross*0.0221).toFixed(2)}`],["Fed+Prov tax",`-$${(line.gross*0.145).toFixed(2)}`]].map(([l,v])=>
+        {(()=>{const d=calcNetPay(line.gross);
+        return <div className={`mt-3 pt-3 border-t border-line-soft grid gap-2.5 text-xs ${mob?"grid-cols-2":"grid-cols-4"}`}>
+          {[["Gross",`$${line.gross.toFixed(2)}`],["CPP",`-$${d.cpp.toFixed(2)}`],["EI",`-$${d.ei.toFixed(2)}`],["Fed+Prov tax",`-$${(d.fedTax+d.provTax).toFixed(2)}`]].map(([l,v])=>
             <div key={l}><div className="text-text-3">{l}</div><div className="text-text font-semibold mt-0.5">{v}</div></div>)}
-        </div>
+        </div>;})()}
       </Card>)}
     </div>}
   </Page>;

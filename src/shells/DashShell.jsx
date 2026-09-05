@@ -265,7 +265,7 @@ export function DashShell({modules,children,brandKind}){
       <I n="bell" s={17}/>
       {A.notifications.filter(n=>!n.read).length>0&&<span className="absolute top-1.5 right-1.5 min-w-3.5 h-3.5 px-1 rounded-full bg-brand text-white text-xs font-bold flex items-center justify-center border-2 border-white">{A.notifications.filter(n=>!n.read).length}</span>}</button>
     <div className="relative ml-2">
-      <button onClick={()=>setAccountMenu(v=>!v)} aria-label="Account"
+      <button onClick={()=>setAccountMenu(v=>!v)} aria-label="Account" aria-haspopup="menu" aria-expanded={accountMenu}
         className="bg-transparent border-0 p-0 cursor-pointer flex rounded-xl transition duration-200 hover:scale-105">
         {user?.role==="employer"
           ? <SmartLogo e={company||{mark:"hex",a:C.brand,b:"#fff",name:"",site:""}} size={36} radius={10}/>

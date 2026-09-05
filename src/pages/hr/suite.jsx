@@ -248,118 +248,6 @@ export function HrDashboard(){
    HR SUITE — All module implementations
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ─── Directory: search, filter, view employees ─── */
-function HrDirectory(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
-  const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
-  const [q,setQ]=useState(""); const [dept,setDept]=useState("all"); const [role,setRole]=useState("all"); const [view,setView]=useState("grid");
-  const all=A.hrEmpsAtCompany(company.id).filter(e=>e.status==="active");
-  const filtered=all.filter(e=>{
-    if(dept!=="all"&&e.dept!==dept)return false;
-    if(role!=="all"&&e.role!==role)return false;
-    if(q&&!(e.name.toLowerCase().includes(q.toLowerCase())||e.title.toLowerCase().includes(q.toLowerCase())||e.email.toLowerCase().includes(q.toLowerCase())))return false;
-    return true;
-  });
-  const [selected,setSelected]=useState(null);
-  const selectedEmp=selected?A.hrEmp(selected):null;
-  return <div>
-    <Card pad={mob?16:20} style={{marginBottom:16,borderRadius:14}}>
-      <div className="flex gap-2.5 flex-wrap items-center">
-        <div className="grow shrink basis-60 min-w-0">
-          <Input icon="search" value={q} onChange={e=>setQ(e.target.value)} placeholder="Search by name, title, or email"/></div>
-        <Sel value={dept} onChange={e=>setDept(e.target.value)} style={{maxWidth:200}}>
-          <option value="all">All departments</option>
-          {A.HR_DEPARTMENTS.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}</Sel>
-        <Sel value={role} onChange={e=>setRole(e.target.value)} style={{maxWidth:160}}>
-          <option value="all">All roles</option>
-          {A.HR_ROLES.map(r=><option key={r.k} value={r.k}>{r.label}</option>)}</Sel>
-        <div className="flex bg-bg rounded-lg p-1 border border-line">
-          {[["grid","layout"],["list","file"]].map(([v,ic])=><button key={v} onClick={()=>setView(v)}
-            className={`border-0 py-2 px-2.5 rounded-md cursor-pointer flex ${view===v?"bg-white text-brand shadow-sm":"bg-transparent text-text-3"}`}><I n={ic} s={15}/></button>)}
-        </div>
-      </div>
-      <div className="text-xs text-text-3 mt-3">{filtered.length} of {all.length} employees</div>
-    </Card>
-
-    {view==="grid"?
-      <div className="grid gap-3" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:280}px,1fr))`}}>
-        {filtered.map(e=>{const d=A.HR_DEPARTMENTS.find(x=>x.id===e.dept);
-          return <div key={e.id} data-card onClick={()=>setSelected(e.id)} className="bg-white border border-line rounded-2xl p-5 cursor-pointer">
-            <div className="flex gap-3 mb-3">
-              <SmartPortrait seed={e.seed} size={48} radius={12}/>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap" style={{fontSize:14.5}}>{e.name}</div>
-                <div className="text-xs text-text-3 mt-0.5 overflow-hidden text-ellipsis whitespace-nowrap">{e.title}</div>
-              </div>
-            </div>
-            <div className="flex gap-1.5 flex-wrap">
-              {d&&<Tag tone="neutral" sm>{d.name}</Tag>}
-              <Tag tone={e.role==="owner"?"warn":e.role==="admin"?"brand":e.role==="hr"?"ok":e.role==="finance"?"violet":"neutral"} sm>{e.role}</Tag>
-            </div>
-          </div>;})}
-      </div>
-      :
-      <Card pad={0} style={{borderRadius:14,overflow:"hidden"}}>
-        {filtered.map((e,i)=>{const d=A.HR_DEPARTMENTS.find(x=>x.id===e.dept);
-          return <div key={e.id} onClick={()=>setSelected(e.id)} className={`flex gap-3.5 items-center cursor-pointer transition-colors duration-150 hover:bg-bg ${mob?"py-3 px-3.5":"py-3.5 px-5"} ${i>0?"border-t border-line-soft":""}`}>
-            <SmartPortrait seed={e.seed} size={38} radius={10}/>
-            <div className="grow shrink basis-50 min-w-0">
-              <div className="text-sm font-semibold text-text">{e.name}</div>
-              <div className="text-xs text-text-3 mt-0.5">{e.title}</div>
-            </div>
-            {!mob&&d&&<div className="text-xs text-text-2" style={{minWidth:140}}>{d.name}</div>}
-            {!mob&&<div className="text-xs text-text-2" style={{minWidth:120}}>{e.city}, {e.prov}</div>}
-            <Tag tone={e.role==="owner"?"warn":e.role==="admin"?"brand":e.role==="hr"?"ok":e.role==="finance"?"violet":"neutral"} sm>{e.role}</Tag>
-          </div>;})}
-      </Card>
-    }
-
-    {selectedEmp&&<Modal onClose={()=>setSelected(null)} title="Employee details" wide>
-      <_HrEmpDetail e={selectedEmp} onClose={()=>setSelected(null)}/>
-    </Modal>}
-  </div>;
-}
-
-function _HrEmpDetail({e,onClose}){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
-  const d=A.HR_DEPARTMENTS.find(x=>x.id===e.dept);
-  const mgr=e.manager?A.hrEmp(e.manager):null;
-  const publicProfile=A.hrPublicProfile(e.id);
-  return <div>
-    <div className="flex gap-4 items-center mb-5 flex-wrap">
-      <SmartPortrait seed={e.seed} size={64} radius={16}/>
-      <div className="flex-1 min-w-0">
-        <div className="text-xl font-bold text-text tracking-tight">{e.name}</div>
-        <div className="text-sm text-text-2 mt-1">{e.title}</div>
-        <div className="flex gap-1.5 flex-wrap mt-2">
-          {d&&<Tag tone="neutral" sm>{d.name}</Tag>}
-          <Tag tone={e.role==="owner"?"warn":e.role==="admin"?"brand":e.role==="hr"?"ok":e.role==="finance"?"violet":"neutral"} sm>{e.role}</Tag>
-        </div>
-      </div>
-    </div>
-    <div className={`grid gap-3.5 text-sm ${mob?"grid-cols-1":"grid-cols-2"}`}>
-      {[["Location",`${e.city}, ${e.prov}`],["Email",e.email],["Phone",e.phone],
-        ["Manager",mgr?.name||"—"],["Hired",e.hired],["Tenure",publicProfile.tenureYears?`${publicProfile.tenureYears} years`:"—"]].map(([l,v])=>
-        <div key={l}><div className="text-xs font-bold text-text-3 tracking-wide uppercase mb-1">{l}</div>
-          <div className="text-text">{v}</div></div>)}
-    </div>
-    {e.skills.length>0&&<div className="mt-4">
-      <div className="text-xs font-bold text-text-3 tracking-wide uppercase mb-2">Skills</div>
-      <div className="flex flex-wrap gap-1.5">
-        {e.skills.map(s=><Tag key={s} tone="brand" sm>{s}</Tag>)}</div>
-    </div>}
-    {e.badges.length>0&&<div className="mt-4">
-      <div className="text-xs font-bold text-text-3 tracking-wide uppercase mb-2">Badges & recognition</div>
-      <div className="flex flex-wrap gap-1.5">
-        {e.badges.map(b=><Tag key={b} tone="warn" sm icon="award">{b}</Tag>)}</div>
-    </div>}
-    <div className="mt-5 flex gap-2.5 justify-end">
-      <Btn kind="outline" size="sm" icon="mail" onClick={()=>{A.go("hrChat"); onClose();}}>Message</Btn>
-      <Btn kind="primary" size="sm" onClick={onClose}>Close</Btn>
-    </div>
-  </div>;
-}
-
 /* ─── Profile: edit own details + visibility toggles for public NorthHire ─── */
 export function HrProfile(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
@@ -978,74 +866,6 @@ function _HrNewChat({onClose,onCreate,allowDm=true,allowGroup=true}){
       <Btn kind="ghost" onClick={onClose}>Cancel</Btn>
       <Btn kind="primary" onClick={create} disabled={selected.length===0||(kind==="group"&&!name.trim())}>Start conversation</Btn>
     </div>
-  </div>;
-}
-
-/* ─── People management: add/edit/offboard, role changes ─── */
-function HrPeople(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
-  const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
-  const [showAdd,setShowAdd]=useState(false);
-  const [ne,setNe]=useState({name:"",email:"",role:"employee",dept:"d1",title:"",city:"",prov:"AB",phone:"",salary:60000});
-  const all=A.hrEmpsAtCompany(company.id);
-  const submit=()=>{if(!ne.name.trim()||!ne.email.trim())return;
-    A.addEmployee({...ne,companyId:company.id});
-    setNe({name:"",email:"",role:"employee",dept:"d1",title:"",city:"",prov:"AB",phone:"",salary:60000});
-    setShowAdd(false);};
-  return <div>
-    <div className="flex justify-between items-center mb-4 flex-wrap gap-2.5">
-      <div><div className="text-lg font-bold text-text">{all.filter(e=>e.status==="active").length} active employees</div>
-        <div className="text-sm text-text-3 mt-1">Add new hires, change roles, and manage the org chart.</div></div>
-      <Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowAdd(true)}>Add employee</Btn>
-    </div>
-
-    <Card pad={0} style={{borderRadius:14,overflow:"hidden"}}>
-      <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:720}}>
-        <thead><tr className="border-b-2 border-line text-left">
-          {["Name","Title","Dept","Role","Hired","Status","Actions"].map(h=>
-            <th key={h} className={TH_CLS}>{h}</th>)}
-        </tr></thead>
-        <tbody>{all.map(e=>{const d=A.HR_DEPARTMENTS.find(x=>x.id===e.dept);
-          return <tr key={e.id} className="border-b border-line-soft transition-colors duration-150 hover:bg-bg">
-            <td className={TD_CLS}><div className="flex gap-2.5 items-center">
-              <SmartPortrait seed={e.seed} size={30} radius={8}/>
-              <span className="text-sm font-semibold text-text">{e.name}</span></div></td>
-            <td className={`${TD_CLS} text-sm text-text-2`}>{e.title}</td>
-            <td className={`${TD_CLS} text-sm text-text-2`}>{d?.name||"—"}</td>
-            <td className={TD_CLS}>
-              <Sel value={e.role} onChange={ev=>A.updateEmp(e.id,{role:ev.target.value})} style={{fontSize:12,padding:"5px 8px",minWidth:0}}>
-                {A.HR_ROLES.map(r=><option key={r.k} value={r.k}>{r.label}</option>)}</Sel>
-            </td>
-            <td className={`${TD_CLS} text-xs text-text-3`}>{e.hired}</td>
-            <td className={TD_CLS}><Tag tone={e.status==="active"?"ok":"neutral"} sm>{e.status}</Tag></td>
-            <td className={TD_CLS}><div className="flex gap-1">
-              {e.status==="active"&&e.id!==emp.id&&<Btn kind="dangerSoft" size="xs" onClick={()=>{if(confirm(`Offboard ${e.name}?`))A.removeEmployee(e.id);}}>Offboard</Btn>}
-            </div></td>
-          </tr>;})}</tbody>
-      </table></div>
-    </Card>
-
-    {showAdd&&<Modal onClose={()=>setShowAdd(false)} title="Add employee" wide>
-      <div className="flex flex-col gap-3.5">
-        <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
-          <Field label="Full name" required><Input value={ne.name} onChange={e=>setNe({...ne,name:e.target.value})}/></Field>
-          <Field label="Email" required><Input icon="mail" value={ne.email} onChange={e=>setNe({...ne,email:e.target.value})}/></Field>
-          <Field label="Job title"><Input value={ne.title} onChange={e=>setNe({...ne,title:e.target.value})}/></Field>
-          <Field label="Phone"><Input icon="phone" value={ne.phone} onChange={e=>setNe({...ne,phone:e.target.value})}/></Field>
-          <Field label="Role"><Sel value={ne.role} onChange={e=>setNe({...ne,role:e.target.value})}>
-            {A.HR_ROLES.map(r=><option key={r.k} value={r.k}>{r.label}</option>)}</Sel></Field>
-          <Field label="Department"><Sel value={ne.dept} onChange={e=>setNe({...ne,dept:e.target.value})}>
-            {A.HR_DEPARTMENTS.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}</Sel></Field>
-          <Field label="City"><Input icon="pin" value={ne.city} onChange={e=>setNe({...ne,city:e.target.value})}/></Field>
-          <Field label="Annual salary (CAD)"><Input type="number" value={ne.salary} onChange={e=>setNe({...ne,salary:Number(e.target.value)||0})}/></Field>
-        </div>
-        <Banner tone="brand" icon="mail" title="Invitation">The new employee will receive an email with sign-in instructions. They can then set their password and start using the HR Suite.</Banner>
-        <div className="flex gap-2.5 justify-end">
-          <Btn kind="ghost" onClick={()=>setShowAdd(false)}>Cancel</Btn>
-          <Btn kind="primary" icon="check" onClick={submit} disabled={!ne.name.trim()||!ne.email.trim()}>Add employee</Btn>
-        </div>
-      </div>
-    </Modal>}
   </div>;
 }
 
@@ -1859,7 +1679,7 @@ export function HrIntegrations(){
 
     {showPunch&&<Modal onClose={()=>setShowPunch(false)} title="Connect a punch machine">
       <div className="flex flex-col gap-3.5">
-        <Banner tone="brand" icon="info" title="Choose your device">Select your device vendor. We'll walk you through the connection steps.</Banner>
+        <Banner tone="warn" icon="info" title="Demo simulation">This preview build doesn't talk to real hardware — selecting a vendor below just marks the integration as connected in your settings, with no live device sync.</Banner>
         <div className="flex flex-col gap-2">
           {A.PUNCH_VENDORS.map(v=><button key={v.id} onClick={()=>{A.connectPunchMachine(company.id,v.name); setShowPunch(false);}}
             className="flex gap-3 items-center py-3.5 px-4 bg-white border border-line rounded-xl cursor-pointer text-left transition-all duration-150 hover:border-brand hover:bg-tint">
@@ -1876,9 +1696,9 @@ export function HrIntegrations(){
 
     {showImport&&<Modal onClose={()=>setShowImport(false)} title="Import from your HR system">
       <div className="flex flex-col gap-3.5">
-        <Banner tone="brand" icon="upload" title="Migration wizard">We'll import employees, roles, salaries and (where available) attendance history. Your existing NorthHire data won't be overwritten.</Banner>
+        <Banner tone="warn" icon="upload" title="Demo simulation">This preview build doesn't run a real migration — selecting a system below just marks the integration as connected in your settings. No employees, salaries, or history are actually imported.</Banner>
         <div className="flex flex-col gap-2">
-          {A.PRIOR_HR_VENDORS.map(v=><button key={v.id} onClick={()=>{A.connectPriorSystem(company.id,v.name); setShowImport(false); setTimeout(()=>A.toast("Import started — you'll get a summary email when it's done.","ok"),200);}}
+          {A.PRIOR_HR_VENDORS.map(v=><button key={v.id} onClick={()=>{A.connectPriorSystem(company.id,v.name); setShowImport(false); A.toast(`Marked as connected to ${v.name} (simulated — no data was actually imported)`,"ok");}}
             className="flex gap-3 items-center py-3.5 px-4 bg-white border border-line rounded-xl cursor-pointer text-left transition-all duration-150 hover:border-brand hover:bg-tint">
             <div className="w-9 h-9 rounded-lg bg-violet-bg text-violet flex items-center justify-center shrink-0"><I n="refresh" s={18}/></div>
             <div className="text-sm font-semibold text-text flex-1">{v.name}</div>

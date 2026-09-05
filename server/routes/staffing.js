@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, nextId, sqlTime } from "../db.js";
 import { verifyPassword, hashPassword, createSessionCookie, clearSessionCookie, requireAgencyAuth, requireAuth, requireRole } from "../auth.js";
 import { salesTaxRate } from "../../src/helpers/salesTax.js";
+import { calcNetPay } from "../../src/helpers/payrollTax.js";
 import {
   serializeWorker, serializeStaffingClient, serializeJobOrder, serializeAssignment,
   serializeStaffingTimesheet, serializeStaffingPayrun, serializeStaffingInvoice, serializePlacement,
@@ -354,7 +355,12 @@ staffingRouter.post("/payroll/run", requireAgencyAuth, (req, res) => {
     if (!byWorker[t.worker_id]) byWorker[t.worker_id] = { hours: 0, gross: 0, otHrs: 0 };
     byWorker[t.worker_id].hours += hours; byWorker[t.worker_id].gross += gross; byWorker[t.worker_id].otHrs += (t.ot_hours || 0);
   }
-  const lines = Object.entries(byWorker).map(([wid, d]) => ({ worker: wid, hours: d.hours, gross: round2(d.gross), net: round2(d.gross * 0.7481), otHrs: d.otHrs }));
+  const lines = Object.entries(byWorker).map(([wid, d]) => {
+    const gross = round2(d.gross);
+    // Same shared flat-rate CPP/EI/fed+prov-tax approximation HR payroll uses, instead of a
+    // separately-hardcoded multiplier that quietly implied a different (and undocumented) rate.
+    return { worker: wid, hours: d.hours, gross, net: round2(calcNetPay(gross).net), otHrs: d.otHrs };
+  });
   const totalHours = lines.reduce((s, l) => s + l.hours, 0);
   const totalGross = round2(lines.reduce((s, l) => s + l.gross, 0));
   const totalNet = round2(lines.reduce((s, l) => s + l.net, 0));

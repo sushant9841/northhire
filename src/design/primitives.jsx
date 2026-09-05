@@ -501,9 +501,17 @@ export function ConfirmDialog({open,onClose,onConfirm,title,children,confirmLabe
 }
 
 export function Tabs({items,value,onChange,style}){
- return <div className="flex gap-1.5 overflow-x-auto pb-0.5" style={style}>
+ const onKeyDown=e=>{
+  if(e.key!=="ArrowRight"&&e.key!=="ArrowLeft")return;
+  e.preventDefault();
+  const i=items.findIndex(it=>it.k===value);
+  const next=items[(i+(e.key==="ArrowRight"?1:-1)+items.length)%items.length];
+  onChange(next.k);
+  e.currentTarget.querySelector(`[data-tab-k="${next.k}"]`)?.focus();
+ };
+ return <div role="tablist" onKeyDown={onKeyDown} className="flex gap-1.5 overflow-x-auto pb-0.5" style={style}>
   {items.map(it=>{const on=value===it.k;
-   return <button key={it.k} onClick={()=>onChange(it.k)}
+   return <button key={it.k} data-tab-k={it.k} role="tab" aria-selected={on} tabIndex={on?0:-1} onClick={()=>onChange(it.k)}
     className={`flex items-center gap-2 py-2.5 px-4 rounded-full cursor-pointer text-sm whitespace-nowrap shrink-0 border transition-all duration-150 ${on?"border-brand bg-wash text-brand font-bold":"border-line bg-white text-text-2 font-medium"}`}>
     {it.icon&&<I n={it.icon} s={15} w={on?2.1:1.8}/>}{it.label}
     {it.n>0&&<span className={`text-xs font-bold min-w-5 h-5 rounded-full flex items-center justify-center px-1.5 ${on?"bg-brand text-white":"bg-line-soft text-text-2"}`}>{it.n}</span>}

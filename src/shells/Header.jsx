@@ -87,7 +87,7 @@ export function Header(){
         {unread>0&&<span className="absolute top-1.5 right-1.5 min-w-4 h-4 px-1 rounded-full bg-brand text-white text-xs font-bold flex items-center justify-center border-2 border-white" style={{animation:"pop .3s ease"}}>{unread}</span>}</button>}
       <div className="relative">
         {A.user
-          ? <button onClick={()=>setMenu(v=>!v)} aria-label="Account"
+          ? <button onClick={()=>setMenu(v=>!v)} aria-label="Account" aria-haspopup="menu" aria-expanded={menu}
               className="bg-transparent border-0 p-0 cursor-pointer flex rounded-xl transition duration-200 hover:scale-105">
               {A.user.role==="employer"
                 ? <SmartLogo e={A.company||{mark:"hex",a:C.brand,b:"#fff",name:"",site:""}} size={38} radius={11}/>

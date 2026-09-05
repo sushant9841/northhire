@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { db, nextId } from "../db.js";
+import { calcNetPay } from "../../src/helpers/payrollTax.js";
 import { hashPassword, verifyPassword, createSessionCookie, clearSessionCookie, requireHrAuth, hrEmployeeFromRequest, requireAuth, requireRole } from "../auth.js";
 import {
   serializeHrEmployee, serializeHrAttendance, serializeHrLeave, serializeHrTask, serializeHrEvent,
@@ -368,9 +369,8 @@ hrRouter.post("/payruns", requireHrAuth, requireHrPriv, (req, res) => {
     const unpaidDeduction = Math.round((unpaidDaysByEmp[e.id] || 0) * ((e.salary || 0) / 260));
     const grossPeriod = Math.max(0, Math.round((e.salary || 0) / 26) - unpaidDeduction);
     const reimb = expByEmp[e.id] || 0;
-    const cpp = Math.round(grossPeriod * 0.0595), ei = Math.round(grossPeriod * 0.0221);
-    const fedTax = Math.round(grossPeriod * 0.145), provTax = Math.round(grossPeriod * 0.075);
-    const net = grossPeriod - (cpp + ei + fedTax + provTax) + reimb;
+    const { cpp, ei, fedTax, provTax, net: netBeforeReimb } = calcNetPay(grossPeriod);
+    const net = netBeforeReimb + reimb;
     return { employee: e.id, name: e.name, gross: grossPeriod, unpaidDeduction, cpp, ei, fedTax, provTax, reimb, net };
   });
   const id = nextId("pr", "hr_payruns");
