@@ -2,8 +2,16 @@ import { Router } from "express";
 import { db, nextId, sqlTime } from "../db.js";
 import { requireAuth, requireRole } from "../auth.js";
 import { serializeBlog, serializeTraining } from "../serialize.js";
+import { PLANS } from "../../src/store/seed/constants.js";
 
 export const contentRouter = Router();
+
+// Publishing (not drafting) articles/trainings is a Growth+ plan feature per the UI's own gate -
+// nothing stopped calling the API directly with status:"published" on a Free plan.
+function employerPlan(employerId) {
+  const employer = db.prepare("SELECT plan FROM employers WHERE id = ?").get(employerId);
+  return PLANS[employer?.plan] || PLANS.Free;
+}
 
 function ownerFilter(req) {
   // Admin sees everything; an employer sees platform ("admin") content + their own.
@@ -61,6 +69,9 @@ contentRouter.get("/blogs/:id", (req, res) => {
 contentRouter.post("/blogs", requireAuth, requireRole("employer", "admin"), (req, res) => {
   const b = req.body || {};
   const isAdmin = req.user.role === "admin";
+  if (!isAdmin && b.status === "published" && !employerPlan(req.user.employer_id).articles) {
+    return res.status(403).json({ error: "Publishing articles is a Growth+ feature." });
+  }
   const id = nextId("bl", "blogs");
   db.prepare(
     `INSERT INTO blogs (id, title, cat, scene, tone, mins, author, author_seed, excerpt, body_json, owner_employer_id, status)
@@ -74,6 +85,9 @@ contentRouter.patch("/blogs/:id", requireAuth, requireRole("employer", "admin"),
   if (!row) return res.status(404).json({ error: "Article not found." });
   const isAdmin = req.user.role === "admin";
   if (!isAdmin && row.owner_employer_id !== req.user.employer_id) return res.status(403).json({ error: "Not your article." });
+  if (!isAdmin && req.body?.status === "published" && !employerPlan(req.user.employer_id).articles) {
+    return res.status(403).json({ error: "Publishing articles is a Growth+ feature." });
+  }
   const b = req.body || {};
   const fields = { title: "title", cat: "cat", scene: "scene", tone: "tone", mins: "mins", author: "author",
     excerpt: "excerpt", status: "status" };
@@ -112,6 +126,9 @@ contentRouter.get("/trainings/:id", (req, res) => {
 contentRouter.post("/trainings", requireAuth, requireRole("employer", "admin"), (req, res) => {
   const b = req.body || {};
   const isAdmin = req.user.role === "admin";
+  if (!isAdmin && b.status === "published" && !employerPlan(req.user.employer_id).trainings) {
+    return res.status(403).json({ error: "Publishing trainings is a Growth+ feature." });
+  }
   const id = nextId("tr", "trainings");
   db.prepare(
     `INSERT INTO trainings (id, title, cat, scene, tone, provider, provider_seed, level, hours, price, mods_json, outcomes_json, about, owner_employer_id, status)
@@ -126,6 +143,9 @@ contentRouter.patch("/trainings/:id", requireAuth, requireRole("employer", "admi
   if (!row) return res.status(404).json({ error: "Training not found." });
   const isAdmin = req.user.role === "admin";
   if (!isAdmin && row.owner_employer_id !== req.user.employer_id) return res.status(403).json({ error: "Not your training." });
+  if (!isAdmin && req.body?.status === "published" && !employerPlan(req.user.employer_id).trainings) {
+    return res.status(403).json({ error: "Publishing trainings is a Growth+ feature." });
+  }
   const b = req.body || {};
   const fields = { title: "title", cat: "cat", scene: "scene", tone: "tone", provider: "provider", level: "level",
     hours: "hours", price: "price", about: "about", status: "status" };

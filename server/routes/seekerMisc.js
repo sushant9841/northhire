@@ -102,10 +102,26 @@ seekerMiscRouter.get("/messages", requireAuth, (req, res) => {
   const rows = db.prepare("SELECT * FROM messages WHERE from_user_id = ? OR to_user_id = ? ORDER BY created_at DESC").all(req.user.id, req.user.id);
   res.json({ messages: rows.map(serializeMessage) });
 });
+// Simple in-memory per-sender sliding window against message-flooding, same shape as the
+// signup throttle in auth.js - no persistence needed, resets on restart.
+const MESSAGE_LIMIT_MAX = 30;
+const MESSAGE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+const messagesSentByUser = new Map();
+function messageRateLimited(userId) {
+  const now = Date.now();
+  const recent = (messagesSentByUser.get(userId) || []).filter(t => now - t < MESSAGE_LIMIT_WINDOW_MS);
+  recent.push(now);
+  messagesSentByUser.set(userId, recent);
+  return recent.length > MESSAGE_LIMIT_MAX;
+}
 seekerMiscRouter.post("/messages", requireAuth, (req, res) => {
   const { toUserId, jobId, text } = req.body || {};
+  if (!toUserId || !text?.trim()) return res.status(400).json({ error: "A recipient and message text are required." });
+  if (text.length > 5000) return res.status(400).json({ error: "Message is too long." });
+  if (!db.prepare("SELECT id FROM users WHERE id = ?").get(toUserId)) return res.status(404).json({ error: "Recipient not found." });
+  if (messageRateLimited(req.user.id)) return res.status(429).json({ error: "Too many messages sent — please slow down." });
   const id = nextId("m", "messages");
-  db.prepare("INSERT INTO messages (id, from_user_id, to_user_id, job_id, text) VALUES (?, ?, ?, ?, ?)").run(id, req.user.id, toUserId, jobId || null, text);
+  db.prepare("INSERT INTO messages (id, from_user_id, to_user_id, job_id, text) VALUES (?, ?, ?, ?, ?)").run(id, req.user.id, toUserId, jobId || null, text.trim());
   res.status(201).json({ message: serializeMessage(db.prepare("SELECT * FROM messages WHERE id = ?").get(id)) });
 });
 seekerMiscRouter.patch("/messages/:id/read", requireAuth, (req, res) => {
@@ -148,12 +164,21 @@ seekerMiscRouter.get("/reviews/employer/:employerId", (req, res) => {
 });
 seekerMiscRouter.post("/reviews", requireAuth, (req, res) => {
   const { employerId, rating, text, anon } = req.body || {};
-  const id = nextId("rv", "reviews");
-  db.prepare("INSERT INTO reviews (id, employer_id, user_id, rating, text, anon) VALUES (?, ?, ?, ?, ?, ?)")
-    .run(id, employerId, req.user.id, rating, text, anon ? 1 : 0);
+  const r = Number(rating);
+  if (!Number.isInteger(r) || r < 1 || r > 5) return res.status(400).json({ error: "Rating must be a whole number from 1 to 5." });
+  // One review per user per employer - without this, the same user could submit unlimited
+  // reviews to skew an employer's average rating in either direction. Editing an existing
+  // review (rather than rejecting the resubmit) is real, useful behavior, not just a workaround.
+  const existing = db.prepare("SELECT id FROM reviews WHERE employer_id = ? AND user_id = ?").get(employerId, req.user.id);
+  const id = existing ? existing.id : nextId("rv", "reviews");
+  if (existing) {
+    db.prepare("UPDATE reviews SET rating = ?, text = ?, anon = ?, created_at = datetime('now') WHERE id = ?").run(r, text, anon ? 1 : 0, id);
+  } else {
+    db.prepare("INSERT INTO reviews (id, employer_id, user_id, rating, text, anon) VALUES (?, ?, ?, ?, ?, ?)").run(id, employerId, req.user.id, r, text, anon ? 1 : 0);
+  }
   const avg = db.prepare("SELECT AVG(rating) AS avg FROM reviews WHERE employer_id = ?").get(employerId).avg;
   db.prepare("UPDATE employers SET rating = ? WHERE id = ?").run(Math.round(avg * 10) / 10, employerId);
-  res.status(201).json({ review: serializeReview(db.prepare("SELECT * FROM reviews WHERE id = ?").get(id)) });
+  res.status(existing ? 200 : 201).json({ review: serializeReview(db.prepare("SELECT * FROM reviews WHERE id = ?").get(id)) });
 });
 seekerMiscRouter.delete("/reviews/:id", requireAuth, (req, res) => {
   const row = db.prepare("SELECT * FROM reviews WHERE id = ?").get(req.params.id);

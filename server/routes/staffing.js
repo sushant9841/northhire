@@ -390,8 +390,12 @@ staffingRouter.get("/payruns", requireAgencyAuth, (req, res) => {
   res.json({ payruns: db.prepare("SELECT * FROM staffing_payruns ORDER BY run_date DESC").all().map(serializeStaffingPayrun) });
 });
 staffingRouter.patch("/payruns/:id/finalize", requireAgencyAuth, (req, res) => {
-  db.prepare("UPDATE staffing_payruns SET status = 'paid' WHERE id = ?").run(req.params.id);
   const run = db.prepare("SELECT * FROM staffing_payruns WHERE id = ?").get(req.params.id);
+  if (!run) return res.status(404).json({ error: "Not found." });
+  // Without this, finalizing twice (or reviving an already-reversed run back to "paid" with no
+  // new reason recorded) was possible - matches the same guard added to HR's execute route.
+  if (run.status !== "pending") return res.status(400).json({ error: "Only a pending payroll run can be finalized." });
+  db.prepare("UPDATE staffing_payruns SET status = 'paid' WHERE id = ?").run(req.params.id);
   logStaffingAudit(req.agencyStaff.id, "payroll_finalized", `Finalized staffing payroll ${run.period_start} → ${run.period_end} (${run.workers} workers, $${run.total_net?.toLocaleString()} net)`);
   res.json({ ok: true });
 });

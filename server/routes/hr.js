@@ -509,12 +509,16 @@ function resolveOwnHrPayrun(req, res) {
   return run;
 }
 hrRouter.patch("/payruns/:id/approve", requireHrAuth, requireHrPriv, (req, res) => {
-  if (!resolveOwnHrPayrun(req, res)) return;
+  const run = resolveOwnHrPayrun(req, res); if (!run) return;
+  if (run.status !== "draft") return res.status(400).json({ error: "Only a draft run can be approved." });
   db.prepare("UPDATE hr_payruns SET status = 'approved', approved_at = datetime('now') WHERE id = ?").run(req.params.id);
   res.json({ payrun: serializeHrPayrun(db.prepare("SELECT * FROM hr_payruns WHERE id = ?").get(req.params.id)) });
 });
+// Must come from 'approved' specifically - without this, calling execute twice (a double-click,
+// or a replayed request) would re-run the expense-reimbursement side effect below a second time.
 hrRouter.patch("/payruns/:id/execute", requireHrAuth, requireHrPriv, (req, res) => {
   const run = resolveOwnHrPayrun(req, res); if (!run) return;
+  if (run.status !== "approved") return res.status(400).json({ error: "Only an approved run can be executed." });
   db.prepare("UPDATE hr_payruns SET status = 'paid', paid_at = datetime('now') WHERE id = ?").run(req.params.id);
   const lines = JSON.parse(run.lines_json || "[]");
   for (const line of lines) {

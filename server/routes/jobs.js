@@ -2,8 +2,17 @@ import { Router } from "express";
 import { db, nextId } from "../db.js";
 import { requireAuth, requireRole } from "../auth.js";
 import { serializeJob } from "../serialize.js";
+import { PLANS } from "../../src/store/seed/constants.js";
 
 export const jobsRouter = Router();
+
+// The UI already gates job-count/featured quotas and CSV-import against the employer's plan, but
+// nothing stopped calling the API directly to bypass that check entirely - these mirror the same
+// PLANS-derived limits server-side, the actual enforcement boundary.
+function employerPlan(employerId) {
+  const employer = db.prepare("SELECT plan FROM employers WHERE id = ?").get(employerId);
+  return PLANS[employer?.plan] || PLANS.Free;
+}
 
 jobsRouter.get("/", (req, res) => {
   const { q, cat, city, prov, type, mode, minPay, employerId, status } = req.query;
@@ -78,6 +87,15 @@ jobsRouter.post("/", requireAuth, requireRole("employer"), (req, res) => {
   const b = req.body || {};
   if (!b.title || !b.desc) return res.status(400).json({ error: "Title and description are required." });
   const initialStatus = b.status === "live" ? "live" : "review";
+  const plan = employerPlan(req.user.employer_id);
+  if (initialStatus === "live") {
+    const liveCount = db.prepare("SELECT COUNT(*) AS n FROM jobs WHERE employer_id = ? AND status = 'live'").get(req.user.employer_id).n;
+    if (liveCount >= plan.jobs) return res.status(403).json({ error: `Your plan allows ${plan.jobs} live listing${plan.jobs === 1 ? "" : "s"}. Upgrade to post more.` });
+  }
+  if (b.featured) {
+    const featuredCount = db.prepare("SELECT COUNT(*) AS n FROM jobs WHERE employer_id = ? AND featured = 1 AND status = 'live'").get(req.user.employer_id).n;
+    if (featuredCount >= plan.featured) return res.status(403).json({ error: `Your plan allows ${plan.featured} featured listing${plan.featured === 1 ? "" : "s"}. Upgrade to feature more.` });
+  }
   // A teammate (employer_role 'member') can post, but it doesn't go out to candidates until the
   // account owner signs off - independent of admin's own platform-moderation status above, which
   // is a different gate for a different reason.
@@ -112,6 +130,11 @@ jobsRouter.patch("/:id", requireAuth, requireRole("employer", "admin"), (req, re
   const { status, flagged, approve } = req.body || {};
   if (status !== undefined) {
     if (!["live", "paused", "review", "closed"].includes(status)) return res.status(400).json({ error: "Invalid status." });
+    if (status === "live" && job.status !== "live" && !isAdmin) {
+      const plan = employerPlan(job.employer_id);
+      const liveCount = db.prepare("SELECT COUNT(*) AS n FROM jobs WHERE employer_id = ? AND status = 'live' AND id != ?").get(job.employer_id, req.params.id).n;
+      if (liveCount >= plan.jobs) return res.status(403).json({ error: `Your plan allows ${plan.jobs} live listing${plan.jobs === 1 ? "" : "s"}. Upgrade to republish this one.` });
+    }
     db.prepare("UPDATE jobs SET status = ? WHERE id = ?").run(status, req.params.id);
   }
   if (flagged !== undefined) {
@@ -127,6 +150,7 @@ jobsRouter.patch("/:id", requireAuth, requireRole("employer", "admin"), (req, re
 });
 
 jobsRouter.post("/import-csv", requireAuth, requireRole("employer"), (req, res) => {
+  if (!employerPlan(req.user.employer_id).csvImport) return res.status(403).json({ error: "CSV import is a Growth+ feature." });
   const { jobs } = req.body || {};
   if (!Array.isArray(jobs) || !jobs.length) return res.status(400).json({ error: "No jobs to import." });
   const insert = db.prepare(

@@ -57,7 +57,10 @@ platformRouter.get("/activity", requireAuth, requireRole("admin"), (req, res) =>
   const rows = db.prepare("SELECT * FROM activity_log ORDER BY created_at DESC LIMIT 1000").all();
   res.json({ activity: rows.map(r => ({ id: r.id, action: r.action, text: r.text, icon: r.icon, actor: r.actor, at: sqlTime(r.created_at).getTime() })) });
 });
-platformRouter.post("/activity", requireAuth, (req, res) => {
+// No frontend call site actually uses this (the client-side activity feed is optimistic/local-
+// only via useStore.js's log() helper) - restricting to admin closes an open door for any
+// authenticated user to inject spoofed entries into the admin-facing audit log for free.
+platformRouter.post("/activity", requireAuth, requireRole("admin"), (req, res) => {
   const { action, text, icon } = req.body || {};
   const id = nextId("l", "activity_log");
   db.prepare("INSERT INTO activity_log (id, action, text, icon, actor) VALUES (?, ?, ?, ?, ?)")
