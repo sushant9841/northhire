@@ -186,6 +186,24 @@ export function useHrStore(){
       if(patch.salary!==undefined||patch.role!==undefined)refreshAuditLog();
     }catch(e){/* surfaced via the calling page's own error handling, if any */}
   };
+  const [hrShifts,setHrShifts]=useState([]);
+  const loadShifts=async(from,to)=>{
+    const qs=new URLSearchParams(); if(from)qs.set("from",from); if(to)qs.set("to",to);
+    const {shifts}=await api.get(`/hr/shifts${qs.toString()?`?${qs}`:""}`);
+    setHrShifts(shifts); return shifts;
+  };
+  const addShift=async(data)=>{
+    try{const {shift}=await api.post("/hr/shifts",data); setHrShifts(l=>[...l,shift]); return {ok:true,shift};}
+    catch(e){return {ok:false,msg:e.message};}
+  };
+  const updateShift=async(id,patch)=>{
+    const {shift}=await api.patch(`/hr/shifts/${id}`,patch);
+    setHrShifts(l=>l.map(s=>s.id===id?shift:s));
+  };
+  const removeShift=async(id)=>{
+    await api.del(`/hr/shifts/${id}`);
+    setHrShifts(l=>l.filter(s=>s.id!==id));
+  };
   const [hrSignDocs,setHrSignDocs]=useState([]);
   const [hrSignDocsAll,setHrSignDocsAll]=useState(null); // privileged-only completion stats, null for non-priv
   const loadSignDocuments=async()=>{
@@ -487,7 +505,7 @@ export function useHrStore(){
 
   /* --- Role-gated module visibility --- */
   const modulesForRole=(role)=>{
-    const base=["dashboard","directory","profile","chat","calendar","tasks","expenses","policies"];
+    const base=["dashboard","directory","profile","chat","calendar","tasks","expenses","policies","roster"];
     const employee=[...base,"attendance","leave","payslips"];
     const hr=[...employee,"people","hiring","trainings","badges","reports"];
     const finance=[...base,"invoices","payroll","reports","attendance"];
@@ -504,6 +522,7 @@ export function useHrStore(){
     hrEmp,hrEmpsAtCompany,hrCurrentEmp,hrCurrentCompany,hrLogin,hrLogout,hrAutoLogin,
     hrPublicProfile,updateEmpVisibility,updateEmp,eraseHrEmployee,addEmployee,removeEmployee,
     hrSignDocs,hrSignDocsAll,loadSignDocuments,createSignDocument,removeSignDocument,signDocument,loadDocumentSignatures,
+    hrShifts,loadShifts,addShift,updateShift,removeShift,
     punchIn,punchOut,requestLeave,decideLeave,
     addTask,updateTaskStatus,deleteTask,addEvent,deleteEvent,
     addInvoice,markInvoicePaid,sendInvoice,printHrInvoice,reverseInvoice,

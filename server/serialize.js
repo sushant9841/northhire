@@ -282,6 +282,12 @@ export function serializeHrAuditEntry(row) {
   if (!row) return null;
   return { id: row.id, actor: row.actor_employee_id, action: row.action, detail: row.detail, at: sqlTime(row.created_at).getTime() };
 }
+export function serializeHrShift(row) {
+  if (!row) return null;
+  return { id: row.id, companyId: row.company_id, employee: row.employee_id, date: row.date,
+    startTime: row.start_time, endTime: row.end_time, role: row.role, site: row.site, notes: row.notes,
+    createdBy: row.created_by, createdAt: sqlTime(row.created_at).getTime() };
+}
 export function serializeHrSignDocument(row) {
   if (!row) return null;
   return { id: row.id, companyId: row.company_id, title: row.title, body: row.body,

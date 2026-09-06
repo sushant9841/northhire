@@ -73,4 +73,5 @@ export const HR_MODULES=[
   {k:"hrSettings",label:"Settings",icon:"gear",module:"settings"},
   {k:"hrIntegrations",label:"Integrations",icon:"hex",module:"integrations"},
   {k:"hrPolicies",label:"Policies & sign-off",icon:"shield",module:"policies"},
+  {k:"hrRoster",label:"Shift roster",icon:"calendar",module:"roster"},
 ];

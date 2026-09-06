@@ -329,6 +329,17 @@ CREATE TABLE IF NOT EXISTS hr_employees (
   UNIQUE(company_id, email)
 );
 
+/* Real shift/roster scheduling - previously HR Suite only had after-the-fact attendance logging
+   (punch in/out against no plan) with zero forward scheduling of who's supposed to work when. */
+CREATE TABLE IF NOT EXISTS hr_shifts (
+  id TEXT PRIMARY KEY,
+  company_id TEXT NOT NULL REFERENCES employers(id),
+  employee_id TEXT NOT NULL REFERENCES hr_employees(id),
+  date TEXT NOT NULL, start_time TEXT NOT NULL, end_time TEXT NOT NULL,
+  role TEXT, site TEXT, notes TEXT,
+  created_by TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 /* Real e-signature, click-wrap style (typed full legal name + a required checkbox + timestamp +
    a hashed IP, never the raw IP) - the same acknowledgment pattern plenty of real lightweight HR
    systems use for handbook/policy sign-off, not a full DocuSign-style envelope-and-witness flow.

@@ -33,7 +33,7 @@ import {
 } from "./pages/employer/staffing.jsx";
 import {
   HrLoginPage, HrDashboard, HrProfile, HrAttendance, HrLeave, HrTasks, HrCalendar, HrChat,
-  HrInvoices, HrPayroll, HrTrainings, HrBadges, HrHiring, HrReports, HrSettings, HrIntegrations, HrPolicies,
+  HrInvoices, HrPayroll, HrTrainings, HrBadges, HrHiring, HrReports, HrSettings, HrIntegrations, HrPolicies, HrRoster,
 } from "./pages/hr/suite.jsx";
 import { HrPeoplePage, HrExpensesPage } from "./pages/hr/people.jsx";
 import { HireOnboardingModal } from "./pages/shared/HireOnboardingModal.jsx";
@@ -109,7 +109,7 @@ export default function NorthHire(){
     hrPayroll:<HrShell><HrPayroll/></HrShell>,
     hrReports:<HrShell><HrReports/></HrShell>,
     hrSettings:<HrShell><HrSettings/></HrShell>,
-    hrIntegrations:<HrShell><HrIntegrations/></HrShell>,hrPolicies:<HrShell><HrPolicies/></HrShell>,
+    hrIntegrations:<HrShell><HrIntegrations/></HrShell>,hrPolicies:<HrShell><HrPolicies/></HrShell>,hrRoster:<HrShell><HrRoster/></HrShell>,
     /* ─── Agency console ─── */
     agencyLogin:<AgencyLoginPage/>,
     agencyDashboard:<AgencyShell><AgencyDashboard/></AgencyShell>,

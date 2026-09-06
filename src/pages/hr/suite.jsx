@@ -1830,6 +1830,85 @@ export function HrPolicies(){
   </div>;
 }
 
+/* ─── Shift roster: real forward-looking scheduling, distinct from attendance (after-the-fact
+   clock records with no plan behind them). Week-at-a-time list view grouped by date - a real
+   calendar grid would be its own larger UI investment, this covers the actual gap (planning who
+   works when) without over-building the presentation layer. ─── */
+function weekBounds(anchor){
+  const d=new Date(anchor); const day=d.getDay(); const monday=new Date(d); monday.setDate(d.getDate()-((day+6)%7));
+  const sunday=new Date(monday); sunday.setDate(monday.getDate()+6);
+  return {from:_fmtDate(monday),to:_fmtDate(sunday),monday};
+}
+export function HrRoster(){
+  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
+  const isPriv=emp.role==="owner"||emp.role==="admin"||emp.role==="hr";
+  const [anchor,setAnchor]=useState(new Date());
+  const {from,to}=weekBounds(anchor);
+  useEffect(()=>{A.loadShifts(from,to);},[from,to]);
+  const [showAdd,setShowAdd]=useState(false);
+  const [ns,setNs]=useState({employeeId:emp.id,date:from,startTime:"09:00",endTime:"17:00",role:"",site:"",notes:""});
+  const days=Array.from({length:7},(_,i)=>{const d=new Date(from); d.setDate(d.getDate()+i); return _fmtDate(d);});
+  const byDate=d=>A.hrShifts.filter(s=>s.date===d).sort((a,b)=>a.startTime.localeCompare(b.startTime));
+  const submit=async()=>{
+    if(!ns.date||!ns.startTime||!ns.endTime)return;
+    const r=await A.addShift(ns);
+    if(r.ok){A.toast("Shift added","ok");setShowAdd(false);setNs({employeeId:emp.id,date:from,startTime:"09:00",endTime:"17:00",role:"",site:"",notes:""});}
+    else A.toast(r.msg,"danger");
+  };
+  return <div>
+    <div className="flex justify-between items-center mb-4 flex-wrap gap-2.5">
+      <div className="flex items-center gap-2">
+        <Btn kind="ghost" size="sm" icon="chevL" onClick={()=>setAnchor(a=>{const d=new Date(a);d.setDate(d.getDate()-7);return d;})}/>
+        <div className="text-sm font-semibold text-text">{from} → {to}</div>
+        <Btn kind="ghost" size="sm" icon="chevR" onClick={()=>setAnchor(a=>{const d=new Date(a);d.setDate(d.getDate()+7);return d;})}/>
+        <Btn kind="ghost" size="xs" onClick={()=>setAnchor(new Date())}>This week</Btn>
+      </div>
+      {isPriv&&<Btn kind="primary" size="sm" icon="plus" onClick={()=>{setNs({employeeId:emp.id,date:from,startTime:"09:00",endTime:"17:00",role:"",site:"",notes:""});setShowAdd(true);}}>Add shift</Btn>}
+    </div>
+    <div className="flex flex-col gap-3">
+      {days.map(d=>{const shifts=byDate(d);
+        return <Card key={d} pad={mob?14:18} style={{borderRadius:14}}>
+          <div className="text-sm font-bold text-text mb-2.5">{new Date(d+"T00:00").toLocaleDateString("en-CA",{weekday:"long",month:"short",day:"numeric"})}</div>
+          {shifts.length===0?<div className="text-xs text-text-3">No shifts scheduled.</div>
+            :<div className="flex flex-col gap-1.5">
+              {shifts.map(s=>{const se=A.hrEmp(s.employee);
+                return <div key={s.id} className="flex justify-between items-center gap-2 py-2 px-3 bg-bg rounded-lg flex-wrap">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <SmartPortrait seed={se?.seed||0} size={26} radius={7}/>
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap">{se?.name||"—"}</div>
+                      <div className="text-xs text-text-3">{s.startTime}–{s.endTime}{s.role?` · ${s.role}`:""}{s.site?` · ${s.site}`:""}</div>
+                    </div>
+                  </div>
+                  {isPriv&&<Btn kind="ghost" size="xs" icon="trash" onClick={()=>A.removeShift(s.id)}/>}
+                </div>;})}
+            </div>}
+        </Card>;})}
+    </div>
+    {showAdd&&<Modal onClose={()=>setShowAdd(false)} title="Add a shift">
+      <div className="flex flex-col gap-3.5">
+        <Field label="Employee" required><Sel value={ns.employeeId} onChange={e=>setNs({...ns,employeeId:e.target.value})}>
+          {A.hrEmpsAtCompany(company.id).filter(e=>e.status==="active").map(e=><option key={e.id} value={e.id}>{e.name}</option>)}</Sel></Field>
+        <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-3"}`}>
+          <Field label="Date" required><Input type="date" value={ns.date} onChange={e=>setNs({...ns,date:e.target.value})}/></Field>
+          <Field label="Start" required><Input type="time" value={ns.startTime} onChange={e=>setNs({...ns,startTime:e.target.value})}/></Field>
+          <Field label="End" required><Input type="time" value={ns.endTime} onChange={e=>setNs({...ns,endTime:e.target.value})}/></Field>
+        </div>
+        <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
+          <Field label="Role/position"><Input value={ns.role} onChange={e=>setNs({...ns,role:e.target.value})} placeholder="e.g. Front desk"/></Field>
+          <Field label="Site/location"><Input value={ns.site} onChange={e=>setNs({...ns,site:e.target.value})} placeholder="e.g. Main office"/></Field>
+        </div>
+        <Field label="Notes"><Area rows={2} value={ns.notes} onChange={e=>setNs({...ns,notes:e.target.value})}/></Field>
+        <div className="flex gap-2.5 justify-end">
+          <Btn kind="ghost" onClick={()=>setShowAdd(false)}>Cancel</Btn>
+          <Btn kind="primary" onClick={submit}>Add shift</Btn>
+        </div>
+      </div>
+    </Modal>}
+  </div>;
+}
+
 export function HrIntegrations(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const company=A.hrCurrentCompany();

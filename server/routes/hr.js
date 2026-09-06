@@ -8,7 +8,7 @@ import { hashPassword, verifyPassword, createSessionCookie, clearSessionCookie, 
 import {
   serializeHrEmployee, serializeHrAttendance, serializeHrLeave, serializeHrTask, serializeHrEvent,
   serializeHrInvoice, serializeHrDepartment, serializeHrExpense, serializeHrPayrun, serializeHrChat, serializeHrChatMessage,
-  serializeHrAuditEntry, serializeHrSignDocument, serializeHrSignature,
+  serializeHrAuditEntry, serializeHrSignDocument, serializeHrSignature, serializeHrShift,
 } from "../serialize.js";
 
 export const hrRouter = Router();
@@ -238,6 +238,48 @@ hrRouter.delete("/documents/:id", requireHrAuth, requireHrPriv, (req, res) => {
 });
 
 /* ─── Attendance ─── */
+/* ─── Shift/roster scheduling - forward-looking, distinct from attendance (after-the-fact
+   clock records against no plan). A manager/HR/admin/owner assigns a shift; every employee sees
+   their own upcoming shifts, privileged roles see the whole company's roster. ─── */
+hrRouter.get("/shifts", requireHrAuth, (req, res) => {
+  const { from, to } = req.query;
+  const clauses = ["company_id = ?"]; const params = [req.hrEmployee.company_id];
+  if (from) { clauses.push("date >= ?"); params.push(from); }
+  if (to) { clauses.push("date <= ?"); params.push(to); }
+  // A plain employee (not manager/HR/admin/owner) only sees their own shifts; privileged roles see
+  // the whole roster, same visibility split used throughout the rest of HR Suite.
+  if (!isPriv(req.hrEmployee)) { clauses.push("employee_id = ?"); params.push(req.hrEmployee.id); }
+  const rows = db.prepare(`SELECT * FROM hr_shifts WHERE ${clauses.join(" AND ")} ORDER BY date ASC, start_time ASC`).all(...params);
+  res.json({ shifts: rows.map(serializeHrShift) });
+});
+hrRouter.post("/shifts", requireHrAuth, requireHrPriv, (req, res) => {
+  const { employeeId, date, startTime, endTime, role, site, notes } = req.body || {};
+  if (!employeeId || !date || !startTime || !endTime) return res.status(400).json({ error: "Employee, date, start and end time are required." });
+  if (endTime <= startTime) return res.status(400).json({ error: "End time must be after start time." });
+  const emp = db.prepare("SELECT * FROM hr_employees WHERE id = ? AND company_id = ?").get(employeeId, req.hrEmployee.company_id);
+  if (!emp) return res.status(404).json({ error: "Employee not found." });
+  const id = nextId("shf", "hr_shifts");
+  db.prepare("INSERT INTO hr_shifts (id, company_id, employee_id, date, start_time, end_time, role, site, notes, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+    .run(id, req.hrEmployee.company_id, employeeId, date, startTime, endTime, role || null, site || null, notes || null, req.hrEmployee.id);
+  res.status(201).json({ shift: serializeHrShift(db.prepare("SELECT * FROM hr_shifts WHERE id = ?").get(id)) });
+});
+hrRouter.patch("/shifts/:id", requireHrAuth, requireHrPriv, (req, res) => {
+  const row = db.prepare("SELECT * FROM hr_shifts WHERE id = ? AND company_id = ?").get(req.params.id, req.hrEmployee.company_id);
+  if (!row) return res.status(404).json({ error: "Shift not found." });
+  const d = req.body || {};
+  const fields = { date: "date", startTime: "start_time", endTime: "end_time", role: "role", site: "site", notes: "notes" };
+  const setCols = []; const params = [];
+  for (const [key, col] of Object.entries(fields)) if (d[key] !== undefined) { setCols.push(`${col} = ?`); params.push(d[key]); }
+  if (setCols.length) db.prepare(`UPDATE hr_shifts SET ${setCols.join(", ")} WHERE id = ?`).run(...params, req.params.id);
+  res.json({ shift: serializeHrShift(db.prepare("SELECT * FROM hr_shifts WHERE id = ?").get(req.params.id)) });
+});
+hrRouter.delete("/shifts/:id", requireHrAuth, requireHrPriv, (req, res) => {
+  const row = db.prepare("SELECT * FROM hr_shifts WHERE id = ? AND company_id = ?").get(req.params.id, req.hrEmployee.company_id);
+  if (!row) return res.status(404).json({ error: "Shift not found." });
+  db.prepare("DELETE FROM hr_shifts WHERE id = ?").run(req.params.id);
+  res.json({ ok: true });
+});
+
 hrRouter.get("/attendance", requireHrAuth, (req, res) => {
   const rows = db.prepare(
     `SELECT hr_attendance.* FROM hr_attendance JOIN hr_employees ON hr_employees.id = hr_attendance.employee_id
