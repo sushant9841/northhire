@@ -243,6 +243,12 @@ staffingRouter.patch("/job-orders/:id", requireAgencyAuth, (req, res) => {
   if (d.overtimeAvailable !== undefined) { setCols.push("overtime_available = ?"); params.push(d.overtimeAvailable ? 1 : 0); }
   if (d.mustHave !== undefined) { setCols.push("must_have_json = ?"); params.push(JSON.stringify(d.mustHave)); }
   if (d.niceToHave !== undefined) { setCols.push("nice_to_have_json = ?"); params.push(JSON.stringify(d.niceToHave)); }
+  // The one action on this route that moves real money math - worth a real audit trail, unlike
+  // every other cosmetic field here (title, location, notes, ...).
+  if ((d.payRate !== undefined && d.payRate !== row.pay_rate) || (d.billRate !== undefined && d.billRate !== row.bill_rate)) {
+    logStaffingAudit(req.agencyStaff.id, "job_order_rate_changed",
+      `${row.title}: pay $${row.pay_rate ?? "—"}→$${d.payRate ?? row.pay_rate}, bill $${row.bill_rate ?? "—"}→$${d.billRate ?? row.bill_rate}`);
+  }
   if (setCols.length) db.prepare(`UPDATE staffing_job_orders SET ${setCols.join(", ")} WHERE id = ?`).run(...params, req.params.id);
   res.json({ jobOrder: serializeJobOrder(db.prepare("SELECT * FROM staffing_job_orders WHERE id = ?").get(req.params.id)) });
 });
@@ -280,6 +286,21 @@ staffingRouter.post("/assignments", requireAgencyAuth, (req, res) => {
   }
   if (d.worker) db.prepare("UPDATE staffing_workers SET availability = 'on-assignment' WHERE id = ?").run(d.worker);
   res.status(201).json({ assignment: serializeAssignment(db.prepare("SELECT * FROM staffing_assignments WHERE id = ?").get(id)) });
+});
+staffingRouter.patch("/assignments/:id", requireAgencyAuth, (req, res) => {
+  const row = db.prepare("SELECT * FROM staffing_assignments WHERE id = ?").get(req.params.id);
+  if (!row) return res.status(404).json({ error: "Assignment not found." });
+  const d = req.body || {};
+  const fields = { payRate: "pay_rate", billRate: "bill_rate", benefitsPerHr: "benefits_per_hr",
+    supervisor: "supervisor", supervisorEmail: "supervisor_email", site: "site", shiftPattern: "shift_pattern", notes: "notes" };
+  const setCols = []; const params = [];
+  for (const [key, col] of Object.entries(fields)) if (d[key] !== undefined) { setCols.push(`${col} = ?`); params.push(d[key]); }
+  if ((d.payRate !== undefined && d.payRate !== row.pay_rate) || (d.billRate !== undefined && d.billRate !== row.bill_rate)) {
+    logStaffingAudit(req.agencyStaff.id, "assignment_rate_changed",
+      `Assignment ${req.params.id}: pay $${row.pay_rate ?? "—"}→$${d.payRate ?? row.pay_rate}, bill $${row.bill_rate ?? "—"}→$${d.billRate ?? row.bill_rate}`);
+  }
+  if (setCols.length) db.prepare(`UPDATE staffing_assignments SET ${setCols.join(", ")} WHERE id = ?`).run(...params, req.params.id);
+  res.json({ assignment: serializeAssignment(db.prepare("SELECT * FROM staffing_assignments WHERE id = ?").get(req.params.id)) });
 });
 staffingRouter.patch("/assignments/:id/end", requireAgencyAuth, (req, res) => {
   const a = db.prepare("SELECT * FROM staffing_assignments WHERE id = ?").get(req.params.id);
@@ -347,6 +368,18 @@ staffingRouter.patch("/timesheets/:id/reject", requireAgencyAuth, (req, res) => 
 staffingRouter.post("/payroll/run", requireAgencyAuth, (req, res) => {
   const { periodStart, periodEnd } = req.body || {};
   const taxConfig = getConfig("payrollTax");
+  // Real CPP/EI annual-maximum enforcement (same as HR payroll) needs each worker's year-to-date
+  // contributions, summed from every already-paid run this calendar year.
+  const payYear = (periodStart || "").slice(0, 4);
+  const paidRunsThisYear = db.prepare("SELECT lines_json FROM staffing_payruns WHERE status = 'paid' AND period_start LIKE ?").all(`${payYear}%`);
+  const ytdByWorker = {};
+  for (const run of paidRunsThisYear) {
+    for (const line of JSON.parse(run.lines_json || "[]")) {
+      if (!ytdByWorker[line.worker]) ytdByWorker[line.worker] = { cpp: 0, ei: 0 };
+      ytdByWorker[line.worker].cpp += line.cpp || 0;
+      ytdByWorker[line.worker].ei += line.ei || 0;
+    }
+  }
   const inPeriod = db.prepare("SELECT * FROM staffing_timesheets WHERE status = 'approved' AND week_start >= ? AND week_start < ?").all(periodStart, periodEnd);
   const byWorker = {};
   for (const t of inPeriod) {
@@ -358,8 +391,9 @@ staffingRouter.post("/payroll/run", requireAgencyAuth, (req, res) => {
   const lines = Object.entries(byWorker).map(([wid, d]) => {
     const gross = round2(d.gross);
     const w = db.prepare("SELECT province, td_on_file FROM staffing_workers WHERE id = ?").get(wid);
-    const net = calcNetPay(gross, { province: w?.province, payPeriodsPerYear: 26, td1OnFile: !!w?.td_on_file }, taxConfig).net;
-    return { worker: wid, hours: d.hours, gross, net: round2(net), otHrs: d.otHrs };
+    const ytd = ytdByWorker[wid] || { cpp: 0, ei: 0 };
+    const calc = calcNetPay(gross, { province: w?.province, payPeriodsPerYear: 26, td1OnFile: !!w?.td_on_file, ytdCpp: ytd.cpp, ytdEi: ytd.ei }, taxConfig);
+    return { worker: wid, hours: d.hours, gross, net: round2(calc.net), otHrs: d.otHrs, cpp: calc.cpp, ei: calc.ei, fedTax: calc.fedTax, provTax: calc.provTax };
   });
   const totalHours = lines.reduce((s, l) => s + l.hours, 0);
   const totalGross = round2(lines.reduce((s, l) => s + l.gross, 0));

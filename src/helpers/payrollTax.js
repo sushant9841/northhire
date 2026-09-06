@@ -44,15 +44,30 @@ function progressiveTax(annualIncome, brackets) {
   return tax;
 }
 
-export function calcNetPay(gross, { province = "ON", payPeriodsPerYear = 26, td1OnFile = true } = {}, config = DEFAULT_PAYROLL_TAX_CONFIG) {
+// The real annual maximum any employee ever pays into CPP/EI - once year-to-date contributions
+// hit this, withholding for the rest of the calendar year is $0. Derived from the same config
+// (not a separate hardcoded number) so a finance-scope admin's YMPE/rate edit stays consistent.
+export function annualMaxCpp(config = DEFAULT_PAYROLL_TAX_CONFIG) {
+  return (config.cppYmpe - config.cppBasicExemption) * config.cppRate;
+}
+export function annualMaxEi(config = DEFAULT_PAYROLL_TAX_CONFIG) {
+  return config.eiMaxInsurable * config.eiRate;
+}
+
+export function calcNetPay(gross, { province = "ON", payPeriodsPerYear = 26, td1OnFile = true, ytdCpp = 0, ytdEi = 0 } = {}, config = DEFAULT_PAYROLL_TAX_CONFIG) {
   const cfg = config || DEFAULT_PAYROLL_TAX_CONFIG;
   const prov = cfg.provincial[province] || cfg.provincial.ON;
   const annualGross = gross * payPeriodsPerYear;
 
   const cppPensionable = Math.max(0, Math.min(annualGross, cfg.cppYmpe) - cfg.cppBasicExemption);
-  const cpp = Math.round((cppPensionable * cfg.cppRate) / payPeriodsPerYear);
+  const cppUncapped = Math.round((cppPensionable * cfg.cppRate) / payPeriodsPerYear);
+  // Real CPP/EI annual-maximum enforcement: once this employee's year-to-date contribution
+  // reaches the real annual cap, this period's withholding is clamped to whatever's left (often
+  // $0 for a high earner late in the year) rather than continuing to overwithhold past the max.
+  const cpp = Math.max(0, Math.min(cppUncapped, annualMaxCpp(cfg) - ytdCpp));
 
-  const ei = Math.round((Math.min(annualGross, cfg.eiMaxInsurable) * cfg.eiRate) / payPeriodsPerYear);
+  const eiUncapped = Math.round((Math.min(annualGross, cfg.eiMaxInsurable) * cfg.eiRate) / payPeriodsPerYear);
+  const ei = Math.max(0, Math.min(eiUncapped, annualMaxEi(cfg) - ytdEi));
 
   const fedCredit = td1OnFile ? cfg.federalBpa * cfg.federalBrackets[0][1] : 0;
   const fedTax = Math.round(Math.max(0, progressiveTax(annualGross, cfg.federalBrackets) - fedCredit) / payPeriodsPerYear);

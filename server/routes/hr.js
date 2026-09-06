@@ -504,6 +504,21 @@ hrRouter.post("/payruns", requireHrAuth, requireHrPriv, (req, res) => {
   const { periodStart, periodEnd } = req.body || {};
   const taxConfig = getConfig("payrollTax");
   const emps = db.prepare("SELECT * FROM hr_employees WHERE company_id = ? AND status = 'active'").all(req.hrEmployee.company_id);
+  // Real CPP/EI annual-maximum enforcement needs year-to-date contributions per employee - summed
+  // from every already-paid run this calendar year (draft/approved runs haven't actually withheld
+  // anything yet, so they don't count toward YTD).
+  const payYear = (periodStart || "").slice(0, 4);
+  const paidRunsThisYear = db.prepare(
+    "SELECT lines_json FROM hr_payruns WHERE company_id = ? AND status = 'paid' AND period_start LIKE ?"
+  ).all(req.hrEmployee.company_id, `${payYear}%`);
+  const ytdByEmp = {};
+  for (const run of paidRunsThisYear) {
+    for (const line of JSON.parse(run.lines_json || "[]")) {
+      if (!ytdByEmp[line.employee]) ytdByEmp[line.employee] = { cpp: 0, ei: 0 };
+      ytdByEmp[line.employee].cpp += line.cpp || 0;
+      ytdByEmp[line.employee].ei += line.ei || 0;
+    }
+  }
   const dueExpenses = db.prepare(
     `SELECT * FROM hr_expenses WHERE status = 'approved' AND reimburse_via = 'next-payroll'
      AND employee_id IN (${emps.map(() => "?").join(",") || "''"})`
@@ -529,7 +544,9 @@ hrRouter.post("/payruns", requireHrAuth, requireHrPriv, (req, res) => {
     const unpaidDeduction = Math.round((unpaidDaysByEmp[e.id] || 0) * ((e.salary || 0) / 260));
     const grossPeriod = Math.max(0, Math.round((e.salary || 0) / 26) - unpaidDeduction);
     const reimb = expByEmp[e.id] || 0;
-    const { cpp, ei, fedTax, provTax, net: netBeforeReimb } = calcNetPay(grossPeriod, { province: e.prov, payPeriodsPerYear: 26, td1OnFile: !!e.td1_on_file }, taxConfig);
+    const ytd = ytdByEmp[e.id] || { cpp: 0, ei: 0 };
+    const { cpp, ei, fedTax, provTax, net: netBeforeReimb } = calcNetPay(grossPeriod,
+      { province: e.prov, payPeriodsPerYear: 26, td1OnFile: !!e.td1_on_file, ytdCpp: ytd.cpp, ytdEi: ytd.ei }, taxConfig);
     const benefits = e.benefits_per_pay || 0;
     const net = netBeforeReimb + reimb - benefits;
     return { employee: e.id, name: e.name, gross: grossPeriod, unpaidDeduction, cpp, ei, fedTax, provTax, benefits, reimb, net };
@@ -556,7 +573,7 @@ hrRouter.patch("/payruns/:id/approve", requireHrAuth, requireHrPriv, (req, res) 
 });
 // Must come from 'approved' specifically - without this, calling execute twice (a double-click,
 // or a replayed request) would re-run the expense-reimbursement side effect below a second time.
-hrRouter.patch("/payruns/:id/execute", requireHrAuth, requireHrPriv, async (req, res) => {
+hrRouter.patch("/payruns/:id/execute", requireHrAuth, requireHrPriv, (req, res) => {
   const run = resolveOwnHrPayrun(req, res); if (!run) return;
   if (run.status !== "approved") return res.status(400).json({ error: "Only an approved run can be executed." });
   db.prepare("UPDATE hr_payruns SET status = 'paid', paid_at = datetime('now') WHERE id = ?").run(req.params.id);
@@ -568,13 +585,20 @@ hrRouter.patch("/payruns/:id/execute", requireHrAuth, requireHrPriv, async (req,
          WHERE employee_id = ? AND status = 'approved' AND reimburse_via = 'next-payroll'`
       ).run(line.employee);
     }
-    const emp = db.prepare("SELECT email, erased FROM hr_employees WHERE id = ?").get(line.employee);
-    if (emp && !emp.erased) {
-      await sendAndLogMail(emp.email, "Your pay has been deposited", `Your pay for ${run.period_start} to ${run.period_end} ($${line.net.toFixed(2)} net) has been deposited. View your full pay stub in HR Suite.`);
-    }
   }
   logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "payroll_executed", `Executed payroll for ${run.period_start} → ${run.period_end} (${lines.length} employees, $${run.total_net?.toLocaleString()} net)`);
   res.json({ ok: true });
+  // Notification emails happen after responding, not awaited in the request path - a payroll run
+  // for a real-sized company (dozens to hundreds of employees) sending each email sequentially
+  // before responding would make this endpoint hang for a long time for no reason the caller needs
+  // to wait on; each send is still logged to the outbox exactly the same, just not on the critical path.
+  for (const line of lines) {
+    const emp = db.prepare("SELECT email, erased FROM hr_employees WHERE id = ?").get(line.employee);
+    if (emp && !emp.erased) {
+      sendAndLogMail(emp.email, "Your pay has been deposited", `Your pay for ${run.period_start} to ${run.period_end} ($${line.net.toFixed(2)} net) has been deposited. View your full pay stub in HR Suite.`)
+        .catch(() => {});
+    }
+  }
 });
 // Same reversal pattern as invoices above - flip status + a logged, required reason. Also undoes
 // the expense side-effect execute() applied, so a reversed run doesn't leave those claims stuck

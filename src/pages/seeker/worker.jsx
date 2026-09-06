@@ -5,7 +5,6 @@ import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
 import { Btn, Card, Tag, Field, Input, Sel, Banner, Empty, H1, Lbl, Stat, SmartLogo, Page, HERO_QUIET } from "../../design/primitives.jsx";
 import { _weekStart } from "../../helpers/utils.js";
-import { calcNetPay } from "../../helpers/payrollTax.js";
 
 /* ─── Worker dashboard ─── */
 export function WorkerDashboard(){
@@ -228,11 +227,14 @@ export function WorkerPayStubs(){
             <Tag tone={run.status==="paid"?"ok":"warn"} sm>{run.status}</Tag>
           </div>
         </div>
-        {(()=>{const d=calcNetPay(line.gross, {province:worker.province, payPeriodsPerYear:26, td1OnFile:worker.tdOnFile}, A.payrollTaxConfig);
-        return <div className={`mt-3 pt-3 border-t border-line-soft grid gap-2.5 text-xs ${mob?"grid-cols-2":"grid-cols-4"}`}>
-          {[["Gross",`$${line.gross.toFixed(2)}`],["CPP",`-$${d.cpp.toFixed(2)}`],["EI",`-$${d.ei.toFixed(2)}`],["Fed+Prov tax",`-$${(d.fedTax+d.provTax).toFixed(2)}`]].map(([l,v])=>
+        {/* Read the real withheld amounts straight off the line (as-actually-calculated at
+            payroll-run time, including annual-max capping) rather than recomputing them fresh -
+            a fresh recompute can't know this worker's year-to-date CPP/EI and would silently
+            disagree with what was really withheld once the annual max kicks in. */}
+        <div className={`mt-3 pt-3 border-t border-line-soft grid gap-2.5 text-xs ${mob?"grid-cols-2":"grid-cols-4"}`}>
+          {[["Gross",`$${line.gross.toFixed(2)}`],["CPP",`-$${(line.cpp||0).toFixed(2)}`],["EI",`-$${(line.ei||0).toFixed(2)}`],["Fed+Prov tax",`-$${((line.fedTax||0)+(line.provTax||0)).toFixed(2)}`]].map(([l,v])=>
             <div key={l}><div className="text-text-3">{l}</div><div className="text-text font-semibold mt-0.5">{v}</div></div>)}
-        </div>;})()}
+        </div>
       </Card>)}
     </div>}
   </Page>;

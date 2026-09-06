@@ -736,6 +736,12 @@ export function AgencyAssignments(){
   const list=A.assignments.filter(a=>tab==="all"?true:a.status===tab).sort((a,b)=>b.startDate.localeCompare(a.startDate));
   const pg=usePagination(list,20);
   useEffect(()=>{pg.setPage(1);},[tab]);
+  const [editingRate,setEditingRate]=useState(null); const [rateDraft,setRateDraft]=useState({payRate:0,billRate:0});
+  const startEditRate=a=>{setEditingRate(a);setRateDraft({payRate:a.payRate,billRate:a.billRate});};
+  const saveRate=async()=>{
+    await A.updateAssignment(editingRate.id,{payRate:Number(rateDraft.payRate),billRate:Number(rateDraft.billRate)});
+    A.toast("Rate updated — logged to the audit trail","ok"); setEditingRate(null);
+  };
   return <div>
     <div className="mb-3.5">
       <div className="text-lg font-bold text-text">{list.length} assignments</div>
@@ -769,12 +775,27 @@ export function AgencyAssignments(){
               {econ?<>${econ.margin}/hr <span className="text-text-3 font-medium">({econ.markupPct}%)</span></>:"—"}
             </td>
             <td className={TD_CLS}><Tag tone={a.status==="active"?"ok":"neutral"} sm>{a.status}</Tag></td>
-            <td className={TD_CLS}>{a.status==="active"&&<Btn kind="ghost" size="xs" onClick={()=>A.endAssignment(a.id)}>Complete</Btn>}</td>
+            <td className={TD_CLS}><div className="flex gap-1">
+              {a.status==="active"&&<Btn kind="ghost" size="xs" onClick={()=>startEditRate(a)}>Edit rate</Btn>}
+              {a.status==="active"&&<Btn kind="ghost" size="xs" onClick={()=>A.endAssignment(a.id)}>Complete</Btn>}</div></td>
           </tr>;})}
         </tbody>
       </table></div>
     </Card>
     <Pagination {...pg}/>
+    {editingRate&&<Modal onClose={()=>setEditingRate(null)} title="Edit assignment rate">
+      <div className="flex flex-col gap-3.5">
+        <Banner tone="neutral" icon="file">Rate changes on active assignments are recorded to the staffing audit log (visible on the Compliance page).</Banner>
+        <div className="grid grid-cols-2 gap-2.5">
+          <Field label="Pay rate ($/hr)"><Input type="number" min="0" step="0.5" value={rateDraft.payRate} onChange={e=>setRateDraft({...rateDraft,payRate:e.target.value})}/></Field>
+          <Field label="Bill rate ($/hr)"><Input type="number" min="0" step="0.5" value={rateDraft.billRate} onChange={e=>setRateDraft({...rateDraft,billRate:e.target.value})}/></Field>
+        </div>
+        <div className="flex gap-2.5 justify-end">
+          <Btn kind="ghost" onClick={()=>setEditingRate(null)}>Cancel</Btn>
+          <Btn kind="primary" onClick={saveRate}>Save</Btn>
+        </div>
+      </div>
+    </Modal>}
   </div>;
 }
 

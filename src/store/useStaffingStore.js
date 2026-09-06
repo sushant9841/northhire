@@ -185,6 +185,11 @@ export function useStaffingStore(user,platformConfig){
     if(data.worker)setWorkers(l=>l.map(w=>w.id===data.worker?{...w,availability:"on-assignment"}:w));
     return a;
   };
+  const updateAssignment=async(id,patch)=>{
+    const {assignment:a}=await api.patch(`/staffing/assignments/${id}`,patch);
+    setAssignments(l=>l.map(x=>x.id===id?a:x));
+    return a;
+  };
   const endAssignment=async(id,endDate)=>{
     const a=assignment(id); if(!a)return;
     await api.patch(`/staffing/assignments/${id}/end`,{endDate});
@@ -351,7 +356,7 @@ export function useStaffingStore(user,platformConfig){
     agencyLogin,agencyLogout,agencyCurrentStaff,agencyAuthChecked,agencyResetRequest,agencyResetConfirm,STAFFING_AGENCY,STAFFING_RATES,
     optInAsWorker,updateWorker,setWorkerAvailability,payoutVacation,
     createJobOrder,updateJobOrder,closeJobOrder,
-    createAssignment,endAssignment,
+    createAssignment,updateAssignment,endAssignment,
     upsertTimesheetDraft,submitTimesheet,approveTimesheet,rejectTimesheet,
     timesheetTotal,timesheetGross,timesheetBill,
     runStaffingPayroll,finalizeStaffingPayrun,reverseStaffingPayrun,
