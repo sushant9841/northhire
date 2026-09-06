@@ -46,7 +46,7 @@ import {
 import { AdmHome, AdmUsers, AdmEmployers, AdmJobs, AdmSettings, AdmLog, AdmStats, AdmConfig, AdmAdmins } from "./pages/admin/suite.jsx";
 import {
   HomePage, BlogsPage, BlogPage, TrainingsPage, TrainingPage, AboutPage, ContactPage, LegalPage,
-  PricingPage, AccessibilityPage, PipedaPage,
+  PricingPage, AccessibilityPage, PipedaPage, CreditsPage,
 } from "./pages/marketing/pages.jsx";
 import { ForEmployersPage, HowItWorksPage } from "./pages/marketing/forEmployers.jsx";
 import { SignupPage, LoginPage, ForgotPasswordPage, WelcomeTourPage, InviteAcceptPage } from "./pages/auth/pages.jsx";
@@ -86,7 +86,7 @@ export default function NorthHire(){
     empCompany:<EmpShell><EmpCompany/></EmpShell>,empTeam:<EmpShell><EmpTeam/></EmpShell>,empBilling:<EmpShell><EmpBilling/></EmpShell>,empAnalytics:<EmpShell><EmpAnalyticsPage/></EmpShell>,
     admHome:<AdmShell><AdmHome/></AdmShell>,admUsers:<AdmShell><AdmUsers/></AdmShell>,admEmployers:<AdmShell><AdmEmployers/></AdmShell>,admJobs:<AdmShell><AdmJobs/></AdmShell>,
     account:<AccountMenuPage/>,
-    accessibility:<AccessibilityPage/>,pipeda:<PipedaPage/>,
+    accessibility:<AccessibilityPage/>,pipeda:<PipedaPage/>,credits:<CreditsPage/>,
     admBlogs:<AdmShell><ContentManager scope="admin"/></AdmShell>,admTrainings:<AdmShell><ContentManager scope="admin"/></AdmShell>,
     admSettings:<AdmShell><AdmSettings/></AdmShell>,admLog:<AdmShell><AdmLog/></AdmShell>,admStats:<AdmShell><AdmStats/></AdmShell>,
     admConfig:<AdmShell><AdmConfig/></AdmShell>,admAdmins:<AdmShell><AdmAdmins/></AdmShell>,

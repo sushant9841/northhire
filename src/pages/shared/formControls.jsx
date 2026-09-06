@@ -169,13 +169,62 @@ const _AI_JD_TEMPLATES={
   transport:{desc:"We're seeking a professional driver to join our fleet operations team. You'll be responsible for the safe, timely delivery of freight across regional and long-haul routes. We invest in modern equipment, competitive pay and driver-first scheduling.",
     duties:["Operate assigned commercial vehicle safely and in compliance with hours-of-service regulations","Complete pre-trip and post-trip inspections","Load and secure freight following DOT and company procedures","Maintain accurate logs, delivery paperwork and expense reports","Communicate proactively with dispatch about delays or issues","Represent the company professionally with customers"],
     reqs:["Valid Class 1 (AZ) commercial licence in good standing","Clean 5-year driver's abstract and CVOR","Minimum 2 years verifiable OTR experience","Ability to cross the Canada-US border","Fluent English and clean criminal record check","Physical ability to load, unload and secure freight"]},
+  retail:{desc:"We're hiring a customer-focused retail team member to join our store. You'll be the face of our brand for every customer who walks through the door, helping them find what they need and keeping the sales floor running smoothly.",
+    duties:["Greet and assist customers on the sales floor and at checkout","Process transactions accurately using the POS system","Restock shelves and maintain visual merchandising standards","Handle returns, exchanges and customer questions professionally","Meet individual and team sales targets","Keep the store clean, organized and safe"],
+    reqs:["Previous retail or customer service experience an asset","Comfortable standing for extended periods and lifting up to 25 lbs","Flexible availability including evenings and weekends","Strong communication and problem-solving skills","Basic math and cash-handling accuracy","Ability to work as part of a team in a fast-paced environment"]},
+  hosp:{desc:"We're hiring for our hospitality team to help deliver a great guest experience from open to close. Whether it's the kitchen, front of house or guest services, you'll be part of a team that takes pride in service.",
+    duties:["Prepare, plate or serve food and beverages to company standards","Maintain cleanliness and sanitation of work areas per food-safety regulations","Greet guests and respond to requests promptly and courteously","Restock and manage inventory of supplies during a shift","Follow all health, safety and allergen-handling procedures","Support the team during peak periods and special events"],
+    reqs:["Food Handler certification (or willingness to obtain)","Previous experience in hospitality, food service or a related role an asset","Ability to stand, walk and lift up to 30 lbs for a full shift","Comfortable working evenings, weekends and holidays","Strong attention to cleanliness and detail","Positive, guest-first attitude"]},
+  factory:{desc:"We're hiring for our production/warehouse team to help keep orders moving accurately and on schedule. You'll work as part of a shift crew in a fast-paced, safety-first facility.",
+    duties:["Operate assigned equipment or workstation per standard operating procedures","Meet production/pick-pack accuracy and throughput targets","Perform quality checks and report defects or issues","Follow all lockout/tagout and facility safety procedures","Keep your work area clean and organized (5S)","Participate in shift handover and daily huddles"],
+    reqs:["Previous warehouse, manufacturing or production experience an asset","Forklift/order-picker certification a plus (or willingness to train)","Ability to lift up to 50 lbs repetitively and stand for a full shift","Comfortable working rotating or fixed shifts including weekends","Basic math and attention to detail","Steel-toe boots and PPE compliance"]},
+  admin:{desc:"We're hiring an organized administrative professional to keep our office running smoothly. You'll be a key point of contact for staff, clients and visitors, and the person others rely on to keep things on track.",
+    duties:["Manage calendars, correspondence and incoming inquiries","Prepare, format and proofread documents, reports and presentations","Coordinate meetings, travel arrangements and office supplies","Maintain accurate records and filing systems, digital and physical","Support other departments with administrative tasks as needed","Greet visitors and manage front-desk duties"],
+    reqs:["1-2 years of administrative or office-support experience","Proficiency with Microsoft Office / Google Workspace","Excellent written and verbal communication skills","Strong organizational skills and attention to detail","Ability to handle confidential information professionally","Comfortable multitasking in a busy office environment"]},
+  edu:{desc:"We're hiring an educator/childcare professional to support learning and development in a safe, engaging environment. You'll work closely with children or students and their families to help them grow and succeed.",
+    duties:["Plan and deliver age-appropriate lessons or activities","Supervise and ensure the safety and wellbeing of children/students at all times","Track and document progress, milestones or learning outcomes","Communicate regularly with parents or guardians","Maintain a clean, organized and stimulating environment","Collaborate with other staff and follow licensing/curriculum standards"],
+    reqs:["Early Childhood Education diploma or teaching certification as applicable","Current First Aid/CPR certification","Vulnerable Sector Check on file","Patience, creativity and strong communication skills","Previous experience working with children or students an asset","Ability to work full days on your feet and lead group activities"]},
+  finance:{desc:"We're hiring a detail-oriented finance professional to support accurate, timely financial operations for our organization. You'll work closely with the finance team to keep the books clean and the numbers right.",
+    duties:["Process accounts payable/receivable, reconciliations and journal entries","Prepare financial reports, statements and month-end close support","Ensure compliance with accounting standards and internal controls","Assist with budgeting, forecasting and audit preparation","Respond to internal and external finance inquiries","Maintain accurate, well-organized financial records"],
+    reqs:["Diploma or degree in accounting, finance or a related field","1-3 years of relevant bookkeeping/accounting experience","Proficiency with accounting software (QuickBooks, Sage, or similar) and Excel","High attention to detail and accuracy under deadlines","Strong understanding of basic accounting principles","Discretion handling confidential financial information"]},
+  tech:{desc:"We're hiring a technically skilled team member to help design, build and support our software and systems. You'll work with a collaborative team shipping real features and solving real problems.",
+    duties:["Design, develop, test and maintain software/systems per requirements","Collaborate with cross-functional teams on technical solutions","Troubleshoot and resolve technical issues in a timely manner","Write clear documentation and participate in code/design reviews","Stay current with relevant tools, languages and best practices","Support production systems and respond to incidents as needed"],
+    reqs:["Degree/diploma in computer science or equivalent practical experience","Proficiency in relevant languages/tools for the role","Strong problem-solving and debugging skills","Experience with version control (Git) and collaborative workflows","Clear written and verbal communication skills","Ability to work independently and manage competing priorities"]},
+  agri:{desc:"We're hiring for our agriculture/fishing operation to support seasonal or year-round production. You'll work outdoors as part of a hands-on team that keeps the operation running.",
+    duties:["Perform planting, harvesting, processing or maintenance tasks as assigned","Operate or assist with farm/fishing equipment and machinery safely","Monitor crop, livestock or catch conditions and report issues","Follow food-safety, biosecurity and environmental regulations","Maintain equipment, buildings and grounds","Work efficiently as part of a seasonal or year-round crew"],
+    reqs:["Previous agriculture, fishing or outdoor labour experience an asset","Comfortable working outdoors in all weather conditions","Ability to lift up to 50 lbs and perform physical, repetitive tasks","Valid driver's licence an asset for equipment operation","Reliable, punctual and able to work early or long hours seasonally","Ability to work well as part of a team"]},
+  security:{desc:"We're hiring for our security/cleaning team to help keep our site safe, secure and presentable. You'll play a visible, trusted role protecting people and property or maintaining a clean, professional environment.",
+    duties:["Patrol and monitor assigned premises, staff and visitors","Respond to incidents, alarms and access-control issues per protocol","Complete accurate incident reports and shift logs","Perform cleaning, sanitizing and maintenance tasks per checklist","Follow all health, safety and site-specific procedures","Report hazards, damage or maintenance needs promptly"],
+    reqs:["Valid provincial security licence if applicable, or willingness to obtain","Previous security, janitorial or cleaning experience an asset","Clean criminal record check","Reliable, observant and able to work independently","Comfortable standing or walking for extended periods, various shifts","Strong communication and report-writing skills"]},
   default:{desc:"We're looking for a motivated professional to join our growing team. In this role you'll contribute directly to team goals while developing your skills in a supportive, learning-focused environment.",
     duties:["Deliver on assigned responsibilities to a high standard","Collaborate with team members across functions","Communicate progress and blockers proactively","Contribute ideas for process improvements","Participate in team meetings and planning sessions","Maintain accurate records and documentation"],
     reqs:["Relevant post-secondary education or equivalent experience","Strong written and verbal communication skills","Ability to work independently and as part of a team","Detail-oriented with strong organizational skills","Proficient with common workplace software","Ability to legally work in Canada"]},
 };
+// Title keywords, one list per category matching CATS' ids exactly (constants.js). Checked BEFORE
+// the category dropdown, which defaults to "Skilled Trades" and is easy to leave untouched when
+// posting - previously that meant ANY title with no trades/health/transport keyword silently got
+// trades boilerplate just because the dropdown still said Trades (e.g. "Sauna Cleaner" got Red
+// Seal journeyperson copy). The title is what the employer actually typed, a far stronger signal
+// of real intent than a form field they may never have touched.
+const _AI_JD_KEYWORDS={
+  trades:["trade","electrician","electrical","plumb","carpenter","welder","hvac","construction","millwright","pipefit","hoist"],
+  health:["health","nurse","psw","care aide","personal support","medical","clinical","therapist","dental","pharmacy","paramedic"],
+  transport:["driver","truck","transport","logistics","courier","delivery","dispatch"],
+  retail:["retail","cashier","sales associate","store clerk","merchandis"],
+  hosp:["cook","chef","kitchen","server","waiter","waitress","barista","hotel","restaurant","hospitality","housekeep","dishwasher","bartender"],
+  factory:["warehouse","factory","manufactur","assembly","production line","picker","packer","machine operator","forklift"],
+  admin:["admin","receptionist","office clerk","coordinator","assistant","data entry"],
+  edu:["teacher","instructor","tutor","daycare","childcare","educator","early childhood"],
+  finance:["accountant","bookkeep","payroll clerk","auditor","tax preparer"],
+  tech:["developer","software","programmer","it support","data analyst","devops","qa engineer","full stack","frontend","backend"],
+  agri:["farm","agricultur","fishing","harvest","greenhouse"],
+  security:["security guard","security officer","guard","janitor","custodian","clean"],
+};
 export function aiSuggestJD(title,cat){
-  const key=["trades","construction","electrical","plumbing"].some(k=>cat?.includes(k)||title?.toLowerCase().includes(k))?"trades":
-    ["health","care","nurse","psw"].some(k=>cat?.includes(k)||title?.toLowerCase().includes(k))?"healthcare":
-    ["transport","driver","truck","logistics"].some(k=>cat?.includes(k)||title?.toLowerCase().includes(k))?"transport":"default";
-  return _AI_JD_TEMPLATES[key];
+  const t=(title||"").toLowerCase();
+  for(const [key,words] of Object.entries(_AI_JD_KEYWORDS)){
+    if(words.some(w=>t.includes(w)))return _AI_JD_TEMPLATES[key];
+  }
+  if(cat&&_AI_JD_TEMPLATES[cat])return _AI_JD_TEMPLATES[cat];
+  return _AI_JD_TEMPLATES.default;
 }

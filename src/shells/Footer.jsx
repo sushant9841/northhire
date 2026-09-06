@@ -46,6 +46,7 @@ export function Footer(){
         <div className="flex gap-5 flex-wrap">
           <button onClick={()=>A.go("accessibility")} className="bg-transparent border-0 p-0 cursor-pointer text-sm text-white/40 transition-colors duration-150 hover:text-white">Accessibility (AODA)</button>
           <button onClick={()=>A.go("pipeda")} className="bg-transparent border-0 p-0 cursor-pointer text-sm text-white/40 transition-colors duration-150 hover:text-white">PIPEDA compliant</button>
+          <button onClick={()=>A.go("credits")} className="bg-transparent border-0 p-0 cursor-pointer text-sm text-white/40 transition-colors duration-150 hover:text-white">Open-source credits</button>
           <span className="text-sm text-white/40">English (CA)</span></div></div>
     </div></footer>;
 }

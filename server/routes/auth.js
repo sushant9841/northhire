@@ -119,8 +119,9 @@ authRouter.post("/login", async (req, res) => {
       .run(user.email, code);
     await sendAndLogMail(user.email, "Your NorthHire sign-in code", `Your sign-in code is ${code}. It expires in 15 minutes.`);
     // Returning the code in the response defeats 2FA entirely for anyone who already has the
-    // password (the whole point of a second factor) - only ever expose it outside production,
-    // where there's no real SMS/email delivery to demo the flow with otherwise.
+    // password (the whole point of a second factor) - only ever expose it outside production. The
+    // email above is now genuinely sent (via Ethereal), but its preview link takes an extra click
+    // to reach outside the outbox UI, so this stays as a dev-only convenience.
     return res.json({ mfaRequired: true, email: user.email, code: process.env.NODE_ENV === "production" ? undefined : code });
   }
   createSessionCookie(res, "session", "main", user.id);

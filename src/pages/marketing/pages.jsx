@@ -1132,3 +1132,48 @@ export function PipedaPage(){
     </div>
   </Page>;
 }
+
+const OSS_CREDITS=[
+  {name:"OpenStreetMap",role:"Map data & tiles",url:"openstreetmap.org",
+   note:"Powers job-search radius search and the map view. Free and open, no account or key required. The standard tile server has a fair-use policy for light traffic like this — a high-traffic production deployment should switch to a dedicated tile provider or self-host, not because of any cost, but as good etiquette to a free public service.",
+   unlimited:false},
+  {name:"Nominatim",role:"Geocoding (place name → coordinates)",url:"nominatim.org",
+   note:"Turns \"Toronto, ON\" into real coordinates for both new job listings and radius search. Free, no key. Its usage policy caps requests at roughly one per second — NorthHire's server enforces that limit itself and caches every result, so it's never actually hit in normal use.",
+   unlimited:false},
+  {name:"Leaflet",role:"Interactive map rendering",url:"leafletjs.com",
+   note:"The map-view library itself — MIT licensed, runs entirely in the browser, no service calls, no limits of any kind.",
+   unlimited:true},
+  {name:"Nodemailer + Ethereal Email",role:"Email delivery",url:"nodemailer.com / ethereal.email",
+   note:"Sends every real email this app sends (password resets, sign-in codes, invites, HR/staffing notifications) to a free sandboxed test inbox — genuinely transmitted over SMTP, never to a real recipient, which is also the responsible choice for a demo with no verified sending domain. Free and unlimited by design.",
+   unlimited:true},
+  {name:"@dnd-kit",role:"Drag-and-drop (kanban boards)",url:"dndkit.com",
+   note:"Powers the draggable hiring-pipeline and task boards. MIT licensed, runs entirely in the browser, no limits.",
+   unlimited:true},
+  {name:"pdf-parse & mammoth",role:"Resume text extraction",url:"npm",
+   note:"Read the text out of an uploaded PDF or Word résumé for the CV builder's import feature. Open-source libraries, run entirely on our own server, no external service call and no limits.",
+   unlimited:true},
+];
+export function CreditsPage(){
+  const mob=useMedia("(max-width: 900px)");
+  return <Page>
+    <div className="max-w-narrow mx-auto">
+      <Tag tone="brand" icon="heart">Open source</Tag>
+      <h1 className={`${HERO_QUIET} mt-5 mb-3 ${mob?"text-3xl":"text-4xl"}`}>Built with open source</h1>
+      <p className="text-base text-text-2 leading-loose mb-9">NorthHire runs on a foundation of free, open-source software. In the spirit of the licences and services below, here's what we use and how — including where a service's fair-use policy shapes how we call it, not just whether it's free.</p>
+      <div className="flex flex-col gap-4">
+        {OSS_CREDITS.map(c=><div key={c.name} className="border border-line rounded-xl p-5">
+          <div className="flex justify-between items-start gap-3 flex-wrap mb-1.5">
+            <div className="text-base font-bold text-text">{c.name}</div>
+            <Tag tone={c.unlimited?"ok":"warn"} sm>{c.unlimited?"No usage limits":"Free, fair-use policy"}</Tag>
+          </div>
+          <div className="text-sm text-text-3 mb-2">{c.role} · {c.url}</div>
+          <p className="text-sm text-text-2 leading-relaxed m-0">{c.note}</p>
+        </div>)}
+      </div>
+      <div className="bg-bg border border-line rounded-xl p-5 mt-8">
+        <div className="text-sm font-bold text-text mb-1.5">Map data attribution</div>
+        <p className="text-sm text-text-2 leading-snug m-0">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" className="text-brand font-semibold">OpenStreetMap</a> contributors, available under the Open Database Licence.</p>
+      </div>
+    </div>
+  </Page>;
+}

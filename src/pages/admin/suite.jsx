@@ -553,13 +553,115 @@ export function AdmAdmins(){
   </Page>;
 }
 
-/* Business config that used to be hardcoded JS constants (plan limits, payroll tax brackets,
-   staffing burden rates/agency policy) - now lives in the backend and is editable here as raw
-   JSON per section, gated to the finance scope server-side. A JSON textarea per key is a
-   deliberately blunt editor (these are nested rate tables, not a handful of flat fields) but it's
-   real: validated before submit, diffed against the live value, and every save is audit-logged. */
-function ConfigSection({title,desc,configKey,value,onSave}){
+/* Business config used to be hardcoded JS constants (plan limits, payroll tax brackets, staffing
+   burden rates/agency policy); now it lives in the backend, editable here, gated to the finance
+   scope server-side. Two editing shapes, picked per section by how the data is shaped: PLANS and
+   STAFFING AGENCY are a handful of flat named fields, so they get a real labeled form (a Switch
+   for booleans, a number input with an "Unlimited" checkbox for anything that supports Infinity).
+   PAYROLL TAX and STAFFING RATES are inherently tabular/nested (a bracket table per province) - a
+   bespoke form for those would be its own large build, so they get a read-only, colour-highlighted,
+   properly indented JSON view by default (genuinely readable, not a flat grey blob) with an
+   explicit "Edit as JSON" escape hatch for the rare case someone needs to change bracket structure
+   itself rather than just a rate. */
+const UNLIMITED_SENTINEL = Infinity;
+function jsonHighlight(text){
+  // Small regex-based colourizer, not a full tokenizer - good enough for config JSON's shape
+  // (no strings containing the characters that would confuse these patterns in this dataset).
+  const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  return esc(text)
+    .replace(/"([^"]+)":/g,'<span style="color:#8250df;font-weight:600">"$1"</span>:')
+    .replace(/: "([^"]*)"/g,': <span style="color:#0a7a3d">"$1"</span>')
+    .replace(/: (-?\d+\.?\d*)/g,': <span style="color:#c2410c">$1</span>')
+    .replace(/: (true|false|null)/g,': <span style="color:#1d4ed8">$1</span>');
+}
+function ReadOnlyJson({value}){
+  return <pre style={{fontFamily:"monospace",fontSize:12.5,lineHeight:1.6,background:C.bg,border:`1px solid ${C.line}`,borderRadius:10,padding:14,overflowX:"auto",margin:0}}
+    dangerouslySetInnerHTML={{__html:jsonHighlight(JSON.stringify(value,null,2))}}/>;
+}
+function ConfigCard({title,desc,dirty,saving,error,onSave,children}){
+  return <Card pad={20} style={{marginBottom:16}}>
+    <div className="flex justify-between items-start gap-3 mb-3.5">
+      <div><H2 sub={desc} style={{margin:0}}>{title}</H2></div>
+      <Btn kind="primary" size="sm" disabled={!dirty||saving} onClick={onSave}>{saving?"Saving…":"Save"}</Btn>
+    </div>
+    {children}
+    {error&&<Banner tone="danger" icon="alert" style={{marginTop:10}}>{error}</Banner>}
+  </Card>;
+}
+function PlansEditor({value,onSave}){
   const A=use();
+  const [plans,setPlans]=useState(value);
+  const [saving,setSaving]=useState(false); const [error,setError]=useState("");
+  const dirty=JSON.stringify(plans)!==JSON.stringify(value);
+  const FIELDS=[
+    ["price","Price ($/mo)","number"],["jobs","Live job slots","limit"],["seats","Team seats","limit"],
+    ["featured","Featured slots/mo","limit"],["messagesPerMonth","Messages/mo","limit"],
+    ["messages","Messaging",["true","false","limited"]],["analytics","Analytics",["basic","full"]],
+    ["interviews","In-app interviews","bool"],["talentPool","Talent pool search","bool"],["csvImport","CSV import","bool"],
+    ["branded","Branded page","bool"],["articles","Publish articles","bool"],["trainings","Publish trainings","bool"],
+    ["hrSuite","HR Suite","bool"],["api","API access","bool"],["sso","SSO","bool"],["manager","Dedicated manager","bool"],
+    ["customStages","Custom pipeline stages","bool"],["bulkActions","Bulk actions","bool"],
+  ];
+  const setField=(planName,key,v)=>setPlans(p=>({...p,[planName]:{...p[planName],[key]:v}}));
+  const save=async()=>{setSaving(true); setError("");
+    const r=await onSave("plans",plans); setSaving(false);
+    if(!r.ok)setError(r.msg||"Save failed."); else A.toast("Plan limits updated","ok");};
+  return <ConfigCard title="Plan limits" desc="Free / Growth / Enterprise feature gates and quotas — what each plan actually unlocks." dirty={dirty} saving={saving} error={error} onSave={save}>
+    <div className="grid gap-4" style={{gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))"}}>
+      {Object.keys(plans).map(planName=><div key={planName} className="border border-line rounded-xl p-3.5">
+        <div className="text-sm font-bold text-text mb-2.5">{planName}</div>
+        <div className="flex flex-col gap-2.5">
+          {FIELDS.map(([key,label,kind])=>{const v=plans[planName][key];
+            if(kind==="bool")return <div key={key} className="flex justify-between items-center gap-2">
+              <span className="text-xs text-text-2">{label}</span><Switch on={!!v} onChange={val=>setField(planName,key,val)}/></div>;
+            if(kind==="number")return <div key={key}><div className="text-xs text-text-3 mb-1">{label}</div>
+              <Input type="number" value={v} onChange={e=>setField(planName,key,Number(e.target.value)||0)} style={{padding:"6px 10px",fontSize:13}}/></div>;
+            if(kind==="limit"){const unlimited=v===UNLIMITED_SENTINEL;
+              return <div key={key}><div className="text-xs text-text-3 mb-1">{label}</div>
+                <div className="flex gap-1.5 items-center">
+                  <Input type="number" disabled={unlimited} value={unlimited?"":v} onChange={e=>setField(planName,key,Number(e.target.value)||0)} style={{padding:"6px 10px",fontSize:13}}/>
+                  <label className="flex items-center gap-1 text-xs text-text-3 whitespace-nowrap"><input type="checkbox" checked={unlimited} onChange={e=>setField(planName,key,e.target.checked?UNLIMITED_SENTINEL:0)}/> ∞</label>
+                </div></div>;}
+            return <div key={key}><div className="text-xs text-text-3 mb-1">{label}</div>
+              <Sel value={String(v)} onChange={e=>setField(planName,key,e.target.value==="true"?true:e.target.value==="false"?false:e.target.value)} style={{padding:"6px 10px",fontSize:13}}>
+                {kind.map(o=><option key={o} value={o}>{o}</option>)}</Sel></div>;
+          })}
+        </div>
+      </div>)}
+    </div>
+  </ConfigCard>;
+}
+function StaffingAgencyEditor({value,onSave}){
+  const A=use();
+  const [d,setD]=useState(value);
+  const [saving,setSaving]=useState(false); const [error,setError]=useState("");
+  const dirty=JSON.stringify(d)!==JSON.stringify(value);
+  const set=(k,v)=>setD(p=>({...p,[k]:v}));
+  const save=async()=>{setSaving(true); setError("");
+    const r=await onSave("staffingAgency",d); setSaving(false);
+    if(!r.ok)setError(r.msg||"Save failed."); else A.toast("Staffing agency policy updated","ok");};
+  const FIELDS=[["name","Agency name","text"],["tagline","Tagline","text"],["license","License number","text"],
+    ["licenseExpiry","License expiry","date"],["licenseLocAmount","License LOC amount ($)","number"],
+    ["wsibRateGroup","WSIB rate group","text"],["markupFloor","Markup floor (%)","number"],
+    ["markupTarget","Markup target (%)","number"],["markupCeiling","Markup ceiling (%)","number"],
+    ["payPeriodDays","Pay period (days)","number"],["invoiceCycleDays","Invoice cycle (days)","number"],
+    ["paymentTermsDefaultDays","Default payment terms (days)","number"]];
+  return <ConfigCard title="Staffing agency policy" desc="Markup floor/target/ceiling, pay period length, invoice cycle, licensing." dirty={dirty} saving={saving} error={error} onSave={save}>
+    <div className="grid gap-3" style={{gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))"}}>
+      {FIELDS.map(([key,label,kind])=><div key={key}>
+        <div className="text-xs text-text-3 mb-1">{label}</div>
+        <Input type={kind} value={d[key]} onChange={e=>set(key,kind==="number"?Number(e.target.value)||0:e.target.value)}/>
+      </div>)}
+      <div><div className="text-xs text-text-3 mb-1">Provinces served (comma-separated)</div>
+        <Input value={(d.provinces||[]).join(", ")} onChange={e=>set("provinces",e.target.value.split(",").map(s=>s.trim().toUpperCase()).filter(Boolean))}/></div>
+      <div><div className="text-xs text-text-3 mb-1">WSIB provinces (comma-separated)</div>
+        <Input value={(d.wsibProvinces||[]).join(", ")} onChange={e=>set("wsibProvinces",e.target.value.split(",").map(s=>s.trim().toUpperCase()).filter(Boolean))}/></div>
+    </div>
+  </ConfigCard>;
+}
+function JsonConfigEditor({title,desc,configKey,value,onSave}){
+  const A=use();
+  const [editing,setEditing]=useState(false);
   const [text,setText]=useState(()=>JSON.stringify(value,null,2));
   const [error,setError]=useState("");
   const [saving,setSaving]=useState(false);
@@ -571,15 +673,21 @@ function ConfigSection({title,desc,configKey,value,onSave}){
     const r=await onSave(configKey,parsed);
     setSaving(false);
     if(!r.ok)setError(r.msg||"Save failed.");
-    else A.toast(`${title} updated`,"ok");
+    else {A.toast(`${title} updated`,"ok"); setEditing(false);}
   };
   return <Card pad={20} style={{marginBottom:16}}>
     <div className="flex justify-between items-start gap-3 mb-2.5">
       <div><H2 sub={desc} style={{margin:0}}>{title}</H2></div>
-      <Btn kind="primary" size="sm" disabled={!dirty||saving} onClick={save}>{saving?"Saving…":"Save"}</Btn>
+      {editing
+        ?<div className="flex gap-2">
+          <Btn kind="ghost" size="sm" onClick={()=>{setText(JSON.stringify(value,null,2));setEditing(false);setError("");}}>Cancel</Btn>
+          <Btn kind="primary" size="sm" disabled={!dirty||saving} onClick={save}>{saving?"Saving…":"Save"}</Btn>
+        </div>
+        :<Btn kind="outline" size="sm" icon="edit" onClick={()=>setEditing(true)}>Edit as JSON</Btn>}
     </div>
-    <Area rows={12} value={text} onChange={e=>setText(e.target.value)}
-      style={{fontFamily:"monospace",fontSize:12,whiteSpace:"pre"}}/>
+    {editing
+      ?<Area rows={16} value={text} onChange={e=>setText(e.target.value)} style={{fontFamily:"monospace",fontSize:12.5,whiteSpace:"pre"}}/>
+      :<ReadOnlyJson value={value}/>}
     {error&&<Banner tone="danger" icon="alert" style={{marginTop:10}}>{error}</Banner>}
   </Card>;
 }
@@ -589,9 +697,9 @@ export function AdmConfig(){
   if(!cfg)return <Page narrow><div className="text-sm text-text-3">Loading…</div></Page>;
   return <Page narrow>
     <H1 sub="The real numbers behind pricing, payroll withholding, and staffing burden math — changing these takes effect immediately for every account, no deploy.">Business config</H1>
-    <ConfigSection title="Plan limits" desc="Free / Growth / Enterprise feature gates and quotas." configKey="plans" value={cfg.plans} onSave={A.updatePlatformConfig}/>
-    <ConfigSection title="Payroll tax brackets" desc="Federal + provincial income tax brackets, basic personal amounts, CPP/EI rates." configKey="payrollTax" value={cfg.payrollTax} onSave={A.updatePlatformConfig}/>
-    <ConfigSection title="Staffing burden rates" desc="Per-province CPP/EI/EHT/WSIB/vacation/stat-holiday rates used in placement margin math." configKey="staffingRates" value={cfg.staffingRates} onSave={A.updatePlatformConfig}/>
-    <ConfigSection title="Staffing agency policy" desc="Markup floor/target/ceiling, pay period length, invoice cycle, licensing." configKey="staffingAgency" value={cfg.staffingAgency} onSave={A.updatePlatformConfig}/>
+    <PlansEditor value={cfg.plans} onSave={A.updatePlatformConfig}/>
+    <JsonConfigEditor title="Payroll tax brackets" desc="Federal + provincial income tax brackets, basic personal amounts, CPP/EI rates." configKey="payrollTax" value={cfg.payrollTax} onSave={A.updatePlatformConfig}/>
+    <JsonConfigEditor title="Staffing burden rates" desc="Per-province CPP/EI/EHT/WSIB/vacation/stat-holiday rates used in placement margin math." configKey="staffingRates" value={cfg.staffingRates} onSave={A.updatePlatformConfig}/>
+    <StaffingAgencyEditor value={cfg.staffingAgency} onSave={A.updatePlatformConfig}/>
   </Page>;
 }

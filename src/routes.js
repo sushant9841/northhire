@@ -47,6 +47,7 @@ export const ROUTES = {
   account:     {title:"My account", tab:"profile", roles:["seeker"], path:"/account"},
   accessibility:{title:"Accessibility (AODA)", tab:"home", root:false, path:"/accessibility"},
   pipeda:       {title:"PIPEDA compliance", tab:"home", root:false, path:"/pipeda"},
+  credits:      {title:"Open-source credits", tab:"home", root:false, path:"/credits"},
   /* HR Suite routes */
   hrLogin:      {title:"HR Suite login", tab:"home", bare:true, path:"/hr/login"},
   hrDashboard:  {title:"Dashboard", tab:"home", bare:true, path:"/hr/dashboard"},
