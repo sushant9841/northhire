@@ -423,6 +423,42 @@ staffingRouter.post("/timesheets/draft", requireAgencyAuth, (req, res) => {
   ).run(id, assignmentId, workerId, weekStart, JSON.stringify(hours), otHours || 0, notes || "");
   res.status(201).json({ ok: true, timesheet: serializeStaffingTimesheet(db.prepare("SELECT * FROM staffing_timesheets WHERE id = ?").get(id)) });
 });
+/* Mass timesheet import - takes rows keyed by the worker's email (the identifier a real payroll
+   export/timesheet system would actually carry, not an internal worker_id nobody outside this app
+   knows) and resolves each to the worker's one active assignment, upserting a draft timesheet the
+   same way the single-entry draft endpoint above does. Returns a per-row result rather than
+   all-or-nothing, since one bad row (typo'd email, no active assignment) shouldn't block the rest
+   of a real spreadsheet from importing. */
+staffingRouter.post("/timesheets/bulk-import", requireAgencyAuth, (req, res) => {
+  const rows = Array.isArray(req.body?.rows) ? req.body.rows : [];
+  const results = rows.map((row, i) => {
+    const email = (row.email || "").trim().toLowerCase();
+    const weekStart = row.weekStart;
+    if (!email || !weekStart) return { row: i, ok: false, error: "Missing email or weekStart." };
+    const person = db.prepare("SELECT * FROM users WHERE lower(email) = ?").get(email);
+    if (!person) return { row: i, ok: false, error: `No account found for ${email}.` };
+    const worker = db.prepare("SELECT * FROM staffing_workers WHERE person_id = ?").get(person.id);
+    if (!worker) return { row: i, ok: false, error: `${email} is not a registered staffing worker.` };
+    const activeAssignments = db.prepare("SELECT * FROM staffing_assignments WHERE worker_id = ? AND status = 'active'").all(worker.id);
+    if (activeAssignments.length === 0) return { row: i, ok: false, error: `${email} has no active assignment.` };
+    if (activeAssignments.length > 1) return { row: i, ok: false, error: `${email} has more than one active assignment — import that row individually.` };
+    const assignmentId = activeAssignments[0].id;
+    const hours = { mon: row.mon || 0, tue: row.tue || 0, wed: row.wed || 0, thu: row.thu || 0, fri: row.fri || 0, sat: row.sat || 0, sun: row.sun || 0 };
+    const existing = db.prepare("SELECT * FROM staffing_timesheets WHERE assignment_id = ? AND week_start = ?").get(assignmentId, weekStart);
+    if (existing && existing.status !== "draft") return { row: i, ok: false, error: `${email}'s ${weekStart} timesheet is already submitted — can't overwrite.` };
+    if (existing) {
+      db.prepare("UPDATE staffing_timesheets SET hours_json = ?, ot_hours = ? WHERE id = ?").run(JSON.stringify(hours), row.otHours || 0, existing.id);
+    } else {
+      db.prepare(
+        `INSERT INTO staffing_timesheets (id, assignment_id, worker_id, week_start, status, hours_json, ot_hours)
+         VALUES (?, ?, ?, ?, 'draft', ?, ?)`
+      ).run(nextId("ts", "staffing_timesheets"), assignmentId, worker.id, weekStart, JSON.stringify(hours), row.otHours || 0);
+    }
+    return { row: i, ok: true };
+  });
+  logStaffingAudit(req.agencyStaff.id, "timesheets_bulk_imported", `Imported ${results.filter(r => r.ok).length}/${rows.length} timesheet rows from a file`);
+  res.json({ results });
+});
 staffingRouter.patch("/timesheets/:id/submit", requireAgencyAuth, (req, res) => {
   const t = db.prepare("SELECT * FROM staffing_timesheets WHERE id = ?").get(req.params.id);
   if (!t) return res.status(404).json({ error: "Not found" });

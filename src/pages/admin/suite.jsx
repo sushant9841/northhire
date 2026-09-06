@@ -76,6 +76,27 @@ export function AdmHome(){
                 <span className="text-text-2">User {f.user_id}</span><span className="font-bold text-warn">{f.n} applications</span></div>)}
             </div>}
           </Card>;})()}
+        {A.opsHealth&&(()=>{const h=A.opsHealth;
+          const fmtUptime=s=>{const d=Math.floor(s/86400),hr=Math.floor((s%86400)/3600),m=Math.floor((s%3600)/60);
+            return d>0?`${d}d ${hr}h`:hr>0?`${hr}h ${m}m`:`${m}m`;};
+          return <Card><H2 sub="Real signals from this API process — error rate is measured, not simulated. No background job queue exists in this app, so there's nothing to report there.">System health</H2>
+            <div className="grid grid-cols-3 gap-2.5 mb-3.5">
+              <div className="p-3 bg-bg rounded-lg text-center">
+                <div className={`text-lg font-bold ${h.errors24h>0?"text-red":"text-text"}`}>{h.errors24h}</div>
+                <div className="text-xs text-text-3 mt-1">Server errors (24h)</div></div>
+              <div className="p-3 bg-bg rounded-lg text-center">
+                <div className="text-lg font-bold text-text">{fmtUptime(h.uptimeSeconds)}</div>
+                <div className="text-xs text-text-3 mt-1">API process uptime</div></div>
+              <div className="p-3 bg-bg rounded-lg text-center">
+                <div className="text-lg font-bold text-text">{h.dbSizeBytes?`${(h.dbSizeBytes/1024/1024).toFixed(1)} MB`:"—"}</div>
+                <div className="text-xs text-text-3 mt-1">Database size</div></div>
+            </div>
+            {h.errors24h===0?<div className="text-sm text-text-3 py-2 text-center">No server errors in the last 24h.</div>
+              :<div className="flex flex-col gap-1.5">
+                {h.topErrorPaths.map((e,i)=><div key={i} className="flex justify-between text-xs py-1.5 px-2.5 bg-red-bg rounded-lg">
+                  <span className="text-text-2">{e.method} {e.path} · {e.status}</span><span className="font-bold text-red">{e.n}×</span></div>)}
+              </div>}
+          </Card>;})()}
         </div></div>
   </Page>;
 }

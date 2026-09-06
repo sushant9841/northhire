@@ -281,6 +281,13 @@ CREATE TABLE IF NOT EXISTS failed_logins (
   kind TEXT NOT NULL DEFAULT 'main', -- 'main' | 'hr' | 'agency' - each login surface is its own account space
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+/* Real ops-health signal for AdmHome - every 5xx response (thrown error or an explicit
+   res.status(500+)) gets logged here by server/index.js's response-finish listener, so "error
+   rate" is an actual measurement, not a placeholder. */
+CREATE TABLE IF NOT EXISTS server_errors (
+  id TEXT PRIMARY KEY, method TEXT NOT NULL, path TEXT NOT NULL, status INTEGER NOT NULL,
+  message TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 CREATE TABLE IF NOT EXISTS platform_settings (
   id INTEGER PRIMARY KEY CHECK (id = 1),
   employer_blogs INTEGER DEFAULT 1, employer_trainings INTEGER DEFAULT 1, employer_feature INTEGER DEFAULT 1,

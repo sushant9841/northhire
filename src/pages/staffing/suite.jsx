@@ -11,6 +11,7 @@ import { _fmtDate, _weekStart } from "../../helpers/utils.js";
 import { InlineList } from "../shared/formControls.jsx";
 import { SEED_AGENCY_LICENSE } from "../../store/seed/agency.js";
 import { invoiceTone, timesheetTone } from "../../helpers/statusTone.js";
+import { parseCsvLine } from "../../helpers/csv.js";
 
 /* Quick-action tile tones — literal lookup (not string-interpolated into a className)
    so Tailwind's static scanner can see every class it needs to generate. */
@@ -837,21 +838,66 @@ export function AgencyAssignments(){
 }
 
 /* ─── Timesheets ─── */
+function _TimesheetImportModal({onClose}){
+  const A=use();
+  const [csv,setCsv]=useState("");
+  const [importing,setImporting]=useState(false);
+  const [results,setResults]=useState(null);
+  const runImport=async()=>{
+    const lines=csv.trim().split("\n").filter(l=>l.trim());
+    const dataLines=lines[0]?.toLowerCase().startsWith("email")?lines.slice(1):lines;
+    const rows=dataLines.map(l=>{
+      const [email,weekStart,mon,tue,wed,thu,fri,sat,sun,otHours]=parseCsvLine(l);
+      return {email,weekStart,mon:Number(mon)||0,tue:Number(tue)||0,wed:Number(wed)||0,thu:Number(thu)||0,fri:Number(fri)||0,sat:Number(sat)||0,sun:Number(sun)||0,otHours:Number(otHours)||0};
+    });
+    if(!rows.length)return;
+    setImporting(true);
+    const res=await A.bulkImportTimesheets(rows);
+    setImporting(false);
+    setResults(res.map((r,i)=>({...r,email:rows[i].email,weekStart:rows[i].weekStart})));
+  };
+  const successCount=results?.filter(r=>r.ok).length||0;
+  return <Modal onClose={onClose} title="Import timesheets from CSV" wide>
+    <div className="flex flex-col gap-3.5">
+      <Banner tone="brand" icon="info" title="Format">
+        One row per worker per week: <code>email,weekStart,mon,tue,wed,thu,fri,sat,sun,otHours</code> (weekStart as YYYY-MM-DD, hours as plain numbers). A header row is optional. Each worker must have exactly one active assignment — draft timesheets are created or updated, never auto-submitted.
+      </Banner>
+      <Area rows={10} value={csv} onChange={e=>{setCsv(e.target.value);setResults(null);}}
+        placeholder={"email,weekStart,mon,tue,wed,thu,fri,sat,sun,otHours\njordan.lee@example.ca,2026-09-01,8,8,8,8,8,0,0,0"}
+        style={{fontFamily:"ui-monospace,monospace",fontSize:12.5}}/>
+      {results&&<div className="p-3 bg-bg rounded-lg">
+        <div className="text-sm font-semibold text-text mb-1.5">{successCount} of {results.length} rows imported</div>
+        {results.filter(r=>!r.ok).length>0&&<div className="flex flex-col gap-1">
+          {results.filter(r=>!r.ok).map((r,i)=><div key={i} className="text-xs text-red">Row {r.row+1} ({r.email||"—"}, {r.weekStart||"—"}): {r.error}</div>)}
+        </div>}
+      </div>}
+      <div className="flex gap-2.5 justify-end">
+        <Btn kind="ghost" onClick={onClose}>Close</Btn>
+        <Btn kind="primary" icon="upload" disabled={!csv.trim()||importing} onClick={runImport}>{importing?"Importing…":"Import"}</Btn>
+      </div>
+    </div>
+  </Modal>;
+}
 export function AgencyTimesheets(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [tab,setTab]=useState("submitted");
   const [returning,setReturning]=useState(null); const [reason,setReason]=useState("");
+  const [importing,setImporting]=useState(false);
   const list=A.timesheets.filter(t=>tab==="all"?true:t.status===tab).sort((a,b)=>b.weekStart.localeCompare(a.weekStart));
   const pg=usePagination(list,20);
   useEffect(()=>{pg.setPage(1);},[tab]);
   return <div>
-    <div className="mb-3.5">
-      <div className="text-lg font-bold text-text">Timesheets</div>
-      <div className="text-sm text-text-3 mt-0.5">Weekly hours submitted by workers, approved by client supervisors.</div>
+    <div className="mb-3.5 flex justify-between items-start gap-3 flex-wrap">
+      <div>
+        <div className="text-lg font-bold text-text">Timesheets</div>
+        <div className="text-sm text-text-3 mt-0.5">Weekly hours submitted by workers, approved by client supervisors.</div>
+      </div>
+      <Btn kind="outline" size="sm" icon="upload" onClick={()=>setImporting(true)}>Import CSV</Btn>
     </div>
 
     <div className="mb-3.5"><_PillTabs items={[["draft","Draft"],["submitted","Submitted"],["approved","Approved"],["paid","Paid"],["all","All"]].map(([v,l])=>
       [v,`${l} (${A.timesheets.filter(t=>v==="all"?true:t.status===v).length})`])} value={tab} onChange={setTab}/></div>
+    {importing&&<_TimesheetImportModal onClose={()=>setImporting(false)}/>}
 
     <Card pad={0} style={{borderRadius:14,overflow:"hidden"}}>
       <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:720}}>

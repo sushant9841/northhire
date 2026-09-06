@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import "./db.js"; // ensures schema exists before any route touches it
+import { db, nextId } from "./db.js"; // also ensures schema exists before any route touches it
 import { authRouter } from "./routes/auth.js";
 import { jobsRouter } from "./routes/jobs.js";
 import { employersRouter } from "./routes/employers.js";
@@ -20,6 +20,19 @@ const PORT = process.env.PORT || 8787;
 // "unlimited" plan quota, an open-ended tax bracket) survives the trip to the client instead of
 // silently becoming null - see src/helpers/jsonInfinity.js and the matching reviver in api.js.
 app.set("json replacer", infinityReplacer);
+
+// Real ops-health signal (AdmHome "System health" card) - logs every 5xx response. Registered
+// before any other middleware so res.on("finish") is attached even for a request that errors out
+// inside CORS/cookie/body-parsing itself, not just ones that make it into an actual route handler.
+app.use((req, res, next) => {
+  res.on("finish", () => {
+    if (res.statusCode >= 500) {
+      db.prepare("INSERT INTO server_errors (id, method, path, status, message) VALUES (?,?,?,?,?)")
+        .run(nextId("errlog", "server_errors"), req.method, req.path, res.statusCode, res.locals._errMessage || null);
+    }
+  });
+  next();
+});
 
 // Session lives in an httpOnly cookie, not anything the frontend can read/write itself (no
 // localStorage/sessionStorage token anywhere) - `credentials: true` + an explicit origin
@@ -70,6 +83,7 @@ app.use((req, res) => res.status(404).json({ error: "Not found." }));
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
   console.error(err);
+  res.locals._errMessage = err?.message || String(err);
   res.status(500).json({ error: "Something went wrong on the server." });
 });
 

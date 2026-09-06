@@ -1,5 +1,6 @@
 import { Router } from "express";
-import { db, nextId, sqlTime } from "../db.js";
+import fs from "node:fs";
+import { db, nextId, sqlTime, DB_PATH } from "../db.js";
 import { requireAuth, requireAdminScope } from "../auth.js";
 import { getAllConfig, setConfig, CONFIG_KEYS } from "../platformConfig.js";
 import { geocode } from "../geocode.js";
@@ -76,6 +77,23 @@ platformRouter.get("/security-signals", requireAuth, requireAdminScope("support"
     `SELECT user_id, COUNT(*) AS n FROM applications WHERE created_at >= ${since24h} GROUP BY user_id HAVING n >= 10 ORDER BY n DESC LIMIT 5`
   ).all();
   res.json({ failedLogins24h, topOffenders, signups24h, spamDomains, applications24h, floodingApplicants });
+});
+
+// Real ops-health signals - error rate is measured (server/index.js logs every 5xx to
+// server_errors), uptime/db size are read directly from the process/filesystem. "Queue health"
+// isn't included: this app has no background job queue to report on, so faking a metric for one
+// would be worse than omitting it.
+platformRouter.get("/ops-health", requireAuth, requireAdminScope("support", "moderator", "finance"), (req, res) => {
+  const since24h = "datetime('now','-1 day')";
+  const errors24h = db.prepare(`SELECT COUNT(*) AS n FROM server_errors WHERE created_at >= ${since24h}`).get().n;
+  const topErrorPaths = db.prepare(
+    `SELECT method, path, status, COUNT(*) AS n, MAX(created_at) AS lastSeen FROM server_errors
+     WHERE created_at >= ${since24h} GROUP BY method, path, status ORDER BY n DESC LIMIT 5`
+  ).all();
+  const recentErrors = db.prepare(`SELECT method, path, status, message, created_at FROM server_errors ORDER BY created_at DESC LIMIT 10`).all();
+  let dbSizeBytes = null;
+  try { dbSizeBytes = fs.statSync(DB_PATH).size; } catch { /* not on disk (e.g. :memory:) */ }
+  res.json({ errors24h, topErrorPaths, recentErrors, uptimeSeconds: Math.round(process.uptime()), dbSizeBytes });
 });
 
 platformRouter.get("/activity", requireAuth, requireAdminScope("support", "moderator", "finance"), (req, res) => {

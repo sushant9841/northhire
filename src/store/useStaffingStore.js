@@ -227,6 +227,12 @@ export function useStaffingStore(user,platformConfig){
       return {ok:true,timesheet:r.timesheet};
     }catch(e){return {ok:false,msg:e.message};}
   };
+  const bulkImportTimesheets=async(rows)=>{
+    const {results}=await api.post("/staffing/timesheets/bulk-import",{rows});
+    const {timesheets:t}=await api.get("/staffing/timesheets");
+    setTimesheets(t);
+    return results;
+  };
   const submitTimesheet=async(id)=>{
     const path=agencyStaff?`/staffing/timesheets/${id}/submit`:`/staffing/my/timesheets/${id}/submit`;
     try{
@@ -402,7 +408,7 @@ export function useStaffingStore(user,platformConfig){
     createJobOrder,updateJobOrder,closeJobOrder,
     submittals,loadSubmittals,submitWorker,updateSubmittal,
     createAssignment,updateAssignment,endAssignment,
-    upsertTimesheetDraft,submitTimesheet,approveTimesheet,rejectTimesheet,
+    upsertTimesheetDraft,bulkImportTimesheets,submitTimesheet,approveTimesheet,rejectTimesheet,
     timesheetTotal,timesheetGross,timesheetBill,
     runStaffingPayroll,finalizeStaffingPayrun,reverseStaffingPayrun,
     generateStaffingInvoices,markStaffingInvoicePaid,

@@ -15,23 +15,7 @@ import { useStaffingStore } from "./useStaffingStore.js";
 import { api, ApiUnreachableError, API_BASE } from "../helpers/api.js";
 import { mapApiJob, mapApiEmployer, mapApiApplication, mapApiUser } from "../helpers/apiMap.js";
 import { buildPath, matchPath, ID_STATE_FOR_ROUTE } from "../helpers/urlRouter.js";
-
-/* Real CSV field parsing (quoted fields, embedded commas, "" escaping) — a plain row.split(",")
-   silently shifts every column after the first comma inside a free-text field like Description. */
-function parseCsvLine(line){
-  const cells=[]; let cur=""; let inQuotes=false;
-  for(let i=0;i<line.length;i++){
-    const c=line[i];
-    if(inQuotes){
-      if(c==='"'){ if(line[i+1]==='"'){cur+='"';i++;} else inQuotes=false; }
-      else cur+=c;
-    } else if(c==='"') inQuotes=true;
-    else if(c===','){cells.push(cur);cur="";}
-    else cur+=c;
-  }
-  cells.push(cur);
-  return cells.map(c=>c.trim());
-}
+import { parseCsvLine } from "../helpers/csv.js";
 
 export function useStore(){
   /* Real URL support: computed once at mount (this hook is only ever instantiated once at the
@@ -84,6 +68,7 @@ export function useStore(){
   const [impersonating,setImpersonating]=useState(null);
   const [activity,setActivity]=useState([]);
   const [securitySignals,setSecuritySignals]=useState(null);
+  const [opsHealth,setOpsHealth]=useState(null);
   const [platformConfig,setPlatformConfig]=useState(null); // {plans, payrollTax, staffingRates, staffingAgency} - fetched from the backend; null until loaded
   const [oauthProviders,setOauthProviders]=useState({google:false,github:false});
   const [settings,setSettings]=useState({employerBlogs:true,employerTrainings:true,employerFeature:true,
@@ -321,6 +306,19 @@ export function useStore(){
         if(!cancelled)setSecuritySignals(signals);
       }catch(e){
         if(typeof console!=="undefined")console.warn(`[NorthHire] Security signals sync failed: ${e.message}`);
+      }
+    })();
+    return ()=>{cancelled=true;};
+  },[user?.id,user?.role]);
+  useEffect(()=>{
+    if(user?.role!=="admin")return;
+    let cancelled=false;
+    (async()=>{
+      try{
+        const health=await api.get("/platform/ops-health");
+        if(!cancelled)setOpsHealth(health);
+      }catch(e){
+        if(typeof console!=="undefined")console.warn(`[NorthHire] Ops-health sync failed: ${e.message}`);
       }
     })();
     return ()=>{cancelled=true;};
@@ -1741,7 +1739,7 @@ export function useStore(){
     references,addReference,removeReference,
     addReview,deleteReview,loadEmployerReviews,loadCandidateContact,candidateNotes,saveCandidateNote,loadScorecards,submitScorecard,
     submitContact,loadContactInbox,resolveContactMessage,listAdmins,setAdminScope,updatePlatformConfig,geocode,
-    saved,following,enrolled,trainingProgress,suspended,suspensionInfo,invitedCandidates,notifications,activity,securitySignals,settings,userSettings,search,setSearch,
+    saved,following,enrolled,trainingProgress,suspended,suspensionInfo,invitedCandidates,notifications,activity,securitySignals,opsHealth,settings,userSettings,search,setSearch,
     toasts,toast,dismissToast,
     jobId,empId,blogId,trainingId,cvId,editId,candidateId,pipelineJob,applyDraft,setApplyDraft,
     contactPrefill,setContactPrefill,pendingPlan,setPendingPlan,employersPrefill,setEmployersPrefill,
