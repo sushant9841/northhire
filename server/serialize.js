@@ -326,6 +326,11 @@ export function serializeJobOrder(row) {
     supervisor: row.supervisor, supervisorEmail: row.supervisor_email, supervisorPhone: row.supervisor_phone,
     ppe: row.ppe, notes: row.notes };
 }
+export function serializeSubmittal(row) {
+  if (!row) return null;
+  return { id: row.id, jobOrder: row.job_order_id, worker: row.worker_id, stage: row.stage, notes: row.notes,
+    createdAt: sqlTime(row.created_at).getTime(), updatedAt: sqlTime(row.updated_at).getTime() };
+}
 export function serializeAssignment(row) {
   if (!row) return null;
   return { id: row.id, worker: row.worker_id, client: row.client_id, jobOrder: row.job_order_id, status: row.status,

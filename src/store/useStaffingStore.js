@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { _fmtDate } from "../helpers/utils.js";
 import { api } from "../helpers/api.js";
-import { calcStaffingEconomics, DEFAULT_STAFFING_RATES, DEFAULT_STAFFING_AGENCY } from "../helpers/staffingEconomics.js";
+import { calcStaffingEconomics, DEFAULT_STAFFING_RATES, DEFAULT_STAFFING_AGENCY, round2 } from "../helpers/staffingEconomics.js";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    STAFFING AGENCY — Store hook, exported into main A context.
@@ -27,6 +27,7 @@ export function useStaffingStore(user,platformConfig){
   const [workers,setWorkers]=useState([]);
   const [staffingClients,setStaffingClients]=useState([]);
   const [jobOrders,setJobOrders]=useState([]);
+  const [submittals,setSubmittals]=useState({}); // {[jobOrderId]: submittal[]}, loaded on demand per job order
   const [assignments,setAssignments]=useState([]);
   const [timesheets,setTimesheets]=useState([]);
   const [staffingPayruns,setStaffingPayruns]=useState([]);
@@ -184,6 +185,21 @@ export function useStaffingStore(user,platformConfig){
     }
     if(data.worker)setWorkers(l=>l.map(w=>w.id===data.worker?{...w,availability:"on-assignment"}:w));
     return a;
+  };
+  const loadSubmittals=async(jobOrderId)=>{
+    const {submittals:rows}=await api.get(`/staffing/job-orders/${jobOrderId}/submittals`);
+    setSubmittals(m=>({...m,[jobOrderId]:rows}));
+    return rows;
+  };
+  const submitWorker=async(jobOrderId,workerId)=>{
+    const {submittal}=await api.post(`/staffing/job-orders/${jobOrderId}/submittals`,{workerId});
+    setSubmittals(m=>({...m,[jobOrderId]:[...(m[jobOrderId]||[]),submittal]}));
+    return submittal;
+  };
+  const updateSubmittal=async(id,jobOrderId,patch)=>{
+    const {submittal}=await api.patch(`/staffing/submittals/${id}`,patch);
+    setSubmittals(m=>({...m,[jobOrderId]:(m[jobOrderId]||[]).map(s=>s.id===id?submittal:s)}));
+    return submittal;
   };
   const updateAssignment=async(id,patch)=>{
     const {assignment:a}=await api.patch(`/staffing/assignments/${id}`,patch);
@@ -356,6 +372,7 @@ export function useStaffingStore(user,platformConfig){
     agencyLogin,agencyLogout,agencyCurrentStaff,agencyAuthChecked,agencyResetRequest,agencyResetConfirm,STAFFING_AGENCY,STAFFING_RATES,
     optInAsWorker,updateWorker,setWorkerAvailability,payoutVacation,
     createJobOrder,updateJobOrder,closeJobOrder,
+    submittals,loadSubmittals,submitWorker,updateSubmittal,
     createAssignment,updateAssignment,endAssignment,
     upsertTimesheetDraft,submitTimesheet,approveTimesheet,rejectTimesheet,
     timesheetTotal,timesheetGross,timesheetBill,

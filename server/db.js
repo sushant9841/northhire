@@ -485,6 +485,19 @@ CREATE TABLE IF NOT EXISTS staffing_job_orders (
   supervisor TEXT, supervisor_email TEXT, supervisor_phone TEXT, ppe TEXT, notes TEXT
 );
 
+/* Real submittal/interview pipeline - previously a worker went straight from "matched %" to
+   "placed" with zero stage tracking, unlike every real staffing agency's actual workflow
+   (submit to client -> client review -> interview -> offer -> placed/rejected). */
+CREATE TABLE IF NOT EXISTS staffing_submittals (
+  id TEXT PRIMARY KEY,
+  job_order_id TEXT NOT NULL REFERENCES staffing_job_orders(id),
+  worker_id TEXT NOT NULL REFERENCES staffing_workers(id),
+  stage TEXT NOT NULL DEFAULT 'submitted' CHECK(stage IN ('submitted','client_review','interview','offer','placed','rejected')),
+  notes TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS staffing_assignments (
   id TEXT PRIMARY KEY,
   worker_id TEXT NOT NULL REFERENCES staffing_workers(id),

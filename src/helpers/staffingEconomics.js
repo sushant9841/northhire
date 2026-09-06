@@ -26,7 +26,7 @@ export const DEFAULT_STAFFING_AGENCY = {
   payPeriodDays: 14, invoiceCycleDays: 7, paymentTermsDefaultDays: 30, vacationPayMode: "accrue",
 };
 
-function round2(n) { return Math.round(n * 100) / 100; }
+export function round2(n) { return Math.round(n * 100) / 100; }
 function round1(n) { return Math.round(n * 10) / 10; }
 
 export function calcStaffingEconomics(pay, bill, prov, benefitsPerHr = 0, rates = DEFAULT_STAFFING_RATES) {

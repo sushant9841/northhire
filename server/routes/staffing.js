@@ -8,7 +8,7 @@ import { calcStaffingEconomics } from "../../src/helpers/staffingEconomics.js";
 import { getConfig } from "../platformConfig.js";
 import { sendAndLogMail } from "../mail.js";
 import {
-  serializeWorker, serializeWorkerForClient, serializeStaffingClient, serializeJobOrder, serializeAssignment,
+  serializeWorker, serializeWorkerForClient, serializeStaffingClient, serializeJobOrder, serializeAssignment, serializeSubmittal,
   serializeStaffingTimesheet, serializeStaffingPayrun, serializeStaffingInvoice, serializePlacement,
   serializeStaffingAuditEntry, serializeWsibClaim,
 } from "../serialize.js";
@@ -255,6 +255,47 @@ staffingRouter.patch("/job-orders/:id", requireAgencyAuth, (req, res) => {
 staffingRouter.patch("/job-orders/:id/close", requireAgencyAuth, (req, res) => {
   db.prepare("UPDATE staffing_job_orders SET status = 'closed' WHERE id = ?").run(req.params.id);
   res.json({ ok: true });
+});
+
+/* ─── Submittal pipeline (submitted -> client review -> interview -> offer -> placed/rejected) -
+   previously a worker went straight from "matched %" to a real placement with no stage tracking
+   at all, unlike how a real staffing desk actually works a job order. ─── */
+const SUBMITTAL_STAGES = ["submitted", "client_review", "interview", "offer", "placed", "rejected"];
+staffingRouter.get("/job-orders/:id/submittals", requireAgencyAuth, (req, res) => {
+  const rows = db.prepare("SELECT * FROM staffing_submittals WHERE job_order_id = ? ORDER BY created_at ASC").all(req.params.id);
+  res.json({ submittals: rows.map(serializeSubmittal) });
+});
+staffingRouter.post("/job-orders/:id/submittals", requireAgencyAuth, (req, res) => {
+  const jo = db.prepare("SELECT * FROM staffing_job_orders WHERE id = ?").get(req.params.id);
+  if (!jo) return res.status(404).json({ error: "Job order not found." });
+  const { workerId } = req.body || {};
+  if (!workerId) return res.status(400).json({ error: "A worker is required." });
+  const active = db.prepare(
+    "SELECT id FROM staffing_submittals WHERE job_order_id = ? AND worker_id = ? AND stage NOT IN ('placed','rejected')"
+  ).get(req.params.id, workerId);
+  if (active) return res.status(409).json({ error: "This worker already has an active submittal for this job order." });
+  const id = nextId("sub", "staffing_submittals");
+  db.prepare("INSERT INTO staffing_submittals (id, job_order_id, worker_id, stage) VALUES (?, ?, ?, 'submitted')").run(id, req.params.id, workerId);
+  logStaffingAudit(req.agencyStaff.id, "worker_submitted", `Submitted a worker to job order "${jo.title}"`);
+  res.status(201).json({ submittal: serializeSubmittal(db.prepare("SELECT * FROM staffing_submittals WHERE id = ?").get(id)) });
+});
+staffingRouter.patch("/submittals/:id", requireAgencyAuth, (req, res) => {
+  const row = db.prepare("SELECT * FROM staffing_submittals WHERE id = ?").get(req.params.id);
+  if (!row) return res.status(404).json({ error: "Submittal not found." });
+  const { stage, notes } = req.body || {};
+  if (stage !== undefined) {
+    if (!SUBMITTAL_STAGES.includes(stage)) return res.status(400).json({ error: "Invalid stage." });
+    if (["placed", "rejected"].includes(row.stage)) return res.status(400).json({ error: "This submittal is already closed out." });
+  }
+  const setCols = ["updated_at = datetime('now')"]; const params = [];
+  if (stage !== undefined) { setCols.push("stage = ?"); params.push(stage); }
+  if (notes !== undefined) { setCols.push("notes = ?"); params.push(notes); }
+  db.prepare(`UPDATE staffing_submittals SET ${setCols.join(", ")} WHERE id = ?`).run(...params, req.params.id);
+  if (stage !== undefined) {
+    const jo = db.prepare("SELECT title FROM staffing_job_orders WHERE id = ?").get(row.job_order_id);
+    logStaffingAudit(req.agencyStaff.id, "submittal_stage_changed", `Job order "${jo?.title || row.job_order_id}": submittal moved to ${stage}`);
+  }
+  res.json({ submittal: serializeSubmittal(db.prepare("SELECT * FROM staffing_submittals WHERE id = ?").get(req.params.id)) });
 });
 
 /* ─── Assignments ─── */

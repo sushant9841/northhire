@@ -353,13 +353,24 @@ export function AgencyJobOrders(){
   </div>;
 }
 
+const SUBMITTAL_STAGE_LABEL={submitted:"Submitted",client_review:"Client review",interview:"Interview",offer:"Offer",placed:"Placed",rejected:"Rejected"};
+const SUBMITTAL_STAGE_ORDER=["submitted","client_review","interview","offer"];
 function _JobOrderDetail({id,onClose}){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const jo=A.jobOrder(id); if(!jo)return null;
   const client=A.staffingClient(jo.client);
   const filled=A.assignments.filter(a=>a.jobOrder===jo.id);
   const [showPlace,setShowPlace]=useState(false);
+  const [placingSubmittal,setPlacingSubmittal]=useState(null);
   const [showAllMatches,setShowAllMatches]=useState(false);
+  useEffect(()=>{A.loadSubmittals(jo.id);},[jo.id]);
+  const submittalList=(A.submittals[jo.id]||[]).filter(s=>!["placed","rejected"].includes(s.stage));
+  const submittedWorkerIds=new Set((A.submittals[jo.id]||[]).filter(s=>!["placed","rejected"].includes(s.stage)).map(s=>s.worker));
+  const advanceSubmittal=(s)=>{
+    const idx=SUBMITTAL_STAGE_ORDER.indexOf(s.stage);
+    if(idx<0||idx===SUBMITTAL_STAGE_ORDER.length-1){setPlacingSubmittal(s);return;}
+    A.updateSubmittal(s.id,jo.id,{stage:SUBMITTAL_STAGE_ORDER[idx+1]});
+  };
   const availableWorkers=A.workers.filter(w=>w.status==="active"&&w.availability==="available");
   /* Match: a worker "has" a must-have ticket if either string contains the other in full,
      not just a first-word substring check (was matching "Red Seal Electrician" against any
@@ -422,51 +433,77 @@ function _JobOrderDetail({id,onClose}){
       </div>
 
       <div>
+        {submittalList.length>0&&<div className="mb-4">
+          <Lbl>Submittal pipeline</Lbl>
+          <div className="flex flex-col gap-2">
+            {submittalList.map(s=>{const w=A.worker(s.worker); const person=w?(A.people||[]).find(p=>p.id===w.personId):null;
+              return <div key={s.id} className="py-2.5 px-3 bg-bg rounded-lg">
+                <div className="flex gap-2.5 items-center mb-2">
+                  <SmartPortrait seed={person?.seed||0} size={28} radius={7}/>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap">{person?.name||"—"}</div>
+                    <Tag tone={s.stage==="offer"?"ok":"brand"} sm>{SUBMITTAL_STAGE_LABEL[s.stage]}</Tag>
+                  </div>
+                </div>
+                <div className="flex gap-1.5">
+                  <Btn kind="outline" size="xs" full onClick={()=>advanceSubmittal(s)}>{s.stage==="offer"?"Place":`Advance to ${SUBMITTAL_STAGE_LABEL[SUBMITTAL_STAGE_ORDER[SUBMITTAL_STAGE_ORDER.indexOf(s.stage)+1]]}`}</Btn>
+                  <Btn kind="ghost" size="xs" onClick={()=>A.updateSubmittal(s.id,jo.id,{stage:"rejected"})}>Reject</Btn>
+                </div>
+              </div>;})}
+          </div>
+        </div>}
         <Lbl>Matched from bench</Lbl>
         <div className="flex flex-col gap-2 mb-3">
           {matched.slice(0,showAllMatches?matched.length:6).map(({w,score,hasAll})=>{const person=(A.people||[]).find(p=>p.id===w.personId);
+            const alreadySubmitted=submittedWorkerIds.has(w.id);
             return <div key={w.id} className="py-2.5 px-3 bg-bg rounded-lg flex gap-2.5 items-center" style={{border:`1px solid ${hasAll?C.okLn:C.line}`}}>
               <SmartPortrait seed={person?.seed||0} size={32} radius={8}/>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap">{person?.name||"—"}</div>
                 <div className="text-xs text-text-3 mt-0.5">{w.city} · ${w.payRateTarget}/hr target</div>
               </div>
-              <div className="text-right shrink-0">
+              <div className="text-right shrink-0 flex items-center gap-2">
                 <div className="text-sm font-bold" style={{color:hasAll?C.ok:score>=50?C.warn:C.text3}}>{score}%</div>
+                {jo.status==="open"&&!alreadySubmitted&&<Btn kind="ghost" size="xs" onClick={()=>A.submitWorker(jo.id,w.id)}>Submit</Btn>}
               </div>
             </div>;})}
           {matched.length===0&&<div className="text-xs text-text-3 p-3 text-center">No available workers.</div>}
           {matched.length>6&&<button onClick={()=>setShowAllMatches(v=>!v)} className="bg-transparent border-0 p-0 cursor-pointer text-sm text-brand font-semibold text-center">
             {showAllMatches?"Show fewer":`Show all ${matched.length} matches`}</button>}
         </div>
-        {jo.status==="open"&&<Btn kind="primary" size="sm" full icon="plus" onClick={()=>setShowPlace(true)}>Place a worker</Btn>}
+        {jo.status==="open"&&<Btn kind="primary" size="sm" full icon="plus" onClick={()=>setShowPlace(true)}>Place a worker directly</Btn>}
       </div>
     </div>
 
     {showPlace&&<_PlaceWorkerModal jobOrder={jo} onClose={()=>setShowPlace(false)} onPlace={()=>{setShowPlace(false); onClose();}}/>}
+    {placingSubmittal&&<_PlaceWorkerModal jobOrder={jo} preselectWorkerId={placingSubmittal.worker}
+      onSubmittalPlaced={()=>A.updateSubmittal(placingSubmittal.id,jo.id,{stage:"placed"})}
+      onClose={()=>setPlacingSubmittal(null)} onPlace={()=>{setPlacingSubmittal(null); onClose();}}/>}
   </Modal>;
 }
 
-function _PlaceWorkerModal({jobOrder,onClose,onPlace}){
+function _PlaceWorkerModal({jobOrder,onClose,onPlace,preselectWorkerId,onSubmittalPlaced}){
   const A=use(); const mob=useMedia("(max-width: 900px)");
-  const [workerId,setWorkerId]=useState("");
+  const [workerId,setWorkerId]=useState(preselectWorkerId||"");
   const [payRate,setPayRate]=useState(jobOrder.payRate);
   const [billRate,setBillRate]=useState(jobOrder.billRate);
   const [benefitsPerHr,setBenefitsPerHr]=useState(0);
-  const availableWorkers=A.workers.filter(w=>w.status==="active"&&w.availability==="available");
+  const availableWorkers=A.workers.filter(w=>w.status==="active"&&(w.availability==="available"||w.id===preselectWorkerId));
+  useEffect(()=>{if(preselectWorkerId){const w=A.workers.find(x=>x.id===preselectWorkerId); if(w){setPayRate(w.payRateTarget||jobOrder.payRate); setBenefitsPerHr(w.defaultBenefitsPerHr||0);}}},[]);
   const selectedW=availableWorkers.find(w=>w.id===workerId);
   const person=selectedW?(A.people||[]).find(p=>p.id===selectedW.personId):null;
   const econ=A.calcStaffingEconomics(Number(payRate)||0,Number(billRate)||0,selectedW?.province||"ON",Number(benefitsPerHr)||0);
   const marginOk=econ.markupPct>=A.STAFFING_AGENCY.markupFloor;
   const rateInvalid=Number(billRate)>0&&Number(payRate)>0&&Number(billRate)<Number(payRate);
 
-  const place=()=>{
+  const place=async()=>{
     if(!workerId||rateInvalid)return;
-    A.createAssignment({worker:workerId,client:jobOrder.client,jobOrder:jobOrder.id,
+    await A.createAssignment({worker:workerId,client:jobOrder.client,jobOrder:jobOrder.id,
       payRate:Number(payRate),billRate:Number(billRate),benefitsPerHr:Number(benefitsPerHr)||0,
       startDate:jobOrder.startDate,endDate:jobOrder.endDate,ongoing:jobOrder.ongoing,
       supervisor:jobOrder.supervisor,supervisorEmail:jobOrder.supervisorEmail,
       site:jobOrder.location,shiftPattern:jobOrder.shiftPattern,notes:""});
+    if(onSubmittalPlaced)await onSubmittalPlaced();
     onPlace();
   };
 
