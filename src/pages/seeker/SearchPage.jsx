@@ -8,6 +8,7 @@ import { annual } from "../../helpers/utils.js";
 import { CATS, CATM, PCODE, PROVS } from "../../store/seed/constants.js";
 import { JobCard } from "../shared/cards.jsx";
 import { matchJobsToFilters } from "../../helpers/jobSearch.js";
+import { JobsMap } from "./components/JobsMap.jsx";
 
 /* ═══════════════ SEARCH · MATCHED · SAVED · EMPLOYERS ═══════════════ */
 function Filters({f,set,clear,n,q,where}){
@@ -51,6 +52,20 @@ export function SearchPage(){
   const [sort,setSort]=useState(A.user?.role==="seeker"?"match":"recent");
   const [panel,setPanel]=useState(false);
   const [showSuggest,setShowSuggest]=useState(false);
+  const [radiusKm,setRadiusKm]=useState(0);
+  const [origin,setOrigin]=useState(null);
+  const [geocoding,setGeocoding]=useState(false);
+  const [mapView,setMapView]=useState(false);
+  /* Radius search needs the typed location resolved to real coordinates - only looked up when a
+     radius is actually selected (an "Exact match" radius stays plain text substring matching, no
+     network call needed) and re-resolved whenever the location text changes while a radius is active. */
+  useEffect(()=>{
+    if(!radiusKm||!where.trim()){setOrigin(null);return;}
+    let cancelled=false;
+    setGeocoding(true);
+    A.geocode(`${where}, Canada`).then(r=>{if(!cancelled){setOrigin(r);setGeocoding(false);}});
+    return ()=>{cancelled=true;};
+  },[radiusKm,where]);
   /* Typeahead - drawn from real live job titles rather than a canned list, so suggestions never
      name a role that doesn't actually exist on the platform right now. */
   const titleSuggestions=useMemo(()=>{
@@ -75,7 +90,7 @@ export function SearchPage(){
   const n=(f.cats?.length||0)+(f.types?.length||0)+(f.modes?.length||0)+(f.exps?.length||0)+(f.prov?1:0)+(f.minPay?1:0);
   const clear=()=>setF({cats:[],types:[],modes:[],exps:[],prov:"",minPay:""});
   const res=useMemo(()=>{
-    const o=matchJobsToFilters(A.jobs,{q,where,...f},{expandQuery:A.expandQuery,emp:A.emp});
+    const o=matchJobsToFilters(A.jobs,{q,where,...f,origin,radiusKm},{expandQuery:A.expandQuery,emp:A.emp});
     const c=[...o];
     if(sort==="match")c.sort((a,b)=>A.score(b)-A.score(a));
     if(sort==="pay")c.sort((a,b)=>annual(b)-annual(a));
@@ -106,8 +121,20 @@ export function SearchPage(){
                 <I n="search" s={13} c={C.text3}/> <span className="ml-1.5">{t}</span></button>)}</div>}</div>
           {!mob&&<div className="w-px bg-line my-2"/>}
           <div className="flex-[1_1_180px] min-w-0"><Input icon="pin" placeholder="City or province" value={where} onChange={e=>setWhere(e.target.value)} style={{border:"none",boxShadow:"none",fontSize:15}}/></div>
+          {!mob&&<div className="w-px bg-line my-2"/>}
+          <div className="flex-[0_0_150px] min-w-0">
+            <Sel value={radiusKm} onChange={e=>setRadiusKm(Number(e.target.value))} style={{border:"none",boxShadow:"none",fontSize:15}}>
+              <option value={0}>Exact match</option>
+              <option value={10}>Within 10 km</option>
+              <option value={25}>Within 25 km</option>
+              <option value={50}>Within 50 km</option>
+              <option value={100}>Within 100 km</option>
+            </Sel>
+          </div>
           {mob&&<Btn kind="outline" icon="sliders" onClick={()=>setPanel(true)} full>Filters{n?` (${n})`:""}</Btn>}
         </div>
+        {radiusKm>0&&<div className="text-xs mt-2 max-w-3xl mx-auto text-center" style={{color:geocoding?C.text3:origin?C.ok:C.warn}}>
+          {geocoding?"Locating…":origin?`Searching within ${radiusKm} km of ${origin.displayName?.split(",").slice(0,2).join(", ")||where}`:where.trim()?"Couldn't find that location — showing exact-match results instead.":"Type a city to search by radius."}</div>}
         <div className="text-xs text-text-3 mt-2 max-w-3xl mx-auto text-center">Tip: add <strong>-word</strong> to exclude results, e.g. "electrician -apprentice"</div>
       </div>
     </section>
@@ -126,9 +153,12 @@ export function SearchPage(){
                   A.setEditingSavedSearchId(null); A.toast("Saved search updated","ok"); A.go("savedSearches");}}>Update saved search</Btn>
               :<Btn kind="outline" size="sm" icon="bookmark"
                 onClick={()=>{const nm=q||CATM[f.cats?.[0]]?.label||"Search";A.saveSearch(q,where,f.cats,nm,f);}}>Save this search</Btn>)}
-            <Sel value={sort} onChange={e=>setSort(e.target.value)} style={{width:mob?170:200,padding:"10px 14px",fontSize:14}}>
-              {A.user?.role==="seeker"&&<option value="match">Best match</option>}
-              <option value="recent">Most recent</option><option value="pay">Highest pay</option><option value="closing">Closing soon</option></Sel></div>
+            <div className="flex gap-2">
+              <Btn kind={mapView?"primary":"outline"} size="sm" icon="pin" onClick={()=>setMapView(v=>!v)}>{mapView?"List view":"Map view"}</Btn>
+              <Sel value={sort} onChange={e=>setSort(e.target.value)} style={{width:mob?150:180,padding:"10px 14px",fontSize:14}}>
+                {A.user?.role==="seeker"&&<option value="match">Best match</option>}
+                <option value="recent">Most recent</option><option value="pay">Highest pay</option><option value="closing">Closing soon</option></Sel>
+            </div></div>
           {n>0&&<div className="flex gap-2 flex-wrap mb-5 items-center">
             {(f.cats||[]).map(c=><button key={c} onClick={()=>setF({...f,cats:f.cats.filter(x=>x!==c)})}
               className="flex items-center gap-1.5 bg-wash border border-line-2 text-brand text-xs font-semibold py-1.5 px-3 rounded-lg cursor-pointer">{CATM[c].label}<I n="x" s={12} w={2.4}/></button>)}
@@ -139,6 +169,7 @@ export function SearchPage(){
           {res.length===0?<Empty icon="search" title="No jobs match those filters"
             body="Try removing a filter, searching a nearby city, or broadening the sector."
             action={<Btn kind="primary" onClick={()=>{clear();setQ("");setWhere("");}}>Reset search</Btn>}/>
+            :mapView?<div style={{height:560}}><JobsMap jobs={res} center={origin} onSelect={j=>A.openJob(j.id)}/></div>
             :<><div className="grid gap-4" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:320}px,1fr))`}}>
               {pg.pageItems.map(j=><JobCard key={j.id} job={j}/>)}</div>
               <Pagination {...pg}/></>}

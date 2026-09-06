@@ -6,6 +6,7 @@ import { salesTaxRate } from "../../src/helpers/salesTax.js";
 import { calcNetPay } from "../../src/helpers/payrollTax.js";
 import { calcStaffingEconomics } from "../../src/helpers/staffingEconomics.js";
 import { getConfig } from "../platformConfig.js";
+import { sendAndLogMail } from "../mail.js";
 import {
   serializeWorker, serializeWorkerForClient, serializeStaffingClient, serializeJobOrder, serializeAssignment,
   serializeStaffingTimesheet, serializeStaffingPayrun, serializeStaffingInvoice, serializePlacement,
@@ -60,7 +61,7 @@ staffingRouter.get("/me", requireAgencyAuth, (req, res) => {
 // users are entirely separate accounts that can share an email address.
 const AGENCY_RESET_COOLDOWN_MS = 60 * 1000;
 const AGENCY_RESET_MAX_ATTEMPTS = 5;
-staffingRouter.post("/reset/request", (req, res) => {
+staffingRouter.post("/reset/request", async (req, res) => {
   const email = (req.body?.email || "").toLowerCase().trim();
   const staff = db.prepare("SELECT id FROM agency_staff WHERE lower(email) = ?").get(email);
   if (!staff) return res.status(404).json({ error: "No agency account with that email." });
@@ -73,8 +74,7 @@ staffingRouter.post("/reset/request", (req, res) => {
   }
   const code = crypto.randomInt(100000, 1000000).toString();
   db.prepare("INSERT INTO agency_reset_codes (email, code, attempts) VALUES (?, ?, 0) ON CONFLICT(email) DO UPDATE SET code = excluded.code, attempts = 0, created_at = datetime('now')").run(email, code);
-  db.prepare("INSERT INTO outbox (id, to_email, subject, body) VALUES (?, ?, 'Reset your NorthHire Staffing password', ?)")
-    .run(nextId("m", "outbox"), email, `Your reset code is ${code}. It expires in 15 minutes.`);
+  await sendAndLogMail(email, "Reset your NorthHire Staffing password", `Your reset code is ${code}. It expires in 15 minutes.`);
   // Same fix as the main site's reset flow (auth.js) - never hand the code back to whoever merely
   // knows the target email, only outside production where there's no real email to demo with.
   res.json({ ok: true, code: process.env.NODE_ENV === "production" ? undefined : code });
@@ -399,7 +399,7 @@ staffingRouter.patch("/payruns/:id/reverse", requireAgencyAuth, (req, res) => {
 });
 
 /* ─── Invoicing ─── */
-staffingRouter.post("/invoices/generate", requireAgencyAuth, (req, res) => {
+staffingRouter.post("/invoices/generate", requireAgencyAuth, async (req, res) => {
   const { weekStart } = req.body || {};
   const inWeek = db.prepare("SELECT * FROM staffing_timesheets WHERE status = 'approved' AND week_start = ?").all(weekStart);
   const byClient = {};
@@ -431,14 +431,11 @@ staffingRouter.post("/invoices/generate", requireAgencyAuth, (req, res) => {
        VALUES (?, ?, ?, ?, date('now'), ?, 'pending', ?, ?, 0, ?, ?, ?)`
     ).run(id, nextNumber(), cid, weekStart, due.toISOString().slice(0, 10), JSON.stringify(d.lines), subtotal, hst, total, client?.po_number || "—");
     const invoice = serializeStaffingInvoice(db.prepare("SELECT * FROM staffing_invoices WHERE id = ?").get(id));
-    // Real simulated delivery: a genuine outbox row (same table/pattern reset-codes use), not just
-    // a UI claim with nothing to back it - only written when the client actually has a billing
-    // contact on file, since sending to no one isn't "emailed" either.
+    // Only sent when the client actually has a billing contact on file, since sending to no one
+    // isn't "emailed" either.
     if (client?.default_supervisor_email) {
-      db.prepare("INSERT INTO outbox (id, to_email, subject, body) VALUES (?, ?, ?, ?)").run(
-        nextId("m", "outbox"), client.default_supervisor_email, `Invoice ${invoice.number} from your staffing agency`,
-        `Invoice ${invoice.number} for the week of ${weekStart} is ready: $${total.toFixed(2)} total, due ${invoice.due}.`
-      );
+      await sendAndLogMail(client.default_supervisor_email, `Invoice ${invoice.number} from your staffing agency`,
+        `Invoice ${invoice.number} for the week of ${weekStart} is ready: $${total.toFixed(2)} total, due ${invoice.due}.`);
     }
     created.push(invoice);
   }

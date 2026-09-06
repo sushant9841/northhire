@@ -3,6 +3,7 @@
 // already sees in the client-only version - not a mismatched second dataset.
 import { db, nextId } from "./db.js";
 import { hashPassword } from "./auth.js";
+import { geocode } from "./geocode.js";
 import { SEED_EMPLOYERS } from "../src/store/seed/employers.js";
 import { SEED_JOBS } from "../src/store/seed/jobs.js";
 import { SEED_PEOPLE } from "../src/store/seed/people.js";
@@ -70,19 +71,24 @@ const parseDaysAgo = s => {
   return m ? Number(m[1]) : 0;
 };
 const insertJob = db.prepare(
-  `INSERT INTO jobs (id, employer_id, title, cat, city, prov, type, mode, pay_lo, pay_hi, pay_unit,
+  `INSERT INTO jobs (id, employer_id, title, cat, city, prov, lat, lng, type, mode, pay_lo, pay_hi, pay_unit,
      vacancies, experience, education, deadline_date, views, urgent, featured, skills_json, perks_json,
      description, duties_json, requirements_json, how_to_apply, status, flagged, created_at)
-   VALUES (@id,@employer_id,@title,@cat,@city,@prov,@type,@mode,@pay_lo,@pay_hi,@pay_unit,
+   VALUES (@id,@employer_id,@title,@cat,@city,@prov,@lat,@lng,@type,@mode,@pay_lo,@pay_hi,@pay_unit,
      @vacancies,@experience,@education,@deadline_date,@views,@urgent,@featured,@skills_json,@perks_json,
      @description,@duties_json,@requirements_json,@how_to_apply,@status,@flagged,@created_at)`
 );
+// Geocoded once at seed time (free OSM Nominatim, throttled/cached in geocode.js) so every seed
+// job carries real coordinates for radius search/map view without hitting the service on every
+// server boot - a handful of distinct cities across 30 jobs takes well under a minute.
 for (const j of SEED_JOBS) {
   const postedDaysAgo = parseDaysAgo(j.posted);
   const createdAt = new Date(Date.now() - postedDaysAgo * 86400000).toISOString();
   const deadlineDate = new Date(Date.now() + (j.dl || 14) * 86400000).toISOString().slice(0, 10);
+  const geo = (j.city && j.prov) ? await geocode(`${j.city}, ${j.prov}, Canada`) : null;
   insertJob.run({
     id: j.id, employer_id: j.e, title: j.t, cat: j.cat || null, city: j.city || null, prov: j.prov || null,
+    lat: geo?.lat ?? null, lng: geo?.lng ?? null,
     type: j.type || null, mode: j.mode || null, pay_lo: j.lo ?? null, pay_hi: j.hi ?? null, pay_unit: j.unit || null,
     vacancies: j.vac || 1, experience: j.exp || null, education: j.edu || null, deadline_date: deadlineDate,
     views: j.views || 0, urgent: j.urgent ? 1 : 0, featured: j.featured ? 1 : 0,
@@ -91,6 +97,7 @@ for (const j of SEED_JOBS) {
     how_to_apply: j.how || null, status: j.status || "live", flagged: j.flagged ? 1 : 0, created_at: createdAt,
   });
 }
+console.log(`Geocoded ${SEED_JOBS.length} jobs via OpenStreetMap Nominatim.`);
 console.log(`Seeded ${SEED_JOBS.length} jobs.`);
 
 const insertUser = db.prepare(

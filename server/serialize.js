@@ -46,6 +46,8 @@ export function serializeJob(row) {
     cat: row.cat,
     city: row.city,
     prov: row.prov,
+    lat: row.lat,
+    lng: row.lng,
     type: row.type,
     mode: row.mode,
     lo: row.pay_lo,

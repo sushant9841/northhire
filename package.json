@@ -12,11 +12,17 @@
     "server:seed": "node server/seed.js"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
     "@tailwindcss/vite": "^4.3.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dompurify": "^3.4.14",
     "express": "^5.2.1",
+    "leaflet": "^1.9.4",
+    "mammoth": "^1.12.2",
+    "nodemailer": "^10.0.0",
+    "pdf-parse": "^2.4.5",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "tailwindcss": "^4.3.3"

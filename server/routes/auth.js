@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { Router } from "express";
 import { db, nextId, sqlTime } from "../db.js";
 import { hashPassword, verifyPassword, createSessionCookie, clearSessionCookie, publicUser, requireAuth } from "../auth.js";
+import { sendAndLogMail } from "../mail.js";
 
 export const authRouter = Router();
 
@@ -90,7 +91,7 @@ authRouter.get("/check-email", (req, res) => {
 
 const LOGIN_LOCKOUT_MAX_ATTEMPTS = 5;
 const LOGIN_LOCKOUT_WINDOW_MIN = 15;
-authRouter.post("/login", (req, res) => {
+authRouter.post("/login", async (req, res) => {
   const { email, password } = req.body || {};
   if (!email || !password) return res.status(400).json({ error: "Email and password are required." });
   const emailLower = email.toLowerCase();
@@ -116,8 +117,7 @@ authRouter.post("/login", (req, res) => {
     const code = crypto.randomInt(100000, 1000000).toString();
     db.prepare("INSERT INTO login_2fa_codes (email, code) VALUES (?, ?) ON CONFLICT(email) DO UPDATE SET code = excluded.code, created_at = datetime('now')")
       .run(user.email, code);
-    db.prepare("INSERT INTO outbox (id, to_email, subject, body) VALUES (?, ?, 'Your NorthHire sign-in code', ?)")
-      .run(nextId("m", "outbox"), user.email, `Your sign-in code is ${code}. It expires in 15 minutes.`);
+    await sendAndLogMail(user.email, "Your NorthHire sign-in code", `Your sign-in code is ${code}. It expires in 15 minutes.`);
     // Returning the code in the response defeats 2FA entirely for anyone who already has the
     // password (the whole point of a second factor) - only ever expose it outside production,
     // where there's no real SMS/email delivery to demo the flow with otherwise.
@@ -164,10 +164,10 @@ authRouter.get("/me", requireAuth, (req, res) => {
 
 authRouter.get("/outbox", requireAuth, (req, res) => {
   const rows = db.prepare("SELECT * FROM outbox WHERE to_email = ? ORDER BY created_at DESC").all(req.user.email);
-  res.json({ outbox: rows.map(r => ({ id: r.id, to: r.to_email, subject: r.subject, body: r.body, at: sqlTime(r.created_at).toLocaleString("en-CA") })) });
+  res.json({ outbox: rows.map(r => ({ id: r.id, to: r.to_email, subject: r.subject, body: r.body, previewUrl: r.preview_url, at: sqlTime(r.created_at).toLocaleString("en-CA") })) });
 });
 
-authRouter.post("/reset/request", (req, res) => {
+authRouter.post("/reset/request", async (req, res) => {
   const email = (req.body?.email || "").toLowerCase().trim();
   const user = db.prepare("SELECT id FROM users WHERE email = ?").get(email);
   if (!user) return res.status(404).json({ error: "No account with that email." });
@@ -180,8 +180,7 @@ authRouter.post("/reset/request", (req, res) => {
   }
   const code = crypto.randomInt(100000, 1000000).toString();
   db.prepare("INSERT INTO reset_codes (email, code, attempts) VALUES (?, ?, 0) ON CONFLICT(email) DO UPDATE SET code = excluded.code, attempts = 0, created_at = datetime('now')").run(email, code);
-  db.prepare("INSERT INTO outbox (id, to_email, subject, body) VALUES (?, ?, 'Reset your NorthHire password', ?)")
-    .run(nextId("m", "outbox"), email, `Your reset code is ${code}. It expires in 15 minutes.`);
+  await sendAndLogMail(email, "Reset your NorthHire password", `Your reset code is ${code}. It expires in 15 minutes.`);
   // Returning the code to whoever merely knows the target email defeats password reset entirely -
   // anyone could take over any account, admin included, without ever touching the real inbox.
   // Only exposed outside production, where there's no real email delivery to demo the flow with.

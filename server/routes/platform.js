@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, nextId, sqlTime } from "../db.js";
 import { requireAuth, requireAdminScope } from "../auth.js";
 import { getAllConfig, setConfig, CONFIG_KEYS } from "../platformConfig.js";
+import { geocode } from "../geocode.js";
 
 export const platformRouter = Router();
 
@@ -27,6 +28,16 @@ platformRouter.patch("/config/:key", requireAuth, requireAdminScope("finance"), 
   db.prepare("INSERT INTO activity_log (id, action, text, icon, actor) VALUES (?, 'config.change', ?, 'gear', ?)")
     .run(nextId("l", "activity_log"), `Updated ${req.params.key} config`, `${req.user.name} (${req.user.role})`);
   res.json({ [req.params.key]: updated });
+});
+
+// A client can't call Nominatim directly and stay within its usage policy (no custom User-Agent
+// from a browser, no shared cache/rate-limit across visitors) - this proxies through the same
+// throttled, cached helper server/jobs.js uses when geocoding a new listing.
+platformRouter.get("/geocode", async (req, res) => {
+  const q = (req.query.q || "").toString().trim();
+  if (!q) return res.status(400).json({ error: "Missing ?q=" });
+  const result = await geocode(q);
+  res.json({ result });
 });
 
 platformRouter.get("/settings", (req, res) => {

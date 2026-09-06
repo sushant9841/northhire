@@ -3,6 +3,7 @@ import { db, nextId } from "../db.js";
 import { requireAuth, requireRole, requireAdminScope, hasAdminScope } from "../auth.js";
 import { serializeJob } from "../serialize.js";
 import { getConfig } from "../platformConfig.js";
+import { geocode } from "../geocode.js";
 
 export const jobsRouter = Router();
 
@@ -85,7 +86,7 @@ jobsRouter.patch("/reports/:id", requireAuth, requireAdminScope("moderator"), (r
   res.json({ ok: true });
 });
 
-jobsRouter.post("/", requireAuth, requireRole("employer"), (req, res) => {
+jobsRouter.post("/", requireAuth, requireRole("employer"), async (req, res) => {
   const b = req.body || {};
   if (!b.title || !b.desc) return res.status(400).json({ error: "Title and description are required." });
   const initialStatus = b.status === "live" ? "live" : "review";
@@ -103,13 +104,17 @@ jobsRouter.post("/", requireAuth, requireRole("employer"), (req, res) => {
   // is a different gate for a different reason.
   const needsOwnerApproval = req.user.employer_role === "member";
   const id = nextId("j", "jobs");
+  // Free OSM geocoding (server/geocode.js) so the listing carries real coordinates for radius
+  // search/map view - best-effort, never blocks posting a job if the lookup fails or times out.
+  const geo = (b.city && b.prov) ? await geocode(`${b.city}, ${b.prov}, Canada`) : null;
   db.prepare(
-    `INSERT INTO jobs (id, employer_id, title, cat, city, prov, type, mode, pay_lo, pay_hi, pay_unit,
+    `INSERT INTO jobs (id, employer_id, title, cat, city, prov, lat, lng, type, mode, pay_lo, pay_hi, pay_unit,
        vacancies, experience, education, deadline_date, urgent, featured, skills_json, perks_json,
        description, duties_json, requirements_json, how_to_apply, screening_questions_json, status, pending_owner_approval)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
   ).run(
-    id, req.user.employer_id, b.title, b.cat || null, b.city || null, b.prov || null, b.type || null, b.mode || null,
+    id, req.user.employer_id, b.title, b.cat || null, b.city || null, b.prov || null, geo?.lat ?? null, geo?.lng ?? null,
+    b.type || null, b.mode || null,
     b.lo ?? null, b.hi ?? null, b.unit || null, b.vac ?? 1, b.exp || null, b.edu || null, b.dlDate || null,
     b.urgent ? 1 : 0, b.featured ? 1 : 0, JSON.stringify(b.skills || []), JSON.stringify(b.perks || []),
     b.desc, JSON.stringify(b.duties || []), JSON.stringify(b.reqs || []), b.how || null,

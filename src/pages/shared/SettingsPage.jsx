@@ -93,7 +93,8 @@ export function SettingsPage(){
               <div className="text-sm font-semibold text-text">{m.subject}</div>
               <div className="text-xs text-text-3 shrink-0">{m.at}</div></div>
             <div className="text-xs text-text-3 mb-2">To: {m.to}</div>
-            <div className="text-sm text-text-2 leading-normal">{m.body}</div></div>)}</div>}</Modal>}
+            <div className="text-sm text-text-2 leading-normal">{m.body}</div>
+            {m.previewUrl&&<a href={m.previewUrl} target="_blank" rel="noreferrer" className="text-xs text-brand font-semibold mt-2 inline-block">View the actual sent email →</a>}</div>)}</div>}</Modal>}
     <Modal open={confirm} onClose={()=>setConfirm(false)} title="Delete your account?" sub="This cannot be undone"
       footer={<div className="flex gap-2.5"><Btn kind="outline" full onClick={()=>setConfirm(false)}>Keep my account</Btn>
         <Btn kind="danger" full icon="trash" onClick={()=>{setConfirm(false);A.deleteAccount();}}>Delete permanently</Btn></div>}>

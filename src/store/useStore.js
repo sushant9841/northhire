@@ -758,6 +758,11 @@ export function useStore(){
     try{await api.patch(`/users/${id}/admin-scope`,{scope});return {ok:true};}
     catch(err){return {ok:false,msg:err.message};}
   };
+  const geocode=async(q)=>{
+    if(!q?.trim())return null;
+    try{const {result}=await api.get(`/platform/geocode?q=${encodeURIComponent(q)}`);return result;}
+    catch{return null;}
+  };
   const updatePlatformConfig=async(key,value)=>{
     try{
       const updated=await api.patch(`/platform/config/${key}`,{value});
@@ -1679,7 +1684,7 @@ export function useStore(){
     twoFactor,enable2FA,disable2FA,
     references,addReference,removeReference,
     addReview,deleteReview,loadEmployerReviews,loadCandidateContact,candidateNotes,saveCandidateNote,loadScorecards,submitScorecard,
-    submitContact,loadContactInbox,resolveContactMessage,listAdmins,setAdminScope,updatePlatformConfig,
+    submitContact,loadContactInbox,resolveContactMessage,listAdmins,setAdminScope,updatePlatformConfig,geocode,
     saved,following,enrolled,trainingProgress,suspended,suspensionInfo,invitedCandidates,notifications,activity,securitySignals,settings,userSettings,search,setSearch,
     toasts,toast,dismissToast,
     jobId,empId,blogId,trainingId,cvId,editId,candidateId,pipelineJob,applyDraft,setApplyDraft,

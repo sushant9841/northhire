@@ -4,6 +4,7 @@ import { db, nextId, sqlTime } from "../db.js";
 import { requireAuth, requireRole, hashPassword, createSessionCookie, publicUser, hasAdminScope } from "../auth.js";
 import { serializeEmployer } from "../serialize.js";
 import { getConfig } from "../platformConfig.js";
+import { sendAndLogMail } from "../mail.js";
 
 export const employersRouter = Router();
 
@@ -85,7 +86,7 @@ employersRouter.get("/team", requireAuth, requireRole("employer"), (req, res) =>
   // deliberately as the "unlimited" sentinel instead of letting that happen by accident.
   res.json({ members, invites, seatLimit: rawLimit === Infinity ? null : rawLimit, seatsUsed: members.length + invites.length });
 });
-employersRouter.post("/team/invite", requireAuth, requireRole("employer"), (req, res) => {
+employersRouter.post("/team/invite", requireAuth, requireRole("employer"), async (req, res) => {
   if (req.user.employer_role !== "owner") return res.status(403).json({ error: "Only the account owner can invite teammates." });
   const email = (req.body?.email || "").toLowerCase().trim();
   if (!email || !email.includes("@")) return res.status(400).json({ error: "Enter a valid email address." });
@@ -100,11 +101,10 @@ employersRouter.post("/team/invite", requireAuth, requireRole("employer"), (req,
   const id = nextId("inv", "employer_invites");
   const token = crypto.randomBytes(20).toString("hex");
   db.prepare("INSERT INTO employer_invites (id, employer_id, email, invited_by, token) VALUES (?, ?, ?, ?, ?)").run(id, req.user.employer_id, email, req.user.id, token);
-  db.prepare("INSERT INTO outbox (id, to_email, subject, body) VALUES (?, ?, 'You have been invited to a NorthHire employer account', ?)")
-    .run(nextId("m", "outbox"), email, `${req.user.name} invited you to join their team on NorthHire. Your invite code: ${token}`);
-  // No real email delivery exists (the same honest ceiling as the reset-code/2FA flows) - the
-  // invited person has no account yet, so they can't check their own /auth/outbox. Return the
-  // link straight to the owner, who copies and sends it themselves for this demo.
+  await sendAndLogMail(email, "You have been invited to a NorthHire employer account", `${req.user.name} invited you to join their team on NorthHire. Your invite code: ${token}`);
+  // The invited person has no account yet, so they can't check their own /auth/outbox even though
+  // the email really was sent (to their Ethereal-sandboxed inbox) - also return the link straight
+  // to the owner so this demo doesn't require digging up a preview URL to test the invite flow.
   res.status(201).json({ invite: serializeInvite(db.prepare("SELECT * FROM employer_invites WHERE id = ?").get(id)), inviteToken: token });
 });
 employersRouter.delete("/team/invite/:id", requireAuth, requireRole("employer"), (req, res) => {

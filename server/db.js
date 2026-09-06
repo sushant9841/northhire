@@ -81,6 +81,7 @@ CREATE TABLE IF NOT EXISTS jobs (
   title TEXT NOT NULL,
   cat TEXT, city TEXT, prov TEXT, type TEXT, mode TEXT,
   pay_lo REAL, pay_hi REAL, pay_unit TEXT,
+  lat REAL, lng REAL,
   vacancies INTEGER DEFAULT 1,
   experience TEXT, education TEXT,
   deadline_date TEXT,
@@ -243,7 +244,7 @@ CREATE TABLE IF NOT EXISTS invited_candidates (
   PRIMARY KEY (job_id, candidate_id)
 );
 CREATE TABLE IF NOT EXISTS outbox (
-  id TEXT PRIMARY KEY, to_email TEXT, subject TEXT, body TEXT,
+  id TEXT PRIMARY KEY, to_email TEXT, subject TEXT, body TEXT, preview_url TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE TABLE IF NOT EXISTS reset_codes (

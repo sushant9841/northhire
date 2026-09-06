@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import { db, nextId, sqlTime } from "../db.js";
 import { calcNetPay } from "../../src/helpers/payrollTax.js";
 import { getConfig } from "../platformConfig.js";
+import { sendAndLogMail } from "../mail.js";
 import { hashPassword, verifyPassword, createSessionCookie, clearSessionCookie, requireHrAuth, hrEmployeeFromRequest, requireAuth, requireRole } from "../auth.js";
 import {
   serializeHrEmployee, serializeHrAttendance, serializeHrLeave, serializeHrTask, serializeHrEvent,
@@ -175,7 +176,7 @@ hrRouter.post("/employees/:id/erase", requireHrAuth, requireHrPriv, (req, res) =
   logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "employee_erased", `Erased personal data for ${row.name}`);
   res.json({ ok: true });
 });
-hrRouter.patch("/employees/:id/badges", requireHrAuth, requireHrPriv, (req, res) => {
+hrRouter.patch("/employees/:id/badges", requireHrAuth, requireHrPriv, async (req, res) => {
   const row = db.prepare("SELECT * FROM hr_employees WHERE id = ? AND company_id = ?").get(req.params.id, req.hrEmployee.company_id);
   if (!row) return res.status(404).json({ error: "Employee not found." });
   const { badge, remove } = req.body || {};
@@ -185,6 +186,7 @@ hrRouter.patch("/employees/:id/badges", requireHrAuth, requireHrPriv, (req, res)
   if (!remove) badges.push({ name: badge, awardedAt: new Date().toISOString() });
   db.prepare("UPDATE hr_employees SET badges_json = ? WHERE id = ?").run(JSON.stringify(badges), req.params.id);
   logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, remove ? "badge_removed" : "badge_awarded", `${remove ? "Removed" : "Awarded"} "${badge}" ${remove ? "from" : "to"} ${row.name}`);
+  if (!remove && !row.erased) await sendAndLogMail(row.email, `You earned a badge: ${badge}`, `${req.hrEmployee.name} awarded you the "${badge}" badge. Check the badge wall in HR Suite to see it.`);
   res.json({ employee: serializeHrEmployee(db.prepare("SELECT * FROM hr_employees WHERE id = ?").get(req.params.id)) });
 });
 
@@ -299,11 +301,16 @@ hrRouter.post("/leave", requireHrAuth, (req, res) => {
     .run(id, req.hrEmployee.id, d.type, d.from, d.to, d.days, d.reason);
   res.status(201).json({ leave: serializeHrLeave(db.prepare("SELECT * FROM hr_leave WHERE id = ?").get(id)) });
 });
-hrRouter.patch("/leave/:id/decide", requireHrAuth, (req, res) => {
+hrRouter.patch("/leave/:id/decide", requireHrAuth, async (req, res) => {
   const row = db.prepare("SELECT * FROM hr_leave WHERE id = ?").get(req.params.id);
   if (!row) return res.status(404).json({ error: "Leave request not found." });
   if (!canDecideFor(req.hrEmployee, row.employee_id)) return res.status(403).json({ error: "Only this employee's manager or HR can decide this request." });
   db.prepare("UPDATE hr_leave SET status = ?, approved_by = ? WHERE id = ?").run(req.body?.decision, req.hrEmployee.id, req.params.id);
+  const emp = db.prepare("SELECT name, email, erased FROM hr_employees WHERE id = ?").get(row.employee_id);
+  if (emp && !emp.erased) {
+    await sendAndLogMail(emp.email, `Your ${row.type} leave request was ${req.body?.decision}`,
+      `Your leave request for ${row.from_date} to ${row.to_date} was ${req.body?.decision} by ${req.hrEmployee.name}.`);
+  }
   res.json({ leave: serializeHrLeave(db.prepare("SELECT * FROM hr_leave WHERE id = ?").get(req.params.id)) });
 });
 
@@ -312,11 +319,15 @@ hrRouter.get("/tasks", requireHrAuth, (req, res) => {
   const rows = db.prepare("SELECT * FROM hr_tasks WHERE company_id = ? ORDER BY created_at DESC").all(req.hrEmployee.company_id);
   res.json({ tasks: rows.map(serializeHrTask) });
 });
-hrRouter.post("/tasks", requireHrAuth, (req, res) => {
+hrRouter.post("/tasks", requireHrAuth, async (req, res) => {
   const d = req.body || {};
   const id = nextId("tk", "hr_tasks");
   db.prepare("INSERT INTO hr_tasks (id, company_id, title, assignee, assigned_by, due, priority, tags_json) VALUES (?,?,?,?,?,?,?,?)")
     .run(id, req.hrEmployee.company_id, d.title, d.assignee, req.hrEmployee.id, d.due, d.priority || "medium", JSON.stringify(d.tags || []));
+  const assignee = d.assignee ? db.prepare("SELECT name, email, erased FROM hr_employees WHERE id = ?").get(d.assignee) : null;
+  if (assignee && !assignee.erased && d.assignee !== req.hrEmployee.id) {
+    await sendAndLogMail(assignee.email, `New task: ${d.title}`, `${req.hrEmployee.name} assigned you a task${d.due ? `, due ${d.due}` : ""}: ${d.title}`);
+  }
   res.status(201).json({ task: serializeHrTask(db.prepare("SELECT * FROM hr_tasks WHERE id = ?").get(id)) });
 });
 hrRouter.patch("/tasks/:id/status", requireHrAuth, (req, res) => {
@@ -545,7 +556,7 @@ hrRouter.patch("/payruns/:id/approve", requireHrAuth, requireHrPriv, (req, res) 
 });
 // Must come from 'approved' specifically - without this, calling execute twice (a double-click,
 // or a replayed request) would re-run the expense-reimbursement side effect below a second time.
-hrRouter.patch("/payruns/:id/execute", requireHrAuth, requireHrPriv, (req, res) => {
+hrRouter.patch("/payruns/:id/execute", requireHrAuth, requireHrPriv, async (req, res) => {
   const run = resolveOwnHrPayrun(req, res); if (!run) return;
   if (run.status !== "approved") return res.status(400).json({ error: "Only an approved run can be executed." });
   db.prepare("UPDATE hr_payruns SET status = 'paid', paid_at = datetime('now') WHERE id = ?").run(req.params.id);
@@ -556,6 +567,10 @@ hrRouter.patch("/payruns/:id/execute", requireHrAuth, requireHrPriv, (req, res) 
         `UPDATE hr_expenses SET status = 'paid', paid_at = datetime('now')
          WHERE employee_id = ? AND status = 'approved' AND reimburse_via = 'next-payroll'`
       ).run(line.employee);
+    }
+    const emp = db.prepare("SELECT email, erased FROM hr_employees WHERE id = ?").get(line.employee);
+    if (emp && !emp.erased) {
+      await sendAndLogMail(emp.email, "Your pay has been deposited", `Your pay for ${run.period_start} to ${run.period_end} ($${line.net.toFixed(2)} net) has been deposited. View your full pay stub in HR Suite.`);
     }
   }
   logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "payroll_executed", `Executed payroll for ${run.period_start} → ${run.period_end} (${lines.length} employees, $${run.total_net?.toLocaleString()} net)`);
