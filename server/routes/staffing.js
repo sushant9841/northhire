@@ -54,6 +54,10 @@ staffingRouter.get("/me", requireAgencyAuth, (req, res) => {
   const s = req.agencyStaff;
   res.json({ staff: { id: s.id, loginId: s.login_id, name: s.name, role: s.role, title: s.title, seed: s.seed, email: s.email } });
 });
+staffingRouter.get("/staff", requireAgencyAuth, (req, res) => {
+  const rows = db.prepare("SELECT id, name, role, title, seed FROM agency_staff ORDER BY name").all();
+  res.json({ staff: rows.map(r => ({ id: r.id, name: r.name, role: r.role, title: r.title, seed: r.seed })) });
+});
 
 // Password reset for the agency console - previously the only auth surface with none at all,
 // a real gap for a payroll-and-PII-bearing back office. Same cooldown/attempt-lockout shape as
@@ -533,12 +537,37 @@ staffingRouter.post("/placements", requireAgencyAuth, (req, res) => {
   const d = req.body || {};
   const salary = Number(d.salary) || 0, feePct = Number(d.feePct) || 20;
   const fee = round2(salary * feePct / 100);
+  const commissionPct = getConfig("staffingAgency").recruiterCommissionPct || 0;
+  const commission = d.recruiterId ? round2(fee * commissionPct / 100) : null;
   const id = nextId("pl", "staffing_placements");
   db.prepare(
-    `INSERT INTO staffing_placements (id, client_id, candidate_id, role, offered_at, status, salary, fee_pct, fee, notes)
-     VALUES (?, ?, ?, ?, date('now'), 'in-progress', ?, ?, ?, ?)`
-  ).run(id, d.client, d.candidate || null, d.role, salary, feePct, fee, d.notes || null);
+    `INSERT INTO staffing_placements (id, client_id, candidate_id, role, offered_at, status, salary, fee_pct, fee, notes, recruiter_id, commission)
+     VALUES (?, ?, ?, ?, date('now'), 'in-progress', ?, ?, ?, ?, ?, ?)`
+  ).run(id, d.client, d.candidate || null, d.role, salary, feePct, fee, d.notes || null, d.recruiterId || null, commission);
   res.status(201).json({ placement: serializePlacement(db.prepare("SELECT * FROM staffing_placements WHERE id = ?").get(id)) });
+});
+staffingRouter.patch("/placements/:id/recruiter", requireAgencyAuth, (req, res) => {
+  const row = db.prepare("SELECT * FROM staffing_placements WHERE id = ?").get(req.params.id);
+  if (!row) return res.status(404).json({ error: "Placement not found." });
+  const { recruiterId } = req.body || {};
+  const commissionPct = getConfig("staffingAgency").recruiterCommissionPct || 0;
+  const commission = recruiterId ? round2(row.fee * commissionPct / 100) : null;
+  db.prepare("UPDATE staffing_placements SET recruiter_id = ?, commission = ? WHERE id = ?").run(recruiterId || null, commission, req.params.id);
+  res.json({ placement: serializePlacement(db.prepare("SELECT * FROM staffing_placements WHERE id = ?").get(req.params.id)) });
+});
+// Commission is only payable once the fee itself has actually been billed (guaranteed status =
+// invoiced, still within the replacement-guarantee window) - paying a recruiter before the agency
+// has even invoiced the client would be commission on money that was never actually earned yet.
+staffingRouter.patch("/placements/:id/pay-commission", requireAgencyAuth, (req, res) => {
+  const row = db.prepare("SELECT * FROM staffing_placements WHERE id = ?").get(req.params.id);
+  if (!row) return res.status(404).json({ error: "Placement not found." });
+  if (!row.recruiter_id) return res.status(400).json({ error: "No recruiter assigned to this placement." });
+  if (row.status !== "guaranteed") return res.status(400).json({ error: row.status === "clawed-back" ? "This placement was clawed back — no commission is payable." : "Commission is only payable once the placement fee has been invoiced." });
+  if (row.commission_paid) return res.status(400).json({ error: "Commission already paid." });
+  db.prepare("UPDATE staffing_placements SET commission_paid = 1, commission_paid_at = date('now') WHERE id = ?").run(req.params.id);
+  const recruiter = db.prepare("SELECT name FROM agency_staff WHERE id = ?").get(row.recruiter_id);
+  logStaffingAudit(req.agencyStaff.id, "commission_paid", `Paid $${row.commission?.toFixed(2)} commission to ${recruiter?.name || row.recruiter_id} for ${row.role}`);
+  res.json({ placement: serializePlacement(db.prepare("SELECT * FROM staffing_placements WHERE id = ?").get(req.params.id)) });
 });
 staffingRouter.patch("/placements/:id/accept", requireAgencyAuth, (req, res) => {
   const { startDate } = req.body || {};

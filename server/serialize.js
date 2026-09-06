@@ -373,5 +373,6 @@ export function serializePlacement(row) {
   return { id: row.id, client: row.client_id, candidate: row.candidate_id, role: row.role, offeredAt: row.offered_at,
     startDate: row.start_date, status: row.status, salary: row.salary, feePct: row.fee_pct, fee: row.fee,
     guaranteeEnds: row.guarantee_ends, invoicedOn: row.invoiced_on, paidOn: row.paid_on,
-    clawbackReason: row.clawback_reason, replacementDue: !!row.replacement_due, notes: row.notes };
+    clawbackReason: row.clawback_reason, replacementDue: !!row.replacement_due, notes: row.notes,
+    recruiterId: row.recruiter_id, commission: row.commission, commissionPaid: !!row.commission_paid, commissionPaidAt: row.commission_paid_at };
 }

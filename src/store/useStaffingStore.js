@@ -35,6 +35,7 @@ export function useStaffingStore(user,platformConfig){
   const [placements,setPlacements]=useState([]);
   const [staffingAuditLog,setStaffingAuditLog]=useState([]);
   const [wsibClaims,setWsibClaims]=useState([]);
+  const [agencyStaffRoster,setAgencyStaffRoster]=useState([]);
 
   useEffect(()=>{
     let cancelled=false;
@@ -52,17 +53,17 @@ export function useStaffingStore(user,platformConfig){
     let cancelled=false;
     (async()=>{
       try{
-        const [w,c,jo,a,t,pr,inv,pl,al,wc]=await Promise.all([
+        const [w,c,jo,a,t,pr,inv,pl,al,wc,st]=await Promise.all([
           api.get("/staffing/workers"),api.get("/staffing/clients"),api.get("/staffing/job-orders"),
           api.get("/staffing/assignments"),api.get("/staffing/timesheets"),api.get("/staffing/payruns"),
           api.get("/staffing/invoices"),api.get("/staffing/placements"),api.get("/staffing/audit-log"),
-          api.get("/staffing/wsib-claims"),
+          api.get("/staffing/wsib-claims"),api.get("/staffing/staff"),
         ]);
         if(cancelled)return;
         setWorkers(w.workers);setStaffingClients(c.clients);setJobOrders(jo.jobOrders);
         setAssignments(a.assignments);setTimesheets(t.timesheets);setStaffingPayruns(pr.payruns);
         setStaffingInvoices(inv.invoices);setPlacements(pl.placements);setStaffingAuditLog(al.auditLog);
-        setWsibClaims(wc.claims);
+        setWsibClaims(wc.claims);setAgencyStaffRoster(st.staff);
       }catch(e){
         if(typeof console!=="undefined")console.warn(`[NorthHire] Agency data sync failed: ${e.message}`);
       }
@@ -323,6 +324,14 @@ export function useStaffingStore(user,platformConfig){
     await api.patch(`/staffing/placements/${id}/clawback`,{reason});
     setPlacements(l=>l.map(x=>x.id===id?{...x,status:"clawed-back",clawbackReason:reason,replacementDue:true}:x));
   };
+  const assignPlacementRecruiter=async(id,recruiterId)=>{
+    const {placement}=await api.patch(`/staffing/placements/${id}/recruiter`,{recruiterId});
+    setPlacements(l=>l.map(x=>x.id===id?placement:x));
+  };
+  const payCommission=async(id)=>{
+    const {placement}=await api.patch(`/staffing/placements/${id}/pay-commission`);
+    setPlacements(l=>l.map(x=>x.id===id?placement:x));
+  };
 
   /* ─── Client (staffing) ─── */
   const upsertStaffingClient=async(data)=>{
@@ -366,7 +375,7 @@ export function useStaffingStore(user,platformConfig){
   };
 
   return {workers,staffingClients,jobOrders,assignments,timesheets,staffingPayruns,staffingInvoices,placements,staffingAuditLog,
-    wsibClaims,fileWsibClaim,updateWsibClaim,
+    wsibClaims,fileWsibClaim,updateWsibClaim,agencyStaffRoster,
     worker,workerByPersonId,staffingClient,staffingClientByEmployerId,jobOrder,assignment,timesheet,
     workerAssignments,activeAssignments,clientAssignments,clientTimesheets,workerTimesheets,openJobOrders,
     agencyLogin,agencyLogout,agencyCurrentStaff,agencyAuthChecked,agencyResetRequest,agencyResetConfirm,STAFFING_AGENCY,STAFFING_RATES,
@@ -378,7 +387,7 @@ export function useStaffingStore(user,platformConfig){
     timesheetTotal,timesheetGross,timesheetBill,
     runStaffingPayroll,finalizeStaffingPayrun,reverseStaffingPayrun,
     generateStaffingInvoices,markStaffingInvoicePaid,
-    createPlacement,acceptPlacement,invoicePlacement,clawbackPlacement,
+    createPlacement,acceptPlacement,invoicePlacement,clawbackPlacement,assignPlacementRecruiter,payCommission,
     upsertStaffingClient,signMsa,
     agencyKPIs,assignmentMargin,
     calcStaffingEconomics:(pay,bill,prov,benefitsPerHr)=>calcStaffingEconomics(pay,bill,prov,benefitsPerHr,STAFFING_RATES),

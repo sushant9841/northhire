@@ -553,7 +553,9 @@ CREATE TABLE IF NOT EXISTS staffing_placements (
   role TEXT, offered_at TEXT, start_date TEXT, status TEXT DEFAULT 'in-progress',
   salary REAL, fee_pct REAL DEFAULT 20, fee REAL,
   guarantee_ends TEXT, invoiced_on TEXT, paid_on TEXT,
-  clawback_reason TEXT, replacement_due INTEGER DEFAULT 0, notes TEXT
+  clawback_reason TEXT, replacement_due INTEGER DEFAULT 0, notes TEXT,
+  recruiter_id TEXT REFERENCES agency_staff(id), commission REAL,
+  commission_paid INTEGER DEFAULT 0, commission_paid_at TEXT
 );
 `);
 

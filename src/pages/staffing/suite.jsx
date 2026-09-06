@@ -1094,11 +1094,25 @@ export function AgencyPlacements(){
     (tab==="guaranteed"||tab==="all")&&a.guaranteeEnds&&b.guaranteeEnds?a.guaranteeEnds.localeCompare(b.guaranteeEnds):b.offeredAt.localeCompare(a.offeredAt));
   const pg=usePagination(list,18);
   useEffect(()=>{pg.setPage(1);},[tab]);
+  const withRecruiter=A.placements.filter(p=>p.recruiterId);
+  const commissionOwed=withRecruiter.filter(p=>p.status==="guaranteed"&&!p.commissionPaid).reduce((s,p)=>s+(p.commission||0),0);
+  const commissionPaid=withRecruiter.filter(p=>p.commissionPaid).reduce((s,p)=>s+(p.commission||0),0);
   return <div>
     <div className="mb-3.5">
       <div className="text-lg font-bold text-text">Permanent placements</div>
       <div className="text-sm text-text-3 mt-0.5">Perm hires we source. Fee due on start. 90-day guarantee.</div>
     </div>
+
+    {withRecruiter.length>0&&<div className={`grid gap-3 mb-3.5 ${mob?"grid-cols-2":"grid-cols-2"}`} style={{maxWidth:400}}>
+      <Card pad={14} style={{borderRadius:12}}>
+        <div className="text-xs font-bold text-text-3 uppercase tracking-wide">Commission owed</div>
+        <div className="text-lg font-bold text-warn mt-1">${commissionOwed.toLocaleString()}</div>
+      </Card>
+      <Card pad={14} style={{borderRadius:12}}>
+        <div className="text-xs font-bold text-text-3 uppercase tracking-wide">Commission paid</div>
+        <div className="text-lg font-bold text-ok mt-1">${commissionPaid.toLocaleString()}</div>
+      </Card>
+    </div>}
 
     <div className="mb-3.5"><_PillTabs items={[["in-progress","In progress"],["accepted","Accepted"],["guaranteed","In guarantee"],["clawed-back","Clawed back"],["all","All"]].map(([v,l])=>
       [v,`${l} (${A.placements.filter(p=>v==="all"?true:p.status===v).length})`])} value={tab} onChange={setTab}/></div>
@@ -1121,6 +1135,19 @@ export function AgencyPlacements(){
               <div className="text-sm font-semibold text-text mt-1">${p.salary.toLocaleString()}</div></div>
             <div><div className="text-xs font-bold text-text-3 tracking-wide uppercase">Fee ({p.feePct}%)</div>
               <div className="text-sm font-bold text-brand mt-1">${p.fee.toLocaleString()}</div></div>
+          </div>
+          <div className="mb-3">
+            <div className="text-xs font-bold text-text-3 tracking-wide uppercase mb-1">Recruiter</div>
+            <Sel value={p.recruiterId||""} onChange={e=>A.assignPlacementRecruiter(p.id,e.target.value||null)} style={{fontSize:13,padding:"6px 10px"}}>
+              <option value="">Unassigned</option>
+              {A.agencyStaffRoster.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
+            </Sel>
+            {p.recruiterId&&<div className="flex justify-between items-center mt-1.5">
+              <span className="text-xs text-text-2">Commission: <strong className="text-text">${(p.commission||0).toLocaleString()}</strong></span>
+              {p.commissionPaid
+                ?<Tag tone="ok" sm icon="check">Paid {p.commissionPaidAt}</Tag>
+                :p.status==="guaranteed"&&<Btn kind="outline" size="xs" onClick={()=>A.payCommission(p.id)}>Pay commission</Btn>}
+            </div>}
           </div>
           <div className="text-xs text-text-3 mb-2.5">
             Offered {p.offeredAt}{p.startDate?` · Started ${p.startDate}`:""}

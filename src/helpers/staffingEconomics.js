@@ -24,6 +24,7 @@ export const DEFAULT_STAFFING_AGENCY = {
   provinces: ["ON", "AB", "BC", "QC", "MB", "SK", "NS", "NB"], founded: "2026-01-01",
   markupFloor: 25, markupTarget: 38, markupCeiling: 65,
   payPeriodDays: 14, invoiceCycleDays: 7, paymentTermsDefaultDays: 30, vacationPayMode: "accrue",
+  recruiterCommissionPct: 20,
 };
 
 export function round2(n) { return Math.round(n * 100) / 100; }

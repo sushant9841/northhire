@@ -645,7 +645,8 @@ function StaffingAgencyEditor({value,onSave}){
     ["wsibRateGroup","WSIB rate group","text"],["markupFloor","Markup floor (%)","number"],
     ["markupTarget","Markup target (%)","number"],["markupCeiling","Markup ceiling (%)","number"],
     ["payPeriodDays","Pay period (days)","number"],["invoiceCycleDays","Invoice cycle (days)","number"],
-    ["paymentTermsDefaultDays","Default payment terms (days)","number"]];
+    ["paymentTermsDefaultDays","Default payment terms (days)","number"],
+    ["recruiterCommissionPct","Recruiter commission (% of placement fee)","number"]];
   return <ConfigCard title="Staffing agency policy" desc="Markup floor/target/ceiling, pay period length, invoice cycle, licensing." dirty={dirty} saving={saving} error={error} onSave={save}>
     <div className="grid gap-3" style={{gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))"}}>
       {FIELDS.map(([key,label,kind])=><div key={key}>
