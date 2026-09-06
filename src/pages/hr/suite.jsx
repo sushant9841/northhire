@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { DndContext, useDraggable, useDroppable, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C, SH } from "../../design/tokens.js";
@@ -613,7 +614,61 @@ export function HrLeave(){
   </div>;
 }
 
-/* ─── Tasks: kanban board ─── */
+/* ─── Tasks: kanban board, real drag-and-drop via @dnd-kit on top of the existing ←/→ buttons
+   (kept as the accessible, no-pointer-required path). ─── */
+function _TaskCard({t,col,cols,emp,A}){
+  const {attributes,listeners,setNodeRef,transform,isDragging}=useDraggable({id:t.id});
+  const style=transform?{transform:`translate3d(${transform.x}px,${transform.y}px,0)`,zIndex:50,opacity:0.9}:undefined;
+  const assn=A.hrEmp(t.assignee);
+  const overdue=col.k!=="done"&&t.due<_fmtDate(new Date());
+  return <div ref={setNodeRef} style={{...style,...(overdue?{borderColor:C.red}:{})}} {...attributes} {...listeners}
+    data-card className={`bg-white border border-line rounded-xl p-3 cursor-grab transition-shadow duration-150 ${isDragging?"shadow-md":""}`}>
+    <div className="text-sm font-semibold text-text mb-2 leading-snug">{t.title}</div>
+    <div className="flex gap-1.5 flex-wrap mb-2.5">
+      <Tag tone={t.priority==="high"?"danger":t.priority==="medium"?"warn":"neutral"} sm>{t.priority}</Tag>
+      {overdue&&<Tag tone="danger" sm icon="alert">Overdue</Tag>}
+      {t.tags?.map(tag=><Tag key={tag} tone="neutral" sm>{tag}</Tag>)}
+    </div>
+    <div className={`text-xs mb-2.5 flex gap-2 flex-wrap ${overdue?"text-red font-semibold":"text-text-3"}`}>
+      <span>Due {t.due}</span>
+      {assn&&<span>• {assn.name.split(" ")[0]}</span>}
+    </div>
+    <div className="flex gap-1" onPointerDown={e=>e.stopPropagation()}>
+      {col.k!=="todo"&&<Btn kind="ghost" size="xs" aria-label={`Move "${t.title}" back to ${cols[cols.findIndex(c=>c.k===col.k)-1].label}`} onClick={()=>A.updateTaskStatus(t.id,cols[cols.findIndex(c=>c.k===col.k)-1].k)}>←</Btn>}
+      {col.k!=="done"&&<Btn kind="ghost" size="xs" aria-label={`Move "${t.title}" forward to ${cols[cols.findIndex(c=>c.k===col.k)+1].label}`} onClick={()=>A.updateTaskStatus(t.id,cols[cols.findIndex(c=>c.k===col.k)+1].k)}>→</Btn>}
+      {(t.assignedBy===emp.id||emp.role==="owner"||emp.role==="admin")&&<Btn kind="ghost" size="xs" icon="trash" aria-label={`Delete task "${t.title}"`} onClick={()=>A.deleteTask(t.id)}/>}
+    </div>
+  </div>;
+}
+function _TaskColumn({col,tasks,cols,emp,A}){
+  const {setNodeRef,isOver}=useDroppable({id:col.k});
+  return <div ref={setNodeRef} className="bg-bg rounded-2xl p-3 transition-colors duration-150" style={{minHeight:200,outline:isOver?`2px solid ${C.brand}`:"none"}}>
+    <div className="flex justify-between items-center py-1 px-1.5 mb-2.5">
+      <div className="flex gap-2 items-center">
+        <div className="w-2 h-2 rounded-full" style={{background:col.tone}}/>
+        <div className="text-xs font-bold text-text tracking-tight">{col.label}</div>
+      </div>
+      <Tag tone="neutral" sm>{tasks.length}</Tag>
+    </div>
+    <div className="flex flex-col gap-2">
+      {[...tasks].sort((a,b)=>a.due.localeCompare(b.due)).map(t=><_TaskCard key={t.id} t={t} col={col} cols={cols} emp={emp} A={A}/>)}
+      {tasks.length===0&&<div className="p-5 text-center text-xs text-text-3">No tasks here.</div>}
+    </div>
+  </div>;
+}
+function _TaskBoard({cols,source,emp,A,mob}){
+  const sensors=useSensors(useSensor(PointerSensor,{activationConstraint:{distance:8}}));
+  const onDragEnd=({active,over})=>{
+    if(!over)return;
+    const task=source.find(t=>t.id===active.id);
+    if(task&&task.status!==over.id)A.updateTaskStatus(active.id,over.id);
+  };
+  return <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+    <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-3"}`}>
+      {cols.map(col=><_TaskColumn key={col.k} col={col} tasks={source.filter(t=>t.status===col.k)} cols={cols} emp={emp} A={A}/>)}
+    </div>
+  </DndContext>;
+}
 export function HrTasks(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
@@ -635,40 +690,7 @@ export function HrTasks(){
       <Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowAdd(true)}>New task</Btn>
     </div>
 
-    <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-3"}`}>
-      {cols.map(col=>{const tasks=source.filter(t=>t.status===col.k);
-        return <div key={col.k} className="bg-bg rounded-2xl p-3" style={{minHeight:200}}>
-          <div className="flex justify-between items-center py-1 px-1.5 mb-2.5">
-            <div className="flex gap-2 items-center">
-              <div className="w-2 h-2 rounded-full" style={{background:col.tone}}/>
-              <div className="text-xs font-bold text-text tracking-tight">{col.label}</div>
-            </div>
-            <Tag tone="neutral" sm>{tasks.length}</Tag>
-          </div>
-          <div className="flex flex-col gap-2">
-            {[...tasks].sort((a,b)=>a.due.localeCompare(b.due)).map(t=>{const assn=A.hrEmp(t.assignee); const by=A.hrEmp(t.assignedBy);
-              const overdue=col.k!=="done"&&t.due<_fmtDate(new Date());
-              return <div key={t.id} data-card className="bg-white border border-line rounded-xl p-3" style={overdue?{borderColor:C.red}:undefined}>
-                <div className="text-sm font-semibold text-text mb-2 leading-snug">{t.title}</div>
-                <div className="flex gap-1.5 flex-wrap mb-2.5">
-                  <Tag tone={t.priority==="high"?"danger":t.priority==="medium"?"warn":"neutral"} sm>{t.priority}</Tag>
-                  {overdue&&<Tag tone="danger" sm icon="alert">Overdue</Tag>}
-                  {t.tags?.map(tag=><Tag key={tag} tone="neutral" sm>{tag}</Tag>)}
-                </div>
-                <div className={`text-xs mb-2.5 flex gap-2 flex-wrap ${overdue?"text-red font-semibold":"text-text-3"}`}>
-                  <span>Due {t.due}</span>
-                  {assn&&<span>• {assn.name.split(" ")[0]}</span>}
-                </div>
-                <div className="flex gap-1">
-                  {col.k!=="todo"&&<Btn kind="ghost" size="xs" aria-label={`Move "${t.title}" back to ${cols[cols.findIndex(c=>c.k===col.k)-1].label}`} onClick={()=>A.updateTaskStatus(t.id,cols[cols.findIndex(c=>c.k===col.k)-1].k)}>←</Btn>}
-                  {col.k!=="done"&&<Btn kind="ghost" size="xs" aria-label={`Move "${t.title}" forward to ${cols[cols.findIndex(c=>c.k===col.k)+1].label}`} onClick={()=>A.updateTaskStatus(t.id,cols[cols.findIndex(c=>c.k===col.k)+1].k)}>→</Btn>}
-                  {(t.assignedBy===emp.id||emp.role==="owner"||emp.role==="admin")&&<Btn kind="ghost" size="xs" icon="trash" aria-label={`Delete task "${t.title}"`} onClick={()=>A.deleteTask(t.id)}/>}
-                </div>
-              </div>;})}
-            {tasks.length===0&&<div className="p-5 text-center text-xs text-text-3">No tasks here.</div>}
-          </div>
-        </div>;})}
-    </div>
+    <_TaskBoard cols={cols} source={source} emp={emp} A={A} mob={mob}/>
 
     {showAdd&&<Modal onClose={()=>setShowAdd(false)} title="New task">
       <div className="flex flex-col gap-3.5">

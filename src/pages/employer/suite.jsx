@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { DndContext, useDraggable, useDroppable, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C, SH } from "../../design/tokens.js";
@@ -395,6 +396,67 @@ export function EmpPost(){
   </Page>;
 }
 
+/* ─── Pipeline kanban: real drag-and-drop via @dnd-kit, on top of the existing Advance/Back
+   buttons (kept as the accessible, no-pointer-required path - drag is an addition, not a
+   replacement). A PointerSensor activation distance stops an ordinary click-to-open-candidate
+   from being swallowed as an accidental drag. ─── */
+function _PipelineCard({a,u,s,idx,selected,tog,A}){
+  const {attributes,listeners,setNodeRef,transform,isDragging}=useDraggable({id:a.id});
+  const style=transform?{transform:`translate3d(${transform.x}px,${transform.y}px,0)`,zIndex:50,opacity:0.9}:undefined;
+  return <div ref={setNodeRef} style={{...style,border:`${selected?2:1}px solid ${selected?C.brand:C.line}`,padding:selected?12:13}}
+    role="button" tabIndex={0} aria-label={`Open ${u.name}'s application`}
+    className={`bg-white rounded-2xl cursor-grab shadow-xs transition-all duration-150 ${isDragging?"shadow-md":""}`}
+    {...attributes} {...listeners}
+    onClick={e=>{if(e.target.closest("[data-nc]"))return; A.openCandidate(a.id);}}
+    onKeyDown={e=>{if((e.key==="Enter"||e.key===" ")&&!e.target.closest("[data-nc]")){e.preventDefault();A.openCandidate(a.id);}}}>
+    <div className="flex gap-2.5 items-center mb-2.5">
+      {A.can("bulkActions")&&<div data-nc role="checkbox" aria-checked={selected} aria-label={`Select ${u.name}`} tabIndex={0}
+        onClick={()=>tog(a.id)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();tog(a.id);}}}
+        className="w-5 h-5 rounded-md cursor-pointer flex items-center justify-center shrink-0"
+        style={{border:`1.5px solid ${selected?C.brand:C.line}`,background:selected?C.brand:"#fff"}}>
+        {selected&&<I n="check" s={12} c="#fff" w={3}/>}</div>}
+      <SmartPortrait seed={u.seed} size={32}/>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap">{u.name}</div>
+        <div className="text-xs text-text-3 mt-px">{u.years} yrs • {u.city}</div></div>
+      <Ring v={s} size={32}/></div>
+    <div data-nc className="flex gap-1.5" onClick={e=>e.stopPropagation()}>
+      {idx>0&&<Btn kind="ghost" size="xs" icon="arrowL" title="Move back" onClick={()=>A.moveApp(a.id,STAGES[idx-1])} style={{flex:1}}/>}
+      {idx<STAGES.length-1&&<Btn kind="outline" size="xs" iconR="arrowR" onClick={()=>A.moveApp(a.id,STAGES[idx+1])} style={{flex:2}}>Advance</Btn>}</div>
+  </div>;
+}
+function _PipelineColumn({stage,items,job,sel,tog,selectStage,A,mob}){
+  const {setNodeRef,isOver}=useDroppable({id:stage});
+  const allSelected=items.length>0&&items.every(a=>sel.has(a.id));
+  return <div ref={setNodeRef} className={`${mob?"w-59":"w-63"} flex flex-col gap-2.5 rounded-2xl transition-colors duration-150`}
+    style={{background:isOver?C.tint:"transparent",padding:isOver?6:0}}>
+    <div className="flex items-center justify-between px-1">
+      <span className="text-xs font-bold text-text-2 uppercase tracking-wide">{stage}</span>
+      <div className="flex gap-1.5 items-center">
+        {items.length>0&&A.can("bulkActions")&&<button onClick={()=>selectStage(stage)} className="bg-transparent border-0 text-xs font-semibold cursor-pointer" style={{color:allSelected?C.brand:C.text3}}>{allSelected?"clear":"all"}</button>}
+        <span className="bg-wash text-brand border border-line-2 text-xs font-bold rounded-full flex items-center justify-center px-1.5" style={{minWidth:22,height:22}}>{items.length}</span></div></div>
+    {items.map(a=>{const u=A.person(a.user); const s=A.scoreCandidate(u,job); const idx=STAGES.indexOf(stage);
+      return <_PipelineCard key={a.id} a={a} u={u} s={s} idx={idx} selected={sel.has(a.id)} tog={tog} A={A}/>;})}
+    {items.length===0&&<div className="rounded-2xl text-center text-xs text-text-3 py-6 px-3" style={{border:`1.5px dashed ${C.line}`}}>Empty</div>}
+  </div>;
+}
+function _PipelineBoard({apps,job,sel,tog,selectStage,A,mob}){
+  const sensors=useSensors(useSensor(PointerSensor,{activationConstraint:{distance:8}}));
+  const onDragEnd=({active,over})=>{
+    if(!over)return;
+    const app=apps.find(a=>a.id===active.id);
+    if(app&&app.stage!==over.id)A.moveApp(active.id,over.id);
+  };
+  return <div className={`flex-1 overflow-x-auto ${mob?"p-3.5":"p-5"}`}>
+    <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+      <div className="flex gap-3 items-start" style={{minWidth:"max-content"}}>
+        {STAGES.map(stage=><_PipelineColumn key={stage} stage={stage} items={apps.filter(a=>a.stage===stage)}
+          job={job} sel={sel} tog={tog} selectStage={selectStage} A={A} mob={mob}/>)}
+      </div>
+    </DndContext>
+  </div>;
+}
+
 export function EmpPipeline(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const myJobs=A.jobs.filter(j=>j.e===A.company.id);
@@ -534,41 +596,7 @@ export function EmpPipeline(){
         </div>
         <Btn kind="onDark" size="sm" icon="x" onClick={()=>setConfirmRejectAll(true)}>Reject all</Btn>
         <Btn kind="onDark" size="sm" onClick={clear}>Clear</Btn></div>}
-      <div className={`flex-1 overflow-x-auto ${mob?"p-3.5":"p-5"}`}>
-        <div className="flex gap-3 items-start" style={{minWidth:"max-content"}}>
-          {STAGES.map(stage=>{const items=apps.filter(a=>a.stage===stage);
-            const allSelected=items.length>0&&items.every(a=>sel.has(a.id));
-            return <div key={stage} className={`${mob?"w-59":"w-63"} flex flex-col gap-2.5`}>
-              <div className="flex items-center justify-between px-1">
-                <span className="text-xs font-bold text-text-2 uppercase tracking-wide">{stage}</span>
-                <div className="flex gap-1.5 items-center">
-                  {items.length>0&&A.can("bulkActions")&&<button onClick={()=>selectStage(stage)} className="bg-transparent border-0 text-xs font-semibold cursor-pointer" style={{color:allSelected?C.brand:C.text3}}>{allSelected?"clear":"all"}</button>}
-                  <span className="bg-wash text-brand border border-line-2 text-xs font-bold rounded-full flex items-center justify-center px-1.5" style={{minWidth:22,height:22}}>{items.length}</span></div></div>
-              {items.map((a,i)=>{const u=A.person(a.user); const s=A.scoreCandidate(u,job); const idx=STAGES.indexOf(stage);
-                const selected=sel.has(a.id);
-                return <div key={a.id} role="button" tabIndex={0} aria-label={`Open ${u.name}'s application`}
-                  className="bg-white rounded-2xl cursor-pointer shadow-xs transition-all duration-150"
-                  style={{border:`${selected?2:1}px solid ${selected?C.brand:C.line}`,padding:selected?12:13}}
-                  onClick={e=>{if(e.target.closest("[data-nc]"))return; A.openCandidate(a.id);}}
-                  onKeyDown={e=>{if((e.key==="Enter"||e.key===" ")&&!e.target.closest("[data-nc]")){e.preventDefault();A.openCandidate(a.id);}}}
-                  onMouseEnter={e=>{if(!selected){e.currentTarget.style.borderColor=C.line2;e.currentTarget.style.transform="translateY(-2px)";}}}
-                  onMouseLeave={e=>{if(!selected){e.currentTarget.style.borderColor=C.line;e.currentTarget.style.transform="none";}}}>
-                  <div className="flex gap-2.5 items-center mb-2.5">
-                    {A.can("bulkActions")&&<div data-nc role="checkbox" aria-checked={selected} aria-label={`Select ${u.name}`} tabIndex={0}
-                      onClick={()=>tog(a.id)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();tog(a.id);}}}
-                      className="w-5 h-5 rounded-md cursor-pointer flex items-center justify-center shrink-0"
-                      style={{border:`1.5px solid ${selected?C.brand:C.line}`,background:selected?C.brand:"#fff"}}>
-                      {selected&&<I n="check" s={12} c="#fff" w={3}/>}</div>}
-                    <SmartPortrait seed={u.seed} size={32}/>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap">{u.name}</div>
-                      <div className="text-xs text-text-3 mt-px">{u.years} yrs • {u.city}</div></div>
-                    <Ring v={s} size={32}/></div>
-                  <div data-nc className="flex gap-1.5" onClick={e=>e.stopPropagation()}>
-                    {idx>0&&<Btn kind="ghost" size="xs" icon="arrowL" title="Move back" onClick={()=>A.moveApp(a.id,STAGES[idx-1])} style={{flex:1}}/>}
-                    {idx<STAGES.length-1&&<Btn kind="outline" size="xs" iconR="arrowR" onClick={()=>A.moveApp(a.id,STAGES[idx+1])} style={{flex:2}}>Advance</Btn>}</div></div>;})}
-              {items.length===0&&<div className="rounded-2xl text-center text-xs text-text-3 py-6 px-3" style={{border:`1.5px dashed ${C.line}`}}>Empty</div>}
-            </div>;})}</div></div>
+      <_PipelineBoard apps={apps} job={job} sel={sel} tog={tog} selectStage={selectStage} A={A} mob={mob}/>
     </>}
     <ConfirmDialog open={confirmRejectAll} onClose={()=>setConfirmRejectAll(false)} confirmLabel="Reject all"
       title={`Reject ${sel.size} candidate${sel.size===1?"":"s"}?`} onConfirm={()=>runBulk("reject")}>
