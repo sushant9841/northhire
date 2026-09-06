@@ -918,6 +918,10 @@ export function useStore(){
       setInvitedCandidates(s=>new Set(s).add(`${jobId}:${candidateId}`));
     }catch(err){toast(err.message,"danger");}
   };
+  const loadCandidateOutreach=async(candidateId)=>{
+    try{const {events}=await api.get(`/employers/candidate-outreach/${candidateId}`);return events;}
+    catch(err){toast(err.message,"danger");return [];}
+  };
 
   /* --- CSV bulk job import (parses a minimal CSV; validates & creates draft jobs) --- */
   const importJobsCSV=async(csvText)=>{
@@ -1715,7 +1719,7 @@ export function useStore(){
     hasAccount,checkPassword,upsertPassword,loginWithPassword,verifyLogin2FA,resetPasswordRequest,resetPasswordConfirm,completeEmployerSignup,
     saveSearch,deleteSavedSearch,toggleSearchAlert,updateSavedSearch,editingSavedSearchId,setEditingSavedSearchId,
     salaryInsight,skillsGap,expandQuery,restoreApp,notifyFollowers,
-    sendMessage,markMessageRead,scheduleInterview,cancelInterview,bulkMove,bulkReject,reverseMatch,inviteToApply,importJobsCSV,employerAnalytics,
+    sendMessage,markMessageRead,scheduleInterview,cancelInterview,bulkMove,bulkReject,reverseMatch,inviteToApply,loadCandidateOutreach,importJobsCSV,employerAnalytics,
     impersonate,stopImpersonating,
     PLANS,PLAN_ORDER,payrollTaxConfig,platformConfig,currentPlan,planName,can,limitOf,planRequires,upgradeModal,setUpgradeModal,requestUpgrade,
     oauthProviders,oauthStart,

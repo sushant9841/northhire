@@ -241,6 +241,7 @@ CREATE TABLE IF NOT EXISTS training_enrolments (
 );
 CREATE TABLE IF NOT EXISTS invited_candidates (
   job_id TEXT NOT NULL, candidate_id TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
   PRIMARY KEY (job_id, candidate_id)
 );
 CREATE TABLE IF NOT EXISTS outbox (

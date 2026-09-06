@@ -505,6 +505,9 @@ export function EmpPipeline(){
   const [talentMinScore,setTalentMinScore]=useState(65);
   const [talentQ,setTalentQ]=useState("");
   const [noting,setNoting]=useState(null); const [noteText,setNoteText]=useState(""); const [noteTags,setNoteTags]=useState("");
+  const [viewingOutreach,setViewingOutreach]=useState(null); const [outreachEvents,setOutreachEvents]=useState([]);
+  const viewOutreach=async(p)=>{setViewingOutreach(p); setOutreachEvents(await A.loadCandidateOutreach(p.id));};
+  const outreachIcon={invite:"send",message:"mail",note:"edit"};
   const reverseCandidates=A.reverseMatch(jobId,talentMinScore)
     .filter(({p})=>!talentQ||matchesQuery(talentQ,p.name,p.title,p.city,(p.skills||[]).join(" ")));
   const talentPg=usePagination(reverseCandidates,12);
@@ -579,6 +582,7 @@ export function EmpPipeline(){
                   ?<Btn kind="soft" size="sm" full icon="check" disabled>Invited</Btn>
                   :<Btn kind="outline" size="sm" full icon="send" onClick={()=>A.inviteToApply(p.id,jobId)}>Invite to apply</Btn>}
                 <Btn kind="ghost" size="sm" icon="edit" onClick={()=>{setNoting(p);setNoteText(cn?.note||"");setNoteTags((cn?.tags||[]).join(", "));}}>{cn?"Edit note":"Note"}</Btn>
+                <Btn kind="ghost" size="sm" icon="clock" onClick={()=>viewOutreach(p)}>History</Btn>
               </div>
             </Card>;})}</div>
           <Pagination {...talentPg}/></>}
@@ -616,6 +620,18 @@ export function EmpPipeline(){
             if(r.ok){A.toast("Notes saved","ok");setNoting(null);}
           }}>Save</Btn>
         </div>
+      </div>
+    </Modal>}
+    {viewingOutreach&&<Modal onClose={()=>setViewingOutreach(null)} title={`Outreach history — ${viewingOutreach.name}`}>
+      <div className="flex flex-col gap-2.5" style={{maxHeight:400,overflowY:"auto"}}>
+        {outreachEvents.length===0&&<div className="text-sm text-text-3 py-3">No contact with this candidate yet — invites, messages and notes will show up here.</div>}
+        {outreachEvents.map((ev,i)=><div key={i} className="flex gap-3 items-start py-2.5 px-3 bg-bg rounded-lg">
+          <div className="w-7 h-7 rounded-lg bg-white border border-line flex items-center justify-center shrink-0 mt-0.5"><I n={outreachIcon[ev.type]||"activity"} s={13} c={C.brand}/></div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm text-text leading-snug">{ev.detail}</div>
+            <div className="text-xs text-text-3 mt-0.5">{new Date(ev.at).toLocaleString("en-CA")}</div>
+          </div>
+        </div>)}
       </div>
     </Modal>}
   </div>;

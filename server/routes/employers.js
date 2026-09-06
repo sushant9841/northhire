@@ -45,6 +45,38 @@ employersRouter.put("/candidate-notes/:candidateId", requireAuth, requireRole("e
   res.json({ note: serializeCandidateNote(row) });
 });
 
+/* Real outreach-history timeline for the talent pool - unifies every actual touch this company's
+   team has had with a candidate (invites, messages either direction, the private note) into one
+   chronological feed, instead of the talent pool being a one-shot list with no memory of past
+   contact. Scoped to req.user.employer_id throughout, so an employer only ever sees its own
+   team's history with a candidate, never another company's. */
+employersRouter.get("/candidate-outreach/:candidateId", requireAuth, requireRole("employer"), (req, res) => {
+  const candidateId = req.params.candidateId;
+  const events = [];
+  const invites = db.prepare(
+    `SELECT invited_candidates.created_at AS at, jobs.title AS job_title FROM invited_candidates
+     JOIN jobs ON jobs.id = invited_candidates.job_id
+     WHERE jobs.employer_id = ? AND invited_candidates.candidate_id = ?`
+  ).all(req.user.employer_id, candidateId);
+  invites.forEach(i => events.push({ type: "invite", at: sqlTime(i.at).getTime(), detail: `Invited to apply: ${i.job_title}` }));
+
+  const messages = db.prepare(
+    `SELECT m.*, sender.name AS senderName FROM messages m JOIN users sender ON sender.id = m.from_user_id
+     WHERE (m.from_user_id IN (SELECT id FROM users WHERE employer_id = ?) AND m.to_user_id = ?)
+        OR (m.to_user_id IN (SELECT id FROM users WHERE employer_id = ?) AND m.from_user_id = ?)`
+  ).all(req.user.employer_id, candidateId, req.user.employer_id, candidateId);
+  messages.forEach(m => events.push({
+    type: "message", at: sqlTime(m.created_at).getTime(),
+    detail: m.to_user_id === candidateId ? `${m.senderName} messaged: "${m.text.slice(0, 80)}${m.text.length > 80 ? "…" : ""}"` : `Candidate replied: "${m.text.slice(0, 80)}${m.text.length > 80 ? "…" : ""}"`,
+  }));
+
+  const note = db.prepare("SELECT * FROM candidate_notes WHERE employer_id = ? AND candidate_id = ?").get(req.user.employer_id, candidateId);
+  if (note && note.note.trim()) events.push({ type: "note", at: sqlTime(note.created_at).getTime(), detail: `Note: "${note.note.slice(0, 100)}${note.note.length > 100 ? "…" : ""}"` });
+
+  events.sort((a, b) => b.at - a.at);
+  res.json({ events });
+});
+
 /* ─── Teammate seats ───
    Plans advertise up to 5 (Growth) or unlimited (Enterprise) recruiter seats, but until now the
    product only ever supported one login per company. users.employer_id already allowed more
