@@ -1,4 +1,6 @@
 import { Router } from "express";
+import { PDFParse } from "pdf-parse";
+import mammoth from "mammoth";
 import { db, nextId } from "../db.js";
 import { requireAuth, requireRole } from "../auth.js";
 import {
@@ -324,4 +326,42 @@ seekerMiscRouter.post("/two-factor/enable", requireAuth, (req, res) => {
 seekerMiscRouter.post("/two-factor/disable", requireAuth, (req, res) => {
   db.prepare("UPDATE two_factor SET enabled = 0 WHERE user_id = ?").run(req.user.id);
   res.json({ ok: true });
+});
+
+/* ─── Resume import (real text extraction, best-effort field guessing) ───
+   pdf-parse/mammoth are free, open-source, run entirely on our own server (no external API call,
+   no account, no limits). Résumés have no fixed layout, so this deliberately does NOT pretend to
+   reliably structure arbitrary work-history/education sections - it confidently extracts what
+   text actually supports (email, phone, a name guess from the first line) and hands back the full
+   plain text so the CV builder can paste it somewhere the user reviews and redistributes, instead
+   of silently mis-structuring content or discarding what it couldn't parse. */
+const MAX_RESUME_BYTES = 8 * 1024 * 1024;
+seekerMiscRouter.post("/cv/parse-resume", requireAuth, requireRole("seeker"), async (req, res) => {
+  const { dataUrl } = req.body || {};
+  const match = typeof dataUrl === "string" && dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) return res.status(400).json({ error: "No file provided." });
+  const [, mime, b64] = match;
+  const buffer = Buffer.from(b64, "base64");
+  if (buffer.length > MAX_RESUME_BYTES) return res.status(413).json({ error: "File is too large — please use one under 8 MB." });
+  let text = "";
+  try {
+    if (mime === "application/pdf") {
+      const parser = new PDFParse({ data: buffer });
+      text = (await parser.getText()).text;
+      await parser.destroy();
+    } else if (mime.includes("wordprocessingml.document") || mime === "application/msword") {
+      text = (await mammoth.extractRawText({ buffer })).value;
+    } else {
+      return res.status(400).json({ error: "Only PDF and Word (.docx) files are supported." });
+    }
+  } catch {
+    return res.status(422).json({ error: "Couldn't read that file — is it a valid PDF or Word document?" });
+  }
+  const emailMatch = text.match(/[\w.+-]+@[\w-]+\.[\w.-]+/);
+  const phoneMatch = text.match(/(\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/);
+  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+  // A reasonable name guess: the first short line before any contact details start - most resumes
+  // lead with the person's name as the very first line of real text.
+  const nameGuess = lines[0] && lines[0].length < 60 && !lines[0].includes("@") ? lines[0] : "";
+  res.json({ name: nameGuess, email: emailMatch?.[0] || "", phone: phoneMatch?.[0] || "", rawText: text.trim().slice(0, 20000) });
 });

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C, FONT, SH } from "../../design/tokens.js";
@@ -85,6 +85,16 @@ export function CvPreview({cv,u,scale=1,mob=false}){
 export function CvsPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const heroPad=mob?"py-11 px-4":"py-18 px-8";
+  const [importing,setImporting]=useState(false);
+  const fileRef=useRef(null);
+  const onFilePicked=async(e)=>{
+    const file=e.target.files?.[0]; e.target.value="";
+    if(!file)return;
+    setImporting(true);
+    try{await A.importResumeToNewCv(file);}
+    catch(err){A.toast(err.message||"Couldn't read that file.","danger");}
+    setImporting(false);
+  };
   if(!A.settings.cvBuilder)return <Page><Empty icon="lock" title="CV builder is temporarily unavailable"
     body="The platform administrator has turned the CV builder off for all job seekers. Your existing CVs are unaffected — check back later."/></Page>;
   return <div className="bg-white min-h-full">
@@ -94,7 +104,10 @@ export function CvsPage(){
           <div><Tag tone="brand" icon="file">CV builder</Tag>
             <h1 className={`${HERO_TIGHT} mt-5 mb-3 ${mob?"text-3xl":"text-5xl"}`}>My CVs.</h1>
             <p className={`text-text-2 leading-normal max-w-xl ${mob?"text-base":"text-lg"}`}>Build as many versions as you need. Pick which one employers receive.</p></div>
-          <Btn kind="primary" size="lg" icon="plus" onClick={()=>A.newCv()}>New CV</Btn></div>
+          <div className="flex gap-2.5">
+            <input ref={fileRef} type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden onChange={onFilePicked}/>
+            <Btn kind="outline" size="lg" icon="upload" disabled={importing} onClick={()=>fileRef.current?.click()}>{importing?"Reading…":"Import from resume"}</Btn>
+            <Btn kind="primary" size="lg" icon="plus" onClick={()=>A.newCv()}>New CV</Btn></div></div>
       </div>
     </section>
     <section className={`bg-bg min-h-100 ${mob?"pt-8 px-4 pb-14":"pt-12 px-8 pb-24"}`}>

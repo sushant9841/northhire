@@ -1432,6 +1432,27 @@ export function useStore(){
       setCvId(cv.id); go("cvEdit","CV builder",cv.id); log("cv.create",`Created CV "${cv.name}"`,"file");
     }catch(err){toast(err.message,"danger");}
   };
+  /* Résumé import: real PDF/DOCX text extraction (server/routes/seekerMisc.js, pdf-parse +
+     mammoth) - confidently pulls name/email/phone, and pastes the full extracted text into the
+     summary field for the user to redistribute into Experience/Education themselves, rather than
+     pretending to reliably reconstruct arbitrary resume layouts into structured sections. */
+  const importResumeToNewCv=async(file)=>{
+    const dataUrl=await new Promise((resolve,reject)=>{
+      const reader=new FileReader();
+      reader.onload=()=>resolve(reader.result); reader.onerror=reject; reader.readAsDataURL(file);
+    });
+    const {name:nameGuess,email:emailGuess,phone:phoneGuess,rawText}=await api.post("/seeker/cv/parse-resume",{dataUrl});
+    const draft={name:`${nameGuess||user.title} CV (imported)`,template:"classic",
+      name0:nameGuess||user.name,title:user.title,email:emailGuess||user.email,phone:phoneGuess||user.phone,city:user.city,prov:user.prov,
+      summary:`<p>${(rawText||"").split("\n").filter(Boolean).slice(0,40).join("<br/>")}</p>`,
+      skills:(user.skills||[]).slice(0,8),certs:[],
+      exp:[{id:uid("x"),role:user.title,org:"",place:`${user.city}, ${user.prov}`,from:"",to:"Present",detail:""}],
+      edu:[{id:uid("e"),qual:user.edu||"",org:"",year:""}]};
+    const {cv}=await api.post("/seeker/cvs",draft);
+    setCvs(l=>[cv,...l]);
+    setCvId(cv.id); go("cvEdit","CV builder",cv.id);
+    toast("Imported — review the summary below and move content into the right sections","ok");
+  };
   const editCv=id=>{setCvId(id);go("cvEdit","CV builder",id);};
   const saveCv=async d=>{
     try{
@@ -1718,7 +1739,7 @@ export function useStore(){
     team,loadTeam,inviteTeammate,revokeInvite,removeTeammate,getInvite,acceptInvite,inviteToken,
     messageTemplates,saveMessageTemplate,deleteMessageTemplate,
     editBlog,editTraining,saveBlog,saveTraining,deleteBlog,deleteTraining,toggleBlogStatus,toggleTrainingStatus,
-    enrol,confirmPaidEnrol,advanceTraining,paidTrainings,newCv,editCv,saveCv,duplicateCv,deleteCv,setDefaultCv,
+    enrol,confirmPaidEnrol,advanceTraining,paidTrainings,newCv,importResumeToNewCv,editCv,saveCv,duplicateCv,deleteCv,setDefaultCv,
     printCv,printCert,printInvoice,printOfferLetter,exportApplicants,exportLog,exportUsers,exportEmployers,share,choosePlan,updateCard,setSetting,
     readNotif,markAllRead,logActivity:log,
     ...HR,
