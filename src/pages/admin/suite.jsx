@@ -701,6 +701,7 @@ export function AdmConfig(){
     <PlansEditor value={cfg.plans} onSave={A.updatePlatformConfig}/>
     <JsonConfigEditor title="Payroll tax brackets" desc="Federal + provincial income tax brackets, basic personal amounts, CPP/EI rates." configKey="payrollTax" value={cfg.payrollTax} onSave={A.updatePlatformConfig}/>
     <JsonConfigEditor title="Staffing burden rates" desc="Per-province CPP/EI/EHT/WSIB/vacation/stat-holiday rates used in placement margin math." configKey="staffingRates" value={cfg.staffingRates} onSave={A.updatePlatformConfig}/>
+    <JsonConfigEditor title="Overtime & holiday pay policy" desc="Weekly overtime threshold/multiplier, statutory holiday dates and pay multiplier, and night-shift differential — applied to every HR Suite employee set to hourly pay." configKey="overtimePolicy" value={cfg.overtimePolicy} onSave={A.updatePlatformConfig}/>
     <StaffingAgencyEditor value={cfg.staffingAgency} onSave={A.updatePlatformConfig}/>
   </Page>;
 }

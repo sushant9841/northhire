@@ -1297,7 +1297,7 @@ export function AgencyWorkers(){
     <Card pad={0} style={{borderRadius:14,overflow:"hidden"}}>
       <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:800}}>
         <thead><tr className="border-b-2 border-line text-left">
-          {["Worker","Location","Availability","Work eligibility","Docs complete","Vac accrued","Actions"].map(h=>
+          {["Worker","Location","Availability","Work eligibility","Docs complete","Background check","Vac accrued","Actions"].map(h=>
             <th key={h} className={TH_CLS}>{h}</th>)}
         </tr></thead>
         <tbody>{pg.pageItems.map(w=>{const person=(A.people||[]).find(p=>p.id===w.personId);
@@ -1314,6 +1314,7 @@ export function AgencyWorkers(){
             <td className={TD_CLS}><Tag tone={w.availability==="available"?"ok":w.availability==="on-assignment"?"brand":"neutral"} sm>{w.availability}</Tag></td>
             <td className={`${TD_CLS} text-xs text-text-2`}>{w.workEligibility}{w.weExpiry?<div className="text-xs" style={{color:new Date(w.weExpiry)<Date.now()+90*864e5?C.warn:C.text3}}>Exp {w.weExpiry}</div>:null}</td>
             <td className={TD_CLS}><Tag tone={docsComplete?"ok":"warn"} sm icon={docsComplete?"check":"alert"}>{docsComplete?"Complete":"Missing"}</Tag></td>
+            <td className={TD_CLS}><Tag tone={{passed:"ok",failed:"danger","in-progress":"brand"}[w.backgroundCheck?.status]||"neutral"} sm>{(w.backgroundCheck?.status||"not-started").replace("-"," ")}</Tag></td>
             <td className={`${TD_CLS} text-sm text-brand font-semibold`}>${w.vacBalance.toFixed(2)}</td>
             <td className={TD_CLS}>
               <Sel value={w.status} onChange={e=>{e.stopPropagation();
@@ -1406,6 +1407,43 @@ export function AgencyWorkers(){
           <Lbl>Recruiter notes</Lbl>
           <div className="text-sm text-text-2 leading-relaxed p-3 bg-bg rounded-lg italic">{w.notes}</div>
         </div>}
+        <div className="mt-4">
+          <Lbl>Background check</Lbl>
+          <div className={`grid gap-2.5 ${mob?"grid-cols-1":"grid-cols-3"}`}>
+            <Field label="Status">
+              <Sel value={w.backgroundCheck?.status||"not-started"} onChange={e=>A.updateWorker(w.id,{backgroundCheck:{...w.backgroundCheck,status:e.target.value}})}>
+                {["not-started","in-progress","passed","failed"].map(s=><option key={s} value={s}>{s.replace("-"," ")}</option>)}
+              </Sel>
+            </Field>
+            <Field label="Provider"><Input defaultValue={w.backgroundCheck?.provider||""} placeholder="e.g. Certn, Sterling" onBlur={e=>A.updateWorker(w.id,{backgroundCheck:{...w.backgroundCheck,provider:e.target.value}})}/></Field>
+            <Field label="Completed"><DatePicker value={w.backgroundCheck?.completedDate||""} onChange={v=>A.updateWorker(w.id,{backgroundCheck:{...w.backgroundCheck,completedDate:v}})}/></Field>
+          </div>
+          <Field label="Notes" style={{marginTop:8}}><Area rows={2} defaultValue={w.backgroundCheck?.notes||""} onBlur={e=>A.updateWorker(w.id,{backgroundCheck:{...w.backgroundCheck,notes:e.target.value}})}/></Field>
+        </div>
+        <div className="mt-4">
+          <div className="flex justify-between items-center mb-1.5">
+            <Lbl style={{margin:0}}>References</Lbl>
+            <Btn kind="ghost" size="xs" icon="plus" onClick={()=>A.updateWorker(w.id,{references:[...(w.references||[]),{name:"",relationship:"",phone:"",contactedDate:"",notes:""}]})}>Add reference</Btn>
+          </div>
+          {(w.references||[]).length===0
+            ?<div className="text-xs text-text-3">No references on file for this worker.</div>
+            :<div className="flex flex-col gap-2.5">
+              {w.references.map((r,i)=>{
+                const save=(field,value)=>A.updateWorker(w.id,{references:w.references.map((x,j)=>j===i?{...x,[field]:value}:x)});
+                return <div key={i} className="p-3 bg-bg rounded-lg">
+                  <div className={`grid gap-2 ${mob?"grid-cols-1":"grid-cols-4"}`}>
+                    <Input defaultValue={r.name} placeholder="Name" onBlur={e=>save("name",e.target.value)}/>
+                    <Input defaultValue={r.relationship} placeholder="Relationship (e.g. Former supervisor)" onBlur={e=>save("relationship",e.target.value)}/>
+                    <Input defaultValue={r.phone} placeholder="Phone" onBlur={e=>save("phone",e.target.value)}/>
+                    <DatePicker value={r.contactedDate||""} onChange={v=>save("contactedDate",v)}/>
+                  </div>
+                  <div className="flex gap-2 mt-2 items-start">
+                    <Area rows={1} defaultValue={r.notes} placeholder="What did they say?" onBlur={e=>save("notes",e.target.value)} style={{flex:1}}/>
+                    <Btn kind="ghost" size="xs" icon="trash" onClick={()=>A.updateWorker(w.id,{references:w.references.filter((_,j)=>j!==i)})}/>
+                  </div>
+                </div>;})}
+            </div>}
+        </div>
       </Modal>
       {filingClaim&&<Modal onClose={()=>setFilingClaim(false)} title={`File WSIB claim — ${person?.name||""}`}>
         <div className="flex flex-col gap-3.5">

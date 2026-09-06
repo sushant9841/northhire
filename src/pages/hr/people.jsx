@@ -340,7 +340,7 @@ function HrPeople_Manage(){
   const OFFBOARD_ITEMS=[["equipment","Equipment returned (laptop, badge, tools, PPE)"],["access","System and building access revoked"],["finalPay","Final pay and any outstanding expenses processed"],["exitInterview","Exit interview completed"]];
   const [offboardChecked,setOffboardChecked]=useState({});
   const startOffboarding=e=>{setOffboarding(e);setOffboardChecked({});};
-  const [ne,setNe]=useState({name:"",email:"",role:"employee",dept:"d1",title:"",city:"",prov:"AB",phone:"",salary:60000,manager:""});
+  const [ne,setNe]=useState({name:"",email:"",role:"employee",dept:"d1",title:"",city:"",prov:"AB",phone:"",salary:60000,manager:"",payType:"salary",hourlyRate:25});
   const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
   if(!emp||!company)return null;
   const depts=A.hrDeptsAtCompany?.(company.id)||A.HR_DEPARTMENTS;
@@ -348,9 +348,10 @@ function HrPeople_Manage(){
   const active=all.filter(e=>e.status==="active");
   const pg=usePagination(all,25);
   const submit=()=>{if(!ne.name.trim()||!ne.email.trim())return;
-    if(!(Number(ne.salary)>0)){A.toast("Enter a salary greater than $0.","danger");return;}
+    if(ne.payType==="hourly"){if(!(Number(ne.hourlyRate)>0)){A.toast("Enter an hourly rate greater than $0.","danger");return;}}
+    else if(!(Number(ne.salary)>0)){A.toast("Enter a salary greater than $0.","danger");return;}
     A.addEmployee({...ne,companyId:company.id});
-    setNe({name:"",email:"",role:"employee",dept:defaultDept,title:"",city:"",prov:"AB",phone:"",salary:60000,manager:""});
+    setNe({name:"",email:"",role:"employee",dept:defaultDept,title:"",city:"",prov:"AB",phone:"",salary:60000,manager:"",payType:"salary",hourlyRate:25});
     setShowAdd(false);};
   const saveEdit=()=>{if(!editing)return;
     /* A plain role dropdown with no confirmation could silently demote a company's last Owner —
@@ -361,9 +362,11 @@ function HrPeople_Manage(){
       A.toast("This is the last Owner on the account — assign another Owner first.","danger");
       return;
     }
-    if(!(Number(editing.salary)>0)){A.toast("Enter a salary greater than $0.","danger");return;}
+    if(editing.payType==="hourly"){if(!(Number(editing.hourlyRate)>0)){A.toast("Enter an hourly rate greater than $0.","danger");return;}}
+    else if(!(Number(editing.salary)>0)){A.toast("Enter a salary greater than $0.","danger");return;}
     A.updateEmp(editing.id,{name:editing.name,title:editing.title,role:editing.role,dept:editing.dept,manager:editing.manager||null,phone:editing.phone,salary:editing.salary,certifications:editing.certifications||[],
-      td1OnFile:editing.td1OnFile,benefitsPerPay:Number(editing.benefitsPerPay)||0,benefitsPlan:editing.benefitsPlan||null});
+      td1OnFile:editing.td1OnFile,benefitsPerPay:Number(editing.benefitsPerPay)||0,benefitsPlan:editing.benefitsPlan||null,
+      payType:editing.payType||"salary",hourlyRate:editing.payType==="hourly"?Number(editing.hourlyRate)||0:editing.hourlyRate});
     setEditing(null);};
   const addCert=()=>setEditing(p=>({...p,certifications:[...(p.certifications||[]),{name:"",issued:"",expires:""}]}));
   const updateCert=(i,patch)=>setEditing(p=>({...p,certifications:p.certifications.map((c,j)=>j===i?{...c,...patch}:c)}));
@@ -426,7 +429,12 @@ function HrPeople_Manage(){
             {active.map(e=><option key={e.id} value={e.id}>{e.name} ({e.title})</option>)}
           </Sel></Field>
           <Field label="City"><Input icon="pin" value={ne.city} onChange={e=>setNe({...ne,city:e.target.value})}/></Field>
-          <Field label="Annual salary (CAD)"><Input type="number" value={ne.salary} onChange={e=>setNe({...ne,salary:Number(e.target.value)||0})}/></Field>
+          <Field label="Pay type"><Sel value={ne.payType} onChange={e=>setNe({...ne,payType:e.target.value})}>
+            <option value="salary">Salary</option><option value="hourly">Hourly</option>
+          </Sel></Field>
+          {ne.payType==="hourly"
+            ?<Field label="Hourly rate (CAD)"><Input type="number" min="0" value={ne.hourlyRate} onChange={e=>setNe({...ne,hourlyRate:Number(e.target.value)||0})}/></Field>
+            :<Field label="Annual salary (CAD)"><Input type="number" value={ne.salary} onChange={e=>setNe({...ne,salary:Number(e.target.value)||0})}/></Field>}
         </div>
         <Banner tone="brand" icon="mail" title="How they'll get access">The new employee will receive an email with sign-in instructions for HR Suite. Their access level is set by the role you assigned above.</Banner>
         <div className="flex gap-2.5 justify-end">
@@ -456,6 +464,14 @@ function HrPeople_Manage(){
         </div>
         <div>
           <Lbl>Payroll</Lbl>
+          <div className={`grid gap-3 mb-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
+            <Field label="Pay type" hint="Hourly pay is computed from clocked attendance each run, including overtime, stat-holiday, and night-shift-differential pay.">
+              <Sel value={editing.payType||"salary"} onChange={e=>setEditing({...editing,payType:e.target.value})}>
+                <option value="salary">Salary</option><option value="hourly">Hourly</option>
+              </Sel>
+            </Field>
+            {editing.payType==="hourly"&&<Field label="Hourly rate (CAD)"><Input type="number" min="0" value={editing.hourlyRate||0} onChange={e=>setEditing({...editing,hourlyRate:Number(e.target.value)||0})}/></Field>}
+          </div>
           <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-3"}`}>
             <Field label="TD1 on file" hint="No TD1 means no basic personal tax credit — higher withholding, same as CRA's real rule.">
               <Switch on={!!editing.td1OnFile} onChange={v=>setEditing({...editing,td1OnFile:v})}/>

@@ -184,6 +184,8 @@ staffingRouter.patch("/workers/:id", requireAgencyAuth, (req, res) => {
   if (d.emergencyContact !== undefined) { setCols.push("emergency_contact_json = ?"); params.push(JSON.stringify(d.emergencyContact)); }
   if (d.documents !== undefined) { setCols.push("documents_json = ?"); params.push(JSON.stringify(d.documents)); }
   if (d.tickets !== undefined) { setCols.push("tickets_json = ?"); params.push(JSON.stringify(d.tickets)); }
+  if (d.backgroundCheck !== undefined) { setCols.push("background_check_json = ?"); params.push(JSON.stringify(d.backgroundCheck)); }
+  if (d.references !== undefined) { setCols.push("references_json = ?"); params.push(JSON.stringify(d.references)); }
   if (setCols.length) db.prepare(`UPDATE staffing_workers SET ${setCols.join(", ")} WHERE id = ?`).run(...params, req.params.id);
   res.json({ worker: serializeWorker(db.prepare("SELECT * FROM staffing_workers WHERE id = ?").get(req.params.id)) });
 });

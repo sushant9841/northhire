@@ -1,7 +1,7 @@
 import { Router } from "express";
 import crypto from "node:crypto";
 import { db, nextId, sqlTime } from "../db.js";
-import { calcNetPay } from "../../src/helpers/payrollTax.js";
+import { calcNetPay, calcHourlyGross } from "../../src/helpers/payrollTax.js";
 import { getConfig } from "../platformConfig.js";
 import { sendAndLogMail } from "../mail.js";
 import { hashPassword, verifyPassword, createSessionCookie, clearSessionCookie, requireHrAuth, hrEmployeeFromRequest, requireAuth, requireRole } from "../auth.js";
@@ -107,18 +107,20 @@ hrRouter.post("/employees", requireHrAuth, requireHrPriv, (req, res) => {
   const { hash, salt } = hashPassword("pcl2026"); // shared demo password for newly-added demo employees, matching the seeded set
   const id = nextId("emp", "hr_employees");
   db.prepare(
-    `INSERT INTO hr_employees (id, company_id, name, email, password_hash, password_salt, role, dept, title, hired, seed, phone, city, prov, salary, birth_date, manager, skills_json, badges_json)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+    `INSERT INTO hr_employees (id, company_id, name, email, password_hash, password_salt, role, dept, title, hired, seed, phone, city, prov, salary, birth_date, manager, skills_json, badges_json, pay_type, hourly_rate)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
   ).run(id, req.hrEmployee.company_id, d.name, d.email, hash, salt, d.role || "employee", d.dept, d.title,
     d.hired || new Date().toISOString().slice(0, 10), d.seed ?? Math.floor(Math.random() * 11), d.phone, d.city, d.prov,
-    d.salary, d.birthDate, d.manager || null, JSON.stringify(d.skills || []), JSON.stringify(d.badges || []));
+    d.salary, d.birthDate, d.manager || null, JSON.stringify(d.skills || []), JSON.stringify(d.badges || []),
+    d.payType === "hourly" ? "hourly" : "salary", d.hourlyRate || null);
   res.status(201).json({ employee: serializeHrEmployee(db.prepare("SELECT * FROM hr_employees WHERE id = ?").get(id)) });
 });
 hrRouter.patch("/employees/:id", requireHrAuth, requireHrPriv, (req, res) => {
   const row = db.prepare("SELECT * FROM hr_employees WHERE id = ? AND company_id = ?").get(req.params.id, req.hrEmployee.company_id);
   if (!row) return res.status(404).json({ error: "Employee not found." });
   const d = req.body || {};
-  const fields = { name: "name", title: "title", role: "role", dept: "dept", manager: "manager", phone: "phone", salary: "salary", benefitsPerPay: "benefits_per_pay", benefitsPlan: "benefits_plan" };
+  if (d.payType !== undefined && !["salary", "hourly"].includes(d.payType)) return res.status(400).json({ error: "payType must be 'salary' or 'hourly'." });
+  const fields = { name: "name", title: "title", role: "role", dept: "dept", manager: "manager", phone: "phone", salary: "salary", benefitsPerPay: "benefits_per_pay", benefitsPlan: "benefits_plan", payType: "pay_type", hourlyRate: "hourly_rate" };
   const setCols = []; const params = [];
   for (const [key, col] of Object.entries(fields)) if (d[key] !== undefined) { setCols.push(`${col} = ?`); params.push(d[key]); }
   if (d.td1OnFile !== undefined) { setCols.push("td1_on_file = ?"); params.push(d.td1OnFile ? 1 : 0); }
@@ -545,7 +547,22 @@ hrRouter.get("/payslips/mine", requireHrAuth, (req, res) => {
 hrRouter.post("/payruns", requireHrAuth, requireHrPriv, (req, res) => {
   const { periodStart, periodEnd } = req.body || {};
   const taxConfig = getConfig("payrollTax");
+  const otPolicy = getConfig("overtimePolicy");
   const emps = db.prepare("SELECT * FROM hr_employees WHERE company_id = ? AND status = 'active'").all(req.hrEmployee.company_id);
+  // Hourly employees' gross comes from real attendance (+ shift timing for the night differential)
+  // within the pay period, not salary/26 - fetch both, grouped by employee, once for the whole run.
+  const hourlyIds = emps.filter(e => e.pay_type === "hourly").map(e => e.id);
+  const attByEmp = {}, shiftsByEmp = {};
+  if (hourlyIds.length) {
+    const att = db.prepare(
+      `SELECT * FROM hr_attendance WHERE date >= ? AND date <= ? AND employee_id IN (${hourlyIds.map(() => "?").join(",")})`
+    ).all(periodStart, periodEnd, ...hourlyIds);
+    att.forEach(a => (attByEmp[a.employee_id] ||= []).push(a));
+    const shifts = db.prepare(
+      `SELECT * FROM hr_shifts WHERE date >= ? AND date <= ? AND employee_id IN (${hourlyIds.map(() => "?").join(",")})`
+    ).all(periodStart, periodEnd, ...hourlyIds);
+    shifts.forEach(s => (shiftsByEmp[s.employee_id] ||= []).push(s));
+  }
   // Real CPP/EI annual-maximum enforcement needs year-to-date contributions per employee - summed
   // from every already-paid run this calendar year (draft/approved runs haven't actually withheld
   // anything yet, so they don't count toward YTD).
@@ -583,15 +600,24 @@ hrRouter.post("/payruns", requireHrAuth, requireHrPriv, (req, res) => {
     unpaidDaysByEmp[l.employee_id] = (unpaidDaysByEmp[l.employee_id] || 0) + Math.min(l.days || overlapDays, overlapDays);
   });
   const lines = emps.map(e => {
-    const unpaidDeduction = Math.round((unpaidDaysByEmp[e.id] || 0) * ((e.salary || 0) / 260));
-    const grossPeriod = Math.max(0, Math.round((e.salary || 0) / 26) - unpaidDeduction);
+    let grossPeriod, unpaidDeduction = 0, hourlyBreakdown = null;
+    if (e.pay_type === "hourly") {
+      // Unpaid leave already shows up here as fewer/no attendance rows for those days - no separate
+      // deduction needed the way salaried pay needs one (a fixed salary doesn't otherwise flex down).
+      const breakdown = calcHourlyGross(e.hourly_rate || 0, attByEmp[e.id] || [], shiftsByEmp[e.id] || [], otPolicy);
+      grossPeriod = breakdown.gross;
+      hourlyBreakdown = breakdown;
+    } else {
+      unpaidDeduction = Math.round((unpaidDaysByEmp[e.id] || 0) * ((e.salary || 0) / 260));
+      grossPeriod = Math.max(0, Math.round((e.salary || 0) / 26) - unpaidDeduction);
+    }
     const reimb = expByEmp[e.id] || 0;
     const ytd = ytdByEmp[e.id] || { cpp: 0, ei: 0 };
     const { cpp, ei, fedTax, provTax, net: netBeforeReimb } = calcNetPay(grossPeriod,
       { province: e.prov, payPeriodsPerYear: 26, td1OnFile: !!e.td1_on_file, ytdCpp: ytd.cpp, ytdEi: ytd.ei }, taxConfig);
     const benefits = e.benefits_per_pay || 0;
     const net = netBeforeReimb + reimb - benefits;
-    return { employee: e.id, name: e.name, gross: grossPeriod, unpaidDeduction, cpp, ei, fedTax, provTax, benefits, reimb, net };
+    return { employee: e.id, name: e.name, payType: e.pay_type, gross: grossPeriod, unpaidDeduction, hourlyBreakdown, cpp, ei, fedTax, provTax, benefits, reimb, net };
   });
   const id = nextId("pr", "hr_payruns");
   db.prepare(

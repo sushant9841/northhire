@@ -674,11 +674,13 @@ export function HrTasks(){
   const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
   const canAssignOthers=emp.role!=="employee";
   const [scope,setScope]=useState("mine"); /* mine | assigned | all */
+  const [assigneeFilter,setAssigneeFilter]=useState("");
   const [showAdd,setShowAdd]=useState(false);
   const [nt,setNt]=useState({title:"",assignee:emp.id,due:"",priority:"medium",tags:[]});
-  const source=scope==="mine"?A.hrTasks.filter(t=>t.assignee===emp.id)
+  const scoped=scope==="mine"?A.hrTasks.filter(t=>t.assignee===emp.id)
     :scope==="assigned"?A.hrTasks.filter(t=>t.assignedBy===emp.id)
     :A.hrTasks;
+  const source=scope==="all"&&assigneeFilter?scoped.filter(t=>t.assignee===assigneeFilter):scoped;
   const cols=[{k:"todo",label:"To do",tone:C.text3},{k:"in-progress",label:"In progress",tone:C.brand},{k:"done",label:"Done",tone:C.ok}];
 
   const submit=()=>{if(!nt.title.trim()||!nt.due)return;
@@ -686,7 +688,13 @@ export function HrTasks(){
 
   return <div>
     <div className="flex justify-between items-center mb-4 flex-wrap gap-2.5">
-      <_PillTabs items={[["mine","My tasks"],...(canAssignOthers?[["assigned","Assigned by me"],["all","All company"]]:[])]} value={scope} onChange={setScope}/>
+      <div className="flex items-center gap-2.5 flex-wrap">
+        <_PillTabs items={[["mine","My tasks"],...(canAssignOthers?[["assigned","Assigned by me"],["all","All company"]]:[])]} value={scope} onChange={v=>{setScope(v);setAssigneeFilter("");}}/>
+        {scope==="all"&&<Sel value={assigneeFilter} onChange={e=>setAssigneeFilter(e.target.value)} style={{width:170}}>
+          <option value="">All assignees</option>
+          {A.hrEmpsAtCompany(company.id).filter(e=>e.status==="active").map(e=><option key={e.id} value={e.id}>{e.name}</option>)}
+        </Sel>}
+      </div>
       <Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowAdd(true)}>New task</Btn>
     </div>
 
@@ -1288,8 +1296,10 @@ function PayrollDetailModal({run,onClose,canApprove,onApprove,onExecute,onRevers
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [reversing,setReversing]=useState(false); const [reverseReason,setReverseReason]=useState("");
   const exportRegister=()=>{
-    const rows=[["Employee","Gross","Unpaid leave","CPP","EI","Federal tax","Provincial tax","Reimbursement","Net"],
-      ...run.lines.map(l=>[l.name,l.gross,l.unpaidDeduction||0,l.cpp,l.ei,l.fedTax,l.provTax,l.reimb||0,l.net])];
+    const rows=[["Employee","Pay type","Gross","Unpaid leave","Reg. hrs","OT hrs","Stat hrs","Night diff hrs","CPP","EI","Federal tax","Provincial tax","Reimbursement","Net"],
+      ...run.lines.map(l=>[l.name,l.payType||"salary",l.gross,l.unpaidDeduction||0,
+        l.hourlyBreakdown?.regularHours||"",l.hourlyBreakdown?.otHours||"",l.hourlyBreakdown?.statHours||"",l.hourlyBreakdown?.nightHours||"",
+        l.cpp,l.ei,l.fedTax,l.provTax,l.reimb||0,l.net])];
     const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
     const blob=new Blob([csv],{type:"text/csv"}); const url=URL.createObjectURL(blob);
     const a=document.createElement("a"); a.href=url; a.download=`payroll-register-${run.period.replace(/[^\w-]/g,"_")}.csv`; a.click(); URL.revokeObjectURL(url);
@@ -1310,9 +1320,14 @@ function PayrollDetailModal({run,onClose,canApprove,onApprove,onExecute,onRevers
             {["Employee","Gross","Unpaid","CPP","EI","Fed","Prov","Reimb.","Net"].map(h=>
               <th key={h} className="py-2.5 px-2.5 text-left font-bold text-text-3 tracking-wide uppercase border-b border-line" style={{fontSize:10.5}}>{h}</th>)}
           </tr></thead>
-          <tbody>{run.lines.map(l=><tr key={l.employee} className="border-b border-line-soft">
-            <td className="py-2.5 px-2.5 font-semibold text-text">{l.name}</td>
-            <td className="py-2.5 px-2.5 text-text">${l.gross.toLocaleString()}</td>
+          <tbody>{run.lines.map(l=>{const hb=l.hourlyBreakdown;
+            return <tr key={l.employee} className="border-b border-line-soft">
+            <td className="py-2.5 px-2.5 font-semibold text-text">{l.name}{l.payType==="hourly"&&<Tag sm tone="violet" style={{marginLeft:6}}>Hourly</Tag>}</td>
+            <td className="py-2.5 px-2.5 text-text">${l.gross.toLocaleString()}
+              {hb&&<div className="text-text-3 font-normal mt-0.5" style={{fontSize:10}} title="Regular / overtime / stat-holiday / night-differential hours this period">
+                {hb.regularHours.toFixed(1)}h reg{hb.otHours>0&&` · ${hb.otHours.toFixed(1)}h OT`}{hb.statHours>0&&` · ${hb.statHours.toFixed(1)}h stat`}{hb.nightHours>0&&` · ${hb.nightHours.toFixed(1)}h night`}
+              </div>}
+            </td>
             <td className="py-2.5 px-2.5" style={{color:l.unpaidDeduction>0?C.red:C.text3}}>{l.unpaidDeduction>0?`-$${l.unpaidDeduction.toLocaleString()}`:"—"}</td>
             <td className="py-2.5 px-2.5 text-text-3">-${l.cpp.toLocaleString()}</td>
             <td className="py-2.5 px-2.5 text-text-3">-${l.ei.toLocaleString()}</td>
@@ -1320,7 +1335,7 @@ function PayrollDetailModal({run,onClose,canApprove,onApprove,onExecute,onRevers
             <td className="py-2.5 px-2.5 text-text-3">-${l.provTax.toLocaleString()}</td>
             <td className="py-2.5 px-2.5" style={{color:l.reimb>0?C.ok:C.text3}}>{l.reimb>0?`+$${l.reimb.toLocaleString()}`:"—"}</td>
             <td className="py-2.5 px-2.5 text-brand font-bold">${l.net.toLocaleString()}</td>
-          </tr>)}</tbody>
+          </tr>;})}</tbody>
         </table>
       </div>
 

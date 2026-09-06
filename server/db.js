@@ -323,6 +323,7 @@ CREATE TABLE IF NOT EXISTS hr_employees (
   terminated_at TEXT,
   td1_on_file INTEGER DEFAULT 1,
   benefits_per_pay REAL DEFAULT 0, benefits_plan TEXT,
+  pay_type TEXT NOT NULL DEFAULT 'salary', hourly_rate REAL,
   erased INTEGER DEFAULT 0, erased_at TEXT,
   visibility_json TEXT DEFAULT '{}',
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -483,7 +484,8 @@ CREATE TABLE IF NOT EXISTS staffing_workers (
   work_eligibility TEXT, we_expiry TEXT,
   emergency_contact_json TEXT DEFAULT '{}', documents_json TEXT DEFAULT '[]',
   tickets_json TEXT DEFAULT '[]', notes TEXT, vac_balance REAL DEFAULT 0,
-  default_benefits_per_hr REAL DEFAULT 0
+  default_benefits_per_hr REAL DEFAULT 0,
+  background_check_json TEXT DEFAULT '{"status":"not-started"}', references_json TEXT DEFAULT '[]'
 );
 
 /* Multi-branch/per-desk model - previously the whole book was one shared, undifferentiated desk

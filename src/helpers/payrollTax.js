@@ -78,3 +78,66 @@ export function calcNetPay(gross, { province = "ON", payPeriodsPerYear = 26, td1
   const net = gross - (cpp + ei + fedTax + provTax);
   return { cpp, ei, fedTax, provTax, net };
 }
+
+/* Overtime/stat-holiday/shift-differential policy for hourly employees - business config, same
+   admin-editable pattern as DEFAULT_PAYROLL_TAX_CONFIG above (see server/platformConfig.js).
+   Salaried employees (the existing majority path, salary/26 per period) are entirely unaffected -
+   this only applies to employees explicitly set to payType:"hourly". weeklyOtThreshold follows
+   Ontario's common default (44h/week); statHolidays is a flat list of ISO dates an admin maintains
+   directly rather than computing federal/provincial holiday calendars, which vary by jurisdiction
+   and change yearly. */
+export const DEFAULT_OVERTIME_POLICY = {
+  weeklyOtThreshold: 44, otMultiplier: 1.5,
+  statHolidayMultiplier: 1.5, statHolidays: ["2026-01-01", "2026-02-16", "2026-04-03", "2026-05-18", "2026-07-01", "2026-09-07", "2026-10-12", "2026-12-25"],
+  nightDifferentialPerHr: 2, nightStart: "18:00", nightEnd: "06:00",
+};
+
+function timeInNightWindow(startTime, endTime, nightStart, nightEnd) {
+  // Counts hours of a shift that fall within the night window [nightStart, nightEnd), handling a
+  // window that wraps past midnight (e.g. 18:00-06:00) and a shift that itself may cross midnight.
+  const toMin = t => { const [h, m] = (t || "0:0").split(":").map(Number); return h * 60 + (m || 0); };
+  let s = toMin(startTime), e = toMin(endTime); if (e <= s) e += 1440;
+  const ns = toMin(nightStart), ne0 = toMin(nightEnd); const wraps = ne0 <= ns;
+  const windows = wraps ? [[ns, 1440 + ne0]] : [[ns, ne0]];
+  let nightMin = 0;
+  for (const [ws, we] of windows) {
+    for (const off of [0, 1440]) {
+      const os = ws + off, oe = we + off;
+      nightMin += Math.max(0, Math.min(e, oe) - Math.max(s, os));
+    }
+  }
+  return Math.min(nightMin, e - s) / 60;
+}
+
+/* Computes gross pay for one hourly employee over a pay period from real attendance rows (hours
+   actually clocked) and shift rows (for night-differential timing, which attendance doesn't carry).
+   Mirrors the shape calcNetPay's caller already expects (a single gross figure to run through tax
+   withholding), plus a breakdown for display/CSV. */
+export function calcHourlyGross(hourlyRate, attendanceRows, shiftRows, policy = DEFAULT_OVERTIME_POLICY) {
+  const p = policy || DEFAULT_OVERTIME_POLICY;
+  const byWeek = {};
+  for (const a of attendanceRows) {
+    const d = new Date(a.date);
+    const weekStart = new Date(d); weekStart.setDate(d.getDate() - d.getDay());
+    const wk = weekStart.toISOString().slice(0, 10);
+    (byWeek[wk] ||= []).push(a);
+  }
+  let regularHours = 0, otHours = 0, statHours = 0, statPay = 0;
+  for (const rows of Object.values(byWeek)) {
+    let weekHours = 0;
+    for (const a of rows) {
+      const isStat = p.statHolidays.includes(a.date);
+      if (isStat) { statHours += a.hours || 0; statPay += (a.hours || 0) * hourlyRate * p.statHolidayMultiplier; continue; }
+      weekHours += a.hours || 0;
+    }
+    const reg = Math.min(weekHours, p.weeklyOtThreshold);
+    const ot = Math.max(0, weekHours - p.weeklyOtThreshold);
+    regularHours += reg; otHours += ot;
+  }
+  const nightHours = (shiftRows || []).reduce((s, sh) => s + timeInNightWindow(sh.start_time, sh.end_time, p.nightStart, p.nightEnd), 0);
+  const regularPay = regularHours * hourlyRate;
+  const otPay = otHours * hourlyRate * p.otMultiplier;
+  const nightDiffPay = nightHours * p.nightDifferentialPerHr;
+  const gross = Math.round(regularPay + otPay + statPay + nightDiffPay);
+  return { gross, regularHours, otHours, statHours, nightHours, regularPay: Math.round(regularPay), otPay: Math.round(otPay), statPay: Math.round(statPay), nightDiffPay: Math.round(nightDiffPay) };
+}

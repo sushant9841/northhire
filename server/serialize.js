@@ -217,6 +217,7 @@ export function serializeHrEmployee(row) {
     certifications: JSON.parse(rest.certifications_json || "[]"),
     status: rest.status, terminatedAt: rest.terminated_at,
     td1OnFile: !!rest.td1_on_file, benefitsPerPay: rest.benefits_per_pay, benefitsPlan: rest.benefits_plan,
+    payType: rest.pay_type || "salary", hourlyRate: rest.hourly_rate,
     erased: !!rest.erased, erasedAt: rest.erased_at,
     visibility: JSON.parse(rest.visibility_json || "{}"),
     joinedDate: rest.hired,
@@ -308,7 +309,9 @@ export function serializeWorker(row) {
     workEligibility: row.work_eligibility, weExpiry: row.we_expiry,
     emergencyContact: JSON.parse(row.emergency_contact_json || "{}"), documents: JSON.parse(row.documents_json || "[]"),
     tickets: JSON.parse(row.tickets_json || "[]"), notes: row.notes, vacBalance: row.vac_balance,
-    defaultBenefitsPerHr: row.default_benefits_per_hr };
+    defaultBenefitsPerHr: row.default_benefits_per_hr,
+    backgroundCheck: JSON.parse(row.background_check_json || '{"status":"not-started"}'),
+    references: JSON.parse(row.references_json || "[]") };
 }
 // A client company only needs enough to identify/display the worker assigned to their site - the
 // agency's internal HR file on that worker (SIN, emergency contact, private pay-rate range,

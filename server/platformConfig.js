@@ -1,6 +1,6 @@
 import { db } from "./db.js";
 import { PLANS } from "../src/store/seed/constants.js";
-import { DEFAULT_PAYROLL_TAX_CONFIG } from "../src/helpers/payrollTax.js";
+import { DEFAULT_PAYROLL_TAX_CONFIG, DEFAULT_OVERTIME_POLICY } from "../src/helpers/payrollTax.js";
 import { DEFAULT_STAFFING_RATES, DEFAULT_STAFFING_AGENCY } from "../src/helpers/staffingEconomics.js";
 import { infinityReplacer, infinityReviver } from "../src/helpers/jsonInfinity.js";
 
@@ -12,8 +12,8 @@ import { infinityReplacer, infinityReviver } from "../src/helpers/jsonInfinity.j
    parses every response with infinityReviver), since several of these configs genuinely need a
    real Infinity (Enterprise's unlimited job count, an open-ended tax bracket ceiling) and plain
    JSON.stringify would silently turn that into null. */
-const CONFIG_KEYS = ["plans", "payrollTax", "staffingRates", "staffingAgency"];
-const DEFAULTS = { plans: PLANS, payrollTax: DEFAULT_PAYROLL_TAX_CONFIG, staffingRates: DEFAULT_STAFFING_RATES, staffingAgency: DEFAULT_STAFFING_AGENCY };
+const CONFIG_KEYS = ["plans", "payrollTax", "staffingRates", "staffingAgency", "overtimePolicy"];
+const DEFAULTS = { plans: PLANS, payrollTax: DEFAULT_PAYROLL_TAX_CONFIG, staffingRates: DEFAULT_STAFFING_RATES, staffingAgency: DEFAULT_STAFFING_AGENCY, overtimePolicy: DEFAULT_OVERTIME_POLICY };
 
 export function getConfig(key) {
   if (!CONFIG_KEYS.includes(key)) throw new Error(`Unknown platform config key: ${key}`);

@@ -19,6 +19,7 @@ import { HR_INVOICES } from "../src/store/seed/hrInvoices.js";
 import { HR_DEPARTMENTS_SEED } from "../src/store/seed/hrDepartments.js";
 import { HR_EXPENSES_SEED } from "../src/store/seed/hrExpenses.js";
 import { HR_PAYRUNS } from "../src/store/seed/hrPayruns.js";
+import { calcNetPay, DEFAULT_PAYROLL_TAX_CONFIG } from "../src/helpers/payrollTax.js";
 import { HR_CHATS, HR_CHAT_MESSAGES } from "../src/store/seed/hrChats.js";
 import { HR_COMPANY_SETTINGS_DEFAULT } from "../src/store/seed/hrCompanySettings.js";
 import {
@@ -312,14 +313,30 @@ for (const x of HR_EXPENSES_SEED) {
 }
 console.log(`Seeded ${HR_EXPENSES_SEED.length} HR expense claims.`);
 
+/* HR_PAYRUNS above only carries hand-picked aggregate totals (no real per-employee lines) - a
+   historical run opened in the UI would show a correct-looking summary but an empty register
+   table underneath, the same "looks right at a glance, breaks on the real click-through" pattern
+   this whole campaign has repeatedly caught. Real per-employee lines are computed here from the
+   actual seeded roster's salary/province/TD1 status, using the same calcNetPay the live payroll
+   endpoint runs - the totals below are the real sum of those lines, not the original placeholder
+   figures (which weren't derived from any actual employee data to begin with). */
+const activeHrEmpsForSeed = db.prepare("SELECT * FROM hr_employees WHERE company_id = 'e1' AND status = 'active'").all();
 const insertHrPayrun = db.prepare(
   `INSERT INTO hr_payruns (id, company_id, period_start, period_end, run_date, status, employees, total_gross, total_net, total_reimb, lines_json)
-   VALUES (@id,'e1',@period_start,@period_end,@run_date,@status,@employees,@total_gross,@total_net,0,'[]')`
+   VALUES (@id,'e1',@period_start,@period_end,@run_date,@status,@employees,@total_gross,@total_net,0,@lines_json)`
 );
 for (const p of HR_PAYRUNS) {
+  const lines = activeHrEmpsForSeed.map(e => {
+    const gross = Math.max(0, Math.round((e.salary || 0) / 26));
+    const { cpp, ei, fedTax, provTax, net } = calcNetPay(gross,
+      { province: e.prov, payPeriodsPerYear: 26, td1OnFile: !!e.td1_on_file }, DEFAULT_PAYROLL_TAX_CONFIG);
+    return { employee: e.id, name: e.name, payType: "salary", gross, unpaidDeduction: 0, hourlyBreakdown: null, cpp, ei, fedTax, provTax, benefits: e.benefits_per_pay || 0, reimb: 0, net: net - (e.benefits_per_pay || 0) };
+  });
   insertHrPayrun.run({
     id: p.id, period_start: `${p.period}-01`, period_end: `${p.period}-28`, run_date: p.runDate,
-    status: p.status, employees: p.employees, total_gross: p.totalGross, total_net: p.totalNet,
+    status: p.status, employees: lines.length,
+    total_gross: lines.reduce((s, l) => s + l.gross, 0), total_net: lines.reduce((s, l) => s + l.net, 0),
+    lines_json: JSON.stringify(lines),
   });
 }
 console.log(`Seeded ${HR_PAYRUNS.length} HR payroll runs.`);
