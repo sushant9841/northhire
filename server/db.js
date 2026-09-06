@@ -135,6 +135,7 @@ CREATE TABLE IF NOT EXISTS blogs (
   excerpt TEXT, body_json TEXT DEFAULT '[]',
   owner_employer_id TEXT REFERENCES employers(id),
   status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','published','hidden')),
+  scheduled_at TEXT,
   views INTEGER DEFAULT 0, featured INTEGER DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -147,7 +148,18 @@ CREATE TABLE IF NOT EXISTS trainings (
   mods_json TEXT DEFAULT '[]', outcomes_json TEXT DEFAULT '[]', about TEXT,
   owner_employer_id TEXT REFERENCES employers(id),
   status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','published','hidden')),
+  scheduled_at TEXT,
   featured INTEGER DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+/* Revision history for both content types - a snapshot of the full row taken right before every
+   edit, so "what did this look like last week" is answerable and a bad edit can be restored. */
+CREATE TABLE IF NOT EXISTS content_revisions (
+  id TEXT PRIMARY KEY,
+  content_type TEXT NOT NULL CHECK(content_type IN ('blog','training')),
+  content_id TEXT NOT NULL,
+  snapshot_json TEXT NOT NULL,
+  created_by TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

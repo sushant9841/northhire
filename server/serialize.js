@@ -133,7 +133,7 @@ export function serializeBlog(row) {
     date: sqlTime(row.created_at).toLocaleDateString("en-CA", { day: "numeric", month: "short", year: "numeric" }),
     excerpt: row.excerpt, body: JSON.parse(row.body_json || "[]"),
     owner: row.owner_employer_id || "admin",
-    status: row.status, views: row.views, featured: !!row.featured,
+    status: row.status, scheduledAt: row.scheduled_at, views: row.views, featured: !!row.featured,
   };
 }
 export function serializeTraining(row) {
@@ -144,8 +144,13 @@ export function serializeTraining(row) {
     hours: row.hours, price: row.price, rating: row.rating, enrolled: row.enrolled,
     mods: JSON.parse(row.mods_json || "[]"), outcomes: JSON.parse(row.outcomes_json || "[]"), about: row.about,
     owner: row.owner_employer_id || "admin",
-    status: row.status, featured: !!row.featured,
+    status: row.status, scheduledAt: row.scheduled_at, featured: !!row.featured,
   };
+}
+export function serializeContentRevision(row) {
+  if (!row) return null;
+  return { id: row.id, contentType: row.content_type, contentId: row.content_id,
+    snapshot: JSON.parse(row.snapshot_json), createdBy: row.created_by, createdAt: sqlTime(row.created_at).getTime() };
 }
 
 /* ═══════════════ SEEKER MISC ═══════════════ */

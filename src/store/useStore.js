@@ -1356,6 +1356,19 @@ export function useStore(){
       go(user.role==="admin"?"admTrainings":"empContent");
     }catch(err){toast(err.message,"danger");}
   };
+  const loadContentRevisions=async(type,id)=>{
+    try{const {revisions}=await api.get(`/content/${type}s/${id}/revisions`);return revisions;}
+    catch(err){toast(err.message,"danger");return [];}
+  };
+  const restoreContentRevision=async(type,id,revisionId)=>{
+    try{
+      const {[type]:item}=await api.post(`/content/${type}s/${id}/restore/${revisionId}`);
+      if(type==="blog")setBlogs(l=>l.map(b=>b.id===id?item:b));
+      else setTrainings(l=>l.map(t=>t.id===id?item:t));
+      toast("Restored — this became a new revision itself, so you can undo the undo","ok");
+      return {ok:true};
+    }catch(err){toast(err.message,"danger");return {ok:false,msg:err.message};}
+  };
   const deleteBlog=async id=>{
     const b=blogs.find(x=>x.id===id);
     try{await api.del(`/content/blogs/${id}`);setBlogs(l=>l.filter(x=>x.id!==id));log("blog.delete",`Deleted article "${b.title}"`,"trash");}
@@ -1743,6 +1756,7 @@ export function useStore(){
     team,loadTeam,inviteTeammate,revokeInvite,removeTeammate,getInvite,acceptInvite,inviteToken,
     messageTemplates,saveMessageTemplate,deleteMessageTemplate,
     editBlog,editTraining,saveBlog,saveTraining,deleteBlog,deleteTraining,toggleBlogStatus,toggleTrainingStatus,
+    loadContentRevisions,restoreContentRevision,
     enrol,confirmPaidEnrol,advanceTraining,paidTrainings,newCv,importResumeToNewCv,editCv,saveCv,duplicateCv,deleteCv,setDefaultCv,
     printCv,printCert,printInvoice,printOfferLetter,exportApplicants,exportLog,exportUsers,exportEmployers,share,choosePlan,updateCard,setSetting,
     readNotif,markAllRead,logActivity:log,

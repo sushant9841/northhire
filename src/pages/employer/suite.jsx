@@ -843,6 +843,12 @@ export function ContentManager({scope,only}){
   const [tab,setTab]=useState(only==="trainings"?"trainings":"blogs");
   const [q,setQ]=useState(""); const [statusFilter,setStatusFilter]=useState("all");
   const [sel,setSel]=useState(new Set());
+  const [viewingHistory,setViewingHistory]=useState(null); const [revisions,setRevisions]=useState([]);
+  const openHistory=async(item,type)=>{setViewingHistory({item,type}); setRevisions(await A.loadContentRevisions(type,item.id));};
+  const restore=async(revId)=>{
+    const r=await A.restoreContentRevision(viewingHistory.type,viewingHistory.item.id,revId);
+    if(r.ok)setViewingHistory(null);
+  };
   const Row=({item,type})=>{
     const editable=isAdmin||item.owner===owner;
     const selected=sel.has(item.id);
@@ -856,13 +862,16 @@ export function ContentManager({scope,only}){
           <span>{item.cat}</span><span>•</span>
           <span>{type==="blog"?`${item.mins} min read`:`${item.hours} h · ${item.price===0?"Free":money(item.price)}`}</span>
           {isAdmin&&<><span>•</span><span>{item.owner==="admin"?"NorthHire":A.emp(item.owner)?.name||item.owner}</span></>}</div></div>
-      <Tag tone={item.status==="published"?"ok":item.status==="draft"?"warn":"neutral"} sm>
-        {item.status==="published"?"Published":item.status==="draft"?"Draft":"Hidden"}</Tag>
+      {item.scheduledAt
+        ?<Tag tone="brand" sm icon="clock">Scheduled {new Date(item.scheduledAt).toLocaleString("en-CA",{dateStyle:"short",timeStyle:"short"})}</Tag>
+        :<Tag tone={item.status==="published"?"ok":item.status==="draft"?"warn":"neutral"} sm>
+          {item.status==="published"?"Published":item.status==="draft"?"Draft":"Hidden"}</Tag>}
       <div className="flex gap-2 flex-wrap">
         <Btn kind="ghost" size="xs" icon="eye" title="Preview"
           onClick={()=>type==="blog"?A.openBlog(item.id):A.openTraining(item.id)}/>
         {editable&&<>
           <Btn kind="outline" size="xs" icon="edit" onClick={()=>type==="blog"?A.editBlog(item.id):A.editTraining(item.id)}>Edit</Btn>
+          <Btn kind="ghost" size="xs" icon="clock" title="Revision history" onClick={()=>openHistory(item,type)}/>
           <Btn kind="ghost" size="xs" onClick={()=>type==="blog"?A.toggleBlogStatus(item.id):A.toggleTrainingStatus(item.id)}>
             {item.status==="published"?"Unpublish":"Publish"}</Btn>
           <Btn kind="ghost" size="xs" icon="trash" title="Delete"
@@ -906,6 +915,18 @@ export function ContentManager({scope,only}){
               Create {tab==="blogs"?"article":"training"}</Btn>:null}/>
         : pg.pageItems.map(x=><Row key={x.id} item={x} type={tab==="blogs"?"blog":"training"}/>)}</Card>
     <Pagination {...pg}/>
+    {viewingHistory&&<Modal onClose={()=>setViewingHistory(null)} title={`Revision history — ${viewingHistory.item.title}`}>
+      <div className="flex flex-col gap-2" style={{maxHeight:400,overflowY:"auto"}}>
+        {revisions.length===0&&<div className="text-sm text-text-3 py-3">No earlier revisions — this hasn't been edited since it was created.</div>}
+        {revisions.map(r=><div key={r.id} className="flex justify-between items-center gap-3 py-2.5 px-3 bg-bg rounded-lg">
+          <div className="min-w-0">
+            <div className="text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap">{r.snapshot.title}</div>
+            <div className="text-xs text-text-3 mt-0.5">{new Date(r.createdAt).toLocaleString("en-CA")}</div>
+          </div>
+          <Btn kind="outline" size="xs" onClick={()=>restore(r.id)}>Restore this version</Btn>
+        </div>)}
+      </div>
+    </Modal>}
   </Page>;
 }
 
@@ -924,14 +945,15 @@ export function BlogEditor(){
       author:A.user?.role==="admin"?"NorthHire Editorial":A.company?.name||"",authorSeed:A.user?.seed??0,
       date:"Today",excerpt:"",bodyText:"",owner:A.user?.role==="admin"?"admin":A.company?.id,status:"draft",views:0,featured:false});
   const [err,setErr]=useState({});
+  const [scheduleAt,setScheduleAt]=useState(existing?.scheduledAt?new Date(existing.scheduledAt).toISOString().slice(0,16):"");
   const set=(k,v)=>{setD(p=>({...p,[k]:v}));setErr(e=>({...e,[k]:undefined}));};
-  const save=(status)=>{const e={};
+  const save=(status,scheduledAt)=>{const e={};
     if(!d.title.trim())e.title="Title is required";
     if(d.excerpt.trim().length<20)e.excerpt="Write a short summary, at least a sentence";
     if((d.bodyText||"").replace(/<[^>]+>/g,"").trim().length<80)e.bodyText="The article body is too short";
     setErr(e); if(Object.keys(e).length)return;
     const body=[["", d.bodyText]]; /* single HTML chunk; renderers will inject with dangerouslySetInnerHTML */
-    A.saveBlog({...d,body,status},isNew);};
+    A.saveBlog({...d,body,status,scheduledAt:scheduledAt||null},isNew);};
   return <Page narrow>
     <H1 sub={isNew?"Published articles appear on the home page and in Career resources":"Editing a published article"}
       action={<Btn kind="ghost" onClick={()=>A.go(A.user.role==="admin"?"admBlogs":"empContent")}>Cancel</Btn>}>
@@ -951,9 +973,16 @@ export function BlogEditor(){
             hint="Each section: heading on the first line, the paragraph underneath, then a blank line before the next section.">
             <RichText value={d.bodyText} onChange={v=>set("bodyText",v)} rows={14} placeholder="Start writing. Use the toolbar for bold, italics, bullet lists, links..."/></Field>
           <Field label="Author name"><Input value={d.author} onChange={e=>set("author",e.target.value)}/></Field></div>
-        <div className="flex gap-2.5 justify-end mt-6 pt-5 border-t border-line-soft flex-wrap">
-          <Btn kind="outline" onClick={()=>save("draft")}>Save as draft</Btn>
-          <Btn kind="primary" icon="check" onClick={()=>save("published")}>Publish</Btn></div></Card>
+        <div className="flex gap-2.5 items-end mt-6 pt-5 border-t border-line-soft flex-wrap">
+          <Field label="Schedule for later (optional)" style={{flex:"1 1 220px",margin:0}}>
+            <Input type="datetime-local" value={scheduleAt} onChange={e=>setScheduleAt(e.target.value)}/></Field>
+          <div className="flex gap-2.5 justify-end flex-wrap">
+            <Btn kind="outline" onClick={()=>save("draft")}>Save as draft</Btn>
+            {scheduleAt
+              ?<Btn kind="primary" icon="clock" onClick={()=>save("draft",new Date(scheduleAt).toISOString())}>Schedule publish</Btn>
+              :<Btn kind="primary" icon="check" onClick={()=>save("published")}>Publish</Btn>}
+          </div>
+        </div></Card>
       <div className="flex flex-col gap-3.5">
         <Card pad={0} style={{overflow:"hidden"}}>
           <div className="py-3 px-4 border-b border-line-soft text-sm font-semibold text-text">Card preview</div>
@@ -985,15 +1014,16 @@ export function TrainingEditor(){
       providerSeed:A.user?.seed??0,level:"Beginner",hours:4,price:0,rating:4.5,enrolled:0,modsText:"",outText:"",about:"",
       owner:A.user?.role==="admin"?"admin":A.company?.id,status:"draft",featured:false});
   const [err,setErr]=useState({});
+  const [scheduleAt,setScheduleAt]=useState(existing?.scheduledAt?new Date(existing.scheduledAt).toISOString().slice(0,16):"");
   const set=(k,v)=>{setD(p=>({...p,[k]:v}));setErr(e=>({...e,[k]:undefined}));};
-  const save=(status)=>{const e={};
+  const save=(status,scheduledAt)=>{const e={};
     if(!d.title.trim())e.title="Title is required";
     const aboutTxt=(d.aboutRich||d.about||"").replace(/<[^>]+>/g,"").trim();
     if(aboutTxt.length<30)e.about="Describe the course in a sentence or two";
     if((d.mods||[]).length<2)e.mods="Add at least two modules";
     if((d.outcomes||[]).length<2)e.outcomes="Add at least two learning outcomes";
     setErr(e); if(Object.keys(e).length)return;
-    A.saveTraining({...d,about:aboutTxt,mods:(d.mods||[]).map(m=>m.title||m).filter(Boolean),outcomes:d.outcomes,status},isNew);};
+    A.saveTraining({...d,about:aboutTxt,mods:(d.mods||[]).map(m=>m.title||m).filter(Boolean),outcomes:d.outcomes,status,scheduledAt:scheduledAt||null},isNew);};
 
   const addMod=()=>set("mods",[...(d.mods||[]),{id:uid("m"),title:"New module",body:"",videoUrl:""}]);
   const updMod=(id,patch)=>set("mods",(d.mods||[]).map(m=>m.id===id?{...m,...patch}:m));
@@ -1107,9 +1137,16 @@ export function TrainingEditor(){
               </>}
           </div>
           </div>
-        <div className="flex gap-2.5 justify-end mt-6 pt-5 border-t border-line-soft flex-wrap">
-          <Btn kind="outline" onClick={()=>save("draft")}>Save as draft</Btn>
-          <Btn kind="primary" icon="check" onClick={()=>save("published")}>Publish</Btn></div></Card>
+        <div className="flex gap-2.5 items-end mt-6 pt-5 border-t border-line-soft flex-wrap">
+          <Field label="Schedule for later (optional)" style={{flex:"1 1 220px",margin:0}}>
+            <Input type="datetime-local" value={scheduleAt} onChange={e=>setScheduleAt(e.target.value)}/></Field>
+          <div className="flex gap-2.5 justify-end flex-wrap">
+            <Btn kind="outline" onClick={()=>save("draft")}>Save as draft</Btn>
+            {scheduleAt
+              ?<Btn kind="primary" icon="clock" onClick={()=>save("draft",new Date(scheduleAt).toISOString())}>Schedule publish</Btn>
+              :<Btn kind="primary" icon="check" onClick={()=>save("published")}>Publish</Btn>}
+          </div>
+        </div></Card>
       <div className="flex flex-col gap-3.5">
         <Card pad={0} style={{overflow:"hidden"}}>
           <div className="py-3 px-4 border-b border-line-soft text-sm font-semibold text-text">Card preview</div>
