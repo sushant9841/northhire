@@ -1702,6 +1702,112 @@ export function HrSettings(){
 }
 
 /* ─── Integrations: punch machines + prior HR systems ─── */
+/* ─── Policies & sign-off: real click-wrap e-signature (typed full name + a required checkbox +
+   timestamp, server-recorded - see db.js's hr_sign_documents/hr_signatures for the design note).
+   Every active employee sees documents assigned to them and can sign; owner/admin/hr additionally
+   see completion stats across the whole company and can publish new documents. */
+export function HrPolicies(){
+  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const emp=A.hrCurrentEmp();
+  const isPriv=emp.role==="owner"||emp.role==="admin"||emp.role==="hr";
+  useEffect(()=>{A.loadSignDocuments();},[]);
+  const [signing,setSigning]=useState(null); const [signedName,setSignedName]=useState(""); const [agreed,setAgreed]=useState(false);
+  const [showNew,setShowNew]=useState(false); const [draft,setDraft]=useState({title:"",body:""});
+  const [viewingSigs,setViewingSigs]=useState(null); const [sigList,setSigList]=useState([]);
+
+  const startSign=(doc)=>{setSigning(doc);setSignedName(emp.name);setAgreed(false);};
+  const submitSign=async()=>{
+    const r=await A.signDocument(signing.id,signedName);
+    if(r.ok){A.toast("Signed","ok");setSigning(null);}else A.toast(r.msg,"danger");
+  };
+  const publish=async()=>{
+    if(!draft.title.trim()||!draft.body.trim())return;
+    const r=await A.createSignDocument({title:draft.title,body:draft.body,requiredFor:["all"]});
+    if(r.ok){A.toast("Published for sign-off","ok");setShowNew(false);setDraft({title:"",body:""});}else A.toast(r.msg,"danger");
+  };
+  const openSigs=async(doc)=>{setViewingSigs(doc);setSigList(await A.loadDocumentSignatures(doc.id));};
+
+  const pending=A.hrSignDocs.filter(d=>!d.signed);
+  const signed=A.hrSignDocs.filter(d=>d.signed);
+
+  return <div>
+    {pending.length>0&&<Banner tone="warn" icon="alert" style={{marginBottom:16}}>{pending.length} document{pending.length===1?"":"s"} need your signature.</Banner>}
+    <div className="flex justify-between items-center mb-4">
+      <div className="text-base font-semibold text-text">Documents for you to review and sign</div>
+      {isPriv&&<Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowNew(true)}>Publish a new policy</Btn>}
+    </div>
+    <div className="flex flex-col gap-2.5 mb-6">
+      {pending.map(d=><Card key={d.id} pad={16} style={{borderRadius:12}}>
+        <div className="flex justify-between items-center gap-3 flex-wrap">
+          <div><div className="text-sm font-semibold text-text">{d.title}</div>
+            <div className="text-xs text-text-3 mt-0.5">Published {new Date(d.createdAt).toLocaleDateString("en-CA")}</div></div>
+          <Btn kind="primary" size="sm" onClick={()=>startSign(d)}>Review & sign</Btn>
+        </div>
+      </Card>)}
+      {pending.length===0&&<div className="text-sm text-text-3">Nothing pending — you're all caught up.</div>}
+    </div>
+
+    {signed.length>0&&<>
+      <div className="text-base font-semibold text-text mb-2.5">Already signed</div>
+      <div className="flex flex-col gap-2 mb-6">
+        {signed.map(d=><div key={d.id} className="flex justify-between items-center py-2.5 px-3.5 bg-bg rounded-lg">
+          <div className="text-sm text-text">{d.title}</div><Tag tone="ok" sm icon="check">Signed</Tag></div>)}
+      </div>
+    </>}
+
+    {isPriv&&A.hrSignDocsAll&&<>
+      <div className="text-base font-semibold text-text mb-2.5 pt-4 border-t border-line-soft">Company-wide completion</div>
+      <div className="flex flex-col gap-2">
+        {A.hrSignDocsAll.map(d=><div key={d.id} className="flex justify-between items-center gap-3 py-2.5 px-3.5 bg-bg rounded-lg flex-wrap">
+          <div className="min-w-0"><div className="text-sm font-semibold text-text">{d.title}</div>
+            <div className="text-xs text-text-3 mt-0.5">{d.signedCount} of {d.targetCount} signed</div></div>
+          <div className="flex gap-2">
+            <Btn kind="ghost" size="xs" onClick={()=>openSigs(d)}>View signatures</Btn>
+            <Btn kind="ghost" size="xs" icon="trash" onClick={async()=>{const r=await A.removeSignDocument(d.id);if(r.ok)A.toast("Removed","ok");}}/>
+          </div>
+        </div>)}
+        {A.hrSignDocsAll.length===0&&<div className="text-sm text-text-3">No policies published yet.</div>}
+      </div>
+    </>}
+
+    {signing&&<Modal onClose={()=>setSigning(null)} title={signing.title} wide>
+      <div className="flex flex-col gap-3.5">
+        <div className="p-4 bg-bg rounded-xl border border-line text-sm text-text-2 leading-relaxed whitespace-pre-wrap" style={{maxHeight:320,overflowY:"auto"}}>{signing.body}</div>
+        <label className="flex items-start gap-2.5 cursor-pointer">
+          <input type="checkbox" checked={agreed} onChange={e=>setAgreed(e.target.checked)} style={{marginTop:3}}/>
+          <span className="text-sm text-text-2">I have read and understood this document and agree to be bound by it.</span>
+        </label>
+        <Field label="Type your full legal name to sign" required><Input value={signedName} onChange={e=>setSignedName(e.target.value)}/></Field>
+        <div className="flex gap-2.5 justify-end">
+          <Btn kind="ghost" onClick={()=>setSigning(null)}>Cancel</Btn>
+          <Btn kind="primary" disabled={!agreed||signedName.trim().length<2} onClick={submitSign}>Sign document</Btn>
+        </div>
+      </div>
+    </Modal>}
+
+    {showNew&&<Modal onClose={()=>setShowNew(false)} title="Publish a new policy" wide>
+      <div className="flex flex-col gap-3.5">
+        <Field label="Title" required><Input value={draft.title} onChange={e=>setDraft({...draft,title:e.target.value})} placeholder="e.g. Employee Handbook 2026"/></Field>
+        <Field label="Document text" required><Area rows={10} value={draft.body} onChange={e=>setDraft({...draft,body:e.target.value})} placeholder="Paste the full policy text employees will read before signing…"/></Field>
+        <div className="text-xs text-text-3">Sent to every active employee for sign-off.</div>
+        <div className="flex gap-2.5 justify-end">
+          <Btn kind="ghost" onClick={()=>setShowNew(false)}>Cancel</Btn>
+          <Btn kind="primary" disabled={!draft.title.trim()||!draft.body.trim()} onClick={publish}>Publish</Btn>
+        </div>
+      </div>
+    </Modal>}
+
+    {viewingSigs&&<Modal onClose={()=>setViewingSigs(null)} title={`Signatures — ${viewingSigs.title}`}>
+      <div className="flex flex-col gap-2">
+        {sigList.map(s=>{const e=A.hrEmp(s.employee);return <div key={s.id} className="flex justify-between items-center py-2 px-3 bg-bg rounded-lg">
+          <div className="text-sm text-text">{e?.name||s.signedName}</div>
+          <div className="text-xs text-text-3">{new Date(s.signedAt).toLocaleString("en-CA")}</div></div>;})}
+        {sigList.length===0&&<div className="text-sm text-text-3">No one has signed yet.</div>}
+      </div>
+    </Modal>}
+  </div>;
+}
+
 export function HrIntegrations(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const company=A.hrCurrentCompany();

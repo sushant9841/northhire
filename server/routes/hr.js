@@ -8,7 +8,7 @@ import { hashPassword, verifyPassword, createSessionCookie, clearSessionCookie, 
 import {
   serializeHrEmployee, serializeHrAttendance, serializeHrLeave, serializeHrTask, serializeHrEvent,
   serializeHrInvoice, serializeHrDepartment, serializeHrExpense, serializeHrPayrun, serializeHrChat, serializeHrChatMessage,
-  serializeHrAuditEntry,
+  serializeHrAuditEntry, serializeHrSignDocument, serializeHrSignature,
 } from "../serialize.js";
 
 export const hrRouter = Router();
@@ -669,4 +669,68 @@ hrRouter.patch("/company-settings", requireHrAuth, requireHrPriv, (req, res) => 
      ON CONFLICT(company_id) DO UPDATE SET settings_json = excluded.settings_json`
   ).run(req.hrEmployee.company_id, JSON.stringify(merged));
   res.json({ settings: merged });
+});
+
+/* ─── Policies & e-signature (real click-wrap acknowledgment, see db.js for the design note) ─── */
+function docAppliesTo(doc, employeeId) {
+  return doc.requiredFor.includes("all") || doc.requiredFor.includes(employeeId);
+}
+hrRouter.get("/sign-documents", requireHrAuth, (req, res) => {
+  const docs = db.prepare("SELECT * FROM hr_sign_documents WHERE company_id = ? ORDER BY created_at DESC")
+    .all(req.hrEmployee.company_id).map(serializeHrSignDocument);
+  const mySignatures = db.prepare("SELECT document_id FROM hr_signatures WHERE employee_id = ?").all(req.hrEmployee.id).map(r => r.document_id);
+  const mine = docs.filter(d => docAppliesTo(d, req.hrEmployee.id)).map(d => ({ ...d, signed: mySignatures.includes(d.id) }));
+  let stats = null;
+  if (isPriv(req.hrEmployee)) {
+    const activeIds = db.prepare("SELECT id FROM hr_employees WHERE company_id = ? AND status = 'active'").all(req.hrEmployee.company_id).map(r => r.id);
+    stats = docs.map(d => {
+      const targetIds = d.requiredFor.includes("all") ? activeIds : d.requiredFor.filter(id => activeIds.includes(id));
+      const signedCount = db.prepare(
+        `SELECT COUNT(*) AS n FROM hr_signatures WHERE document_id = ? AND employee_id IN (${targetIds.map(() => "?").join(",") || "''"})`
+      ).get(d.id, ...targetIds).n;
+      return { ...d, targetCount: targetIds.length, signedCount };
+    });
+  }
+  res.json({ documents: mine, allDocuments: stats });
+});
+hrRouter.post("/sign-documents", requireHrAuth, requireHrPriv, (req, res) => {
+  const { title, body, requiredFor } = req.body || {};
+  if (!title?.trim() || !body?.trim()) return res.status(400).json({ error: "A title and body are required." });
+  const id = nextId("sd", "hr_sign_documents");
+  db.prepare("INSERT INTO hr_sign_documents (id, company_id, title, body, required_for_json, created_by) VALUES (?, ?, ?, ?, ?, ?)")
+    .run(id, req.hrEmployee.company_id, title.trim(), body.trim(), JSON.stringify(Array.isArray(requiredFor) && requiredFor.length ? requiredFor : ["all"]), req.hrEmployee.id);
+  logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "sign_document_created", `Published "${title.trim()}" for sign-off`);
+  res.status(201).json({ document: serializeHrSignDocument(db.prepare("SELECT * FROM hr_sign_documents WHERE id = ?").get(id)) });
+});
+hrRouter.delete("/sign-documents/:id", requireHrAuth, requireHrPriv, (req, res) => {
+  const row = db.prepare("SELECT * FROM hr_sign_documents WHERE id = ? AND company_id = ?").get(req.params.id, req.hrEmployee.company_id);
+  if (!row) return res.status(404).json({ error: "Not found." });
+  db.prepare("DELETE FROM hr_signatures WHERE document_id = ?").run(req.params.id);
+  db.prepare("DELETE FROM hr_sign_documents WHERE id = ?").run(req.params.id);
+  logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "sign_document_removed", `Removed "${row.title}"`);
+  res.json({ ok: true });
+});
+hrRouter.get("/sign-documents/:id/signatures", requireHrAuth, requireHrPriv, (req, res) => {
+  const row = db.prepare("SELECT * FROM hr_sign_documents WHERE id = ? AND company_id = ?").get(req.params.id, req.hrEmployee.company_id);
+  if (!row) return res.status(404).json({ error: "Not found." });
+  const sigs = db.prepare("SELECT * FROM hr_signatures WHERE document_id = ?").all(req.params.id).map(serializeHrSignature);
+  res.json({ signatures: sigs });
+});
+hrRouter.post("/sign-documents/:id/sign", requireHrAuth, (req, res) => {
+  const row = db.prepare("SELECT * FROM hr_sign_documents WHERE id = ? AND company_id = ?").get(req.params.id, req.hrEmployee.company_id);
+  if (!row) return res.status(404).json({ error: "Not found." });
+  const doc = serializeHrSignDocument(row);
+  if (!docAppliesTo(doc, req.hrEmployee.id)) return res.status(403).json({ error: "This document isn't assigned to you." });
+  const { signedName } = req.body || {};
+  if (!signedName?.trim() || signedName.trim().length < 2) return res.status(400).json({ error: "Type your full legal name to sign." });
+  if (db.prepare("SELECT id FROM hr_signatures WHERE document_id = ? AND employee_id = ?").get(req.params.id, req.hrEmployee.id))
+    return res.status(409).json({ error: "You've already signed this document." });
+  const id = nextId("sig", "hr_signatures");
+  // Never store the raw IP - a one-way hash is enough to show "signed from a consistent, traceable
+  // origin" for an audit trail without keeping a directly-identifying record indefinitely.
+  const ipHash = crypto.createHash("sha256").update(req.ip || "unknown").digest("hex").slice(0, 16);
+  db.prepare("INSERT INTO hr_signatures (id, document_id, employee_id, signed_name, ip_hash) VALUES (?, ?, ?, ?, ?)")
+    .run(id, req.params.id, req.hrEmployee.id, signedName.trim(), ipHash);
+  logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "document_signed", `${req.hrEmployee.name} signed "${row.title}"`);
+  res.status(201).json({ signature: serializeHrSignature(db.prepare("SELECT * FROM hr_signatures WHERE id = ?").get(id)) });
 });

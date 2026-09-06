@@ -186,6 +186,27 @@ export function useHrStore(){
       if(patch.salary!==undefined||patch.role!==undefined)refreshAuditLog();
     }catch(e){/* surfaced via the calling page's own error handling, if any */}
   };
+  const [hrSignDocs,setHrSignDocs]=useState([]);
+  const [hrSignDocsAll,setHrSignDocsAll]=useState(null); // privileged-only completion stats, null for non-priv
+  const loadSignDocuments=async()=>{
+    try{const {documents,allDocuments}=await api.get("/hr/sign-documents");setHrSignDocs(documents);setHrSignDocsAll(allDocuments);}
+    catch{/* best-effort */}
+  };
+  const createSignDocument=async(data)=>{
+    try{await api.post("/hr/sign-documents",data);await loadSignDocuments();return {ok:true};}
+    catch(e){return {ok:false,msg:e.message};}
+  };
+  const removeSignDocument=async(id)=>{
+    try{await api.del(`/hr/sign-documents/${id}`);await loadSignDocuments();return {ok:true};}
+    catch(e){return {ok:false,msg:e.message};}
+  };
+  const signDocument=async(id,signedName)=>{
+    try{await api.post(`/hr/sign-documents/${id}/sign`,{signedName});await loadSignDocuments();return {ok:true};}
+    catch(e){return {ok:false,msg:e.message};}
+  };
+  const loadDocumentSignatures=async(id)=>{
+    try{const {signatures}=await api.get(`/hr/sign-documents/${id}/signatures`);return signatures;}catch{return [];}
+  };
   const eraseHrEmployee=async(empId)=>{
     try{
       await api.post(`/hr/employees/${empId}/erase`);
@@ -466,7 +487,7 @@ export function useHrStore(){
 
   /* --- Role-gated module visibility --- */
   const modulesForRole=(role)=>{
-    const base=["dashboard","directory","profile","chat","calendar","tasks","expenses"];
+    const base=["dashboard","directory","profile","chat","calendar","tasks","expenses","policies"];
     const employee=[...base,"attendance","leave","payslips"];
     const hr=[...employee,"people","hiring","trainings","badges","reports"];
     const finance=[...base,"invoices","payroll","reports","attendance"];
@@ -482,6 +503,7 @@ export function useHrStore(){
     hrPayruns,hrCompanySettings,hrDepartments,hrExpenses,hrAuditLog,
     hrEmp,hrEmpsAtCompany,hrCurrentEmp,hrCurrentCompany,hrLogin,hrLogout,hrAutoLogin,
     hrPublicProfile,updateEmpVisibility,updateEmp,eraseHrEmployee,addEmployee,removeEmployee,
+    hrSignDocs,hrSignDocsAll,loadSignDocuments,createSignDocument,removeSignDocument,signDocument,loadDocumentSignatures,
     punchIn,punchOut,requestLeave,decideLeave,
     addTask,updateTaskStatus,deleteTask,addEvent,deleteEvent,
     addInvoice,markInvoicePaid,sendInvoice,printHrInvoice,reverseInvoice,

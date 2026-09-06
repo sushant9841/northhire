@@ -2,7 +2,7 @@
    httpOnly cookie the browser manages itself - nothing here reads or writes localStorage. */
 import { infinityReviver } from "./jsonInfinity.js";
 
-const API_BASE = "http://localhost:8787/api";
+export const API_BASE = "http://localhost:8787/api";
 
 /* A network failure (server not running) is distinguished from a real API error response
    so callers can fall back to local-only behavior instead of showing a confusing message. */

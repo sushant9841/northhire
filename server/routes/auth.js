@@ -3,6 +3,7 @@ import { Router } from "express";
 import { db, nextId, sqlTime } from "../db.js";
 import { hashPassword, verifyPassword, createSessionCookie, clearSessionCookie, publicUser, requireAuth } from "../auth.js";
 import { sendAndLogMail } from "../mail.js";
+import { PROVIDERS, isConfigured, buildAuthUrl, exchangeCodeForProfile, issueState, consumeState } from "../oauth.js";
 
 export const authRouter = Router();
 
@@ -208,4 +209,46 @@ authRouter.post("/reset/confirm", (req, res) => {
   db.prepare("UPDATE users SET password_hash = ?, password_salt = ? WHERE email = ?").run(hash, salt, email);
   db.prepare("DELETE FROM reset_codes WHERE email = ?").run(email);
   res.json({ ok: true });
+});
+
+/* ─── OAuth ("Sign in with Google/GitHub") - see oauth.js for the full setup note ─── */
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+authRouter.get("/oauth/status", (req, res) => {
+  res.json({ providers: Object.fromEntries(Object.keys(PROVIDERS).map(p => [p, isConfigured(p)])) });
+});
+authRouter.get("/oauth/:provider/start", (req, res) => {
+  const provider = req.params.provider;
+  if (!PROVIDERS[provider]) return res.status(404).send("Unknown provider.");
+  if (!isConfigured(provider)) return res.status(503).send(`${provider} sign-in isn't configured on this server yet.`);
+  res.redirect(buildAuthUrl(provider, issueState()));
+});
+authRouter.get("/oauth/:provider/callback", async (req, res) => {
+  const provider = req.params.provider;
+  const { code, state, error } = req.query;
+  const fail = (msg) => res.redirect(`${FRONTEND_URL}/?oauthError=${encodeURIComponent(msg)}`);
+  if (error) return fail(String(error));
+  if (!PROVIDERS[provider] || !isConfigured(provider)) return fail("Provider not configured.");
+  if (!state || !consumeState(String(state))) return fail("Sign-in expired — please try again.");
+  try {
+    const profile = await exchangeCodeForProfile(provider, String(code));
+    if (!profile.email) return fail(`${provider} didn't share an email address — try a different sign-in method.`);
+    const email = profile.email.toLowerCase();
+    let user = db.prepare("SELECT * FROM users WHERE email = ?").get(email);
+    if (!user) {
+      // A brand-new OAuth sign-in creates a seeker account (the common social-sign-up case) - an
+      // employer account needs a company name OAuth never provides, so that path stays
+      // password-signup-only. The random password is never used - this account can only ever be
+      // reached via OAuth or a password reset.
+      const { hash, salt } = hashPassword(crypto.randomBytes(24).toString("hex"));
+      const id = nextId("u", "users");
+      db.prepare("INSERT INTO users (id, role, name, email, password_hash, password_salt) VALUES (?, 'seeker', ?, ?, ?, ?)")
+        .run(id, profile.name || email.split("@")[0], email, hash, salt);
+      user = db.prepare("SELECT * FROM users WHERE id = ?").get(id);
+    }
+    if (user.suspended) return fail("This account has been suspended.");
+    createSessionCookie(res, "session", "main", user.id);
+    res.redirect(`${FRONTEND_URL}/?oauthSuccess=1`);
+  } catch (e) {
+    fail(e.message || "Sign-in failed.");
+  }
 });

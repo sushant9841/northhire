@@ -316,6 +316,26 @@ CREATE TABLE IF NOT EXISTS hr_employees (
   UNIQUE(company_id, email)
 );
 
+/* Real e-signature, click-wrap style (typed full legal name + a required checkbox + timestamp +
+   a hashed IP, never the raw IP) - the same acknowledgment pattern plenty of real lightweight HR
+   systems use for handbook/policy sign-off, not a full DocuSign-style envelope-and-witness flow.
+   requiredFor lets a document target specific employees or every active one at creation time. */
+CREATE TABLE IF NOT EXISTS hr_sign_documents (
+  id TEXT PRIMARY KEY,
+  company_id TEXT NOT NULL REFERENCES employers(id),
+  title TEXT NOT NULL, body TEXT NOT NULL,
+  required_for_json TEXT NOT NULL DEFAULT '[]',
+  created_by TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS hr_signatures (
+  id TEXT PRIMARY KEY,
+  document_id TEXT NOT NULL REFERENCES hr_sign_documents(id),
+  employee_id TEXT NOT NULL REFERENCES hr_employees(id),
+  signed_name TEXT NOT NULL, ip_hash TEXT,
+  signed_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(document_id, employee_id)
+);
+
 CREATE TABLE IF NOT EXISTS hr_documents (
   id TEXT PRIMARY KEY,
   employee_id TEXT NOT NULL REFERENCES hr_employees(id),

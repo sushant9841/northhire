@@ -277,6 +277,15 @@ export function serializeHrAuditEntry(row) {
   if (!row) return null;
   return { id: row.id, actor: row.actor_employee_id, action: row.action, detail: row.detail, at: sqlTime(row.created_at).getTime() };
 }
+export function serializeHrSignDocument(row) {
+  if (!row) return null;
+  return { id: row.id, companyId: row.company_id, title: row.title, body: row.body,
+    requiredFor: JSON.parse(row.required_for_json || "[]"), createdBy: row.created_by, createdAt: sqlTime(row.created_at).getTime() };
+}
+export function serializeHrSignature(row) {
+  if (!row) return null;
+  return { id: row.id, document: row.document_id, employee: row.employee_id, signedName: row.signed_name, signedAt: sqlTime(row.signed_at).getTime() };
+}
 
 /* ═══════════════ STAFFING AGENCY ═══════════════ */
 export function serializeWorker(row) {

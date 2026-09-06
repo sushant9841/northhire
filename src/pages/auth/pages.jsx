@@ -130,7 +130,14 @@ export function SignupPage(){
                   <I n={r.ic} s={22}/></div>
                 <div className={`text-base font-bold tracking-tight mb-1.5 ${on?"text-brand":"text-text"}`}>{r.t}</div>
                 <div className="text-sm text-text-2 leading-normal">{r.d}</div></button>;})}
-            {err.role&&<div className="col-span-full text-sm mt-1.5" style={{color:C.danger}}>{err.role}</div>}</div>}
+            {err.role&&<div className="col-span-full text-sm mt-1.5" style={{color:C.danger}}>{err.role}</div>}
+            {(A.oauthProviders.google||A.oauthProviders.github)&&<div className="col-span-full">
+              <div className="flex items-center gap-3 my-1"><div className="flex-1 h-px bg-line"/><span className="text-xs text-text-3">or, for job seekers</span><div className="flex-1 h-px bg-line"/></div>
+              <div className={`grid gap-2.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
+                {A.oauthProviders.google&&<Btn kind="outline" full icon="globe" onClick={()=>A.oauthStart("google")}>Continue with Google</Btn>}
+                {A.oauthProviders.github&&<Btn kind="outline" full icon="hex" onClick={()=>A.oauthStart("github")}>Continue with GitHub</Btn>}
+              </div>
+            </div>}</div>}
 
           {step.k==="account"&&<div className="flex flex-col gap-4">
             <Field label="Email address" required error={err.email}>
@@ -362,6 +369,13 @@ export function LoginPage(){
         {err&&<Banner tone="danger" icon="alert" title="Sign-in failed">{err}</Banner>}
         <Btn kind="primary" size="lg" full iconR="arrowR" onClick={submit} disabled={busy}>{busy?"Signing in…":"Sign in"}</Btn>
       </div>
+      {(A.oauthProviders.google||A.oauthProviders.github)&&<>
+        <div className="flex items-center gap-3 my-4"><div className="flex-1 h-px bg-line"/><span className="text-xs text-text-3">or</span><div className="flex-1 h-px bg-line"/></div>
+        <div className="flex flex-col gap-2.5">
+          {A.oauthProviders.google&&<Btn kind="outline" size="lg" full icon="globe" onClick={()=>A.oauthStart("google")}>Continue with Google</Btn>}
+          {A.oauthProviders.github&&<Btn kind="outline" size="lg" full icon="hex" onClick={()=>A.oauthStart("github")}>Continue with GitHub</Btn>}
+        </div>
+      </>}
       <div className="flex justify-between mt-4 text-sm">
         <button onClick={()=>A.go("signup")} className="bg-transparent border-0 p-0 cursor-pointer font-semibold text-brand">Create account</button>
         <button onClick={()=>A.go("forgot")} className="bg-transparent border-0 p-0 cursor-pointer font-semibold text-brand">Forgot password?</button>

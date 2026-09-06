@@ -72,4 +72,5 @@ export const HR_MODULES=[
   {k:"hrReports",label:"Reports",icon:"trend",module:"reports"},
   {k:"hrSettings",label:"Settings",icon:"gear",module:"settings"},
   {k:"hrIntegrations",label:"Integrations",icon:"hex",module:"integrations"},
+  {k:"hrPolicies",label:"Policies & sign-off",icon:"shield",module:"policies"},
 ];

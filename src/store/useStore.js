@@ -12,7 +12,7 @@ import { SEED_BLOGS } from "./seed/blogs.js";
 import { SEED_TRAININGS } from "./seed/trainings.js";
 import { useHrStore } from "./useHrStore.js";
 import { useStaffingStore } from "./useStaffingStore.js";
-import { api, ApiUnreachableError } from "../helpers/api.js";
+import { api, ApiUnreachableError, API_BASE } from "../helpers/api.js";
 import { mapApiJob, mapApiEmployer, mapApiApplication, mapApiUser } from "../helpers/apiMap.js";
 import { buildPath, matchPath, ID_STATE_FOR_ROUTE } from "../helpers/urlRouter.js";
 
@@ -85,6 +85,7 @@ export function useStore(){
   const [activity,setActivity]=useState([]);
   const [securitySignals,setSecuritySignals]=useState(null);
   const [platformConfig,setPlatformConfig]=useState(null); // {plans, payrollTax, staffingRates, staffingAgency} - fetched from the backend; null until loaded
+  const [oauthProviders,setOauthProviders]=useState({google:false,github:false});
   const [settings,setSettings]=useState({employerBlogs:true,employerTrainings:true,employerFeature:true,
     autoApproveJobs:true,publicSignup:true,cvBuilder:true,matching:true,enrolments:true,payTransparency:true,maintenance:false});
   const [userSettings,setUserSettings]=useState({matchAlerts:true,appAlerts:true,marketing:false,discoverable:true,hideEmployer:false,reducedMotion:false,lang:"en"});
@@ -146,6 +147,22 @@ export function useStore(){
       }
     })();
     return ()=>{cancelled=true;};
+  },[]);
+  useEffect(()=>{
+    api.get("/auth/oauth/status").then(({providers})=>setOauthProviders(providers)).catch(()=>{});
+  },[]);
+  const oauthStart=(provider)=>{window.location.href=`${API_BASE}/auth/oauth/${provider}/start`;};
+  /* OAuth ("Sign in with Google/GitHub") lands back here via a real browser redirect (not a fetch
+     call the store can await), so the outcome arrives as a query param instead - surfaced once as
+     a toast, then stripped from the URL so a refresh doesn't repeat it. */
+  useEffect(()=>{
+    const params=new URLSearchParams(window.location.search);
+    const err=params.get("oauthError"); const ok=params.get("oauthSuccess");
+    if(!err&&!ok)return;
+    if(err)toast(err,"danger"); else if(ok)toast("Signed in","ok");
+    params.delete("oauthError"); params.delete("oauthSuccess");
+    const qs=params.toString();
+    window.history.replaceState({},"",window.location.pathname+(qs?`?${qs}`:""));
   },[]);
   /* Applications are per-user (a seeker's own, or an employer's own across their jobs), so
      unlike jobs/employers they're synced per logged-in session rather than once globally -
@@ -1680,6 +1697,7 @@ export function useStore(){
     sendMessage,markMessageRead,scheduleInterview,cancelInterview,bulkMove,bulkReject,reverseMatch,inviteToApply,importJobsCSV,employerAnalytics,
     impersonate,stopImpersonating,
     PLANS,PLAN_ORDER,payrollTaxConfig,platformConfig,currentPlan,planName,can,limitOf,planRequires,upgradeModal,setUpgradeModal,requestUpgrade,
+    oauthProviders,oauthStart,
     paymentMethods,addPaymentMethod,removePaymentMethod,setDefaultPayment,
     twoFactor,enable2FA,disable2FA,
     references,addReference,removeReference,

@@ -68,6 +68,7 @@ export const ROUTES = {
   hrReports:    {title:"Reports", tab:"home", bare:true, path:"/hr/reports"},
   hrSettings:   {title:"HR Settings", tab:"home", bare:true, path:"/hr/settings"},
   hrIntegrations:{title:"Integrations", tab:"home", bare:true, path:"/hr/integrations"},
+  hrPolicies:   {title:"Policies & sign-off", tab:"home", bare:true, path:"/hr/policies"},
 
   /* ─── Staffing agency console ─── */
   agencyLogin:      {title:"Agency sign in", tab:"home", bare:true, path:"/staffing/login"},
