@@ -465,6 +465,7 @@ CREATE TABLE IF NOT EXISTS hr_audit_log (
 CREATE TABLE IF NOT EXISTS agency_staff (
   id TEXT PRIMARY KEY,
   login_id TEXT NOT NULL UNIQUE, name TEXT, role TEXT, title TEXT, seed INTEGER DEFAULT 0, email TEXT,
+  branch_id TEXT REFERENCES staffing_branches(id),
   password_hash TEXT NOT NULL, password_salt TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS agency_reset_codes (
@@ -485,9 +486,20 @@ CREATE TABLE IF NOT EXISTS staffing_workers (
   default_benefits_per_hr REAL DEFAULT 0
 );
 
+/* Multi-branch/per-desk model - previously the whole book was one shared, undifferentiated desk
+   with no way to say "this client/this recruiter belongs to the Calgary office." Branch ownership
+   flows from the client (job orders/assignments/workers inherit it implicitly through their
+   client, so nothing else needed a new column); staff are assigned to a branch directly. */
+CREATE TABLE IF NOT EXISTS staffing_branches (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL, city TEXT, province TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS staffing_clients (
   id TEXT PRIMARY KEY,
   employer_id TEXT NOT NULL REFERENCES employers(id),
+  branch_id TEXT REFERENCES staffing_branches(id),
   status TEXT DEFAULT 'prospect', signed_msa TEXT,
   bill_to_address TEXT, payment_terms_days INTEGER DEFAULT 30, po_required INTEGER DEFAULT 0,
   default_supervisor_email TEXT, conversion_fee_pct REAL DEFAULT 20,

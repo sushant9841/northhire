@@ -85,6 +85,7 @@ export const ROUTES = {
   agencyWorkers:    {title:"Workers", tab:"home", bare:true, root:true, path:"/staffing/workers"},
   agencyMargins:    {title:"Margins", tab:"home", bare:true, root:true, path:"/staffing/margins"},
   agencyCompliance: {title:"Compliance", tab:"home", bare:true, root:true, path:"/staffing/compliance"},
+  agencyBranches:   {title:"Branches", tab:"home", bare:true, root:true, path:"/staffing/branches"},
 
   /* ─── Worker view (seeker who opted in) ─── */
   workerDashboard:  {title:"Worker dashboard", tab:"profile", roles:["seeker"], path:"/worker"},

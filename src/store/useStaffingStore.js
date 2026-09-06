@@ -36,6 +36,7 @@ export function useStaffingStore(user,platformConfig){
   const [staffingAuditLog,setStaffingAuditLog]=useState([]);
   const [wsibClaims,setWsibClaims]=useState([]);
   const [agencyStaffRoster,setAgencyStaffRoster]=useState([]);
+  const [staffingBranches,setStaffingBranches]=useState([]);
 
   useEffect(()=>{
     let cancelled=false;
@@ -53,17 +54,17 @@ export function useStaffingStore(user,platformConfig){
     let cancelled=false;
     (async()=>{
       try{
-        const [w,c,jo,a,t,pr,inv,pl,al,wc,st]=await Promise.all([
+        const [w,c,jo,a,t,pr,inv,pl,al,wc,st,br]=await Promise.all([
           api.get("/staffing/workers"),api.get("/staffing/clients"),api.get("/staffing/job-orders"),
           api.get("/staffing/assignments"),api.get("/staffing/timesheets"),api.get("/staffing/payruns"),
           api.get("/staffing/invoices"),api.get("/staffing/placements"),api.get("/staffing/audit-log"),
-          api.get("/staffing/wsib-claims"),api.get("/staffing/staff"),
+          api.get("/staffing/wsib-claims"),api.get("/staffing/staff"),api.get("/staffing/branches"),
         ]);
         if(cancelled)return;
         setWorkers(w.workers);setStaffingClients(c.clients);setJobOrders(jo.jobOrders);
         setAssignments(a.assignments);setTimesheets(t.timesheets);setStaffingPayruns(pr.payruns);
         setStaffingInvoices(inv.invoices);setPlacements(pl.placements);setStaffingAuditLog(al.auditLog);
-        setWsibClaims(wc.claims);setAgencyStaffRoster(st.staff);
+        setWsibClaims(wc.claims);setAgencyStaffRoster(st.staff);setStaffingBranches(br.branches);
       }catch(e){
         if(typeof console!=="undefined")console.warn(`[NorthHire] Agency data sync failed: ${e.message}`);
       }
@@ -333,6 +334,23 @@ export function useStaffingStore(user,platformConfig){
     setPlacements(l=>l.map(x=>x.id===id?placement:x));
   };
 
+  /* ─── Branches (multi-office / per-desk model) ─── */
+  const createBranch=async(data)=>{
+    const {branch}=await api.post("/staffing/branches",data);
+    setStaffingBranches(l=>[...l,branch]);
+    return branch;
+  };
+  const deleteBranch=async(id)=>{
+    await api.del(`/staffing/branches/${id}`);
+    setStaffingBranches(l=>l.filter(b=>b.id!==id));
+    setStaffingClients(l=>l.map(c=>c.branchId===id?{...c,branchId:null}:c));
+    setAgencyStaffRoster(l=>l.map(s=>s.branchId===id?{...s,branchId:null}:s));
+  };
+  const assignStaffBranch=async(staffId,branchId)=>{
+    await api.patch(`/staffing/staff/${staffId}/branch`,{branchId});
+    setAgencyStaffRoster(l=>l.map(s=>s.id===staffId?{...s,branchId}:s));
+  };
+
   /* ─── Client (staffing) ─── */
   const upsertStaffingClient=async(data)=>{
     const {client}=await api.post("/staffing/clients",data);
@@ -376,6 +394,7 @@ export function useStaffingStore(user,platformConfig){
 
   return {workers,staffingClients,jobOrders,assignments,timesheets,staffingPayruns,staffingInvoices,placements,staffingAuditLog,
     wsibClaims,fileWsibClaim,updateWsibClaim,agencyStaffRoster,
+    staffingBranches,createBranch,deleteBranch,assignStaffBranch,
     worker,workerByPersonId,staffingClient,staffingClientByEmployerId,jobOrder,assignment,timesheet,
     workerAssignments,activeAssignments,clientAssignments,clientTimesheets,workerTimesheets,openJobOrders,
     agencyLogin,agencyLogout,agencyCurrentStaff,agencyAuthChecked,agencyResetRequest,agencyResetConfirm,STAFFING_AGENCY,STAFFING_RATES,

@@ -41,7 +41,7 @@ import { ToastHost } from "./design/primitives.jsx";
 import {
   AgencyLoginPage, AgencyDashboard, AgencyJobOrders, AgencyBench, AgencyAssignments,
   AgencyTimesheets, AgencyPayroll, AgencyInvoicing, AgencyPlacements, AgencyClients,
-  AgencyWorkers, AgencyMargins, AgencyCompliance,
+  AgencyWorkers, AgencyMargins, AgencyCompliance, AgencyBranches,
 } from "./pages/staffing/suite.jsx";
 import { AdmHome, AdmUsers, AdmEmployers, AdmJobs, AdmSettings, AdmLog, AdmStats, AdmConfig, AdmAdmins } from "./pages/admin/suite.jsx";
 import {
@@ -123,7 +123,7 @@ export default function NorthHire(){
     agencyClients:<AgencyShell><AgencyClients/></AgencyShell>,
     agencyWorkers:<AgencyShell><AgencyWorkers/></AgencyShell>,
     agencyMargins:<AgencyShell><AgencyMargins/></AgencyShell>,
-    agencyCompliance:<AgencyShell><AgencyCompliance/></AgencyShell>,
+    agencyCompliance:<AgencyShell><AgencyCompliance/></AgencyShell>,agencyBranches:<AgencyShell><AgencyBranches/></AgencyShell>,
     /* ─── Worker routes (seeker who opted in) ─── */
     workerDashboard:<WorkerDashboard/>,
     workerTimesheet:<WorkerTimesheet/>,

@@ -321,10 +321,14 @@ export function serializeWorkerForClient(row) {
 }
 export function serializeStaffingClient(row) {
   if (!row) return null;
-  return { id: row.id, employerId: row.employer_id, status: row.status, signedMsa: row.signed_msa,
+  return { id: row.id, employerId: row.employer_id, branchId: row.branch_id, status: row.status, signedMsa: row.signed_msa,
     billToAddress: row.bill_to_address, paymentTermsDays: row.payment_terms_days, poRequired: !!row.po_required,
     defaultSupervisorEmail: row.default_supervisor_email, conversionFeePct: row.conversion_fee_pct,
     creditLimit: row.credit_limit, currentAR: row.current_ar, industry: row.industry, markup: row.markup, notes: row.notes };
+}
+export function serializeStaffingBranch(row) {
+  if (!row) return null;
+  return { id: row.id, name: row.name, city: row.city, province: row.province, createdAt: sqlTime(row.created_at).getTime() };
 }
 export function serializeJobOrder(row) {
   if (!row) return null;

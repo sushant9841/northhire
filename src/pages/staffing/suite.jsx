@@ -1181,12 +1181,15 @@ export function AgencyPlacements(){
 export function AgencyClients(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [q,setQ]=useState(""); const [showAdd,setShowAdd]=useState(false); const [sort,setSort]=useState("name");
+  const [branchFilter,setBranchFilter]=useState("");
   const [nc,setNc]=useState({employerId:"",industry:"",province:"ON",city:""});
   const availableEmployers=A.employers.filter(e=>!A.staffingClients.some(c=>c.employerId===e.id));
   const submitAdd=()=>{if(!nc.employerId)return;
     A.upsertStaffingClient(nc);
     setShowAdd(false); setNc({employerId:"",industry:"",province:"ON",city:""});};
-  const filtered=A.staffingClients.filter(c=>{if(!q)return true;
+  const filtered=A.staffingClients.filter(c=>{
+    if(branchFilter&&c.branchId!==branchFilter)return false;
+    if(!q)return true;
     const emp=A.employers.find(e=>e.id===c.employerId);
     return (emp?.name||"").toLowerCase().includes(q.toLowerCase())||(c.industry||"").toLowerCase().includes(q.toLowerCase());});
   /* AR-risk coloring was purely cosmetic (a color flip) with no way to actually triage by it -
@@ -1206,6 +1209,10 @@ export function AgencyClients(){
       <div className="max-w-105 flex-1 min-w-60"><Input icon="search" placeholder="Search by employer or industry" value={q} onChange={e=>setQ(e.target.value)}/></div>
       <Sel value={sort} onChange={e=>setSort(e.target.value)} style={{width:170}}>
         <option value="name">Sort: Name</option><option value="risk">Sort: AR risk (highest first)</option></Sel>
+      {A.staffingBranches.length>0&&<Sel value={branchFilter} onChange={e=>setBranchFilter(e.target.value)} style={{width:170}}>
+        <option value="">All branches</option>
+        {A.staffingBranches.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}
+      </Sel>}
     </div>
 
     <div className="grid gap-3" style={{gridTemplateColumns:mob?"1fr":"repeat(auto-fill,minmax(340px,1fr))"}}>
@@ -1236,6 +1243,12 @@ export function AgencyClients(){
             {c.signedMsa?<>MSA signed {c.signedMsa}</>:<span className="text-warn font-semibold">MSA not signed</span>}
             {" · "}Markup target {c.markup}%
           </div>
+          {A.staffingBranches.length>0&&<div className="mt-2.5">
+            <Sel value={c.branchId||""} onChange={e=>A.upsertStaffingClient({employerId:c.employerId,branchId:e.target.value||null})} style={{fontSize:12,padding:"5px 8px",width:"100%"}}>
+              <option value="">No branch assigned</option>
+              {A.staffingBranches.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}
+            </Sel>
+          </div>}
           {!c.signedMsa&&<Btn kind="primary" size="xs" full style={{marginTop:10}} onClick={()=>A.signMsa(c.id)}>Mark MSA signed</Btn>}
           {c.currentAR>c.creditLimit*0.8&&<Btn kind="dangerSoft" size="xs" full style={{marginTop:10}}
             onClick={()=>{A.logActivity("client.ar_followup",`Followed up with ${emp?.name||c.id} on $${(c.currentAR/1000).toFixed(0)}k outstanding AR`,"alert");A.toast(`Follow-up logged for ${emp?.name}`,"ok");}}>
@@ -1484,6 +1497,78 @@ export function AgencyMargins(){
 }
 
 /* ─── Compliance dashboard ─── */
+/* ─── Branches: multi-office / per-desk model - previously the whole book was one shared,
+   undifferentiated desk with no way to say "this client/this recruiter belongs to Calgary." ─── */
+export function AgencyBranches(){
+  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const [showAdd,setShowAdd]=useState(false);
+  const [nb,setNb]=useState({name:"",city:"",province:"ON"});
+  const submit=async()=>{if(!nb.name.trim())return;
+    await A.createBranch(nb); setShowAdd(false); setNb({name:"",city:"",province:"ON"});};
+  return <div>
+    <div className="flex justify-between items-center mb-4 flex-wrap gap-2.5">
+      <div>
+        <div className="text-lg font-bold text-text">{A.staffingBranches.length} branches</div>
+        <div className="text-sm text-text-3 mt-0.5">Assign clients and recruiters to a branch/desk instead of one shared book.</div>
+      </div>
+      <Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowAdd(true)}>Add branch</Btn>
+    </div>
+    <div className="grid gap-3 mb-6" style={{gridTemplateColumns:mob?"1fr":"repeat(auto-fill,minmax(280px,1fr))"}}>
+      {A.staffingBranches.map(b=>{
+        const clientCount=A.staffingClients.filter(c=>c.branchId===b.id).length;
+        const staffCount=A.agencyStaffRoster.filter(s=>s.branchId===b.id).length;
+        return <Card key={b.id} pad={18} style={{borderRadius:14}}>
+          <div className="flex justify-between items-start gap-2">
+            <div>
+              <div className="text-base font-bold text-text">{b.name}</div>
+              <div className="text-xs text-text-3 mt-0.5">{b.city}{b.city&&b.province?", ":""}{b.province}</div>
+            </div>
+            <Btn kind="ghost" size="xs" icon="trash" onClick={()=>A.deleteBranch(b.id)}/>
+          </div>
+          <div className="flex gap-4 mt-3.5 pt-3 border-t border-line-soft">
+            <div><div className="text-lg font-bold text-brand">{clientCount}</div><div className="text-xs text-text-3">Clients</div></div>
+            <div><div className="text-lg font-bold text-brand">{staffCount}</div><div className="text-xs text-text-3">Staff</div></div>
+          </div>
+        </Card>;})}
+      {A.staffingBranches.length===0&&<Empty icon="building" title="No branches yet" body="Add one to start assigning clients and recruiters to a specific desk."/>}
+    </div>
+
+    <div className="text-base font-semibold text-text mb-2.5">Staff assignment</div>
+    <Card pad={0} style={{borderRadius:14,overflow:"hidden"}}>
+      <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:480}}>
+        <thead><tr className="border-b-2 border-line text-left">
+          {["Name","Role","Branch"].map(h=><th key={h} className={TH_CLS}>{h}</th>)}
+        </tr></thead>
+        <tbody>{A.agencyStaffRoster.map(s=><tr key={s.id} className="border-b border-line-soft">
+          <td className={`${TD_CLS} text-sm font-semibold text-text`}>{s.name}</td>
+          <td className={`${TD_CLS} text-sm text-text-2`}>{s.title||s.role}</td>
+          <td className={TD_CLS}>
+            <Sel value={s.branchId||""} onChange={e=>A.assignStaffBranch(s.id,e.target.value||null)} style={{fontSize:13,padding:"5px 8px"}}>
+              <option value="">Unassigned</option>
+              {A.staffingBranches.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}
+            </Sel>
+          </td>
+        </tr>)}</tbody>
+      </table></div>
+    </Card>
+
+    {showAdd&&<Modal onClose={()=>setShowAdd(false)} title="Add a branch">
+      <div className="flex flex-col gap-3.5">
+        <Field label="Branch name" required><Input value={nb.name} onChange={e=>setNb({...nb,name:e.target.value})} placeholder="e.g. Calgary Desk"/></Field>
+        <div className="grid grid-cols-2 gap-2.5">
+          <Field label="City"><Input value={nb.city} onChange={e=>setNb({...nb,city:e.target.value})}/></Field>
+          <Field label="Province"><Sel value={nb.province} onChange={e=>setNb({...nb,province:e.target.value})}>
+            {A.STAFFING_AGENCY.provinces.map(p=><option key={p} value={p}>{p}</option>)}</Sel></Field>
+        </div>
+        <div className="flex gap-2.5 justify-end">
+          <Btn kind="ghost" onClick={()=>setShowAdd(false)}>Cancel</Btn>
+          <Btn kind="primary" disabled={!nb.name.trim()} onClick={submit}>Add branch</Btn>
+        </div>
+      </div>
+    </Modal>}
+  </div>;
+}
+
 export function AgencyCompliance(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [drill,setDrill]=useState(null);

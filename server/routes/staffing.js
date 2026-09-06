@@ -8,7 +8,7 @@ import { calcStaffingEconomics } from "../../src/helpers/staffingEconomics.js";
 import { getConfig } from "../platformConfig.js";
 import { sendAndLogMail } from "../mail.js";
 import {
-  serializeWorker, serializeWorkerForClient, serializeStaffingClient, serializeJobOrder, serializeAssignment, serializeSubmittal,
+  serializeWorker, serializeWorkerForClient, serializeStaffingClient, serializeStaffingBranch, serializeJobOrder, serializeAssignment, serializeSubmittal,
   serializeStaffingTimesheet, serializeStaffingPayrun, serializeStaffingInvoice, serializePlacement,
   serializeStaffingAuditEntry, serializeWsibClaim,
 } from "../serialize.js";
@@ -55,8 +55,39 @@ staffingRouter.get("/me", requireAgencyAuth, (req, res) => {
   res.json({ staff: { id: s.id, loginId: s.login_id, name: s.name, role: s.role, title: s.title, seed: s.seed, email: s.email } });
 });
 staffingRouter.get("/staff", requireAgencyAuth, (req, res) => {
-  const rows = db.prepare("SELECT id, name, role, title, seed FROM agency_staff ORDER BY name").all();
-  res.json({ staff: rows.map(r => ({ id: r.id, name: r.name, role: r.role, title: r.title, seed: r.seed })) });
+  const rows = db.prepare("SELECT id, name, role, title, seed, branch_id FROM agency_staff ORDER BY name").all();
+  res.json({ staff: rows.map(r => ({ id: r.id, name: r.name, role: r.role, title: r.title, seed: r.seed, branchId: r.branch_id })) });
+});
+staffingRouter.patch("/staff/:id/branch", requireAgencyAuth, (req, res) => {
+  const row = db.prepare("SELECT * FROM agency_staff WHERE id = ?").get(req.params.id);
+  if (!row) return res.status(404).json({ error: "Staff member not found." });
+  db.prepare("UPDATE agency_staff SET branch_id = ? WHERE id = ?").run(req.body?.branchId || null, req.params.id);
+  res.json({ ok: true });
+});
+
+/* ─── Branches (multi-office / per-desk model) ─── */
+staffingRouter.get("/branches", requireAgencyAuth, (req, res) => {
+  res.json({ branches: db.prepare("SELECT * FROM staffing_branches ORDER BY name").all().map(serializeStaffingBranch) });
+});
+staffingRouter.post("/branches", requireAgencyAuth, (req, res) => {
+  const { name, city, province } = req.body || {};
+  if (!name?.trim()) return res.status(400).json({ error: "A branch name is required." });
+  const id = nextId("br", "staffing_branches");
+  db.prepare("INSERT INTO staffing_branches (id, name, city, province) VALUES (?, ?, ?, ?)").run(id, name.trim(), city || null, province || null);
+  logStaffingAudit(req.agencyStaff.id, "branch_created", `Opened a new branch: ${name.trim()}`);
+  res.status(201).json({ branch: serializeStaffingBranch(db.prepare("SELECT * FROM staffing_branches WHERE id = ?").get(id)) });
+});
+staffingRouter.delete("/branches/:id", requireAgencyAuth, (req, res) => {
+  const row = db.prepare("SELECT * FROM staffing_branches WHERE id = ?").get(req.params.id);
+  if (!row) return res.status(404).json({ error: "Branch not found." });
+  // Unassign rather than block the delete or cascade - a closed branch's clients/staff still
+  // exist, they just go back to being unassigned (visible in an "Unassigned" bucket) instead of
+  // silently orphaned with a dangling foreign key or losing all their other data.
+  db.prepare("UPDATE staffing_clients SET branch_id = NULL WHERE branch_id = ?").run(req.params.id);
+  db.prepare("UPDATE agency_staff SET branch_id = NULL WHERE branch_id = ?").run(req.params.id);
+  db.prepare("DELETE FROM staffing_branches WHERE id = ?").run(req.params.id);
+  logStaffingAudit(req.agencyStaff.id, "branch_closed", `Closed branch: ${row.name}`);
+  res.json({ ok: true });
 });
 
 // Password reset for the agency console - previously the only auth surface with none at all,
@@ -181,6 +212,7 @@ staffingRouter.post("/clients", requireAgencyAuth, (req, res) => {
       status: "status", billToAddress: "bill_to_address", paymentTermsDays: "payment_terms_days",
       defaultSupervisorEmail: "default_supervisor_email", conversionFeePct: "conversion_fee_pct",
       creditLimit: "credit_limit", currentAR: "current_ar", industry: "industry", markup: "markup", notes: "notes",
+      branchId: "branch_id",
     };
     const setCols = []; const params = [];
     for (const [key, col] of Object.entries(fields)) if (d[key] !== undefined) { setCols.push(`${col} = ?`); params.push(d[key]); }
@@ -190,8 +222,8 @@ staffingRouter.post("/clients", requireAgencyAuth, (req, res) => {
   }
   const id = nextId("c", "staffing_clients");
   db.prepare(
-    `INSERT INTO staffing_clients (id, employer_id, industry, notes) VALUES (?, ?, ?, ?)`
-  ).run(id, d.employerId, d.industry || null, d.notes || null);
+    `INSERT INTO staffing_clients (id, employer_id, branch_id, industry, notes) VALUES (?, ?, ?, ?, ?)`
+  ).run(id, d.employerId, d.branchId || null, d.industry || null, d.notes || null);
   res.status(201).json({ client: serializeStaffingClient(db.prepare("SELECT * FROM staffing_clients WHERE id = ?").get(id)) });
 });
 staffingRouter.patch("/clients/:id/sign-msa", requireAgencyAuth, (req, res) => {

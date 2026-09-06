@@ -355,4 +355,5 @@ export const AGENCY_MODULES=[
   {k:"agencyWorkers",label:"Workers",icon:"user",section:"main"},
   {k:"agencyMargins",label:"Margins",icon:"trend",section:"insights"},
   {k:"agencyCompliance",label:"Compliance",icon:"shield",section:"insights"},
+  {k:"agencyBranches",label:"Branches",icon:"building",section:"insights"},
 ];
