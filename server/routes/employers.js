@@ -184,6 +184,11 @@ employersRouter.patch("/:id", requireAuth, (req, res) => {
   if (plan !== undefined) {
     if (!isOwner && !isAdmin) return res.status(403).json({ error: "Not your company." });
     if (isAdmin && !hasAdminScope(req.user, "finance")) return res.status(403).json({ error: "This admin account doesn't have access to plan changes." });
+    // An owner can only self-serve down to a free plan here - moving onto any priced plan has to
+    // go through real Stripe checkout (POST /billing/checkout), not a direct PATCH. An admin
+    // (finance scope) can still set any plan directly, for comps/trials/support overrides.
+    const targetPrice = getConfig("plans")[plan]?.price ?? 0;
+    if (isOwner && !isAdmin && targetPrice > 0) return res.status(402).json({ error: "Upgrading to a paid plan requires checkout." });
     db.prepare("UPDATE employers SET plan = ? WHERE id = ?").run(plan, req.params.id);
   }
   const fieldMap = { name: "name", industry: "industry", city: "city", prov: "prov", size: "size", about: "about", site: "site", businessNumber: "business_number", founded: "founded", mark: "mark", a: "a", b: "b" };

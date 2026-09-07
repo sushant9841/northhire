@@ -1298,31 +1298,26 @@ export function EmpBilling(){
   const limit=A.PLANS[plan]?.jobs??1;
   const price=A.PLANS[plan]?.price||0;
   const nextRenewal=(()=>{const d=new Date();d.setMonth(d.getMonth()+1,1);return d.toLocaleDateString("en-CA",{day:"numeric",month:"long",year:"numeric"});})();
-  const invoices=price>0?Array.from({length:4},(_,i)=>{
-    const d=new Date();d.setMonth(d.getMonth()-i,1);
-    return {id:`INV-${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`,
-      date:d.toLocaleDateString("en-CA",{day:"numeric",month:"short",year:"numeric"}),amt:price};
-  }):[];
+  const invoices=A.employerInvoices.map(inv=>({id:inv.id,date:new Date(inv.createdAt).toLocaleDateString("en-CA",{day:"numeric",month:"short",year:"numeric"}),
+    amt:inv.amountPretax,tax:inv.tax,taxLabel:inv.taxLabel,total:inv.total,plan:inv.plan}));
+  // Lands here on the real redirect back from Stripe Checkout (see server/stripe.js's success_url)
+  // - verifies the session server-side (never trusts the URL alone) and shows the outcome once,
+  // then strips the query string so a refresh of this page doesn't re-verify the same session.
+  const [checkoutResult,setCheckoutResult]=useState(null);
+  useEffect(()=>{
+    const params=new URLSearchParams(window.location.search);
+    if(params.get("checkout")==="success"&&params.get("session_id")){
+      A.verifyCheckout(params.get("session_id")).then(r=>setCheckoutResult(r.paid?{ok:true}:{ok:false,msg:r.error||"Payment could not be confirmed."}));
+      window.history.replaceState({},"",window.location.pathname);
+    }
+  },[]);
   const [showCard,setShowCard]=useState(false);
-  const [card,setCard]=useState({name:"",number:"",exp:"",cvc:""});
-  const [cardErr,setCardErr]=useState({});
-  const detectBrand=n=>{const s=n.replace(/\s/g,"");
-    if(/^4/.test(s))return "Visa"; if(/^5[1-5]/.test(s))return "Mastercard";
-    if(/^3[47]/.test(s))return "Amex"; if(/^6(?:011|5)/.test(s))return "Discover"; return "Card";};
-  const luhnOK=n=>{const s=n.replace(/\D/g,""); if(s.length<13||s.length>19)return false;
-    let sum=0,dbl=false; for(let i=s.length-1;i>=0;i--){let d=+s[i]; if(dbl){d*=2;if(d>9)d-=9;} sum+=d; dbl=!dbl;} return sum%10===0;};
-  const submitCard=()=>{const e={};
-    if(!card.name.trim())e.name="Cardholder name required";
-    if(!luhnOK(card.number))e.number="Enter a valid card number";
-    if(!/^\d{2}\/\d{2}$/.test(card.exp))e.exp="MM/YY format";
-    if(!/^\d{3,4}$/.test(card.cvc))e.cvc="3 or 4 digits";
-    setCardErr(e); if(Object.keys(e).length)return;
-    A.addPaymentMethod({...card,brand:detectBrand(card.number)});
-    setCard({name:"",number:"",exp:"",cvc:""}); setShowCard(false);};
-  const fmtNumber=v=>v.replace(/\D/g,"").slice(0,19).match(/.{1,4}/g)?.join(" ")||"";
-  const fmtExp=v=>{const s=v.replace(/\D/g,"").slice(0,4); return s.length>2?`${s.slice(0,2)}/${s.slice(2)}`:s;};
+  const [portalLoading,setPortalLoading]=useState(false);
   return <Page narrow>
     <H1 sub="Your subscription, usage and invoices">Billing</H1>
+    {checkoutResult&&<Banner tone={checkoutResult.ok?"ok":"danger"} icon={checkoutResult.ok?"check":"alert"} style={{marginBottom:16}}
+      title={checkoutResult.ok?"Payment confirmed":"Payment not confirmed"}>
+      {checkoutResult.ok?"Your plan has been upgraded.":checkoutResult.msg}</Banner>}
     <Card pad={mob?20:26} style={{marginBottom:16,background:C.ink,borderColor:C.ink}}>
       <div className="flex justify-between gap-4 flex-wrap text-white">
         <div className="grow shrink basis-60">
@@ -1333,46 +1328,23 @@ export function EmpBilling(){
         <div className="flex gap-2.5 flex-wrap items-start">
           <Btn kind="onDark" onClick={()=>A.go("pricing")}>Change plan</Btn></div></div></Card>
 
-    <Card style={{marginBottom:16,borderRadius:20}}><H2 action={<Btn kind="outline" size="sm" icon="plus" onClick={()=>setShowCard(true)}>Add card</Btn>}>Payment methods</H2>
-      {A.paymentMethods.length===0
-        ? <div className="py-5 text-center">
-            <div className="text-sm text-text-3 mb-3">No payment method saved yet.</div>
-            <Btn kind="primary" icon="plus" onClick={()=>setShowCard(true)}>Add a card</Btn></div>
-        : <div className="flex flex-col gap-2">
-            {A.paymentMethods.map(pm=><div key={pm.id} className="flex gap-3.5 items-center py-3.5 px-4 bg-bg rounded-xl border border-line">
-              <div className="w-11 h-8 rounded-md text-white flex items-center justify-center text-xs font-bold tracking-wide shrink-0"
-                style={{background:pm.brand==="Visa"?"#1A1F71":pm.brand==="Mastercard"?"#EB001B":pm.brand==="Amex"?"#006FCF":C.ink}}>{pm.brand.toUpperCase().slice(0,4)}</div>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold text-text">{pm.brand} {pm.masked}</div>
-                <div className="text-xs text-text-3 mt-0.5">{pm.name} • Exp {pm.exp}</div></div>
-              {pm.default&&<Tag tone="brand" sm>Default</Tag>}
-              {!pm.default&&<Btn kind="ghost" size="xs" onClick={()=>A.setDefaultPayment(pm.id)}>Set default</Btn>}
-              <Btn kind="ghost" size="xs" icon="trash" onClick={()=>A.removePaymentMethod(pm.id)}/></div>)}</div>}
+    <Card style={{marginBottom:16,borderRadius:20}}>
+      <H2 sub="Update your card, view Stripe's own receipts, or cancel — all handled by Stripe directly, not stored in this app.">Payment method</H2>
+      {price===0
+        ?<div className="text-sm text-text-3 py-2">No payment method on file — you're on the free plan.</div>
+        :<Btn kind="outline" icon="wallet" disabled={portalLoading} onClick={async()=>{setPortalLoading(true);const r=await A.openBillingPortal();if(!r.ok){setPortalLoading(false);A.toast(r.msg,"danger");}}}>
+          {portalLoading?"Opening…":"Manage billing in Stripe"}</Btn>}
     </Card>
 
-    {showCard&&<Modal onClose={()=>{setShowCard(false);setCardErr({});}} title="Add a payment method">
-      <div className="flex flex-col gap-3.5">
-        <Banner tone="brand" icon="shield" title="Test-mode form">Card details are validated (Luhn check) and stored locally. Real charges would flow through Stripe.</Banner>
-        <Field label="Cardholder name" required error={cardErr.name}><Input value={card.name} onChange={e=>{setCard({...card,name:e.target.value});setCardErr(x=>({...x,name:undefined}));}} placeholder="Jean Tremblay"/></Field>
-        <Field label="Card number" required error={cardErr.number} hint="Try 4242 4242 4242 4242 for testing.">
-          <Input value={card.number} onChange={e=>{setCard({...card,number:fmtNumber(e.target.value)});setCardErr(x=>({...x,number:undefined}));}} placeholder="1234 5678 9012 3456" style={{fontFamily:"ui-monospace,monospace",letterSpacing:".08em"}}/></Field>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Expiry" required error={cardErr.exp}><Input value={card.exp} onChange={e=>{setCard({...card,exp:fmtExp(e.target.value)});setCardErr(x=>({...x,exp:undefined}));}} placeholder="MM/YY"/></Field>
-          <Field label="CVC" required error={cardErr.cvc}><Input type="password" value={card.cvc} onChange={e=>{setCard({...card,cvc:e.target.value.replace(/\D/g,"").slice(0,4)});setCardErr(x=>({...x,cvc:undefined}));}} placeholder="123"/></Field>
-        </div>
-        <div className="flex gap-2.5 justify-end mt-1.5">
-          <Btn kind="ghost" onClick={()=>{setShowCard(false);setCardErr({});}}>Cancel</Btn>
-          <Btn kind="primary" icon="check" onClick={submitCard}>Add card</Btn></div></div></Modal>}
-
     {invoices.length>0&&<Card style={{borderRadius:20}}><H2>Invoices</H2>
-      {invoices.map(({id,date,amt})=>
+      {invoices.map(({id,date,amt,tax,taxLabel,total,plan:invPlan})=>
         <div key={id} className="flex items-center gap-3.5 py-3 border-b border-line-soft flex-wrap">
           <div className="grow shrink basis-35 min-w-0">
             <div className="text-sm font-semibold text-text">{id}</div>
             <div className="text-xs text-text-3 mt-0.5">{date}</div></div>
-          <div className="text-sm font-semibold text-text">${amt}.00</div>
+          <div className="text-sm font-semibold text-text">${total.toFixed(2)}</div>
           <Tag tone="ok" sm icon="check">Paid</Tag>
-          <Btn kind="ghost" size="xs" icon="download" onClick={()=>A.printInvoice(id,date,amt,plan)}>Print / Save as PDF</Btn></div>)}</Card>}
+          <Btn kind="ghost" size="xs" icon="download" onClick={()=>A.printInvoice(id,date,amt,invPlan,tax,taxLabel)}>Print / Save as PDF</Btn></div>)}</Card>}
   </Page>;
 }
 

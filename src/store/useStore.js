@@ -71,6 +71,7 @@ export function useStore(){
   const [opsHealth,setOpsHealth]=useState(null);
   const [platformConfig,setPlatformConfig]=useState(null); // {plans, payrollTax, staffingRates, staffingAgency} - fetched from the backend; null until loaded
   const [oauthProviders,setOauthProviders]=useState({google:false,github:false});
+  const [turnstileSiteKey,setTurnstileSiteKey]=useState(null);
   const [settings,setSettings]=useState({employerBlogs:true,employerTrainings:true,employerFeature:true,
     autoApproveJobs:true,publicSignup:true,cvBuilder:true,matching:true,enrolments:true,payTransparency:true,maintenance:false});
   const [userSettings,setUserSettings]=useState({matchAlerts:true,appAlerts:true,marketing:false,discoverable:true,hideEmployer:false,reducedMotion:false,lang:"en"});
@@ -135,6 +136,7 @@ export function useStore(){
   },[]);
   useEffect(()=>{
     api.get("/auth/oauth/status").then(({providers})=>setOauthProviders(providers)).catch(()=>{});
+    api.get("/auth/turnstile-config").then(({siteKey})=>setTurnstileSiteKey(siteKey)).catch(()=>{});
   },[]);
   const oauthStart=(provider)=>{window.location.href=`${API_BASE}/auth/oauth/${provider}/start`;};
   /* OAuth ("Sign in with Google/GitHub") lands back here via a real browser redirect (not a fetch
@@ -201,7 +203,7 @@ export function useStore(){
     if(!user){
       setCvs([]);setSavedSearches([]);setMessages([]);setInterviews([]);setReviews([]);setNotifications([]);
       setSaved(new Set());setFollowing(new Set());setEnrolled(new Set());setTrainingProgress({});
-      setReferences([]);setPaymentMethods([]);setTwoFactor({});setInvitedCandidates(new Set());setOutbox([]);setCandidateNotes({});
+      setReferences([]);setPaymentMethods([]);setTwoFactor({});setInvitedCandidates(new Set());setOutbox([]);setCandidateNotes({});setEmployerInvoices([]);
       return;
     }
     let cancelled=false;
@@ -219,7 +221,7 @@ export function useStore(){
           api.get("/seeker/saved-jobs"),api.get("/seeker/followed-employers"),api.get("/content/enrolments/mine"),
           api.get("/seeker/references"),api.get("/seeker/payment-methods"),api.get("/seeker/two-factor"),
         );
-        if(isEmployer)calls.push(api.get("/seeker/interviews"),api.get("/seeker/invited-candidates"),api.get("/employers/candidate-notes"));
+        if(isEmployer)calls.push(api.get("/seeker/interviews"),api.get("/seeker/invited-candidates"),api.get("/employers/candidate-notes"),api.get("/billing/invoices"));
         const results=await Promise.all(calls);
         if(cancelled)return;
         const [{notifications:n},{messages:m},{userSettings:us},{outbox:ob}]=results;
@@ -244,6 +246,7 @@ export function useStore(){
           setInterviews(results[i++].interviews);
           setInvitedCandidates(new Set(results[i++].invited));
           setCandidateNotes(Object.fromEntries(results[i++].notes.map(n=>[n.candidate,n])));
+          setEmployerInvoices(results[i++].invoices);
         }
         /* Reviews are public per-employer, not per-user - fetched lazily by whichever employer
            profile page is open (see employers.jsx), not here. */
@@ -559,7 +562,7 @@ export function useStore(){
     const yearsMap={"No experience yet":0,"Less than 1 year":1,"1-2 years":2,"3-5 years":4,"6-10 years":8,"More than 10 years":12};
     try{
       const {user:apiUser}=await api.post("/auth/signup",{
-        name:`${d.first} ${d.last}`.trim(),email,password:d.password,role:"seeker"});
+        name:`${d.first} ${d.last}`.trim(),email,password:d.password,role:"seeker",turnstileToken:d.turnstileToken});
       /* The signup endpoint only takes name/email/password/role - everything else the wizard
          collected (title/cat/city/skills/pay expectations...) is a profile update on top,
          same two-step shape saveProfile already uses elsewhere. */
@@ -582,7 +585,7 @@ export function useStore(){
     if(!d.company||!d.company.trim())return {ok:false,msg:"Company name required"};
     try{
       const {user:apiUser}=await api.post("/auth/signup",{
-        name:d.name||"Hiring Team",email,password:d.password,role:"employer",companyName:d.company.trim()});
+        name:d.name||"Hiring Team",email,password:d.password,role:"employer",companyName:d.company.trim(),turnstileToken:d.turnstileToken});
       const domain=email.split("@")[1]||"example.com";
       /* The employer record itself was created server-side by signup (its id lives on the
          returned user as employer_id) - patch in the extra profile fields the wizard collected
@@ -591,18 +594,42 @@ export function useStore(){
         size:d.size||"1-50",site:domain,about:d.about||`${d.company.trim()} is hiring on NorthHire.`,
         businessNumber:(d.businessNumber||"").replace(/\s/g,"")||undefined};
       const {employer}=await api.patch(`/employers/${apiUser.employer_id}`,patch);
-      if(pendingPlan&&PLANS[pendingPlan])await api.patch(`/employers/${apiUser.employer_id}`,{plan:pendingPlan});
-      const e=mapApiEmployer({...employer,plan:(pendingPlan&&PLANS[pendingPlan])?pendingPlan:employer.plan});
+      // A paid pendingPlan (chosen on the pricing page before signing up) can't be silently
+      // granted here for free - the account is created on Free, then handed straight to real
+      // Stripe checkout for the plan they actually picked. A free pendingPlan (or none) applies
+      // directly, same as before.
+      const wantsPaidPlan=pendingPlan&&PLANS[pendingPlan]&&PLANS[pendingPlan].price>0;
+      if(!wantsPaidPlan&&pendingPlan&&PLANS[pendingPlan])await api.patch(`/employers/${apiUser.employer_id}`,{plan:pendingPlan});
+      const e=mapApiEmployer({...employer,plan:(!wantsPaidPlan&&pendingPlan&&PLANS[pendingPlan])?pendingPlan:employer.plan});
       setEmployers(list=>[e,...list]);
       setUser({...mapApiUser(apiUser),name:e.ownerName,skills:[]});
-      setPendingPlan(null);
-      _hardNav("welcomeEmp");
       log("auth.signup.employer",`New employer registered: ${e.name}`,"building");
       notify({icon:"sparkle",title:"Welcome to NorthHire",body:"Post your first job to start receiving applicants. Verification usually takes 1 business day.",for:apiUser.id,link:"empPost"});
+      if(wantsPaidPlan){
+        setPendingPlan(null);
+        await startCheckout(pendingPlan); // redirects the browser to Stripe - nothing after this runs
+        return {ok:true};
+      }
+      setPendingPlan(null);
+      _hardNav("welcomeEmp");
       return {ok:true};
     }catch(e){
       return {ok:false,msg:e.message};
     }
+  };
+  const startCheckout=async(planKey)=>{
+    try{
+      const {url}=await api.post("/billing/checkout",{plan:planKey});
+      window.location.href=url;
+      return {ok:true};
+    }catch(e){return {ok:false,msg:e.message};}
+  };
+  const openBillingPortal=async()=>{
+    try{
+      const {url}=await api.post("/billing/portal");
+      window.location.href=url;
+      return {ok:true};
+    }catch(e){return {ok:false,msg:e.message};}
   };
   const saveProfile=async d=>{
     setUser(d);setPeople(p=>p.map(x=>x.id===d.id?{...x,...d}:x));log("profile.update","Updated their profile","edit");
@@ -685,6 +712,15 @@ export function useStore(){
 
   /* --- payment / cards --- */
   const [paymentMethods,setPaymentMethods]=useState([]);
+  const [employerInvoices,setEmployerInvoices]=useState([]);
+  const verifyCheckout=async sessionId=>{
+    try{
+      const r=await api.get(`/billing/verify?session_id=${encodeURIComponent(sessionId)}`);
+      if(r.paid&&r.employer)setEmployers(l=>l.map(e=>e.id===r.employer.id?mapApiEmployer(r.employer):e));
+      if(r.paid&&r.invoice)setEmployerInvoices(l=>l.find(x=>x.id===r.invoice.id)?l:[r.invoice,...l]);
+      return r;
+    }catch(e){return {paid:false,error:e.message};}
+  };
   const addPaymentMethod=async card=>{
     try{
       const {paymentMethod:pm}=await api.post("/seeker/payment-methods",{number:card.number,brand:card.brand||"Card",exp:card.exp,name:card.name});
@@ -1578,9 +1614,13 @@ export function useStore(){
   /* Was a bare 3-line .txt file labelled "PDF" - real letterhead + tax breakdown via the same
      print-a-formatted-page pattern printCv/printCert already use (no PDF-generation lib exists,
      so the browser's own print-to-PDF is the honest ceiling here, same as those two). */
-  const printInvoice=(id,date,amt,planName)=>{
+  const printInvoice=(id,date,amt,planName,tax,taxLabel)=>{
     if(typeof window==="undefined")return;
-    const gst=Math.round(amt*0.05*100)/100; const total=Math.round((amt+gst)*100)/100;
+    // tax/taxLabel come from the real per-province rate charged at checkout (see billing.js) -
+    // falls back to a flat 5% GST estimate only for the handful of pre-Stripe invoice rows that
+    // predate real checkout and never recorded a real tax figure.
+    const gst=tax??Math.round(amt*0.05*100)/100; const total=Math.round((amt+gst)*100)/100;
+    const taxName=taxLabel||"GST (5%)";
     const html=`<!DOCTYPE html><html><head><title>${id}</title>
       <style>body{font-family:Arial,Helvetica,sans-serif;max-width:680px;margin:40px auto;padding:0 30px;color:#111;line-height:1.5}
         .brand{font-size:20pt;font-weight:700;color:#005CCC;margin-bottom:2px}.sub{font-size:9pt;color:#888;margin-bottom:30px}
@@ -1598,13 +1638,13 @@ export function useStore(){
       <table><thead><tr><th>Description</th><th class="right">Amount</th></tr></thead>
         <tbody><tr><td>NorthHire ${planName||"subscription"} plan — monthly</td><td class="right">$${amt.toFixed(2)}</td></tr></tbody></table>
       <div class="totals"><div><span>Subtotal</span><span>$${amt.toFixed(2)}</span></div>
-        <div><span>GST (5%)</span><span>$${gst.toFixed(2)}</span></div>
+        <div><span>${taxName}</span><span>$${gst.toFixed(2)}</span></div>
         <div class="grand"><span>Total (CAD)</span><span>$${total.toFixed(2)}</span></div></div>
       <script>window.onload=()=>setTimeout(()=>window.print(),400);</script>
       </body></html>`;
     const w=window.open("","_blank");
     if(!w){
-      downloadText(`${id}.txt`,`NorthHire invoice ${id}\nBilled to: ${company?.name||""}\nDate: ${date}\nSubtotal: $${amt.toFixed(2)}\nGST (5%): $${gst.toFixed(2)}\nTotal: $${total.toFixed(2)} CAD\nStatus: Paid`);
+      downloadText(`${id}.txt`,`NorthHire invoice ${id}\nBilled to: ${company?.name||""}\nDate: ${date}\nSubtotal: $${amt.toFixed(2)}\n${taxName}: $${gst.toFixed(2)}\nTotal: $${total.toFixed(2)} CAD\nStatus: Paid`);
       toast("Enable pop-ups to print a formatted invoice — a text version was downloaded instead.","warn");
       return;
     }
@@ -1687,6 +1727,11 @@ export function useStore(){
   const choosePlan=async n=>{
     if(!PLANS[n])return;
     if(user?.role==="employer"){
+      if(PLANS[n].price>0){
+        const r=await startCheckout(n); // redirects to Stripe - nothing after this runs on success
+        if(!r.ok)toast(r.msg,"danger");
+        return;
+      }
       try{
         const {employer}=await api.patch(`/employers/${company.id}`,{plan:n});
         setEmployers(l=>l.map(e=>e.id===company.id?mapApiEmployer(employer):e));
@@ -1733,8 +1778,8 @@ export function useStore(){
     sendMessage,markMessageRead,scheduleInterview,cancelInterview,bulkMove,bulkReject,reverseMatch,inviteToApply,loadCandidateOutreach,importJobsCSV,employerAnalytics,
     impersonate,stopImpersonating,
     PLANS,PLAN_ORDER,payrollTaxConfig,platformConfig,currentPlan,planName,can,limitOf,planRequires,upgradeModal,setUpgradeModal,requestUpgrade,
-    oauthProviders,oauthStart,
-    paymentMethods,addPaymentMethod,removePaymentMethod,setDefaultPayment,
+    oauthProviders,oauthStart,turnstileSiteKey,
+    paymentMethods,addPaymentMethod,removePaymentMethod,setDefaultPayment,employerInvoices,verifyCheckout,startCheckout,openBillingPortal,
     twoFactor,enable2FA,disable2FA,
     references,addReference,removeReference,
     addReview,deleteReview,loadEmployerReviews,loadCandidateContact,candidateNotes,saveCandidateNote,loadScorecards,submitScorecard,

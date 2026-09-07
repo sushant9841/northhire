@@ -16,6 +16,45 @@ const CA_LOCATIONS=[
   "Burnaby, BC","Richmond, BC","Laval, QC","Longueuil, QC","Gatineau, QC","Whitehorse, YT","Yellowknife, NT","Iqaluit, NU"
 ];
 
+/* Cloudflare Turnstile bot-check widget. Loads the vendor script once (module-level flag, so
+   multiple mounts across a session don't re-inject it), then renders CF's real challenge into a
+   div by ref - CF finds and manages that div itself via its own render() API, this component
+   never draws the challenge UI. onToken fires with the solved token (or null if it expires). */
+let _turnstileScriptPromise=null;
+function _loadTurnstileScript(){
+  if(_turnstileScriptPromise)return _turnstileScriptPromise;
+  _turnstileScriptPromise=new Promise((resolve,reject)=>{
+    if(window.turnstile){resolve();return;}
+    const s=document.createElement("script");
+    s.src="https://challenges.cloudflare.com/turnstile/v0/api.js";
+    s.async=true; s.defer=true;
+    s.onload=()=>resolve(); s.onerror=()=>reject(new Error("Turnstile script failed to load"));
+    document.head.appendChild(s);
+  });
+  return _turnstileScriptPromise;
+}
+export function TurnstileWidget({siteKey,onToken}){
+  const ref=useRef(null);
+  const widgetId=useRef(null);
+  useEffect(()=>{
+    let cancelled=false;
+    _loadTurnstileScript().then(()=>{
+      if(cancelled||!ref.current||!window.turnstile)return;
+      widgetId.current=window.turnstile.render(ref.current,{
+        sitekey:siteKey,
+        callback:token=>onToken(token),
+        "expired-callback":()=>onToken(null),
+        "error-callback":()=>onToken(null),
+      });
+    }).catch(()=>onToken(null));
+    return ()=>{
+      cancelled=true;
+      if(widgetId.current!=null&&window.turnstile)try{window.turnstile.remove(widgetId.current);}catch{}
+    };
+  },[siteKey]);
+  return <div ref={ref}/>;
+}
+
 export function LocationInput({value,onChange,placeholder="City or province",required,onLocate}){
   const [q,setQ]=useState(value||"");
   const [open,setOpen]=useState(false);

@@ -4,6 +4,7 @@ import { db, nextId, sqlTime } from "../db.js";
 import { hashPassword, verifyPassword, createSessionCookie, clearSessionCookie, publicUser, requireAuth } from "../auth.js";
 import { sendAndLogMail } from "../mail.js";
 import { PROVIDERS, isConfigured, buildAuthUrl, exchangeCodeForProfile, issueState, consumeState } from "../oauth.js";
+import { verifyTurnstile, turnstileConfigured } from "../turnstile.js";
 
 export const authRouter = Router();
 
@@ -23,9 +24,13 @@ function signupRateLimited(ip) {
   return recent.length > SIGNUP_LIMIT_MAX;
 }
 
-authRouter.post("/signup", (req, res) => {
+authRouter.get("/turnstile-config", (req, res) => {
+  res.json({ siteKey: turnstileConfigured() ? process.env.TURNSTILE_SITE_KEY : null });
+});
+authRouter.post("/signup", async (req, res) => {
   if (signupRateLimited(req.ip)) return res.status(429).json({ error: "Too many accounts created from this network — try again later." });
-  const { name, email, password, role = "seeker", companyName } = req.body || {};
+  const { name, email, password, role = "seeker", companyName, turnstileToken } = req.body || {};
+  if (!(await verifyTurnstile(turnstileToken, req.ip))) return res.status(400).json({ error: "Bot check failed — please retry." });
   if (!name || !email || !password) return res.status(400).json({ error: "Name, email and password are required." });
   if (password.length < 8) return res.status(400).json({ error: "Password must be at least 8 characters." });
   if (!["seeker", "employer"].includes(role)) return res.status(400).json({ error: "Invalid account type." });

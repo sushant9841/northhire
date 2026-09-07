@@ -71,7 +71,21 @@ CREATE TABLE IF NOT EXISTS employers (
   industry TEXT, city TEXT, prov TEXT, size TEXT,
   rating REAL DEFAULT 0, verified INTEGER DEFAULT 0, hold INTEGER DEFAULT 0,
   about TEXT, founded INTEGER, site TEXT, plan TEXT DEFAULT 'Free',
-  business_number TEXT,
+  business_number TEXT, stripe_customer_id TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+/* Real Stripe checkout receipts - one row per successfully paid plan purchase, replacing the
+   previous UI that fabricated 4 fake monthly invoices client-side from nothing but the current
+   plan's price. stripe_session_id is UNIQUE so verifying the same checkout session twice (e.g. a
+   page refresh right after returning from Stripe) never double-records it. */
+CREATE TABLE IF NOT EXISTS employer_invoices (
+  id TEXT PRIMARY KEY,
+  employer_id TEXT NOT NULL REFERENCES employers(id),
+  plan TEXT NOT NULL,
+  amount_pretax REAL NOT NULL, tax REAL NOT NULL, tax_label TEXT, total REAL NOT NULL,
+  stripe_session_id TEXT UNIQUE, stripe_subscription_id TEXT,
+  status TEXT NOT NULL DEFAULT 'paid',
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

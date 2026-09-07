@@ -5,6 +5,7 @@ import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
 import { Page, Card, Btn, Bar, Field, Input, Banner, Sel, Area, CheckRow, Lbl, Ring, Tag, SmartScene, SmartPortrait, HERO_QUIET } from "../../design/primitives.jsx";
 import { CATS, CATM, PROVS } from "../../store/seed/constants.js";
+import { TurnstileWidget } from "../shared/formControls.jsx";
 
 /* ═══════════════ SIGN UP · SIGN IN · FORGOT PASSWORD ═══════════════ */
 const SU_STEPS_SEEKER=[{k:"role",t:"Get started",d:"Are you looking for work, or hiring?"},
@@ -21,7 +22,7 @@ const SIGNUP_DRAFT_KEY="northhire.signupDraft";
 const _defaultSignupData=()=>({role:"",email:"",password:"",phone:"",first:"",last:"",city:"",prov:"Ontario",eligible:"",
     cat:"",title:"",years:"",edu:"",skills:[],draft:"",payMin:"",payUnit:"hr",types:["Full Time"],modes:["On-site"],
     startWhen:"Within 2 weeks",alerts:true,
-    company:"",industry:"",size:"1-50",about:"",name:"",businessNumber:""});
+    company:"",industry:"",size:"1-50",about:"",name:"",businessNumber:"",turnstileToken:null});
 const _loadSignupDraft=()=>{try{return JSON.parse(sessionStorage.getItem(SIGNUP_DRAFT_KEY)||"null");}catch{return null;}};
 
 export function SignupPage(){
@@ -238,10 +239,13 @@ export function SignupPage(){
             <CheckRow on={d.alerts} onChange={v=>set("alerts",v)} label="Email me new matching jobs"
               sub="A short digest, at most twice a week. You can turn this off any time."/></div>}
         </div>
+        {i===STEPS.length-1&&A.turnstileSiteKey&&<div style={{marginTop:18}}>
+          <TurnstileWidget siteKey={A.turnstileSiteKey} onToken={t=>set("turnstileToken",t)}/></div>}
         {submitErr&&<Banner tone="danger" icon="alert" title="Sign-up failed" style={{marginTop:18}}>{submitErr}</Banner>}
         <div className="flex gap-2.5 justify-between mt-7 pt-5 border-t border-line-soft">
           <Btn kind="ghost" icon="arrowL" onClick={()=>{if(i===0){try{sessionStorage.removeItem(SIGNUP_DRAFT_KEY);}catch{} A.go("home");}else setI(i-1);}}>{i===0?"Cancel":"Back"}</Btn>
-          <Btn kind="primary" size="lg" iconR={i===STEPS.length-1?"check":"arrowR"} onClick={next} disabled={(step.k==="role"&&!d.role)||submitting}>
+          <Btn kind="primary" size="lg" iconR={i===STEPS.length-1?"check":"arrowR"} onClick={next}
+            disabled={(step.k==="role"&&!d.role)||submitting||(i===STEPS.length-1&&A.turnstileSiteKey&&!d.turnstileToken)}>
             {submitting?"Creating account…":i===STEPS.length-1?(d.role==="employer"?"Create employer account":"Finish and start matching"):"Continue"}</Btn></div>
       </Card>
       <div className="text-center mt-5 text-sm text-text-2">

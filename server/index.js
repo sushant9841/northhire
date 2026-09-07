@@ -1,3 +1,9 @@
+// Loads .env into process.env before anything below reads it (OAuth/Stripe/Turnstile keys).
+// Node's native loader (stable since v22, no dependency needed) - silently a no-op if .env
+// doesn't exist, since every feature that reads one of these vars already degrades gracefully
+// (see oauth.js's isConfigured(), stripe.js, turnstile.js).
+try { process.loadEnvFile(); } catch { /* no .env file - fine, real features gate on their own vars being set */ }
+
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -12,6 +18,7 @@ import { seekerMiscRouter } from "./routes/seekerMisc.js";
 import { platformRouter } from "./routes/platform.js";
 import { hrRouter } from "./routes/hr.js";
 import { staffingRouter } from "./routes/staffing.js";
+import { billingRouter } from "./routes/billing.js";
 import { infinityReplacer } from "../src/helpers/jsonInfinity.js";
 
 const app = express();
@@ -78,6 +85,7 @@ app.use("/api/seeker", seekerMiscRouter);
 app.use("/api/platform", platformRouter);
 app.use("/api/hr", hrRouter);
 app.use("/api/staffing", staffingRouter);
+app.use("/api/billing", billingRouter);
 
 app.use((req, res) => res.status(404).json({ error: "Not found." }));
 // eslint-disable-next-line no-unused-vars
