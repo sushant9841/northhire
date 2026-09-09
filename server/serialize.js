@@ -104,6 +104,10 @@ export function serializeEmployer(row) {
     site: row.site,
     plan: row.plan,
     businessNumber: row.business_number,
+    // null (not the default list) so the client can tell "never customised" from "customised to
+    // something that happens to match the default" - the former follows the platform default if
+    // it ever changes, the latter is a deliberate choice that shouldn't move underneath them.
+    pipelineStages: row.pipeline_stages_json ? JSON.parse(row.pipeline_stages_json) : null,
     owner: row.owner || null,
     ownerName: row.ownerName || null,
   };

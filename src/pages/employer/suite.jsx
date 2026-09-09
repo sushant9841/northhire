@@ -12,7 +12,7 @@ import {
 import { postingRules, checkPayRange, findCanadianExperience, applicationDecisionNotice, AI_DISCLOSURE_TEXT } from "../../helpers/jobPostingLaw.js";
 import { pay, payShort, dlText, money, uid, matchesQuery } from "../../helpers/utils.js";
 import { sanitizeHtml } from "../../helpers/sanitize.js";
-import { STAGES, PROVS, PCODE, CATS, CATM } from "../../store/seed/constants.js";
+import { PROVS, PCODE, CATS, CATM } from "../../store/seed/constants.js";
 import { jobTone, jobStatusLabel } from "../../helpers/statusTone.js";
 import { LocationInput, InlineList, QuestionBuilder, aiSuggestJD } from "../shared/formControls.jsx";
 
@@ -21,7 +21,8 @@ export function EmpHome(){
   const e=A.company;
   const jobs=A.jobs.filter(j=>j.e===e.id);
   const apps=A.applications.filter(a=>jobs.some(j=>j.id===a.job));
-  const byStage=STAGES.reduce((m,s)=>({...m,[s]:apps.filter(a=>a.stage===s).length}),{});
+  const stages=A.stagesFor(e.id);
+  const byStage=stages.reduce((m,s)=>({...m,[s]:apps.filter(a=>a.stage===s).length}),{});
   const canContent=A.settings.employerContent;
   return <Page wide>
     <H1 sub={`${e.verified?"Verified employer":"Awaiting verification"} • ${A.planName?A.planName():e.plan||"Free"} plan`}
@@ -55,7 +56,7 @@ export function EmpHome(){
               <Tag tone={jobTone(j.status)} sm>{jobStatusLabel(j.status)}</Tag></div>;})}</Card>
       <div className="flex flex-col gap-4">
         <Card><H2>Pipeline</H2>
-          {STAGES.map(s=>{const n=byStage[s]||0;
+          {stages.map(s=>{const n=byStage[s]||0;
             return <div key={s} className="mb-3.5">
               <div className="flex justify-between text-sm mb-1.5">
                 <span className="text-text-2 font-medium">{s}</span><span className="font-bold text-brand">{n}</span></div>
@@ -456,7 +457,7 @@ export function EmpPost(){
    buttons (kept as the accessible, no-pointer-required path - drag is an addition, not a
    replacement). A PointerSensor activation distance stops an ordinary click-to-open-candidate
    from being swallowed as an accidental drag. ─── */
-function _PipelineCard({a,u,s,idx,selected,tog,A,notice}){
+function _PipelineCard({a,u,s,idx,selected,tog,A,notice,stages}){
   const {attributes,listeners,setNodeRef,transform,isDragging}=useDraggable({id:a.id});
   const style=transform?{transform:`translate3d(${transform.x}px,${transform.y}px,0)`,zIndex:50,opacity:0.9}:undefined;
   return <div ref={setNodeRef} style={{...style,border:`${selected?2:1}px solid ${selected?C.brand:C.line}`,padding:selected?12:13}}
@@ -484,11 +485,11 @@ function _PipelineCard({a,u,s,idx,selected,tog,A,notice}){
           ? `Decision notice ${Math.abs(notice.daysLeft)}d overdue`
           : `Decision notice due in ${notice.daysLeft}d`}</span></div>}
     <div data-nc className="flex gap-1.5" onClick={e=>e.stopPropagation()}>
-      {idx>0&&<Btn kind="ghost" size="xs" icon="arrowL" title="Move back" onClick={()=>A.moveApp(a.id,STAGES[idx-1])} style={{flex:1}}/>}
-      {idx<STAGES.length-1&&<Btn kind="outline" size="xs" iconR="arrowR" onClick={()=>A.moveApp(a.id,STAGES[idx+1])} style={{flex:2}}>Advance</Btn>}</div>
+      {idx>0&&<Btn kind="ghost" size="xs" icon="arrowL" title="Move back" onClick={()=>A.moveApp(a.id,stages[idx-1])} style={{flex:1}}/>}
+      {idx<stages.length-1&&<Btn kind="outline" size="xs" iconR="arrowR" onClick={()=>A.moveApp(a.id,stages[idx+1])} style={{flex:2}}>Advance</Btn>}</div>
   </div>;
 }
-function _PipelineColumn({stage,items,job,sel,tog,selectStage,A,mob}){
+function _PipelineColumn({stage,items,job,sel,tog,selectStage,A,mob,stages}){
   const {setNodeRef,isOver}=useDroppable({id:stage});
   const allSelected=items.length>0&&items.every(a=>sel.has(a.id));
   return <div ref={setNodeRef} className={`${mob?"w-59":"w-63"} flex flex-col gap-2.5 rounded-2xl transition-colors duration-150`}
@@ -498,13 +499,13 @@ function _PipelineColumn({stage,items,job,sel,tog,selectStage,A,mob}){
       <div className="flex gap-1.5 items-center">
         {items.length>0&&A.can("bulkActions")&&<button onClick={()=>selectStage(stage)} className="bg-transparent border-0 text-xs font-semibold cursor-pointer" style={{color:allSelected?C.brand:C.text3}}>{allSelected?"clear":"all"}</button>}
         <span className="bg-wash text-brand border border-line-2 text-xs font-bold rounded-full flex items-center justify-center px-1.5" style={{minWidth:22,height:22}}>{items.length}</span></div></div>
-    {items.map(a=>{const u=A.person(a.user); const s=A.scoreCandidate(u,job); const idx=STAGES.indexOf(stage);
+    {items.map(a=>{const u=A.person(a.user); const s=A.scoreCandidate(u,job); const idx=stages.indexOf(stage);
       const notice=applicationDecisionNotice(a,postingRules({prov:job?.prov,employerSize:A.company?.size}));
-      return <_PipelineCard key={a.id} a={a} u={u} s={s} idx={idx} selected={sel.has(a.id)} tog={tog} A={A} notice={notice}/>;})}
+      return <_PipelineCard key={a.id} a={a} u={u} s={s} idx={idx} selected={sel.has(a.id)} tog={tog} A={A} notice={notice} stages={stages}/>;})}
     {items.length===0&&<div className="rounded-2xl text-center text-xs text-text-3 py-6 px-3" style={{border:`1.5px dashed ${C.line}`}}>Empty</div>}
   </div>;
 }
-function _PipelineBoard({apps,job,sel,tog,selectStage,A,mob}){
+function _PipelineBoard({apps,job,sel,tog,selectStage,A,mob,stages}){
   const sensors=useSensors(useSensor(PointerSensor,{activationConstraint:{distance:8}}));
   const onDragEnd=({active,over})=>{
     if(!over)return;
@@ -514,8 +515,8 @@ function _PipelineBoard({apps,job,sel,tog,selectStage,A,mob}){
   return <div className={`flex-1 overflow-x-auto ${mob?"p-3.5":"p-5"}`}>
     <DndContext sensors={sensors} onDragEnd={onDragEnd}>
       <div className="flex gap-3 items-start" style={{minWidth:"max-content"}}>
-        {STAGES.map(stage=><_PipelineColumn key={stage} stage={stage} items={apps.filter(a=>a.stage===stage)}
-          job={job} sel={sel} tog={tog} selectStage={selectStage} A={A} mob={mob}/>)}
+        {stages.map(stage=><_PipelineColumn key={stage} stage={stage} items={apps.filter(a=>a.stage===stage)}
+          job={job} sel={sel} tog={tog} selectStage={selectStage} A={A} mob={mob} stages={stages}/>)}
       </div>
     </DndContext>
   </div>;
@@ -526,6 +527,7 @@ export function EmpPipeline(){
   const myJobs=A.jobs.filter(j=>j.e===A.company.id);
   const jobId=A.pipelineJob||myJobs[0]?.id;
   const job=A.job(jobId);
+  const pipelineStages=A.stagesFor(A.company.id);
   const rawApps=A.applications.filter(a=>a.job===jobId);
   const [tab,setTab]=useState("pipeline");
   const [sel,setSel]=useState(new Set());
@@ -660,11 +662,11 @@ export function EmpPipeline(){
         <div className="relative" ref={bulkMenuRef}>
           <Btn kind="onDark" size="sm" iconR="chevD" aria-expanded={bulkMenu} onClick={()=>setBulkMenu(!bulkMenu)}>Move to…</Btn>
           {bulkMenu&&<div role="menu" className="absolute top-full right-0 mt-1.5 bg-white border border-line rounded-xl shadow-lg p-1.5 z-20" style={{minWidth:180}}>
-            {STAGES.map(s=><button key={s} role="menuitem" onClick={()=>runBulk("move",s)} className="block w-full text-left py-2.5 px-3 bg-transparent border-0 cursor-pointer text-sm text-text rounded-lg hover:bg-bg transition-colors duration-150">{s}</button>)}</div>}
+            {pipelineStages.map(s=><button key={s} role="menuitem" onClick={()=>runBulk("move",s)} className="block w-full text-left py-2.5 px-3 bg-transparent border-0 cursor-pointer text-sm text-text rounded-lg hover:bg-bg transition-colors duration-150">{s}</button>)}</div>}
         </div>
         <Btn kind="onDark" size="sm" icon="x" onClick={()=>setConfirmRejectAll(true)}>Reject all</Btn>
         <Btn kind="onDark" size="sm" onClick={clear}>Clear</Btn></div>}
-      <_PipelineBoard apps={apps} job={job} sel={sel} tog={tog} selectStage={selectStage} A={A} mob={mob}/>
+      <_PipelineBoard apps={apps} job={job} sel={sel} tog={tog} selectStage={selectStage} A={A} mob={mob} stages={pipelineStages}/>
     </>}
     <ConfirmDialog open={confirmRejectAll} onClose={()=>setConfirmRejectAll(false)} confirmLabel="Reject all"
       title={`Reject ${sel.size} candidate${sel.size===1?"":"s"}?`} onConfirm={()=>runBulk("reject")}>
@@ -720,7 +722,8 @@ export function EmpCandidate(){
   useEffect(()=>{refreshScorecards();},[a?.id]);
   if(!a) return <Page><Empty icon="users" title="Candidate not found" body="This application may have been withdrawn."
     action={<Btn kind="primary" onClick={()=>A.go("empPipeline")}>Back to pipeline</Btn>}/></Page>;
-  const u=A.person(a.user), job=A.job(a.job), s=A.scoreCandidate(u,job), idx=STAGES.indexOf(a.stage);
+  const u=A.person(a.user), job=A.job(a.job), s=A.scoreCandidate(u,job);
+  const candStages=A.stagesForApp(a); const idx=candStages.indexOf(a.stage);
   const threadMessages=A.messages.filter(m=>(m.from===u.id&&m.to===A.user?.id)||(m.to===u.id&&m.from===A.user?.id)).slice().reverse();
   const upcomingInterviews=A.interviews.filter(iv=>iv.app===a.id&&iv.status==="scheduled");
   return <Page narrow>
@@ -783,8 +786,8 @@ export function EmpCandidate(){
           <div className="text-sm text-text-2">{Array.isArray(sa.answer)?(sa.answer.join(", ")||"—"):(sa.answer||"—")}</div></div>)}</div></Card>}
     <Card style={{marginBottom:16}}><Lbl>Move this candidate</Lbl>
       <div className="flex gap-2.5 flex-wrap">
-        {idx>0&&<Btn kind="outline" icon="arrowL" onClick={()=>A.moveApp(a.id,STAGES[idx-1])}>Back to {STAGES[idx-1]}</Btn>}
-        {idx<STAGES.length-1&&<Btn kind="primary" iconR="arrowR" onClick={()=>A.moveApp(a.id,STAGES[idx+1])}>Advance to {STAGES[idx+1]}</Btn>}
+        {idx>0&&<Btn kind="outline" icon="arrowL" onClick={()=>A.moveApp(a.id,candStages[idx-1])}>Back to {candStages[idx-1]}</Btn>}
+        {idx<candStages.length-1&&<Btn kind="primary" iconR="arrowR" onClick={()=>A.moveApp(a.id,candStages[idx+1])}>Advance to {candStages[idx+1]}</Btn>}
         {A.can("messages")?<Btn kind="outline" icon="mail" onClick={()=>setShowMsg(true)}>Message</Btn>:<Btn kind="ghost" icon="lock" onClick={()=>A.go("pricing")}>Message (Growth+)</Btn>}
         {A.can("interviews")?<Btn kind="outline" icon="calendar" onClick={()=>setShowSched(true)}>Schedule interview</Btn>:<Btn kind="ghost" icon="lock" onClick={()=>A.go("pricing")}>Schedule (Growth+)</Btn>}
         {a.stage==="Offer"&&<Btn kind="ok" icon="file" onClick={()=>setShowOfferLetter(true)}>Generate offer letter</Btn>}
@@ -1278,11 +1281,68 @@ export function EmpCompany(){
       <div className="flex gap-2.5 justify-end mt-6 pt-5 border-t border-line-soft">
         {dirty&&<Btn kind="ghost" onClick={()=>setConfirmDiscard(true)}>Discard</Btn>}
         <Btn kind="primary" icon="check" disabled={!dirty} onClick={()=>A.saveCompany(d)}>{dirty?"Save changes":"Saved"}</Btn></div></Card>
+    <_PipelineStageEditor A={A} mob={mob}/>
     <ConfirmDialog open={confirmDiscard} onClose={()=>setConfirmDiscard(false)} confirmLabel="Discard changes"
       title="Discard unsaved changes?" onConfirm={()=>setD({...A.company})}>
       This will revert every field on this page back to what's currently saved.
     </ConfirmDialog>
   </Page>;
+}
+
+/* Custom hiring stages, sold on Growth+ and previously not built at all. The server refuses a
+   save that would strand candidates in a stage no longer on the board, so the error surfaced
+   here is the real one, naming which stages are still occupied. */
+function _PipelineStageEditor({A,mob}){
+  const canCustomise=A.can("customStages");
+  const isOwner=A.user?.employerRole==="owner";
+  const saved=A.stagesFor(A.company.id);
+  const [stages,setStages]=useState(saved);
+  const [err,setErr]=useState(""); const [saving,setSaving]=useState(false);
+  useEffect(()=>{setStages(A.stagesFor(A.company.id));},[A.company.id,A.company.pipelineStages]);
+
+  const dirty=JSON.stringify(stages)!==JSON.stringify(saved);
+  const setAt=(i,v)=>setStages(s=>s.map((x,k)=>k===i?v:x));
+  const removeAt=i=>setStages(s=>s.filter((_,k)=>k!==i));
+  const move=(i,dir)=>setStages(s=>{const n=[...s];const j=i+dir;if(j<0||j>=n.length)return s;[n[i],n[j]]=[n[j],n[i]];return n;});
+
+  const save=async()=>{
+    setErr(""); setSaving(true);
+    const r=await A.savePipelineStages(stages.map(s=>s.trim()).filter(Boolean));
+    setSaving(false);
+    if(!r.ok)setErr(r.msg);
+  };
+
+  return <Card pad={mob?20:26} style={{marginTop:16}}>
+    <div className="flex justify-between items-center flex-wrap gap-2 mb-1">
+      <Lbl style={{marginBottom:0}}>Hiring pipeline stages</Lbl>
+      {!canCustomise&&<button type="button" onClick={()=>A.requestUpgrade("customStages","Custom pipeline stages","users")}
+        className="bg-transparent border-0 p-0 cursor-pointer text-xs font-semibold text-brand underline">Available on Growth — see plans</button>}
+    </div>
+    <div className="text-sm text-text-2 mb-4 leading-relaxed">
+      The columns your candidate board uses. Candidates already in a stage keep it — remove a stage
+      only after moving everyone out of it.
+    </div>
+
+    {err&&<Banner tone="danger" icon="alert" style={{marginBottom:14}}>{err}</Banner>}
+
+    <div className={`flex flex-col gap-2 ${canCustomise&&isOwner?"":"opacity-50 pointer-events-none"}`}>
+      {stages.map((s,i)=>
+        <div key={i} className="flex gap-2 items-center">
+          <span className="text-xs text-text-3 w-5 shrink-0 text-right tabular-nums">{i+1}</span>
+          <div className="flex-1 min-w-0"><Input value={s} onChange={e=>setAt(i,e.target.value)} maxLength={32}/></div>
+          <Btn kind="ghost" size="xs" title="Move earlier" aria-label={`Move ${s||"stage"} earlier`} onClick={()=>move(i,-1)} disabled={i===0}>↑</Btn>
+          <Btn kind="ghost" size="xs" title="Move later" aria-label={`Move ${s||"stage"} later`} onClick={()=>move(i,1)} disabled={i===stages.length-1}>↓</Btn>
+          <Btn kind="ghost" size="xs" icon="trash" title="Remove stage" aria-label={`Remove ${s||"stage"}`} onClick={()=>removeAt(i)} disabled={stages.length<=2}/>
+        </div>)}
+      {stages.length<10&&<div><Btn kind="outline" size="sm" icon="plus" onClick={()=>setStages(s=>[...s,""])}>Add stage</Btn></div>}
+    </div>
+
+    {canCustomise&&isOwner&&<div className="flex gap-2.5 justify-end mt-5 pt-4 border-t border-line-soft">
+      {dirty&&<Btn kind="ghost" onClick={()=>{setStages(saved);setErr("");}}>Reset</Btn>}
+      <Btn kind="primary" icon="check" disabled={!dirty||saving} onClick={save}>{saving?"Saving…":dirty?"Save stages":"Saved"}</Btn>
+    </div>}
+    {canCustomise&&!isOwner&&<div className="text-xs text-text-3 mt-3">Only the account owner can change pipeline stages.</div>}
+  </Card>;
 }
 
 export function EmpTeam(){

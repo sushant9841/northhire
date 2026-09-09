@@ -46,7 +46,13 @@ export function StatusPage(){
   const mine=A.myApps;
   const counts=mine.reduce((m,a)=>({...m,[a.stage]:(m[a.stage]||0)+1}),{});
   const list=tab==="all"?mine:mine.filter(a=>a.stage===tab);
-  const items=[{k:"all",label:"All",n:mine.length},...STAGES.map(s=>({k:s,label:s,n:counts[s]||0})),
+  /* Employers can define their own pipeline stages, so a seeker's filter list is the union of
+     the stages used by the companies they've actually applied to, in first-seen order - showing
+     one company's custom stages over another's application would be simply wrong. */
+  const stageUnion=[];
+  for(const a of mine) for(const st of A.stagesForApp(a)) if(!stageUnion.includes(st)) stageUnion.push(st);
+  const allStages=stageUnion.length?stageUnion:STAGES;
+  const items=[{k:"all",label:"All",n:mine.length},...allStages.map(s=>({k:s,label:s,n:counts[s]||0})),
     {k:"Withdrawn",label:"Withdrawn",n:counts.Withdrawn||0}];
   return <Page>
     <H1 sub="Live status pulled straight from each employer's pipeline"
@@ -62,7 +68,8 @@ export function StatusPage(){
       action={<Btn kind="primary" onClick={()=>A.go("search")}>Browse jobs</Btn>}/>
       :<div className="flex flex-col gap-3">
         {list.map((a,i)=>{const j=A.job(a.job); if(!j) return null; const e=A.emp(j.e);
-          const idx=STAGES.indexOf(a.stage); const pct=a.stage==="Withdrawn"?0:((idx+1)/STAGES.length)*100;
+          const cardStages=A.stagesForApp(a);
+          const idx=cardStages.indexOf(a.stage); const pct=a.stage==="Withdrawn"?0:((idx+1)/cardStages.length)*100;
           return <Card key={a.id} pad={0} delay={Math.min(i,6)*0.05} style={{overflow:"hidden"}}>
             <div className={`flex gap-3.5 items-start ${mob?"p-4":"p-5"}`}>
               <EmpMark e={e} size={46}/>
@@ -78,7 +85,7 @@ export function StatusPage(){
             {a.stage!=="Withdrawn"&&<div className="py-3.5 px-5 bg-bg border-t border-line-soft">
               <Bar v={pct} tone={a.stage==="Offer"?C.ok:C.brand} h={6}/>
               <div className="flex justify-between mt-2.5">
-                {STAGES.map((s,k)=><div key={s} className="text-center flex-1">
+                {cardStages.map((s,k)=><div key={s} className="text-center flex-1">
                   <div className={`w-2 h-2 rounded-full mx-auto mb-1 transition-colors duration-500 ${k<=idx?(a.stage==="Offer"?"bg-ok":"bg-brand"):"bg-line"}`}/>
                   <div className={`text-xs ${k<=idx?"text-text-2":"text-text-3"} ${k===idx?"font-bold":"font-normal"}`}>{s}</div></div>)}</div></div>}
             <div className="py-3 px-5 border-t border-line-soft flex gap-2.5 flex-wrap">

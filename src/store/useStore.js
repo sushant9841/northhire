@@ -450,6 +450,30 @@ export function useStore(){
   /* Employer-side equivalent of the seeker's matchReasons()/skillsGap() breakdown - shows the
      same 4 weighted components scoreCandidate() actually uses, so "why did this candidate score
      X" isn't a bare unexplained number on the employer side the way it used to be. */
+  /* Custom pipeline stages are per-employer, so anything rendering a stage list has to resolve
+     it against the company that owns the job - a seeker's status page spans several employers at
+     once and would otherwise show one company's stage names over another's application. Falls
+     back to the platform default whenever a company hasn't customised. */
+  const stagesFor=employerId=>{
+    const e=employers.find(x=>x.id===employerId);
+    const custom=e?.pipelineStages;
+    return Array.isArray(custom)&&custom.length?custom:STAGES;
+  };
+  const stagesForApp=app=>{
+    const j=jobs.find(x=>x.id===app?.job);
+    return stagesFor(j?.e);
+  };
+  const savePipelineStages=async stages=>{
+    try{
+      const r=await api.put("/employers/pipeline-stages",{stages});
+      setEmployers(list=>list.map(e=>e.id===company?.id?{...e,pipelineStages:r.stages}:e));
+      toast("Pipeline stages updated.","ok");
+      return {ok:true,stages:r.stages};
+    }catch(e){
+      return {ok:false,msg:e.message};
+    }
+  };
+
   const scoreBreakdown=(u,j)=>{
     if(!u||!j)return [];
     const req=j.skills.map(s=>s.toLowerCase()), has=(u.skills||[]).map(s=>s.toLowerCase());
@@ -1786,6 +1810,7 @@ export function useStore(){
     contactPrefill,setContactPrefill,pendingPlan,setPendingPlan,employersPrefill,setEmployersPrefill,
     blogAuthorFilter,setBlogAuthorFilter,filterBlogsByAuthor,
     emp,job,person,score,scoreCandidate,scoreBreakdown,matchReasons,myApps,appliedJobIds,myNotifications,defaultCv,
+    stagesFor,stagesForApp,savePipelineStages,
     jobHiringType,jobHiringLabel,
     completeness,completenessHint,tabBadges,
     logout,completeSignup,saveProfile,deleteAccount,exportData,setUserSetting,marketingConsent,setMarketingConsent,

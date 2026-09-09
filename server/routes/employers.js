@@ -88,6 +88,69 @@ function serializeInvite(row) {
 }
 // Message templates / canned responses - contained to the employer's own account, no cross-tenant
 // sharing, so any teammate on the account sees and can use every template.
+/* ─── Custom hiring pipeline stages (Growth+) ──────────────────────────────────────────────
+   Sold on Growth and Enterprise but never implemented - every company shared one hardcoded
+   six-stage set. The plan gate is enforced here, not only in the UI.
+
+   The dangerous edit is removing or renaming a stage that still holds applications: those rows
+   would keep a stage string no column of the board renders, and the candidates in them would
+   silently vanish from the pipeline. Rather than silently remapping someone's candidates, a
+   destructive save is refused and names exactly which stages are still occupied. */
+const DEFAULT_PIPELINE_STAGES = ["Applied", "Reviewed", "Shortlisted", "Interview", "Offer", "Hired"];
+
+employersRouter.get("/pipeline-stages", requireAuth, requireRole("employer"), (req, res) => {
+  const employer = db.prepare("SELECT pipeline_stages_json, plan FROM employers WHERE id = ?").get(req.user.employer_id);
+  const custom = employer?.pipeline_stages_json ? JSON.parse(employer.pipeline_stages_json) : null;
+  res.json({
+    stages: custom || DEFAULT_PIPELINE_STAGES,
+    isCustom: !!custom,
+    defaultStages: DEFAULT_PIPELINE_STAGES,
+    canCustomise: !!getConfig("plans")[employer?.plan || "Free"]?.customStages,
+  });
+});
+
+employersRouter.put("/pipeline-stages", requireAuth, requireRole("employer"), (req, res) => {
+  if (req.user.employer_role !== "owner") return res.status(403).json({ error: "Only the account owner can change pipeline stages." });
+  const employerId = req.user.employer_id;
+  const employer = db.prepare("SELECT plan FROM employers WHERE id = ?").get(employerId);
+  if (!getConfig("plans")[employer?.plan || "Free"]?.customStages) {
+    return res.status(403).json({ error: "Custom pipeline stages are available on Growth and above." });
+  }
+
+  const raw = Array.isArray(req.body?.stages) ? req.body.stages : null;
+  if (!raw) return res.status(400).json({ error: "Send a `stages` array." });
+  const stages = raw.map(s => String(s || "").trim()).filter(Boolean);
+  if (stages.length < 2) return res.status(400).json({ error: "A pipeline needs at least two stages." });
+  if (stages.length > 10) return res.status(400).json({ error: "A pipeline can have at most 10 stages." });
+  if (stages.some(s => s.length > 32)) return res.status(400).json({ error: "Stage names are limited to 32 characters." });
+  if (new Set(stages.map(s => s.toLowerCase())).size !== stages.length) {
+    return res.status(400).json({ error: "Stage names have to be unique." });
+  }
+  // "Withdrawn" is the terminal state a rejection or withdrawal writes; it isn't a board column
+  // and must not be redefinable as one, or a rejected candidate would reappear mid-pipeline.
+  if (stages.some(s => s.toLowerCase() === "withdrawn")) {
+    return res.status(400).json({ error: '"Withdrawn" is reserved for rejected and withdrawn applications.' });
+  }
+
+  const inUse = db.prepare(
+    `SELECT applications.stage AS stage, COUNT(*) AS n
+       FROM applications JOIN jobs ON jobs.id = applications.job_id
+      WHERE jobs.employer_id = ? AND applications.stage != 'Withdrawn'
+      GROUP BY applications.stage`
+  ).all(employerId);
+  const kept = new Set(stages);
+  const orphaned = inUse.filter(r => !kept.has(r.stage));
+  if (orphaned.length) {
+    const detail = orphaned.map(r => `${r.stage} (${r.n})`).join(", ");
+    return res.status(409).json({
+      error: `These stages still hold candidates, so removing or renaming them would hide those applications: ${detail}. Move them first, then save.`,
+    });
+  }
+
+  db.prepare("UPDATE employers SET pipeline_stages_json = ? WHERE id = ?").run(JSON.stringify(stages), employerId);
+  res.json({ stages, isCustom: true });
+});
+
 employersRouter.get("/templates", requireAuth, requireRole("employer"), (req, res) => {
   const rows = db.prepare("SELECT * FROM message_templates WHERE employer_id = ? ORDER BY created_at DESC").all(req.user.employer_id);
   res.json({ templates: rows.map(r => ({ id: r.id, name: r.name, body: r.body })) });

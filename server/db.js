@@ -82,6 +82,10 @@ CREATE TABLE IF NOT EXISTS employers (
   rating REAL DEFAULT 0, verified INTEGER DEFAULT 0, hold INTEGER DEFAULT 0,
   about TEXT, founded INTEGER, site TEXT, plan TEXT DEFAULT 'Free',
   business_number TEXT, stripe_customer_id TEXT,
+  /* Custom hiring pipeline stages, sold on Growth+ but previously not implemented at all -
+     every company shared one hardcoded six-stage set. NULL means "use the platform default",
+     which is what every existing company keeps until they deliberately change it. */
+  pipeline_stages_json TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
