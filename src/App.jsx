@@ -38,6 +38,7 @@ import {
   HrInvoices, HrPayroll, HrTrainings, HrBadges, HrHiring, HrReports, HrSettings, HrIntegrations, HrPolicies, HrRoster,
 } from "./pages/hr/suite.jsx";
 import { HrPeoplePage, HrExpensesPage } from "./pages/hr/people.jsx";
+import { KioskPage } from "./pages/hr/KioskPage.jsx";
 import { HireOnboardingModal } from "./pages/shared/HireOnboardingModal.jsx";
 import { ToastHost } from "./design/primitives.jsx";
 import {
@@ -93,7 +94,7 @@ export default function NorthHire(){
     admSettings:<AdmShell><AdmSettings/></AdmShell>,admLog:<AdmShell><AdmLog/></AdmShell>,admStats:<AdmShell><AdmStats/></AdmShell>,
     admConfig:<AdmShell><AdmConfig/></AdmShell>,admAdmins:<AdmShell><AdmAdmins/></AdmShell>,
     /* HR Suite */
-    hrLogin:<HrLoginPage/>,
+    hrLogin:<HrLoginPage/>,hrKiosk:<KioskPage/>,
     hrDashboard:<HrShell><HrDashboard/></HrShell>,
     hrDirectory:<HrShell><HrPeoplePage/></HrShell>, /* backward-compat: routes to new merged People */
     hrProfile:<HrShell><HrProfile/></HrShell>,

@@ -394,6 +394,23 @@ export function useHrStore(){
   const hrMyTaxSlip=year=>api.get(`/hr/tax-slips/${year}/mine`);
   const hrRoe=(employeeId,reason="K")=>api.get(`/hr/roe/${employeeId}?reason=${encodeURIComponent(reason)}`);
 
+  /* --- Shared time clocks (kiosk terminals) ---
+     The pairing token comes back only from the create call; the list endpoint deliberately never
+     returns it again. */
+  const hrKioskDevices=()=>api.get("/hr/kiosk/devices").then(r=>r.devices).catch(()=>[]);
+  const hrCreateKioskDevice=async(name,site)=>{
+    try{const r=await api.post("/hr/kiosk/devices",{name,site});return {ok:true,token:r.token,device:r.device};}
+    catch(e){return {ok:false,msg:e.message};}
+  };
+  const hrRevokeKioskDevice=async id=>{
+    try{await api.del(`/hr/kiosk/devices/${id}`);return {ok:true};}
+    catch(e){return {ok:false,msg:e.message};}
+  };
+  const hrSetPunchPin=async(employeeId,pin)=>{
+    try{await api.put(`/hr/employees/${employeeId}/punch-pin`,{pin});return {ok:true};}
+    catch(e){return {ok:false,msg:e.message};}
+  };
+
   const _slipShell=(title,inner)=>`<!DOCTYPE html><html><head><title>${title}</title>
     <style>body{font-family:Arial,Helvetica,sans-serif;max-width:720px;margin:36px auto;padding:0 30px;color:#111;line-height:1.45}
       .brand{font-size:18pt;font-weight:700;color:#B45309}.sub{font-size:9pt;color:#888;margin-bottom:22px}
@@ -608,6 +625,7 @@ export function useHrStore(){
     addInvoice,markInvoicePaid,sendInvoice,printHrInvoice,reverseInvoice,
     myPayslips,printPayslip,
     hrTaxSlipYears,hrTaxSlips,hrMyTaxSlip,hrRoe,printT4,printRoe,
+    hrKioskDevices,hrCreateKioskDevice,hrRevokeKioskDevice,hrSetPunchPin,
     hrDeptsAtCompany,addDepartment,updateDepartment,removeDepartment,
     empExpenses,companyExpenses,submitExpense,decideExpense,payExpense,
     runPayroll,approvePayroll,executePayroll,reversePayroll,

@@ -390,9 +390,43 @@ export function HrProfile(){
                 </div>)}
               </div>}
         </Card>
+        <_PunchPinCard A={A} empId={emp.id}/>
       </div>
     </div>
   </div>;
+}
+
+/* Your own punch PIN for the shared time clock. Deliberately separate from your password: you key
+   this in on a tablet in front of colleagues, so it opens nothing but the time clock. */
+function _PunchPinCard({A,empId}){
+  const [pin,setPin]=useState(""); const [confirm,setConfirm]=useState("");
+  const [msg,setMsg]=useState(null); const [busy,setBusy]=useState(false);
+  const save=async()=>{
+    setMsg(null);
+    if(pin!==confirm){setMsg({tone:"danger",text:"The two PINs don't match."});return;}
+    setBusy(true);
+    const r=await A.hrSetPunchPin(empId,pin);
+    setBusy(false);
+    if(r.ok){setMsg({tone:"ok",text:"Punch PIN updated."});setPin("");setConfirm("");}
+    else setMsg({tone:"danger",text:r.msg});
+  };
+  return <Card pad={20} style={{borderRadius:16,marginTop:16}}>
+    <Lbl>Time clock PIN</Lbl>
+    <div className="text-sm text-text-2 mb-3.5 leading-relaxed">
+      4–6 digits, used only to punch in and out on a shared terminal. It can't sign you in anywhere.
+    </div>
+    {msg&&<Banner tone={msg.tone} icon={msg.tone==="ok"?"check":"alert"} style={{marginBottom:12}}>{msg.text}</Banner>}
+    <div className="grid gap-2.5 grid-cols-2">
+      <Field label="New PIN">
+        <Input type="password" inputMode="numeric" maxLength={6} value={pin}
+          onChange={e=>setPin(e.target.value.replace(/\D/g,""))} placeholder="••••"/></Field>
+      <Field label="Confirm PIN">
+        <Input type="password" inputMode="numeric" maxLength={6} value={confirm}
+          onChange={e=>setConfirm(e.target.value.replace(/\D/g,""))} placeholder="••••"/></Field>
+    </div>
+    <Btn kind="primary" size="sm" style={{marginTop:12}} disabled={busy||pin.length<4} onClick={save}>
+      {busy?"Saving…":"Set PIN"}</Btn>
+  </Card>;
 }
 
 /* ─── Attendance: log view + punch machine integration ─── */
@@ -1733,6 +1767,76 @@ export function HrReports(){
 }
 
 /* ─── Settings: module toggles, working hours, leave policies ─── */
+/* Shared time clocks: the physical terminals that accept punches for this company. The pairing
+   code is shown exactly once, at creation — the list endpoint never returns it, so a screen left
+   open later can't hand someone a working terminal credential. Revoking a lost tablet is
+   deleting its row, which takes effect on its very next punch. */
+function _TimeClocks({A,mob}){
+  const [devices,setDevices]=useState([]);
+  const [name,setName]=useState(""); const [site,setSite]=useState("");
+  const [issued,setIssued]=useState(null);   // {name, token} — shown once
+  const [err,setErr]=useState(""); const [busy,setBusy]=useState(false);
+  const [revoking,setRevoking]=useState(null);
+
+  const load=()=>A.hrKioskDevices().then(setDevices).catch(()=>{});
+  useEffect(()=>{load();},[]);
+
+  const create=async()=>{
+    setErr(""); setBusy(true);
+    const r=await A.hrCreateKioskDevice(name.trim(),site.trim());
+    setBusy(false);
+    if(!r.ok){setErr(r.msg);return;}
+    setIssued({name:name.trim(),token:r.token});
+    setName(""); setSite(""); load();
+  };
+
+  return <Card pad={mob?20:26} style={{borderRadius:16,marginBottom:16}}>
+    <Lbl>Time clocks</Lbl>
+    <div className="text-sm text-text-2 mb-4 leading-relaxed">
+      A shared tablet at the entrance that staff punch in and out on with a short PIN. Each terminal
+      is paired once with its own code. This is what "allow remote punch-in = off" points people at.
+    </div>
+
+    {issued&&<Banner tone="ok" icon="check" style={{marginBottom:14}} title={`"${issued.name}" is ready — copy this code now`}>
+      <div className="text-xs text-text-2 mb-2">
+        Open <strong className="text-text">/hr/kiosk</strong> on that tablet and paste this code. It is shown once and can't be retrieved later.
+      </div>
+      <div className="flex gap-2 items-center flex-wrap">
+        <code className="text-xs bg-white border border-line rounded-lg px-2.5 py-1.5 break-all flex-1 min-w-0">{issued.token}</code>
+        <Btn kind="outline" size="sm" onClick={()=>{navigator.clipboard?.writeText(issued.token);}}>Copy</Btn>
+        <Btn kind="ghost" size="sm" onClick={()=>setIssued(null)}>Done</Btn>
+      </div>
+    </Banner>}
+    {err&&<Banner tone="danger" icon="alert" style={{marginBottom:14}}>{err}</Banner>}
+
+    <div className={`grid gap-2.5 mb-3 ${mob?"grid-cols-1":"grid-cols-[1fr_1fr_auto]"}`}>
+      <Field label="Terminal name"><Input value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Front gate tablet"/></Field>
+      <Field label="Site (optional)"><Input value={site} onChange={e=>setSite(e.target.value)} placeholder="e.g. Yard 2"/></Field>
+      <div className="flex items-end"><Btn kind="primary" icon="plus" onClick={create} disabled={busy||!name.trim()}>{busy?"Creating…":"Add terminal"}</Btn></div>
+    </div>
+
+    {devices.length===0
+      ? <div className="text-sm text-text-3 py-2">No terminals paired yet.</div>
+      : <div className="flex flex-col gap-2">
+          {devices.map(dv=>
+            <div key={dv.id} className="flex justify-between items-center gap-3 border border-line rounded-xl py-2.5 px-3.5 flex-wrap">
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-text">{dv.name}</div>
+                <div className="text-xs text-text-3 mt-0.5">
+                  {dv.site?`${dv.site} · `:""}{dv.lastSeen?`Last punch ${dv.lastSeen}`:"Never used"}</div>
+              </div>
+              <Btn kind="ghost" size="xs" onClick={()=>setRevoking(dv)}>Revoke</Btn>
+            </div>)}
+        </div>}
+
+    <ConfirmDialog open={!!revoking} onClose={()=>setRevoking(null)} confirmLabel="Revoke terminal" danger
+      title={`Revoke "${revoking?.name}"?`}
+      onConfirm={async()=>{await A.hrRevokeKioskDevice(revoking.id);setRevoking(null);load();}}>
+      That tablet stops accepting punches immediately. Attendance already recorded from it is kept.
+    </ConfirmDialog>
+  </Card>;
+}
+
 export function HrSettings(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
@@ -1770,6 +1874,8 @@ export function HrSettings(){
         <Switch on={d.attendance.allowRemotePunch} onChange={v=>setSection("attendance","allowRemotePunch",v)}/>
       </div>
     </Card>
+
+    <_TimeClocks A={A} mob={mob}/>
 
     <Card pad={mob?20:26} style={{borderRadius:16,marginBottom:16}}>
       <Lbl>Leave policy</Lbl>

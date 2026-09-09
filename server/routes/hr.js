@@ -290,6 +290,117 @@ hrRouter.get("/attendance", requireHrAuth, (req, res) => {
   ).all(req.hrEmployee.company_id);
   res.json({ attendance: rows.map(serializeHrAttendance) });
 });
+/* ─── Shared-terminal time clock (kiosk) ───────────────────────────────────────────────────
+   A tablet at the site entrance that accepts punches for one company. Two separate secrets are
+   needed: the DEVICE holds a token proving it's an authorised terminal, and the EMPLOYEE keys in
+   a short PIN. Neither alone is enough, and a PIN can never sign anyone into the HR Suite — it's
+   punch-only, because people type it in front of colleagues.
+
+   A 4-6 digit PIN is inherently weak, so attempts are rate-limited per device using the same
+   failed_logins table the password flows use. */
+const KIOSK_WINDOW_MIN = 5;
+const KIOSK_MAX_ATTEMPTS = 8;
+
+function kioskDeviceFromRequest(req) {
+  const token = req.get("x-kiosk-token") || req.body?.deviceToken || "";
+  if (!token) return null;
+  return db.prepare("SELECT * FROM hr_kiosk_devices WHERE token = ?").get(token) || null;
+}
+
+hrRouter.get("/kiosk/devices", requireHrAuth, requireHrPriv, (req, res) => {
+  const rows = db.prepare("SELECT id, name, site, last_seen, created_at FROM hr_kiosk_devices WHERE company_id = ? ORDER BY created_at DESC")
+    .all(req.hrEmployee.company_id);
+  res.json({ devices: rows.map(r => ({ id: r.id, name: r.name, site: r.site, lastSeen: r.last_seen, createdAt: r.created_at })) });
+});
+
+hrRouter.post("/kiosk/devices", requireHrAuth, requireHrPriv, (req, res) => {
+  const name = String(req.body?.name || "").trim();
+  if (!name) return res.status(400).json({ error: "Give the terminal a name so it can be told apart from the others." });
+  const id = nextId("kd", "hr_kiosk_devices");
+  const token = `kiosk_${crypto.randomBytes(24).toString("hex")}`;
+  db.prepare("INSERT INTO hr_kiosk_devices (id, company_id, name, token, site, created_by) VALUES (?, ?, ?, ?, ?, ?)")
+    .run(id, req.hrEmployee.company_id, name, token, String(req.body?.site || "").trim() || null, req.hrEmployee.id);
+  // The token is returned exactly once, at creation - it is never readable again from the list
+  // endpoint, so a leaked screen later can't hand someone a working terminal credential.
+  res.status(201).json({ device: { id, name, site: req.body?.site || null }, token });
+});
+
+hrRouter.delete("/kiosk/devices/:id", requireHrAuth, requireHrPriv, (req, res) => {
+  const r = db.prepare("DELETE FROM hr_kiosk_devices WHERE id = ? AND company_id = ?").run(req.params.id, req.hrEmployee.company_id);
+  if (!r.changes) return res.status(404).json({ error: "Terminal not found." });
+  res.json({ ok: true });
+});
+
+/* Setting a punch PIN: a privileged role can set anyone's, an employee can set their own. */
+hrRouter.put("/employees/:id/punch-pin", requireHrAuth, (req, res) => {
+  const target = db.prepare("SELECT * FROM hr_employees WHERE id = ? AND company_id = ?").get(req.params.id, req.hrEmployee.company_id);
+  if (!target) return res.status(404).json({ error: "Employee not found." });
+  const isSelf = target.id === req.hrEmployee.id;
+  if (!isSelf && !isPriv(req.hrEmployee)) return res.status(403).json({ error: "Not allowed for your role." });
+  const pin = String(req.body?.pin ?? "");
+  if (!/^\d{4,6}$/.test(pin)) return res.status(400).json({ error: "A punch PIN is 4 to 6 digits." });
+  // Reject PINs that are trivially guessable on a shared terminal in front of colleagues.
+  if (/^(\d)\1+$/.test(pin) || "0123456789".includes(pin) || "9876543210".includes(pin)) {
+    return res.status(400).json({ error: "Choose a less predictable PIN — no repeated digits or straight runs." });
+  }
+  const { hash, salt } = hashPassword(pin);
+  db.prepare("UPDATE hr_employees SET punch_pin_hash = ?, punch_pin_salt = ? WHERE id = ?").run(hash, salt, target.id);
+  res.json({ ok: true });
+});
+
+/* The kiosk punch itself. Deliberately NOT behind requireHrAuth - the terminal has no HR session,
+   it authenticates as a device. Toggles: punched in already today -> punch out, otherwise in. */
+hrRouter.post("/kiosk/punch", (req, res) => {
+  const device = kioskDeviceFromRequest(req);
+  if (!device) return res.status(401).json({ error: "This terminal isn't paired. Ask an administrator to set it up." });
+
+  const lockoutKey = `kiosk:${device.id}`;
+  const recentFails = db.prepare(
+    `SELECT COUNT(*) AS n FROM failed_logins WHERE email = ? AND kind = 'hr' AND created_at >= datetime('now', ?)`
+  ).get(lockoutKey, `-${KIOSK_WINDOW_MIN} minutes`).n;
+  if (recentFails >= KIOSK_MAX_ATTEMPTS) {
+    return res.status(429).json({ error: `Too many incorrect PINs on this terminal — wait ${KIOSK_WINDOW_MIN} minutes.` });
+  }
+
+  const pin = String(req.body?.pin ?? "");
+  const candidates = db.prepare("SELECT * FROM hr_employees WHERE company_id = ? AND status = 'active' AND erased = 0 AND punch_pin_hash IS NOT NULL")
+    .all(device.company_id);
+  // Every candidate is checked rather than looking the employee up by PIN, so a wrong PIN can't
+  // be distinguished from an unset one by timing or by a different error.
+  const employee = candidates.find(e => verifyPassword(pin, e.punch_pin_hash, e.punch_pin_salt));
+  if (!employee) {
+    db.prepare("INSERT INTO failed_logins (id, email, kind) VALUES (?, ?, 'hr')").run(nextId("fl", "failed_logins"), lockoutKey);
+    return res.status(401).json({ error: "PIN not recognised." });
+  }
+
+  db.prepare("UPDATE hr_kiosk_devices SET last_seen = datetime('now') WHERE id = ?").run(device.id);
+
+  const today = new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  const open = db.prepare("SELECT * FROM hr_attendance WHERE employee_id = ? AND clock_out IS NULL ORDER BY date DESC LIMIT 1").get(employee.id);
+
+  if (open) {
+    const clockInAt = new Date(`${open.date}T${open.clock_in}:00`);
+    const hours = Math.max(0, Math.round((now - clockInAt) / 36000) / 100);
+    db.prepare("UPDATE hr_attendance SET clock_out = ?, hours = ? WHERE id = ?").run(time, hours, open.id);
+    return res.json({ action: "out", name: employee.name, time, hours, site: device.site || null });
+  }
+
+  const existingToday = db.prepare("SELECT * FROM hr_attendance WHERE employee_id = ? AND date = ?").get(employee.id, today);
+  if (existingToday) return res.status(409).json({ error: `${employee.name} already completed a shift today.`, name: employee.name });
+
+  const settingsRow = db.prepare("SELECT settings_json FROM hr_company_settings WHERE company_id = ?").get(device.company_id);
+  const settings = settingsRow ? JSON.parse(settingsRow.settings_json) : null;
+  const att = settings?.attendance || { workingHoursStart: "08:00", lateThresholdMin: 15 };
+  const [sh, sm] = (att.workingHoursStart || "08:00").split(":").map(Number);
+  const late = (now.getHours() * 60 + now.getMinutes()) > (sh * 60 + sm + (att.lateThresholdMin || 0));
+  const id = `att_${employee.id}_${today}`;
+  db.prepare("INSERT INTO hr_attendance (id, employee_id, date, clock_in, source, site, late) VALUES (?, ?, ?, ?, 'kiosk', ?, ?)")
+    .run(id, employee.id, today, time, device.site || "Head Office", late ? 1 : 0);
+  res.status(201).json({ action: "in", name: employee.name, time, late: !!late, site: device.site || null });
+});
+
 hrRouter.post("/attendance/punch-in", requireHrAuth, (req, res) => {
   // No caller-supplied employeeId override - nothing in the app ever legitimately punches in on
   // someone else's behalf, and honoring one let any employee forge a colleague's attendance

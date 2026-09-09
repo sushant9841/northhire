@@ -364,6 +364,10 @@ CREATE TABLE IF NOT EXISTS hr_employees (
   td1_on_file INTEGER DEFAULT 1,
   benefits_per_pay REAL DEFAULT 0, benefits_plan TEXT,
   pay_type TEXT NOT NULL DEFAULT 'salary', hourly_rate REAL,
+  /* Shared-terminal punch PIN, hashed with the same scrypt helper as passwords. A PIN is punch-
+     only and can never sign anyone into the HR Suite - people key it in on a tablet in front of
+     colleagues, so it must not be worth shoulder-surfing. */
+  punch_pin_hash TEXT, punch_pin_salt TEXT,
   erased INTEGER DEFAULT 0, erased_at TEXT,
   visibility_json TEXT DEFAULT '{}',
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -413,6 +417,21 @@ CREATE TABLE IF NOT EXISTS hr_attendance (
   employee_id TEXT NOT NULL REFERENCES hr_employees(id),
   date TEXT NOT NULL, clock_in TEXT, clock_out TEXT, source TEXT DEFAULT 'web',
   hours REAL DEFAULT 0, site TEXT, late INTEGER DEFAULT 0
+);
+
+/* A physical shared terminal (a tablet by the site entrance) authorised to accept punches for one
+   company. The device holds a token; an employee then only keys in a short PIN. Without this the
+   "remote punch-in disabled - use the office time clock" setting had nothing behind it, and any
+   browser could have posted a punch for anyone. Revoking a lost tablet is deleting its row. */
+CREATE TABLE IF NOT EXISTS hr_kiosk_devices (
+  id TEXT PRIMARY KEY,
+  company_id TEXT NOT NULL REFERENCES employers(id),
+  name TEXT NOT NULL,
+  token TEXT NOT NULL UNIQUE,
+  site TEXT,
+  created_by TEXT,
+  last_seen TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS hr_leave (

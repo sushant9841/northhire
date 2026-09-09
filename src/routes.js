@@ -53,6 +53,9 @@ export const ROUTES = {
   matchScore:   {title:"How the match score works", tab:"home", root:false, path:"/match-score"},
   /* HR Suite routes */
   hrLogin:      {title:"HR Suite login", tab:"home", bare:true, path:"/hr/login"},
+  /* The shared time clock authenticates as a DEVICE, not a person, so it must be reachable
+     without an HR session - it is the surface people punch in on before signing in anywhere. */
+  hrKiosk:      {title:"Time clock", tab:"home", bare:true, path:"/hr/kiosk"},
   hrDashboard:  {title:"Dashboard", tab:"home", bare:true, path:"/hr/dashboard"},
   hrDirectory:  {title:"Directory", tab:"home", bare:true, path:"/hr/directory"},
   hrProfile:    {title:"My profile", tab:"home", bare:true, path:"/hr/profile"},
