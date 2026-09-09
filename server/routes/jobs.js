@@ -5,6 +5,7 @@ import { serializeJob } from "../serialize.js";
 import { getConfig } from "../platformConfig.js";
 import { geocode } from "../geocode.js";
 import { postingRules, checkPayRange, findCanadianExperience } from "../../src/helpers/jobPostingLaw.js";
+import { notifyInstantMatches } from "../jobAlerts.js";
 
 export const jobsRouter = Router();
 
@@ -162,6 +163,12 @@ jobsRouter.post("/", requireAuth, requireRole("employer"), async (req, res) => {
   );
   const row = db.prepare("SELECT * FROM jobs WHERE id = ?").get(id);
   res.status(201).json({ job: serializeJob(row) });
+  // Instant saved-search alerts go out AFTER the response - a seeker's mail delivery should
+  // never make the employer wait to hear their listing published (the same mistake the HR
+  // payroll run made by awaiting every employee's email before responding).
+  if (initialStatus === "live" && !needsOwnerApproval) {
+    notifyInstantMatches(id).catch(e => console.warn(`[jobAlerts] ${e.message}`));
+  }
 });
 
 jobsRouter.patch("/:id", requireAuth, requireRole("employer", "admin"), (req, res) => {

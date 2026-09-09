@@ -19,6 +19,7 @@ import { platformRouter } from "./routes/platform.js";
 import { hrRouter } from "./routes/hr.js";
 import { staffingRouter } from "./routes/staffing.js";
 import { billingRouter } from "./routes/billing.js";
+import { consentRouter } from "./routes/consent.js";
 import { infinityReplacer } from "../src/helpers/jsonInfinity.js";
 
 const app = express();
@@ -86,6 +87,7 @@ app.use("/api/platform", platformRouter);
 app.use("/api/hr", hrRouter);
 app.use("/api/staffing", staffingRouter);
 app.use("/api/billing", billingRouter);
+app.use("/api/consent", consentRouter);
 
 app.use((req, res) => res.status(404).json({ error: "Not found." }));
 // eslint-disable-next-line no-unused-vars

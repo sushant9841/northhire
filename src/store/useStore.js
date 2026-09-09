@@ -16,6 +16,7 @@ import { api, ApiUnreachableError, API_BASE } from "../helpers/api.js";
 import { mapApiJob, mapApiEmployer, mapApiApplication, mapApiUser } from "../helpers/apiMap.js";
 import { buildPath, matchPath, ID_STATE_FOR_ROUTE } from "../helpers/urlRouter.js";
 import { parseCsvLine } from "../helpers/csv.js";
+import { expandQuery } from "../helpers/synonyms.js";
 
 export function useStore(){
   /* Real URL support: computed once at mount (this hook is only ever instantiated once at the
@@ -562,7 +563,9 @@ export function useStore(){
     const yearsMap={"No experience yet":0,"Less than 1 year":1,"1-2 years":2,"3-5 years":4,"6-10 years":8,"More than 10 years":12};
     try{
       const {user:apiUser}=await api.post("/auth/signup",{
-        name:`${d.first} ${d.last}`.trim(),email,password:d.password,role:"seeker",turnstileToken:d.turnstileToken});
+        name:`${d.first} ${d.last}`.trim(),email,password:d.password,role:"seeker",turnstileToken:d.turnstileToken,
+        /* CASL consent, captured by the wizard's own unchecked-by-default box. */
+        marketingConsent:!!d.alerts});
       /* The signup endpoint only takes name/email/password/role - everything else the wizard
          collected (title/cat/city/skills/pay expectations...) is a profile update on top,
          same two-step shape saveProfile already uses elsewhere. */
@@ -644,6 +647,28 @@ export function useStore(){
   const setUserSetting=(k,v)=>{
     setUserSettings(s=>({...s,[k]:v}));
     api.patch("/seeker/user-settings",{[k]:v}).catch(err=>toast(`Setting saved locally, but couldn't sync to the server: ${err.message}`,"warn"));
+  };
+
+  /* CASL consent for job-alert email. Kept separate from the local user_settings row above
+     because it is the legally operative record - it gates whether the server will send a
+     commercial electronic message at all, and stores when/how consent was given so it can be
+     proven later. Toggling the "New matching jobs" switch is the act of giving or withdrawing it. */
+  const [marketingConsent,setMarketingConsentState]=useState({consent:false,at:null,source:null});
+  useEffect(()=>{
+    if(!user){setMarketingConsentState({consent:false,at:null,source:null});return;}
+    api.get("/consent/marketing").then(setMarketingConsentState).catch(()=>{});
+  },[user?.id]);
+  const setMarketingConsent=async v=>{
+    setMarketingConsentState(s=>({...s,consent:v}));
+    try{
+      await api.patch("/consent/marketing",{consent:v});
+      const fresh=await api.get("/consent/marketing");
+      setMarketingConsentState(fresh);
+      toast(v?"You'll get an email when a saved search matches a new job.":"Unsubscribed from job-alert emails.","ok");
+    }catch(err){
+      setMarketingConsentState(s=>({...s,consent:!v}));
+      toast(`Couldn't update email preference: ${err.message}`,"warn");
+    }
   };
 
   /* --- saved searches --- */
@@ -1039,42 +1064,8 @@ export function useStore(){
     return {totalJobs:myJobs.length,liveJobs:myJobs.filter(j=>j.status==="live").length,totalViews,totalApps,conversion,byStage,topJob,avgScore,applicationTrend,eligibilityMix,byJob};
   };
 
-  /* --- fuzzy / synonym expansion for search queries --- */
-  const SYNONYMS={
-    nurse:["rn","psw","nursing","registered nurse","personal support worker"],
-    rn:["nurse","nursing"],
-    psw:["personal support worker","health care aide","hca"],
-    electrician:["electric","electrical","journeyperson","red seal"],
-    driver:["driving","truck","az","dz","hauler","operator","chauffeur"],
-    cook:["cooking","kitchen","chef","line cook","prep","food"],
-    welder:["welding","fabricator","fabrication"],
-    plumber:["plumbing","gas fitter"],
-    admin:["administrative","clerk","assistant","reception","secretary"],
-    warehouse:["forklift","picker","packer","stockroom"],
-    developer:["engineer","programmer","software","dev","coder"],
-    accountant:["bookkeeper","accounting","cpa","finance"],
-    security:["guard","officer"],
-    teacher:["educator","instructor","tutor"],
-  };
-  const expandQuery=q=>{
-    if(!q)return [];
-    const base=q.toLowerCase().trim();
-    const words=base.split(/\s+/);
-    const set=new Set([base,...words]);
-    words.forEach(w=>{
-      // exact synonym match
-      if(SYNONYMS[w])SYNONYMS[w].forEach(s=>set.add(s));
-      // reverse lookup: is w a synonym of something?
-      Object.entries(SYNONYMS).forEach(([k,vals])=>{if(vals.includes(w))set.add(k);});
-      // stem: drop trailing s, ing, ed
-      if(w.length>4){
-        if(w.endsWith("s"))set.add(w.slice(0,-1));
-        if(w.endsWith("ing"))set.add(w.slice(0,-3));
-        if(w.endsWith("ed"))set.add(w.slice(0,-2));
-      }
-    });
-    return [...set].filter(Boolean);
-  };
+  /* Fuzzy/synonym expansion now lives in helpers/synonyms.js so server/jobAlerts.js matches
+     saved searches against new jobs using the identical logic this page's search uses. */
 
   /* --- follow-employer notifications: fired when publishJob is called --- */
   const notifyFollowers=(job,employer)=>{
@@ -1795,7 +1786,7 @@ export function useStore(){
     emp,job,person,score,scoreCandidate,scoreBreakdown,matchReasons,myApps,appliedJobIds,myNotifications,defaultCv,
     jobHiringType,jobHiringLabel,
     completeness,completenessHint,tabBadges,
-    logout,completeSignup,saveProfile,deleteAccount,exportData,setUserSetting,
+    logout,completeSignup,saveProfile,deleteAccount,exportData,setUserSetting,marketingConsent,setMarketingConsent,
     toggleSave,followEmployer,openJob,openEmployer,openBlog,openTraining,openCandidate,
     beginApply,submitApply,withdraw,acceptOffer,moveApp,rejectApp,
     publishJob,approveJob,toggleJobStatus,flagJob,reportJob,jobReports,loadJobReports,decideJobReport,setPipelineJob:setPipelineJobFn,saveCompany,verifyEmployer,holdEmployer,toggleSuspend,eraseUser,

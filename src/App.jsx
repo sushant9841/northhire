@@ -21,6 +21,7 @@ import { AlertsPage } from "./pages/shared/AlertsPage.jsx";
 import { DeniedPage } from "./pages/shared/DeniedPage.jsx";
 import { ProfilePage } from "./pages/shared/ProfilePage.jsx";
 import { SettingsPage } from "./pages/shared/SettingsPage.jsx";
+import { UnsubscribePage } from "./pages/shared/UnsubscribePage.jsx";
 import { MessagesPage } from "./pages/shared/MessagesPage.jsx";
 import { InterviewsPage } from "./pages/shared/InterviewsPage.jsx";
 import { WorkerDashboard, WorkerTimesheet, WorkerPayStubs, WorkerDocuments } from "./pages/seeker/worker.jsx";
@@ -86,7 +87,7 @@ export default function NorthHire(){
     empCompany:<EmpShell><EmpCompany/></EmpShell>,empTeam:<EmpShell><EmpTeam/></EmpShell>,empBilling:<EmpShell><EmpBilling/></EmpShell>,empAnalytics:<EmpShell><EmpAnalyticsPage/></EmpShell>,
     admHome:<AdmShell><AdmHome/></AdmShell>,admUsers:<AdmShell><AdmUsers/></AdmShell>,admEmployers:<AdmShell><AdmEmployers/></AdmShell>,admJobs:<AdmShell><AdmJobs/></AdmShell>,
     account:<AccountMenuPage/>,
-    accessibility:<AccessibilityPage/>,pipeda:<PipedaPage/>,credits:<CreditsPage/>,
+    accessibility:<AccessibilityPage/>,pipeda:<PipedaPage/>,credits:<CreditsPage/>,unsubscribe:<UnsubscribePage/>,
     admBlogs:<AdmShell><ContentManager scope="admin"/></AdmShell>,admTrainings:<AdmShell><ContentManager scope="admin"/></AdmShell>,
     admSettings:<AdmShell><AdmSettings/></AdmShell>,admLog:<AdmShell><AdmLog/></AdmShell>,admStats:<AdmShell><AdmStats/></AdmShell>,
     admConfig:<AdmShell><AdmConfig/></AdmShell>,admAdmins:<AdmShell><AdmAdmins/></AdmShell>,

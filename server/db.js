@@ -30,6 +30,16 @@ CREATE TABLE IF NOT EXISTS users (
   suspended INTEGER DEFAULT 0, suspension_reason TEXT, suspended_at TEXT,
   default_cv TEXT, start_when TEXT, joined TEXT,
   visibility_json TEXT DEFAULT '{}',
+  /* CASL (Canada's Anti-Spam Legislation) consent record. A commercial electronic message - a
+     job-alert digest, a marketing nudge - may only be sent with express or implied consent, and
+     the sender carries the burden of proving it, so when and how consent was given is stored
+     alongside the flag rather than just a boolean. Transactional mail (receipts, password
+     resets, application-status updates) is not a CEM and does not consult this.
+     unsubscribe_token backs the one-click unsubscribe link CASL requires on every CEM. */
+  marketing_consent INTEGER DEFAULT 0,
+  marketing_consent_at TEXT,
+  marketing_consent_source TEXT,
+  unsubscribe_token TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

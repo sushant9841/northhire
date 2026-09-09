@@ -22,8 +22,13 @@ export function SettingsPage(){
     <H1 sub="Account, notifications and privacy">Settings</H1>
     <Card pad={mob?18:24} style={{marginBottom:16}}>
       <Lbl>Notifications</Lbl>
-      <Row icon="bell" title="New matching jobs" sub="A short digest, at most twice a week">
-        <Switch on={S.matchAlerts} onChange={v=>A.setUserSetting("matchAlerts",v)}/></Row>
+      {/* This switch IS the CASL consent record, not a cosmetic preference - the server refuses
+          to send a job-alert email without it, and stores when and how it was given. */}
+      <Row icon="bell" title="New matching jobs"
+        sub={A.marketingConsent?.consent
+          ? `Emailed by NorthHire Technologies Inc. when a saved search matches a new listing.${A.marketingConsent.at?` Consent recorded ${new Date(A.marketingConsent.at).toLocaleDateString()}.`:""}`
+          : "Off — you'll still see matches in the app, but no email will be sent."}>
+        <Switch on={!!A.marketingConsent?.consent} onChange={v=>A.setMarketingConsent(v)}/></Row>
       <Row icon="activity" title="Application updates" sub="When an employer moves you to a new stage">
         <Switch on={S.appAlerts} onChange={v=>A.setUserSetting("appAlerts",v)}/></Row>
       <Row icon="mail" title="Product and career emails" sub="New articles, trainings and platform updates">

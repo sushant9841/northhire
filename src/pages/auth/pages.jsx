@@ -21,7 +21,9 @@ const SU_STEPS_EMPLOYER=[{k:"role",t:"Get started",d:"Are you looking for work, 
 const SIGNUP_DRAFT_KEY="northhire.signupDraft";
 const _defaultSignupData=()=>({role:"",email:"",password:"",phone:"",first:"",last:"",city:"",prov:"Ontario",eligible:"",
     cat:"",title:"",years:"",edu:"",skills:[],draft:"",payMin:"",payUnit:"hr",types:["Full Time"],modes:["On-site"],
-    startWhen:"Within 2 weeks",alerts:true,
+    /* CASL: express consent to a commercial electronic message has to be an affirmative act by
+       the recipient, so this box starts UNCHECKED - a pre-ticked box is not consent. */
+    startWhen:"Within 2 weeks",alerts:false,
     company:"",industry:"",size:"1-50",about:"",name:"",businessNumber:"",turnstileToken:null});
 const _loadSignupDraft=()=>{try{return JSON.parse(sessionStorage.getItem(SIGNUP_DRAFT_KEY)||"null");}catch{return null;}};
 
@@ -237,7 +239,7 @@ export function SignupPage(){
             <Field label="When can you start?"><Sel value={d.startWhen} onChange={e=>set("startWhen",e.target.value)}>
               {["Immediately","Within 2 weeks","Within 1 month","More than 1 month"].map(o=><option key={o}>{o}</option>)}</Sel></Field>
             <CheckRow on={d.alerts} onChange={v=>set("alerts",v)} label="Email me new matching jobs"
-              sub="A short digest, at most twice a week. You can turn this off any time."/></div>}
+              sub="Optional. NorthHire Technologies Inc. will email you when a saved search matches a new listing. Every email has a one-click unsubscribe, and you can turn this off any time in Settings."/></div>}
         </div>
         {i===STEPS.length-1&&A.turnstileSiteKey&&<div style={{marginTop:18}}>
           <TurnstileWidget siteKey={A.turnstileSiteKey} onToken={t=>set("turnstileToken",t)}/></div>}

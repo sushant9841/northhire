@@ -49,10 +49,16 @@ authRouter.post("/signup", async (req, res) => {
 
   const { hash, salt } = hashPassword(password);
   const id = nextId("u", "users");
+  // CASL: record consent (and when/how it was given) at the moment it's captured - the sender
+  // carries the burden of proving consent, and "the box was ticked at signup" is only provable
+  // if the timestamp and source were stored then.
+  const marketingConsent = req.body?.marketingConsent ? 1 : 0;
   db.prepare(
-    `INSERT INTO users (id, role, name, email, password_hash, password_salt, employer_id, seed)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(id, role, name, email.toLowerCase(), hash, salt, employerId, Math.floor(Math.random() * 12));
+    `INSERT INTO users (id, role, name, email, password_hash, password_salt, employer_id, seed,
+       marketing_consent, marketing_consent_at, marketing_consent_source)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(id, role, name, email.toLowerCase(), hash, salt, employerId, Math.floor(Math.random() * 12),
+    marketingConsent, marketingConsent ? new Date().toISOString() : null, marketingConsent ? "signup-checkbox" : null);
   db.prepare("INSERT INTO user_settings (user_id) VALUES (?)").run(id);
 
   createSessionCookie(res, "session", "main", id);

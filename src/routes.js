@@ -48,6 +48,8 @@ export const ROUTES = {
   accessibility:{title:"Accessibility (AODA)", tab:"home", root:false, path:"/accessibility"},
   pipeda:       {title:"PIPEDA compliance", tab:"home", root:false, path:"/pipeda"},
   credits:      {title:"Open-source credits", tab:"home", root:false, path:"/credits"},
+  /* CASL requires the unsubscribe link in a commercial email to work without signing in. */
+  unsubscribe:  {title:"Unsubscribe", tab:"home", root:false, path:"/unsubscribe"},
   /* HR Suite routes */
   hrLogin:      {title:"HR Suite login", tab:"home", bare:true, path:"/hr/login"},
   hrDashboard:  {title:"Dashboard", tab:"home", bare:true, path:"/hr/dashboard"},
