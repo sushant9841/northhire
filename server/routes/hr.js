@@ -2,6 +2,7 @@ import { Router } from "express";
 import crypto from "node:crypto";
 import { db, nextId, sqlTime } from "../db.js";
 import { calcNetPay, calcHourlyGross } from "../../src/helpers/payrollTax.js";
+import { buildT4, buildAllT4s, buildRoe, payrollYears } from "../../src/helpers/taxSlips.js";
 import { getConfig } from "../platformConfig.js";
 import { sendAndLogMail } from "../mail.js";
 import { hashPassword, verifyPassword, createSessionCookie, clearSessionCookie, requireHrAuth, hrEmployeeFromRequest, requireAuth, requireRole } from "../auth.js";
@@ -544,6 +545,60 @@ hrRouter.get("/payslips/mine", requireHrAuth, (req, res) => {
     .filter(Boolean);
   res.json({ payslips: slips });
 });
+/* ─── Year-end tax slips (T4) and Records of Employment ────────────────────────────────────
+   Both are computed from the payroll runs that were actually paid, never from a parallel set of
+   numbers. See src/helpers/taxSlips.js for what is and isn't modelled - these generate a real,
+   printable slip, they do not file anything with CRA or Service Canada. */
+
+hrRouter.get("/tax-slips/years", requireHrAuth, requireHrPriv, (req, res) => {
+  const runs = db.prepare("SELECT * FROM hr_payruns WHERE company_id = ?").all(req.hrEmployee.company_id).map(serializeHrPayrun);
+  res.json({ years: payrollYears(runs) });
+});
+
+hrRouter.get("/tax-slips/:year", requireHrAuth, requireHrPriv, (req, res) => {
+  const year = Number(req.params.year);
+  if (!Number.isInteger(year)) return res.status(400).json({ error: "Invalid year." });
+  const companyId = req.hrEmployee.company_id;
+  const runs = db.prepare("SELECT * FROM hr_payruns WHERE company_id = ?").all(companyId).map(serializeHrPayrun);
+  const employees = db.prepare("SELECT * FROM hr_employees WHERE company_id = ? AND erased = 0").all(companyId).map(serializeHrEmployee);
+  const cfg = getConfig("payrollTax");
+  const slips = buildAllT4s({ employees, runs, year, caps: { cppYmpe: cfg.cppYmpe, eiMaxInsurable: cfg.eiMaxInsurable } });
+  const employer = db.prepare("SELECT name, business_number, city, prov FROM employers WHERE id = ?").get(companyId);
+  res.json({
+    year, slips,
+    employer: { name: employer?.name, businessNumber: employer?.business_number || null, city: employer?.city, prov: employer?.prov },
+    totals: slips.reduce((t, s) => ({
+      gross: t.gross + s.boxes[14], cpp: t.cpp + s.boxes[16], ei: t.ei + s.boxes[18], tax: t.tax + s.boxes[22],
+    }), { gross: 0, cpp: 0, ei: 0, tax: 0 }),
+  });
+});
+
+/* An employee can always pull their OWN T4 without a privileged role - it's their income. */
+hrRouter.get("/tax-slips/:year/mine", requireHrAuth, (req, res) => {
+  const year = Number(req.params.year);
+  if (!Number.isInteger(year)) return res.status(400).json({ error: "Invalid year." });
+  const companyId = req.hrEmployee.company_id;
+  const runs = db.prepare("SELECT * FROM hr_payruns WHERE company_id = ?").all(companyId).map(serializeHrPayrun);
+  const me = serializeHrEmployee(db.prepare("SELECT * FROM hr_employees WHERE id = ?").get(req.hrEmployee.id));
+  const cfg = getConfig("payrollTax");
+  const slip = buildT4({ employee: me, runs, year, caps: { cppYmpe: cfg.cppYmpe, eiMaxInsurable: cfg.eiMaxInsurable } });
+  if (!slip) return res.status(404).json({ error: `No paid payroll recorded for you in ${year}.` });
+  const employer = db.prepare("SELECT name, business_number FROM employers WHERE id = ?").get(companyId);
+  res.json({ year, slip, employer: { name: employer?.name, businessNumber: employer?.business_number || null } });
+});
+
+hrRouter.get("/roe/:employeeId", requireHrAuth, requireHrPriv, (req, res) => {
+  const companyId = req.hrEmployee.company_id;
+  const row = db.prepare("SELECT * FROM hr_employees WHERE id = ? AND company_id = ?").get(req.params.employeeId, companyId);
+  if (!row) return res.status(404).json({ error: "Employee not found." });
+  const employee = serializeHrEmployee(row);
+  const runs = db.prepare("SELECT * FROM hr_payruns WHERE company_id = ?").all(companyId).map(serializeHrPayrun);
+  const roe = buildRoe({ employee, runs, reason: String(req.query.reason || "K").toUpperCase() });
+  if (!roe) return res.status(404).json({ error: "No paid payroll on record for this employee, so there are no insurable earnings to report." });
+  const employer = db.prepare("SELECT name, business_number, city, prov FROM employers WHERE id = ?").get(companyId);
+  res.json({ roe, employer: { name: employer?.name, businessNumber: employer?.business_number || null, city: employer?.city, prov: employer?.prov } });
+});
+
 hrRouter.post("/payruns", requireHrAuth, requireHrPriv, (req, res) => {
   const { periodStart, periodEnd } = req.body || {};
   const taxConfig = getConfig("payrollTax");

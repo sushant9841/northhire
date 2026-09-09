@@ -275,6 +275,9 @@ export function serializeHrPayrun(row) {
   return { id: row.id, companyId: row.company_id, periodStart: row.period_start, periodEnd: row.period_end,
     period: `${row.period_start} → ${row.period_end}`, runDate: row.run_date, status: row.status,
     employees: row.employees, totalGross: row.total_gross, totalNet: row.total_net, totalReimb: row.total_reimb,
+    // paidAt is what a T4 year is keyed to (CRA keys the slip to when the employee was actually
+    // paid, not the period worked), so it has to survive serialization.
+    approvedAt: row.approved_at, paidAt: row.paid_at,
     lines: JSON.parse(row.lines_json || "[]") };
 }
 export function serializeHrChat(row) {

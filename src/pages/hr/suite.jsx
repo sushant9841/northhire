@@ -11,6 +11,7 @@ import {
 import { _fmtDate } from "../../helpers/utils.js";
 import { invoiceTone } from "../../helpers/statusTone.js";
 import { salesTaxRate, salesTaxLabel } from "../../helpers/salesTax.js";
+import { ROE_REASONS } from "../../helpers/taxSlips.js";
 import { HR_ROLES, HR_COMPANY_SETTINGS_DEFAULT, PUNCH_VENDORS, PRIOR_HR_VENDORS, HR_MODULES } from "../../store/seed/hrCompanySettings.js";
 import { HR_DEPARTMENTS } from "../../store/seed/hrDepartments.js";
 import { InlineList } from "../shared/formControls.jsx";
@@ -1134,6 +1135,114 @@ function InvoiceDetailModal({invoice:inv,company,onClose,canManage,onMarkPaid,on
 }
 
 /* ─── Payroll ─── */
+/* Year-end T4s and Records of Employment, computed from the payroll runs that were actually
+   paid. Every employee can pull their own T4; only owner/admin/hr/finance see the whole company's
+   or can produce an ROE. Both printouts state plainly that nothing has been filed with CRA or
+   Service Canada - generating the slip and filing it are different things, and an employer
+   assuming otherwise would be a genuinely costly misunderstanding. */
+function _YearEndSlips({A,mob,isEmployee,isPayrollMgr}){
+  const [years,setYears]=useState([]);
+  const [year,setYear]=useState(null);
+  const [data,setData]=useState(null);
+  const [mine,setMine]=useState(null);
+  const [err,setErr]=useState("");
+  const [roeFor,setRoeFor]=useState(null);
+  const [roeReason,setRoeReason]=useState("A");
+
+  useEffect(()=>{let off=false;
+    A.hrTaxSlipYears().then(ys=>{if(off)return;setYears(ys);setYear(ys[0]??null);});
+    return()=>{off=true;};},[]);
+
+  useEffect(()=>{if(!year)return;let off=false;setErr("");
+    if(isEmployee){
+      A.hrMyTaxSlip(year).then(r=>{if(!off)setMine(r);}).catch(e=>{if(!off){setMine(null);setErr(e.message);}});
+    }else{
+      A.hrTaxSlips(year).then(r=>{if(!off)setData(r);}).catch(e=>{if(!off){setData(null);setErr(e.message);}});
+    }
+    return()=>{off=true;};},[year,isEmployee]);
+
+  const money=n=>`$${Number(n||0).toLocaleString("en-CA",{maximumFractionDigits:0})}`;
+
+  if(!years.length) return null;
+
+  return <Card pad={mob?16:20} style={{borderRadius:14,marginBottom:16}}>
+    <div className="flex justify-between items-center flex-wrap gap-3 mb-1">
+      <Lbl style={{margin:0}}>Year-end slips</Lbl>
+      <Sel value={year||""} onChange={e=>setYear(Number(e.target.value))} style={{width:130}}>
+        {years.map(y=><option key={y} value={y}>{y}</option>)}</Sel>
+    </div>
+    <div className="text-xs text-text-2 mb-3.5 leading-relaxed">
+      Amounts come from payroll runs actually paid in {year}. Generating a slip is not filing it —
+      the T4 Summary still has to go to CRA, and an ROE through ROE Web.
+    </div>
+    {err&&<Banner tone="warn" icon="alert">{err}</Banner>}
+
+    {isEmployee
+      ? (mine&&<div className="border border-line rounded-xl p-4">
+          <div className="flex justify-between items-center flex-wrap gap-3">
+            <div>
+              <div className="text-sm font-semibold text-text">T4 — {mine.slip.year}</div>
+              <div className="text-xs text-text-2 mt-1">
+                Employment income {money(mine.slip.boxes[14])} · Tax deducted {money(mine.slip.boxes[22])} ·
+                {" "}{mine.slip.periodsPaid} pay period{mine.slip.periodsPaid===1?"":"s"}</div>
+            </div>
+            <Btn kind="outline" size="sm" icon="download" onClick={()=>A.printT4(mine.slip,mine.employer)}>Print / Save as PDF</Btn>
+          </div>
+        </div>)
+      : (data&&<>
+        <div className={`grid gap-2.5 mb-3.5 ${mob?"grid-cols-2":"grid-cols-4"}`}>
+          {[["Employees",data.slips.length],["Employment income",money(data.totals.gross)],
+            ["CPP + EI",money(data.totals.cpp+data.totals.ei)],["Tax deducted",money(data.totals.tax)]].map(([l,v])=>
+            <div key={l} className="bg-bg border border-line rounded-xl p-3">
+              <div className="text-xs text-text-3">{l}</div>
+              <div className="text-base font-bold text-text mt-0.5">{v}</div></div>)}
+        </div>
+        <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:620}}>
+          <thead><tr className="border-b-2 border-line text-left">
+            {["Employee","Box 14 income","Box 16 CPP","Box 18 EI","Box 22 tax",""].map(h=><th key={h} className={TH_CLS}>{h}</th>)}
+          </tr></thead>
+          <tbody>
+            {data.slips.map(s=><tr key={s.employeeId} className="border-b border-line-soft">
+              <td className={`${TD_CLS} text-sm font-medium text-text`}>{s.name}</td>
+              <td className={`${TD_CLS} text-sm`}>{money(s.boxes[14])}</td>
+              <td className={`${TD_CLS} text-sm text-text-2`}>{money(s.boxes[16])}</td>
+              <td className={`${TD_CLS} text-sm text-text-2`}>{money(s.boxes[18])}</td>
+              <td className={`${TD_CLS} text-sm text-text-2`}>{money(s.boxes[22])}</td>
+              <td className={TD_CLS}>
+                <div className="flex gap-1 justify-end">
+                  <Btn kind="ghost" size="xs" onClick={()=>A.printT4(s,data.employer)}>T4</Btn>
+                  {isPayrollMgr&&<Btn kind="ghost" size="xs" onClick={()=>{setRoeFor(s);setRoeReason("A");}}>ROE</Btn>}
+                </div></td>
+            </tr>)}
+            {data.slips.length===0&&<tr><td colSpan={6} className="p-5">
+              <Empty icon="wallet" title={`No paid payroll in ${year}`} body="A T4 is only generated once a payroll run has actually been paid."/></td></tr>}
+          </tbody>
+        </table></div>
+      </>)}
+
+    {roeFor&&<Modal onClose={()=>setRoeFor(null)} title={`Record of Employment — ${roeFor.name}`}>
+      <div className="text-sm text-text-2 mb-4 leading-relaxed">
+        Insurable earnings and hours are read from this employee's paid payroll runs. Pick the reason
+        Service Canada should see, then print the working copy to check the figures before issuing.
+      </div>
+      <Field label="Reason for issuing">
+        <Sel value={roeReason} onChange={e=>setRoeReason(e.target.value)}>
+          {Object.entries(ROE_REASONS).map(([c,l])=><option key={c} value={c}>{c} — {l}</option>)}</Sel>
+      </Field>
+      <div className="flex gap-2.5 justify-end mt-5">
+        <Btn kind="ghost" onClick={()=>setRoeFor(null)}>Cancel</Btn>
+        <Btn kind="primary" icon="download" onClick={async()=>{
+          try{
+            const r=await A.hrRoe(roeFor.employeeId,roeReason);
+            A.printRoe(r.roe,r.employer);
+            setRoeFor(null);
+          }catch(e){setErr(e.message);setRoeFor(null);}
+        }}>Print working copy</Btn>
+      </div>
+    </Modal>}
+  </Card>;
+}
+
 export function HrPayroll(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
@@ -1162,7 +1271,7 @@ export function HrPayroll(){
       <div className="flex justify-between items-center mb-4 flex-wrap gap-2.5">
         <div>
           <div className="text-xl font-bold text-text tracking-tight">Payroll</div>
-          <div className="text-sm text-text-3 mt-0.5">Biweekly runs. CPP/EI/tax estimated at flat statutory rates (not full CRA brackets or credits). Approved expenses flow through automatically.</div>
+          <div className="text-sm text-text-3 mt-0.5">Biweekly runs using real federal and provincial tax brackets, TD1 credits, and CPP/EI annual maximums. Approved expenses flow through automatically.</div>
         </div>
         {isPayrollMgr&&<Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowNew(true)}>Create payroll run</Btn>}
       </div>
@@ -1207,6 +1316,8 @@ export function HrPayroll(){
         </table></div>
       </Card>
     </>}
+
+    <_YearEndSlips A={A} mob={mob} isEmployee={isEmployee} isPayrollMgr={isPayrollMgr}/>
 
     <Card pad={mob?16:20} style={{borderRadius:14}}>
       <div className="flex justify-between items-center flex-wrap gap-3 mb-3">
@@ -1263,7 +1374,7 @@ export function HrPayroll(){
 
     {showNew&&<Modal onClose={()=>setShowNew(false)} title="Create payroll run">
       <div className="flex flex-col gap-3.5">
-        <Banner tone="brand" icon="info">Runs pay for {all.length} active employees. CPP, EI, and tax are estimated at flat statutory rates — not a substitute for real CRA payroll calculation. Approved expenses awaiting reimbursement will be included.</Banner>
+        <Banner tone="brand" icon="info">Runs pay for {all.length} active employees using real federal and provincial brackets, TD1 credits, and CPP/EI annual maximums. Remitting the withheld amounts to CRA is still a separate step. Approved expenses awaiting reimbursement will be included.</Banner>
         <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
           <Field label="Period start" required><Input type="date" value={np.periodStart} onChange={e=>setNp({...np,periodStart:e.target.value})}/></Field>
           <Field label="Period end" required><Input type="date" value={np.periodEnd} onChange={e=>setNp({...np,periodEnd:e.target.value})}/></Field>

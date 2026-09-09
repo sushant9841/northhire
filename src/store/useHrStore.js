@@ -370,7 +370,7 @@ export function useHrStore(){
       <div class="totals"><div><span>Gross pay</span><span>$${line.gross.toLocaleString()}</span></div>
         <div><span>Total deductions</span><span>-$${(line.cpp+line.ei+line.fedTax+line.provTax).toLocaleString()}</span></div>
         <div class="grand"><span>Net pay</span><span>$${line.net.toLocaleString()} CAD</span></div></div>
-      <div style="margin-top:30px;font-size:8.5pt;color:#999">CPP/EI/tax shown are estimated at flat statutory rates, not full CRA brackets and credits — not a substitute for an official T4.</div>
+      <div style="margin-top:30px;font-size:8.5pt;color:#999">CPP, EI and tax are calculated with real federal and provincial brackets, TD1 credits and annual maximums. This is a pay statement, not a T4 — year-end slips are generated separately from Payroll.</div>
       <script>window.onload=()=>setTimeout(()=>window.print(),300);</script>
       </body></html>`;
     const w=window.open("","_blank");
@@ -381,6 +381,86 @@ export function useHrStore(){
       }
       return;
     }
+    w.document.write(html); w.document.close();
+  };
+
+  /* --- Year-end tax slips (T4) and Records of Employment ---
+     Both are computed server-side from the payroll runs actually paid (see helpers/taxSlips.js),
+     so the printed slip can never disagree with the payroll register behind it. These generate a
+     real slip; they do not file anything with CRA or Service Canada, and both printouts say so
+     rather than letting an employer assume filing happened. */
+  const hrTaxSlipYears=()=>api.get("/hr/tax-slips/years").then(r=>r.years).catch(()=>[]);
+  const hrTaxSlips=year=>api.get(`/hr/tax-slips/${year}`);
+  const hrMyTaxSlip=year=>api.get(`/hr/tax-slips/${year}/mine`);
+  const hrRoe=(employeeId,reason="K")=>api.get(`/hr/roe/${employeeId}?reason=${encodeURIComponent(reason)}`);
+
+  const _slipShell=(title,inner)=>`<!DOCTYPE html><html><head><title>${title}</title>
+    <style>body{font-family:Arial,Helvetica,sans-serif;max-width:720px;margin:36px auto;padding:0 30px;color:#111;line-height:1.45}
+      .brand{font-size:18pt;font-weight:700;color:#B45309}.sub{font-size:9pt;color:#888;margin-bottom:22px}
+      h1{font-size:14pt;margin:0 0 10px}
+      .meta{display:flex;justify-content:space-between;gap:24px;margin:16px 0 20px;font-size:10pt;color:#444}
+      table{width:100%;border-collapse:collapse;margin-top:12px}
+      th{text-align:left;font-size:8.5pt;text-transform:uppercase;letter-spacing:.05em;color:#888;border-bottom:2px solid #ddd;padding:7px 0}
+      td{padding:8px 0;border-bottom:1px solid #eee;font-size:11pt}.right{text-align:right}
+      .box{display:inline-block;min-width:34px;font-weight:700;color:#B45309;font-size:9.5pt}
+      .note{margin-top:26px;padding:12px 14px;background:#FDF6E7;border:1px solid #E8D4A3;border-radius:6px;font-size:8.5pt;color:#6b5518;line-height:1.5}
+      @media print{@page{margin:1.4cm}}</style></head><body>${inner}
+    <script>window.onload=()=>setTimeout(()=>window.print(),300);</script></body></html>`;
+
+  const printT4=(slip,employer)=>{
+    if(typeof window==="undefined")return;
+    const esc=s=>String(s??"").replace(/[<>]/g,"");
+    const m=n=>`$${Number(n||0).toLocaleString("en-CA",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+    const rows=[[14,"Employment income",slip.boxes[14]],[16,"Employee's CPP contributions",slip.boxes[16]],
+      [18,"Employee's EI premiums",slip.boxes[18]],[22,"Income tax deducted",slip.boxes[22]],
+      [24,"EI insurable earnings",slip.boxes[24]],[26,"CPP pensionable earnings",slip.boxes[26]]];
+    const html=_slipShell(`T4 ${slip.year} — ${esc(slip.name)}`,`
+      <div class="brand">${esc(employer?.name||"Your company")}</div>
+      <div class="sub">Statement of Remuneration Paid — T4 ${slip.year}</div>
+      <h1>${esc(slip.name)}</h1>
+      <div class="meta">
+        <div>Employer<br><strong>${esc(employer?.name)}</strong>${employer?.businessNumber?`<br>BN ${esc(employer.businessNumber)}`:""}</div>
+        <div style="text-align:right">Tax year<br><strong>${slip.year}</strong><br>${slip.periodsPaid} pay period${slip.periodsPaid===1?"":"s"} paid</div>
+      </div>
+      <table><thead><tr><th>Box</th><th>Description</th><th class="right">Amount</th></tr></thead><tbody>
+        ${rows.map(([b,l,v])=>`<tr><td><span class="box">${b}</span></td><td>${l}</td><td class="right">${m(v)}</td></tr>`).join("")}
+      </tbody></table>
+      <div class="note"><strong>This slip has not been filed.</strong> Amounts are computed from the payroll
+        runs actually paid to this employee in ${slip.year}. Filing the T4 and T4 Summary with the Canada Revenue
+        Agency is a separate step and has not happened. Boxes for CPP2, RPP contributions, union dues and pension
+        adjustments are not shown because this payroll does not track them; if any apply, this slip is incomplete.</div>`);
+    const w=window.open("","_blank");
+    if(!w)return; // pop-up blocked - nothing to fall back to for a formatted slip
+    w.document.write(html); w.document.close();
+  };
+
+  const printRoe=(roe,employer)=>{
+    if(typeof window==="undefined")return;
+    const esc=s=>String(s??"").replace(/[<>]/g,"");
+    const m=n=>`$${Number(n||0).toLocaleString("en-CA",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+    const rows=[["10","First day worked",esc(roe.firstDayWorked)||"—"],["11","Last day for which paid",esc(roe.lastDayPaid)||"—"],
+      ["6","Pay period type",esc(roe.payPeriodType)],["15A","Total insurable hours",roe.insurableHours.toLocaleString()],
+      ["15B","Total insurable earnings",m(roe.insurableEarnings)],["16","Reason for issuing",`${esc(roe.reasonCode)} — ${esc(roe.reasonLabel)}`]];
+    const html=_slipShell(`Record of Employment — ${esc(roe.name)}`,`
+      <div class="brand">${esc(employer?.name||"Your company")}</div>
+      <div class="sub">Record of Employment (working copy)</div>
+      <h1>${esc(roe.name)}</h1>
+      <div class="meta">
+        <div>Employer<br><strong>${esc(employer?.name)}</strong>${employer?.businessNumber?`<br>BN ${esc(employer.businessNumber)}`:""}</div>
+        <div style="text-align:right">Pay periods on record<br><strong>${roe.periods}</strong></div>
+      </div>
+      <table><thead><tr><th>Block</th><th>Description</th><th class="right">Value</th></tr></thead><tbody>
+        ${rows.map(([b,l,v])=>`<tr><td><span class="box">${b}</span></td><td>${l}</td><td class="right">${v}</td></tr>`).join("")}
+      </tbody></table>
+      <div class="note"><strong>This is a working copy, not a submitted ROE.</strong> Service Canada requires the
+        ROE to be issued through ROE Web or on their own form; this sheet exists so the figures can be checked
+        before that. ${roe.hoursWereAssumed
+          ? `<br><br><strong>Insurable hours are partly assumed.</strong> ${roe.assumedHours.toLocaleString()} of the
+             ${roe.insurableHours.toLocaleString()} hours shown were derived from a standard 40-hour week because this
+             employee is salaried and no hours were recorded. Confirm the real figure before issuing.`
+          : ""}</div>`);
+    const w=window.open("","_blank");
+    if(!w)return; // pop-up blocked - nothing to fall back to for a formatted slip
     w.document.write(html); w.document.close();
   };
 
@@ -527,6 +607,7 @@ export function useHrStore(){
     addTask,updateTaskStatus,deleteTask,addEvent,deleteEvent,
     addInvoice,markInvoicePaid,sendInvoice,printHrInvoice,reverseInvoice,
     myPayslips,printPayslip,
+    hrTaxSlipYears,hrTaxSlips,hrMyTaxSlip,hrRoe,printT4,printRoe,
     hrDeptsAtCompany,addDepartment,updateDepartment,removeDepartment,
     empExpenses,companyExpenses,submitExpense,decideExpense,payExpense,
     runPayroll,approvePayroll,executePayroll,reversePayroll,
