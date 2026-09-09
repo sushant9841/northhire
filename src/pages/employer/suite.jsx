@@ -6,9 +6,10 @@ import { C, SH } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
 import {
   Page, H1, H2, Btn, Banner, Stat, Card, Empty, Tag, Bar, Modal, Area, Field, Input, Sel,
-  RichText, Switch, DatePicker, Ring, Tabs, Lbl, SmartPortrait, SmartScene, SmartLogo, Mark, MARKS, ConfirmDialog,
+  RichText, Switch, CheckRow, DatePicker, Ring, Tabs, Lbl, SmartPortrait, SmartScene, SmartLogo, Mark, MARKS, ConfirmDialog,
   usePagination, Pagination, HERO_WIDE,
 } from "../../design/primitives.jsx";
+import { postingRules, checkPayRange, findCanadianExperience, applicationDecisionNotice, AI_DISCLOSURE_TEXT } from "../../helpers/jobPostingLaw.js";
 import { pay, payShort, dlText, money, uid, matchesQuery } from "../../helpers/utils.js";
 import { sanitizeHtml } from "../../helpers/sanitize.js";
 import { STAGES, PROVS, PCODE, CATS, CATM } from "../../store/seed/constants.js";
@@ -127,6 +128,9 @@ const _defaultJobPostData=()=>({t:"",cat:"trades",type:"Full Time",mode:"On-site
     vac:1,exp:"Entry level welcome",yearsExp:0,edu:"No formal education required",
     dlDate:"", /* absolute date, replaces days */
     perks:[],duties:"",reqs:"",how:"",urgent:false,featured:false,
+    /* Ontario Bill 149 disclosures. aiScreening starts true because this platform really does
+       auto-score every applicant - turning it off is the claim that needs a deliberate act. */
+    aiScreening:true,vacancyConfirmed:false,
     questions:[]});
 const _loadJobPostDraft=()=>{try{return JSON.parse(sessionStorage.getItem(JOBPOST_DRAFT_KEY)||"null");}catch{return null;}};
 
@@ -151,12 +155,21 @@ export function EmpPost(){
       duties:p.duties||s.duties.join("\n"),
       reqs:p.reqs||s.reqs.join("\n")}));};
 
+  /* Which posting laws bind this listing, decided by where the WORK is (that's what "advertised
+     in Ontario/BC" turns on), falling back to the company's own province before a location is
+     picked. See helpers/jobPostingLaw.js - the server re-checks all of this on publish. */
+  const lawRules=postingRules({prov:PCODE[f.prov]||A.company?.prov,employerSize:A.company?.size});
+
   const validate=()=>{const e={};
     if(step===1){
       if(!f.t.trim())e.t="Job title is required";
       const descTxt=(f.desc||"").replace(/<[^>]+>/g,"").trim();
       if(descTxt.length<40)e.desc="Give at least a couple of sentences";
       if(f.mustHave.length===0)e.mustHave="Add at least one must-have skill";
+      if(lawRules.noCanadianExperience){
+        const hit=findCanadianExperience([f.t,f.desc,f.duties,f.reqs]);
+        if(hit)e.desc=`Ontario's Bill 149 prohibits requiring Canadian experience — remove "${hit}".`;
+      }
     }
     if(step===2){
       if(!f.location.trim())e.location="Choose a location";
@@ -175,6 +188,15 @@ export function EmpPost(){
         else if(Number(f.fixed)<minV||Number(f.fixed)>maxV)e.fixed=`Enter a realistic amount ($${minV.toLocaleString()}–$${maxV.toLocaleString()})`;
       }
       if(!f.dlDate)e.dlDate="Choose a closing date";
+      if(f.payType==="range"&&f.lo&&f.hi&&!e.lo&&!e.hi){
+        const rangeErr=checkPayRange({lo:f.lo,hi:f.hi,unit:f.payPeriod,rules:lawRules});
+        if(rangeErr)e.hi=rangeErr;
+      }
+      if(lawRules.vacancyConfirm&&!f.vacancyConfirmed)e.vacancyConfirmed="Confirm this is a real, currently open vacancy";
+      if(lawRules.noCanadianExperience){
+        const hit=findCanadianExperience([f.how,...(f.questions||[]).map(q=>q.prompt)]);
+        if(hit)e.how=`Ontario's Bill 149 prohibits requiring Canadian experience — remove "${hit}".`;
+      }
     }
     setErr(e); return !Object.keys(e).length;};
 
@@ -194,7 +216,8 @@ export function EmpPost(){
       unit:f.payPeriod,
       perks:(f.perks||[]).join(","),
       dl:f.dlDate?Math.max(1,Math.ceil((new Date(f.dlDate)-new Date())/(1000*60*60*24))):14,
-      featured:f.featured};
+      featured:f.featured,
+      aiScreening:f.aiScreening,vacancyConfirmed:f.vacancyConfirmed};
     setPosting(true);
     const r=await A.publishJob(payload);
     setPosting(false);
@@ -334,6 +357,35 @@ export function EmpPost(){
           <QuestionBuilder value={f.questions} onChange={v=>set("questions",v)}/>
         </div>
 
+        {(lawRules.aiDisclosure||lawRules.vacancyConfirm)&&
+          <div className="rounded-xl border border-warn-ln bg-warn-bg p-4 mt-1.5">
+            <div className="flex items-start gap-2.5 mb-3">
+              <I n="alert" s={17} c={C.warn}/>
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-text">Required disclosures for this posting</div>
+                <div className="text-xs text-text-2 mt-1 leading-relaxed">
+                  Ontario's Bill 149 has applied to publicly advertised postings by employers with 25+ employees
+                  since 1 January 2026. These appear on the listing candidates see.</div>
+              </div>
+            </div>
+            <div className="flex items-center justify-between gap-3.5 py-3 border-t border-warn-ln">
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-text">AI is used to screen applicants</div>
+                <div className="text-xs text-text-2 mt-0.5 leading-snug">
+                  NorthHire automatically scores every applicant against your must-have skills and ranks your
+                  pipeline by that score, so this normally stays on. Turn it off only if you ignore the ranking
+                  entirely and review every application yourself.</div>
+              </div>
+              <Switch on={f.aiScreening} onChange={v=>set("aiScreening",v)}/>
+            </div>
+            <div className="pt-3 border-t border-warn-ln">
+              <CheckRow on={f.vacancyConfirmed} onChange={v=>set("vacancyConfirmed",v)}
+                label="This posting is for an existing, currently open vacancy"
+                sub="Bill 149 prohibits advertising a role you aren't actually hiring for."/>
+              {err.vacancyConfirmed&&<div className="text-xs font-semibold text-red mt-1.5">{err.vacancyConfirmed}</div>}
+            </div>
+          </div>}
+
         <div className="flex items-center justify-between gap-3.5 py-3.5 border-t border-line-soft mt-2">
           <div><div className="text-sm font-semibold text-text">Mark as urgent hire</div>
             <div className="text-xs text-text-2 mt-0.5">Adds an "Urgent" badge candidates see on the listing.</div></div>
@@ -382,6 +434,10 @@ export function EmpPost(){
             <div className="text-xs font-semibold text-text mb-1.5">Application questions ({f.questions.length})</div>
             <div className="text-xs text-text-2 leading-snug">{f.questions.map(q=>q.prompt||"(empty)").join(" • ")}</div>
           </div>}
+          {(lawRules.aiDisclosure&&f.aiScreening)&&<div className="mt-3.5 p-3 bg-white border border-line rounded-lg">
+            <div className="text-xs font-semibold text-text mb-1">Required disclosure shown to candidates</div>
+            <div className="text-xs text-text-2 leading-snug">{AI_DISCLOSURE_TEXT}</div>
+          </div>}
         </div>
         <Banner tone="brand" icon="sparkle" title="Scoring is automatic">
           Every applicant is scored out of 100 against your must-have skills and experience. Your pipeline shows the best fit first, ranked by the system.</Banner>
@@ -400,7 +456,7 @@ export function EmpPost(){
    buttons (kept as the accessible, no-pointer-required path - drag is an addition, not a
    replacement). A PointerSensor activation distance stops an ordinary click-to-open-candidate
    from being swallowed as an accidental drag. ─── */
-function _PipelineCard({a,u,s,idx,selected,tog,A}){
+function _PipelineCard({a,u,s,idx,selected,tog,A,notice}){
   const {attributes,listeners,setNodeRef,transform,isDragging}=useDraggable({id:a.id});
   const style=transform?{transform:`translate3d(${transform.x}px,${transform.y}px,0)`,zIndex:50,opacity:0.9}:undefined;
   return <div ref={setNodeRef} style={{...style,border:`${selected?2:1}px solid ${selected?C.brand:C.line}`,padding:selected?12:13}}
@@ -420,6 +476,13 @@ function _PipelineCard({a,u,s,idx,selected,tog,A}){
         <div className="text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap">{u.name}</div>
         <div className="text-xs text-text-3 mt-px">{u.years} yrs • {u.city}</div></div>
       <Ring v={s} size={32}/></div>
+    {/* Ontario Bill 149: an interviewed applicant has to be told the outcome within 45 days. */}
+    {notice&&!notice.decided&&(notice.overdue||notice.daysLeft<=14)&&
+      <div className={`flex gap-1.5 items-center rounded-lg py-1.5 px-2 mb-2 text-xs font-semibold ${notice.overdue?"bg-red-bg text-red":"bg-warn-bg text-warn"}`}>
+        <I n="clock" s={12}/>
+        <span>{notice.overdue
+          ? `Decision notice ${Math.abs(notice.daysLeft)}d overdue`
+          : `Decision notice due in ${notice.daysLeft}d`}</span></div>}
     <div data-nc className="flex gap-1.5" onClick={e=>e.stopPropagation()}>
       {idx>0&&<Btn kind="ghost" size="xs" icon="arrowL" title="Move back" onClick={()=>A.moveApp(a.id,STAGES[idx-1])} style={{flex:1}}/>}
       {idx<STAGES.length-1&&<Btn kind="outline" size="xs" iconR="arrowR" onClick={()=>A.moveApp(a.id,STAGES[idx+1])} style={{flex:2}}>Advance</Btn>}</div>
@@ -436,7 +499,8 @@ function _PipelineColumn({stage,items,job,sel,tog,selectStage,A,mob}){
         {items.length>0&&A.can("bulkActions")&&<button onClick={()=>selectStage(stage)} className="bg-transparent border-0 text-xs font-semibold cursor-pointer" style={{color:allSelected?C.brand:C.text3}}>{allSelected?"clear":"all"}</button>}
         <span className="bg-wash text-brand border border-line-2 text-xs font-bold rounded-full flex items-center justify-center px-1.5" style={{minWidth:22,height:22}}>{items.length}</span></div></div>
     {items.map(a=>{const u=A.person(a.user); const s=A.scoreCandidate(u,job); const idx=STAGES.indexOf(stage);
-      return <_PipelineCard key={a.id} a={a} u={u} s={s} idx={idx} selected={sel.has(a.id)} tog={tog} A={A}/>;})}
+      const notice=applicationDecisionNotice(a,postingRules({prov:job?.prov,employerSize:A.company?.size}));
+      return <_PipelineCard key={a.id} a={a} u={u} s={s} idx={idx} selected={sel.has(a.id)} tog={tog} A={A} notice={notice}/>;})}
     {items.length===0&&<div className="rounded-2xl text-center text-xs text-text-3 py-6 px-3" style={{border:`1.5px dashed ${C.line}`}}>Empty</div>}
   </div>;
 }

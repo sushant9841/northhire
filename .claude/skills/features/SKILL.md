@@ -18,3 +18,16 @@ Every audit of this app — full-codebase or single-module — should sort findi
 - Findings should be concrete and file/line-anchored where possible, not vague ("the pipeline page could be better" is useless; "EmpPipeline's bulk-move menu has no keyboard escape and no click-outside-to-close" is actionable).
 - Don't fix while auditing unless the fix is trivial and the user asked for that — an audit is a report first; let the user prioritize across buckets before you start changing code. Bucket 1 findings are the exception worth flagging immediately even mid-audit if they're severe (e.g. data loss).
 - Cross-reference: a "missing feature" (bucket 3) is not automatically higher priority than a "looks functional but isn't" bug (bucket 1) in the same area — a broken existing flow usually outranks an absent new one.
+
+## Legal/regulatory compliance cross-check
+
+NorthHire also has a **Canada Compliance Register** (published Artifact, see [project_compliance_register](project_compliance_register.md) for the URL and full discipline) tracking every Canadian licence, registration, and law touching the business and the product — separate from this 4-bucket feature framework, but overlapping it whenever a feature IS the compliance requirement (job-posting law, payroll, privacy, staffing-agency licensing surfaces).
+
+Before/after building anything in these areas, check the Register for a matching row and keep it current:
+- **Job-posting/hiring features** (pay-range fields, AI-screening disclosure, background checks, screening questions) — Ontario's Bill 149 (in force Jan 1, 2026) and BC's Pay Transparency Act bind here.
+- **Payroll/tax features** — GST/HST calculation, T4/CRA remittance, SIN handling.
+- **Privacy-touching features** — anything collecting/storing PII, especially SIN, background-check results, or Quebec-resident data (Law 25).
+- **Staffing-agency-facing features** — licence-number/expiry fields for Ontario/Quebec/BC/Alberta/Manitoba/Nova Scotia agency licensing.
+- **Marketing/locale features** — Quebec's Bill 96 French-website requirement (deadline already passed).
+
+Updating the Register itself follows a stricter rule than the Fix Tracker: **never self-mark an item Done** by editing the seed data. The register's own UI only lets a viewer toggle Not-started/In-progress directly; anything with a real certificate/licence/registration number behind it requires an evidence submission (reference number, issuing authority, dates) which sets status to "Submitted — pending review," and only a status written directly to the `db` store from outside the page (i.e., by Claude, after actually reviewing what was submitted) can set "Done." When a code change fully closes a **product-feature** row (e.g., Bill 149's six sub-requirements all shipped), that specific row can be flipped to done directly since it's verifiable from the code itself — but rows describing NorthHire Inc.'s own business/legal paperwork (incorporation, GST/HST registration, insurance, agency licences) must go through the evidence-submission + review path, never be marked done from a code change alone.

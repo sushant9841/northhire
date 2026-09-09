@@ -104,6 +104,11 @@ CREATE TABLE IF NOT EXISTS jobs (
   skills_json TEXT DEFAULT '[]', perks_json TEXT DEFAULT '[]',
   description TEXT, duties_json TEXT DEFAULT '[]', requirements_json TEXT DEFAULT '[]', how_to_apply TEXT,
   screening_questions_json TEXT DEFAULT '[]',
+  /* Ontario Bill 149 posting disclosures (in force 2026-01-01). ai_screening defaults to 1
+     because this platform genuinely does auto-score every applicant against the posting - a
+     posting that didn't disclose it would be the inaccurate state, not the safe one. */
+  ai_screening INTEGER DEFAULT 1,
+  vacancy_confirmed INTEGER DEFAULT 0,
   status TEXT NOT NULL DEFAULT 'live' CHECK(status IN ('live','paused','review','closed')),
   flagged INTEGER DEFAULT 0,
   hiring_type TEXT NOT NULL DEFAULT 'direct' CHECK(hiring_type IN ('direct','agency-contract','agency-perm')),

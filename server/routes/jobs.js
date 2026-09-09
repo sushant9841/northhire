@@ -4,8 +4,39 @@ import { requireAuth, requireRole, requireAdminScope, hasAdminScope } from "../a
 import { serializeJob } from "../serialize.js";
 import { getConfig } from "../platformConfig.js";
 import { geocode } from "../geocode.js";
+import { postingRules, checkPayRange, findCanadianExperience } from "../../src/helpers/jobPostingLaw.js";
 
 export const jobsRouter = Router();
+
+/* Ontario Bill 149 / BC Pay Transparency Act enforcement. The post wizard validates the same
+   rules for a good error experience, but this is the boundary that actually holds - a direct API
+   call would otherwise publish a posting that breaks a currently-in-force law. Returns an error
+   string, or null when the posting is clean. */
+function checkPostingLaw(b, employer) {
+  const rules = postingRules({ prov: b.prov || employer?.prov, employerSize: employer?.size });
+  if (!rules.payRequired && !rules.rangeCap && !rules.noCanadianExperience) return null;
+
+  if (rules.payRequired && !(Number(b.lo) > 0) && !(Number(b.hi) > 0)) {
+    return rules.bcPayTransparency
+      ? "British Columbia's Pay Transparency Act requires every publicly advertised posting to state an expected salary or pay range."
+      : "Ontario's Bill 149 requires a publicly advertised posting to state the expected compensation or range.";
+  }
+  const rangeErr = checkPayRange({ lo: b.lo, hi: b.hi, unit: b.unit, rules });
+  if (rangeErr) return rangeErr;
+
+  if (rules.noCanadianExperience) {
+    const hit = findCanadianExperience([
+      b.title, b.desc, b.how,
+      ...(b.duties || []), ...(b.reqs || []),
+      ...(b.questions || []).map(q => q && q.prompt),
+    ]);
+    if (hit) return `Ontario's Bill 149 prohibits requiring Canadian experience in a job posting or its application form. Remove "${hit}".`;
+  }
+  if (rules.vacancyConfirm && !b.vacancyConfirmed) {
+    return "Ontario's Bill 149 requires confirming this posting is for an existing, currently open vacancy.";
+  }
+  return null;
+}
 
 // The UI already gates job-count/featured quotas and CSV-import against the employer's plan, but
 // nothing stopped calling the API directly to bypass that check entirely - these mirror the same
@@ -103,6 +134,9 @@ jobsRouter.post("/", requireAuth, requireRole("employer"), async (req, res) => {
   // account owner signs off - independent of admin's own platform-moderation status above, which
   // is a different gate for a different reason.
   const needsOwnerApproval = req.user.employer_role === "member";
+  const employer = db.prepare("SELECT prov, size FROM employers WHERE id = ?").get(req.user.employer_id);
+  const lawErr = checkPostingLaw(b, employer);
+  if (lawErr) return res.status(400).json({ error: lawErr });
   const id = nextId("j", "jobs");
   // Free OSM geocoding (server/geocode.js) so the listing carries real coordinates for radius
   // search/map view - best-effort, never blocks posting a job if the lookup fails or times out.
@@ -110,8 +144,9 @@ jobsRouter.post("/", requireAuth, requireRole("employer"), async (req, res) => {
   db.prepare(
     `INSERT INTO jobs (id, employer_id, title, cat, city, prov, lat, lng, type, mode, pay_lo, pay_hi, pay_unit,
        vacancies, experience, education, deadline_date, urgent, featured, skills_json, perks_json,
-       description, duties_json, requirements_json, how_to_apply, screening_questions_json, status, pending_owner_approval)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+       description, duties_json, requirements_json, how_to_apply, screening_questions_json,
+       ai_screening, vacancy_confirmed, status, pending_owner_approval)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
   ).run(
     id, req.user.employer_id, b.title, b.cat || null, b.city || null, b.prov || null, geo?.lat ?? null, geo?.lng ?? null,
     b.type || null, b.mode || null,
@@ -122,6 +157,7 @@ jobsRouter.post("/", requireAuth, requireRole("employer"), async (req, res) => {
     // keep only the fields the applicant-facing form actually needs, capped at a sane count.
     JSON.stringify((b.questions || []).filter(q => q && q.prompt && q.prompt.trim()).slice(0, 10)
       .map(q => ({ id: q.id, type: q.type, prompt: q.prompt.trim(), required: !!q.required, options: Array.isArray(q.options) ? q.options : [] }))),
+    b.aiScreening === false ? 0 : 1, b.vacancyConfirmed ? 1 : 0,
     initialStatus, needsOwnerApproval ? 1 : 0
   );
   const row = db.prepare("SELECT * FROM jobs WHERE id = ?").get(id);

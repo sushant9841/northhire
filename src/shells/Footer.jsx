@@ -47,6 +47,10 @@ export function Footer(){
           <button onClick={()=>A.go("accessibility")} className="bg-transparent border-0 p-0 cursor-pointer text-sm text-white/40 transition-colors duration-150 hover:text-white">Accessibility (AODA)</button>
           <button onClick={()=>A.go("pipeda")} className="bg-transparent border-0 p-0 cursor-pointer text-sm text-white/40 transition-colors duration-150 hover:text-white">PIPEDA compliant</button>
           <button onClick={()=>A.go("credits")} className="bg-transparent border-0 p-0 cursor-pointer text-sm text-white/40 transition-colors duration-150 hover:text-white">Open-source credits</button>
-          <span className="text-sm text-white/40">English (CA)</span></div></div>
+          <span className="text-sm text-white/40">English (CA)</span>
+          <span className="w-px h-4 bg-white/14 hidden sm:inline-block"/>
+          <a href="https://claude.ai/code/artifact/8a33ba65-c63c-4e7c-8785-6ff9f67874b0" target="_blank" rel="noopener noreferrer" className="text-sm text-white/40 transition-colors duration-150 hover:text-white">Fix Tracker ↗</a>
+          <a href="https://claude.ai/code/artifact/12bf8761-350d-4ce4-8aaf-2fabe4d15552" target="_blank" rel="noopener noreferrer" className="text-sm text-white/40 transition-colors duration-150 hover:text-white">Compliance Register ↗</a>
+          </div></div>
     </div></footer>;
 }

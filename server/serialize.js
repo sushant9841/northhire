@@ -66,6 +66,8 @@ export function serializeJob(row) {
     skills: JSON.parse(row.skills_json || "[]"),
     perks: JSON.parse(row.perks_json || "[]"),
     desc: row.description,
+    aiScreening: !!row.ai_screening,
+    vacancyConfirmed: !!row.vacancy_confirmed,
     duties: JSON.parse(row.duties_json || "[]"),
     reqs: JSON.parse(row.requirements_json || "[]"),
     how: row.how_to_apply,

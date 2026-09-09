@@ -1227,6 +1227,9 @@ export function useStore(){
       reqs:f.reqs.split("\n").map(s=>s.trim()).filter(Boolean),
       desc:f.desc.trim(),how:f.how.trim()||"Apply through NorthHire with your resume.",
       questions:f.questions||[],
+      /* Ontario Bill 149 posting disclosures - the server re-validates these against the
+         posting's province and the employer's size before it will accept the listing. */
+      aiScreening:f.aiScreening!==false,vacancyConfirmed:!!f.vacancyConfirmed,
       status:settings.autoApproveJobs?"live":"review"};
     let nj;
     try{

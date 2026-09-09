@@ -6,6 +6,7 @@ import { I } from "../../design/icons.jsx";
 import { Btn, Tag, Ring, Empty, Lbl, Banner, Page, Modal, Field, Area, HERO_TIGHT } from "../../design/primitives.jsx";
 import { pay, payUnit, annual, dlText, money } from "../../helpers/utils.js";
 import { EmpMark, HiringTypeBadge, JobCard } from "./cards.jsx";
+import { AI_DISCLOSURE_TEXT, VACANCY_CONFIRMED_TEXT } from "../../helpers/jobPostingLaw.js";
 
 export function JobDetailPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
@@ -87,6 +88,17 @@ export function JobDetailPage(){
                 <span className="text-ok flex shrink-0"><I n="check" s={16} w={2.4}/></span>
                 <span className="text-sm text-text font-medium">{p}</span></div>)}</div></Sec>
           <Sec title="How to apply"><p className="text-base text-text-2 leading-relaxed">{job.how}</p></Sec>
+          {/* Ontario Bill 149 requires these disclosures to appear on the posting itself, not
+              just be collected from the employer. See helpers/jobPostingLaw.js. */}
+          {(job.aiScreening||job.vacancyConfirmed)&&<Sec title="Transparency">
+            <div className="flex flex-col gap-2.5">
+              {job.aiScreening&&<div className="flex gap-3 items-start bg-bg border border-line rounded-xl py-3.5 px-4">
+                <span className="text-text-3 flex shrink-0 mt-0.5"><I n="sparkle" s={16}/></span>
+                <span className="text-sm text-text-2 leading-relaxed">{AI_DISCLOSURE_TEXT}</span></div>}
+              {job.vacancyConfirmed&&<div className="flex gap-3 items-start bg-bg border border-line rounded-xl py-3.5 px-4">
+                <span className="text-ok flex shrink-0 mt-0.5"><I n="check" s={16} w={2.4}/></span>
+                <span className="text-sm text-text-2 leading-relaxed">{VACANCY_CONFIRMED_TEXT}</span></div>}
+            </div></Sec>}
         </div>
 
         {!mob&&<div className="sticky top-20 flex flex-col gap-4">
