@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, nextId, sqlTime } from "../db.js";
 import { requireAuth, requireRole } from "../auth.js";
 import { serializeApplication } from "../serialize.js";
+import { emitWebhook } from "../webhooks.js";
 
 export const applicationsRouter = Router();
 
@@ -117,6 +118,9 @@ applicationsRouter.post("/", requireAuth, requireRole("seeker"), (req, res) => {
 
   const row = db.prepare("SELECT * FROM applications WHERE id = ?").get(id);
   res.status(201).json({ application: serializeApplication(row) });
+  // Fired after the response so a customer webhook endpoint can never make an applicant wait.
+  const ownerJob = db.prepare("SELECT employer_id FROM jobs WHERE id = ?").get(jobId);
+  if (ownerJob) emitWebhook(ownerJob.employer_id, "application.created", serializeApplication(row));
 });
 
 const STAGE_NOTE = {
@@ -126,15 +130,34 @@ const STAGE_NOTE = {
   Offer: "Offer extended — check your notifications",
   Hired: "Welcome to the team! Onboarding details coming.",
 };
-const MOVABLE_STAGES = Object.keys(STAGE_NOTE);
+const DEFAULT_STAGES = ["Applied", "Reviewed", "Shortlisted", "Interview", "Offer", "Hired"];
+
+/* Which stages this employer's board actually has. Validating against a hardcoded list broke the
+   moment custom pipeline stages shipped: the board rendered a custom column but the move into it
+   was rejected as "Invalid stage". The stage still has to be one the employer configured — an
+   arbitrary caller-supplied string would let anyone write any value into the column that drives
+   the seeker's status page and the analytics roll-ups. */
+function stagesForEmployer(employerId) {
+  const row = db.prepare("SELECT pipeline_stages_json FROM employers WHERE id = ?").get(employerId);
+  if (!row?.pipeline_stages_json) return DEFAULT_STAGES;
+  try {
+    const parsed = JSON.parse(row.pipeline_stages_json);
+    return Array.isArray(parsed) && parsed.length ? parsed : DEFAULT_STAGES;
+  } catch { return DEFAULT_STAGES; }
+}
 
 applicationsRouter.patch("/:id/stage", requireAuth, requireRole("employer"), (req, res) => {
   const { stage } = req.body || {};
-  if (!MOVABLE_STAGES.includes(stage)) return res.status(400).json({ error: "Invalid stage." });
   const app = loadOwnedApplication(req.params.id, req, res, "employer");
   if (!app) return;
+  const allowed = stagesForEmployer(req.user.employer_id);
+  if (typeof stage !== "string" || !allowed.includes(stage)) {
+    return res.status(400).json({ error: `Not a stage on this pipeline. Configured stages: ${allowed.join(", ")}.` });
+  }
 
-  const note = STAGE_NOTE[stage];
+  // A custom stage has no pre-written candidate-facing note, so it gets a plain factual one
+  // rather than borrowing the wording of whichever default stage it sits near.
+  const note = STAGE_NOTE[stage] || `Moved to ${stage}`;
   const history = appendHistory(app, stage, note);
   db.prepare("UPDATE applications SET stage = ?, note = ?, history_json = ? WHERE id = ?").run(stage, note, history, req.params.id);
 
@@ -148,6 +171,8 @@ applicationsRouter.patch("/:id/stage", requireAuth, requireRole("employer"), (re
 
   const row = db.prepare("SELECT * FROM applications WHERE id = ?").get(req.params.id);
   res.json({ application: serializeApplication(row) });
+  emitWebhook(req.user.employer_id, "application.stage_changed",
+    { ...serializeApplication(row), previousStage: app.stage });
 });
 
 applicationsRouter.patch("/:id/reject", requireAuth, requireRole("employer"), (req, res) => {

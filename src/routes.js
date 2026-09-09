@@ -23,6 +23,7 @@ export const ROUTES = {
   messages:    {title:"Messages", tab:"alerts", roles:["seeker","employer"], path:"/messages"},
   interviews:  {title:"Interviews", tab:"alerts", roles:["seeker","employer"], path:"/interviews"},
   empAnalytics:{title:"Analytics", tab:"empHome", roles:["employer"], bare:true, root:true, path:"/employer/analytics"},
+  empApi:      {title:"API & webhooks", tab:"empHome", roles:["employer"], bare:true, root:true, path:"/employer/api"},
   alerts:      {title:"Notifications", tab:"status", path:"/notifications"},
   cvs:         {title:"My CVs", tab:"profile", roles:["seeker"], path:"/cvs"},
   cvEdit:      {title:"CV builder", tab:"profile", roles:["seeker"], path:"/cvs/:id/edit"},

@@ -34,6 +34,7 @@ export const EMP_MODULES=[
   {k:"empCompany",label:"Company profile",icon:"building",section:"account"},
   {k:"empTeam",label:"Team",icon:"users",section:"account"},
   {k:"empBilling",label:"Billing & plan",icon:"wallet",section:"account"},
+  {k:"empApi",label:"API & webhooks",icon:"externalLink",section:"account",feature:"api"},
   {k:"settings",label:"Settings",icon:"gear",section:"account"},
 ];
 

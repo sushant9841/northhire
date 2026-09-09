@@ -93,6 +93,36 @@ CREATE TABLE IF NOT EXISTS employers (
    previous UI that fabricated 4 fake monthly invoices client-side from nothing but the current
    plan's price. stripe_session_id is UNIQUE so verifying the same checkout session twice (e.g. a
    page refresh right after returning from Stripe) never double-records it. */
+/* Enterprise API access, sold on the pricing page ("API access", "API + Zapier") with nothing
+   behind it. A key is stored only as a hash - the full key is shown once at creation, exactly
+   like the kiosk pairing token, so a leaked screen later can't hand someone working credentials.
+   key_prefix is the visible fragment that lets someone identify which key to revoke. */
+CREATE TABLE IF NOT EXISTS employer_api_keys (
+  id TEXT PRIMARY KEY,
+  employer_id TEXT NOT NULL REFERENCES employers(id),
+  name TEXT NOT NULL,
+  key_hash TEXT NOT NULL, key_salt TEXT NOT NULL,
+  key_prefix TEXT NOT NULL,
+  created_by TEXT,
+  last_used TEXT,
+  revoked INTEGER DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+/* Outbound webhooks so an employer's own systems (or Zapier) learn about events without polling.
+   Each delivery is signed with the endpoint's own secret so the receiver can verify it really
+   came from NorthHire and wasn't replayed. */
+CREATE TABLE IF NOT EXISTS employer_webhooks (
+  id TEXT PRIMARY KEY,
+  employer_id TEXT NOT NULL REFERENCES employers(id),
+  url TEXT NOT NULL,
+  secret TEXT NOT NULL,
+  events_json TEXT DEFAULT '[]',
+  active INTEGER DEFAULT 1,
+  last_status INTEGER, last_error TEXT, last_at TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS employer_invoices (
   id TEXT PRIMARY KEY,
   employer_id TEXT NOT NULL REFERENCES employers(id),

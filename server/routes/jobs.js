@@ -6,6 +6,7 @@ import { getConfig } from "../platformConfig.js";
 import { geocode } from "../geocode.js";
 import { postingRules, checkPayRange, findCanadianExperience } from "../../src/helpers/jobPostingLaw.js";
 import { notifyInstantMatches } from "../jobAlerts.js";
+import { emitWebhook } from "../webhooks.js";
 
 export const jobsRouter = Router();
 
@@ -168,6 +169,7 @@ jobsRouter.post("/", requireAuth, requireRole("employer"), async (req, res) => {
   // payroll run made by awaiting every employee's email before responding).
   if (initialStatus === "live" && !needsOwnerApproval) {
     notifyInstantMatches(id).catch(e => console.warn(`[jobAlerts] ${e.message}`));
+    emitWebhook(req.user.employer_id, "job.published", serializeJob(row));
   }
 });
 
