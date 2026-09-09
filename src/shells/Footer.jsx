@@ -19,7 +19,7 @@ export function Footer(){
       ["Agency staff sign in",()=>A.go("agencyLogin")],
     ]},
     {h:"Explore",links:CATS.slice(0,6).map(c=>[c.label,()=>{A.setSearch({q:"",where:"",cats:[c.id]});A.go("search");}])},
-    {h:"Company",links:[["About us",()=>A.go("about")],["How it works",()=>A.go("howItWorks")],["Contact us",()=>A.go("contact")],["Career resources",()=>A.go("blogs")],["Privacy policy",()=>A.go("privacy")],["Terms of service",()=>A.go("terms")]]},
+    {h:"Company",links:[["About us",()=>A.go("about")],["How it works",()=>A.go("howItWorks")],["Contact us",()=>A.go("contact")],["Career resources",()=>A.go("blogs")],["How matching works",()=>A.go("matchScore")],["Privacy policy",()=>A.go("privacy")],["Terms of service",()=>A.go("terms")]]},
   ];
   return <footer className="bg-ink text-white mt-auto shrink-0">
     <div className={`max-w-site mx-auto ${mob?"pt-9 px-4 pb-6":"pt-13 px-7 pb-8"}`}>

@@ -94,7 +94,9 @@ export function JobDetailPage(){
             <div className="flex flex-col gap-2.5">
               {job.aiScreening&&<div className="flex gap-3 items-start bg-bg border border-line rounded-xl py-3.5 px-4">
                 <span className="text-text-3 flex shrink-0 mt-0.5"><I n="sparkle" s={16}/></span>
-                <span className="text-sm text-text-2 leading-relaxed">{AI_DISCLOSURE_TEXT}</span></div>}
+                <span className="text-sm text-text-2 leading-relaxed">{AI_DISCLOSURE_TEXT}{" "}
+                  <button onClick={()=>A.go("matchScore")} className="bg-transparent border-0 p-0 cursor-pointer text-sm font-semibold text-brand underline">See exactly what it weighs</button>
+                </span></div>}
               {job.vacancyConfirmed&&<div className="flex gap-3 items-start bg-bg border border-line rounded-xl py-3.5 px-4">
                 <span className="text-ok flex shrink-0 mt-0.5"><I n="check" s={16} w={2.4}/></span>
                 <span className="text-sm text-text-2 leading-relaxed">{VACANCY_CONFIRMED_TEXT}</span></div>}
@@ -106,7 +108,8 @@ export function JobDetailPage(){
             {A.user?.role==="seeker"&&<div className="pb-5 mb-5 border-b border-line-soft">
               <div className="flex items-center gap-3.5">
                 <Ring v={score} size={56}/><div><div className="text-sm font-bold text-text">Your match score</div>
-                  <div className="text-sm text-text-2 mt-1">From your skills and preferences</div></div></div>
+                  <div className="text-sm text-text-2 mt-1">From your skills and preferences</div>
+                  <button onClick={()=>A.go("matchScore")} className="bg-transparent border-0 p-0 mt-1 cursor-pointer text-xs font-semibold text-brand underline">How this is calculated</button></div></div>
               {A.matchReasons(job).length>0&&<div className="flex flex-wrap gap-1.5 mt-3.5">
                 {A.matchReasons(job).map(r=><Tag key={r} tone="ok" sm icon="check">{r}</Tag>)}</div>}</div>}
             <Btn kind={applied?"soft":"primary"} size="lg" full disabled={applied} icon={applied?"check":"send"} onClick={apply}>

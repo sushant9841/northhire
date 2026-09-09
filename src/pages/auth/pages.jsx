@@ -386,8 +386,16 @@ export function LoginPage(){
         <button onClick={()=>A.go("signup")} className="bg-transparent border-0 p-0 cursor-pointer font-semibold text-brand">Create account</button>
         <button onClick={()=>A.go("forgot")} className="bg-transparent border-0 p-0 cursor-pointer font-semibold text-brand">Forgot password?</button>
       </div>
+      {/* Working credentials for four real accounts - including a full administrator - used to be
+          printed on the public sign-in page for anyone who loaded it. They stay for local
+          development, where they're genuinely useful, but `import.meta.env.DEV` is statically
+          replaced with `false` at build time, so a production bundle drops this branch AND the
+          credential strings themselves rather than merely hiding them behind a conditional. */}
+      {import.meta.env.DEV&&
       <Card pad={mob?18:20} style={{marginTop:22,borderRadius:16,background:C.tint,border:`1px solid ${C.line2}`}}>
-        <div className="text-xs font-bold text-brand tracking-wide uppercase mb-2.5">Demo accounts</div>
+        <div className="flex items-center gap-2 mb-2.5">
+          <div className="text-xs font-bold text-brand tracking-wide uppercase">Demo accounts</div>
+          <span className="text-xs font-semibold text-warn bg-warn-bg border border-warn-ln rounded px-1.5 py-px">dev only</span></div>
         <div className="flex flex-col gap-1.5">
           {[["sarah.chen@example.ca","Password123","Job seeker — Sarah Chen"],
             ["marcus.b@example.ca","Password123","Job seeker — Marcus (trades)"],
@@ -398,7 +406,7 @@ export function LoginPage(){
                 <span className="text-sm font-semibold text-text">{r}</span>
                 <span className="text-xs text-text-3 mt-0.5 overflow-hidden text-ellipsis whitespace-nowrap">{e}</span></span>
               <span className="text-xs text-brand font-semibold">Sign in →</span></button>)}</div>
-      </Card>
+      </Card>}
     </>)}
   </div>;
 }

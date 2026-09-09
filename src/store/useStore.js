@@ -34,15 +34,18 @@ export function useStore(){
      manages itself - there's no client-readable token to gate on, so the app always starts
      signed-out and the /auth/me effect below fills in `user` once the cookie is checked. */
   const [user,setUser]=useState(null);
-  const DEMO_PASSWORDS={
+  /* Demo-account passwords for the dev sign-in shortcuts. `import.meta.env.DEV` is statically
+     replaced at build time, so a production bundle ships an empty object and the plaintext
+     credentials - including the administrator's - are not present in the shipped JS at all.
+     The server has always been the real authority for credentials; this was only ever a
+     convenience map for local development. */
+  const DEMO_PASSWORDS=import.meta.env.DEV?{
     "sarah.chen@example.ca":"Password123",
     "marcus.b@example.ca":"Password123",
     "priya.r@example.ca":"Password123",
     "hr@pcl.com":"Employer123",
     "admin@northhire.ca":"Admin1234"
-  };
-  /* passwords is just a demo-account hint map for hasAccount()/checkPassword() (see below) - the
-     real authority for credentials is always the server. */
+  }:{};
   const [passwords,setPasswords]=useState(DEMO_PASSWORDS);
   const [employers,setEmployers]=useState(SEED_EMPLOYERS);
   const [jobs,setJobs]=useState(SEED_JOBS);
@@ -513,7 +516,6 @@ export function useStore(){
      "does this email already exist" is the API's signup response (a 409), surfaced via
      submitErr on the signup wizard's final step. */
   const hasAccount=email=>!!passwords[(email||"").toLowerCase().trim()];
-  const checkPassword=(email,pw)=>passwords[(email||"").toLowerCase().trim()]===pw;
   const upsertPassword=(email,pw)=>setPasswords(p=>({...p,[email.toLowerCase().trim()]:pw}));
   const loginWithPassword=async(email,pw)=>{
     try{
@@ -1766,7 +1768,7 @@ export function useStore(){
   };
 
   const A={pg,go,back,pageTitle,homePg,history:stack,user,company,employers,jobs,people,applications,blogs,trainings,cvs,passwords,outbox,savedSearches,messages,interviews,reviews,impersonating,setImpersonating,hireOnboarding,setHireOnboarding,
-    hasAccount,checkPassword,upsertPassword,loginWithPassword,verifyLogin2FA,resetPasswordRequest,resetPasswordConfirm,completeEmployerSignup,
+    hasAccount,upsertPassword,loginWithPassword,verifyLogin2FA,resetPasswordRequest,resetPasswordConfirm,completeEmployerSignup,
     saveSearch,deleteSavedSearch,toggleSearchAlert,updateSavedSearch,editingSavedSearchId,setEditingSavedSearchId,
     salaryInsight,skillsGap,expandQuery,restoreApp,notifyFollowers,
     sendMessage,markMessageRead,scheduleInterview,cancelInterview,bulkMove,bulkReject,reverseMatch,inviteToApply,loadCandidateOutreach,importJobsCSV,employerAnalytics,

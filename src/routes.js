@@ -50,6 +50,7 @@ export const ROUTES = {
   credits:      {title:"Open-source credits", tab:"home", root:false, path:"/credits"},
   /* CASL requires the unsubscribe link in a commercial email to work without signing in. */
   unsubscribe:  {title:"Unsubscribe", tab:"home", root:false, path:"/unsubscribe"},
+  matchScore:   {title:"How the match score works", tab:"home", root:false, path:"/match-score"},
   /* HR Suite routes */
   hrLogin:      {title:"HR Suite login", tab:"home", bare:true, path:"/hr/login"},
   hrDashboard:  {title:"Dashboard", tab:"home", bare:true, path:"/hr/dashboard"},
