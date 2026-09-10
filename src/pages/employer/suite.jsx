@@ -11,7 +11,7 @@ import {
 } from "../../design/primitives.jsx";
 import { hiringSummary } from "../../helpers/hiringAnalytics.js";
 import { postingRules, checkPayRange, findCanadianExperience, applicationDecisionNotice, AI_DISCLOSURE_TEXT } from "../../helpers/jobPostingLaw.js";
-import { pay, payShort, dlText, money, uid, matchesQuery } from "../../helpers/utils.js";
+import { pay, payShort, dlText, money, uid, matchesQuery, matchesBooleanQuery } from "../../helpers/utils.js";
 import { sanitizeHtml } from "../../helpers/sanitize.js";
 import { PROVS, PCODE, CATS, CATM } from "../../store/seed/constants.js";
 import { jobTone, jobStatusLabel } from "../../helpers/statusTone.js";
@@ -523,6 +523,59 @@ function _PipelineBoard({apps,job,sel,tog,selectStage,A,mob,stages}){
   </div>;
 }
 
+/* Per-job scoring weights. Roles genuinely differ — a ticketed trade is almost entirely about
+   certifications, a coordinator role weights experience far more — and until now one fixed
+   formula was applied to every posting. Weights are normalised rather than required to total
+   100, so moving one slider doesn't force rebalancing the other three by hand. */
+function _JobScoring({A,job,mob}){
+  const [open,setOpen]=useState(false);
+  const [w,setW]=useState(()=>job?.scoreWeights||A.DEFAULT_SCORE_WEIGHTS);
+  const [busy,setBusy]=useState(false); const [err,setErr]=useState("");
+  useEffect(()=>{setW(job?.scoreWeights||A.DEFAULT_SCORE_WEIGHTS);},[job?.id,job?.scoreWeights]);
+  if(!job)return null;
+
+  const total=Object.values(w).reduce((s,v)=>s+(Number(v)||0),0)||1;
+  const rows=[["skills","Skills match"],["experience","Experience"],["location","Location fit"],["category","Category fit"]];
+  const dirty=JSON.stringify(w)!==JSON.stringify(job.scoreWeights||A.DEFAULT_SCORE_WEIGHTS);
+
+  return <Card style={{padding:mob?20:24,borderRadius:16,marginBottom:16}}>
+    <div className="flex justify-between items-center gap-3 flex-wrap">
+      <div>
+        <Lbl style={{marginBottom:2}}>How this job is scored</Lbl>
+        <div className="text-xs text-text-2">
+          {job.scoreWeights?"Custom weighting for this posting.":"Using the platform default weighting."}</div>
+      </div>
+      <Btn kind="ghost" size="sm" onClick={()=>setOpen(o=>!o)}>{open?"Hide":"Adjust"}</Btn>
+    </div>
+    {open&&<div className="mt-4 pt-4 border-t border-line-soft">
+      {err&&<Banner tone="danger" icon="alert" style={{marginBottom:12}}>{err}</Banner>}
+      <div className="flex flex-col gap-3">
+        {rows.map(([k,label])=>
+          <div key={k} className="flex items-center gap-3 flex-wrap">
+            <span className="text-sm text-text w-32 shrink-0">{label}</span>
+            <input type="range" min="0" max="100" value={w[k]} className="flex-1 min-w-40 cursor-pointer"
+              aria-label={`${label} weight`}
+              onChange={e=>setW(p=>({...p,[k]:Number(e.target.value)}))}/>
+            <span className="text-sm font-semibold text-text tabular-nums w-14 text-right">
+              {Math.round((Number(w[k])||0)/total*100)}%</span>
+          </div>)}
+      </div>
+      <div className="text-xs text-text-3 mt-3 leading-relaxed">
+        Shown as a share of the total, so these always add to 100% however you set them. Changing
+        this re-scores existing applicants too — the score is computed, not stored.
+      </div>
+      <div className="flex gap-2.5 justify-end mt-4 flex-wrap">
+        {job.scoreWeights&&<Btn kind="ghost" size="sm" onClick={async()=>{
+          setBusy(true);const r=await A.saveScoreWeights(job.id,null);setBusy(false);if(!r.ok)setErr(r.msg);
+        }} disabled={busy}>Reset to default</Btn>}
+        <Btn kind="primary" size="sm" disabled={busy||!dirty} onClick={async()=>{
+          setErr("");setBusy(true);const r=await A.saveScoreWeights(job.id,w);setBusy(false);if(!r.ok)setErr(r.msg);
+        }}>{busy?"Saving…":"Save scoring"}</Btn>
+      </div>
+    </div>}
+  </Card>;
+}
+
 export function EmpPipeline(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const myJobs=A.jobs.filter(j=>j.e===A.company.id);
@@ -554,7 +607,7 @@ export function EmpPipeline(){
   const apps=rawApps.filter(a=>{const u=A.person(a.user);const s=A.scoreCandidate(u,job);
     if(s<f.minScore)return false;
     if(f.prov&&u.prov!==PCODE[f.prov])return false;
-    if(f.q&&!matchesQuery(f.q,u.name,u.title,u.city,(u.skills||[]).join(" ")))return false;
+    if(f.q&&!matchesBooleanQuery(f.q,u.name,u.title,u.city,(u.skills||[]).join(" ")))return false;
     return true;});
 
   const tog=id=>{const n=new Set(sel);n.has(id)?n.delete(id):n.add(id);setSel(n);};
@@ -576,7 +629,7 @@ export function EmpPipeline(){
   const viewOutreach=async(p)=>{setViewingOutreach(p); setOutreachEvents(await A.loadCandidateOutreach(p.id));};
   const outreachIcon={invite:"send",message:"mail",note:"edit"};
   const reverseCandidates=A.reverseMatch(jobId,talentMinScore)
-    .filter(({p})=>!talentQ||matchesQuery(talentQ,p.name,p.title,p.city,(p.skills||[]).join(" ")));
+    .filter(({p})=>!talentQ||matchesBooleanQuery(talentQ,p.name,p.title,p.city,(p.skills||[]).join(" ")));
   const talentPg=usePagination(reverseCandidates,12);
   useEffect(()=>{talentPg.setPage(1);},[talentMinScore,talentQ]);
 
@@ -594,6 +647,7 @@ export function EmpPipeline(){
     </div>
 
     {tab==="filters"&&<div className={`${mob?"p-4":"p-6"} max-w-site mx-auto w-full`}>
+      <_JobScoring A={A} job={job} mob={mob}/>
       <Card style={{padding:mob?20:24,borderRadius:16}}>
         <Lbl>Filter this pipeline</Lbl>
         <div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-3"}`}>
@@ -602,7 +656,8 @@ export function EmpPipeline(){
               {[0,50,60,70,75,80,85].map(v=><option key={v} value={v}>{v?`${v}+`:"Any"}</option>)}</Sel></Field>
           <Field label="Province"><Sel value={f.prov} onChange={e=>setF({...f,prov:e.target.value})}>
             <option value="">All provinces</option>{PROVS.map(p=><option key={p}>{p}</option>)}</Sel></Field>
-          <Field label="Search"><Input icon="search" value={f.q} onChange={e=>setF({...f,q:e.target.value})} placeholder="Name, title, city or skill"/></Field>
+          <Field label="Search" hint={`Supports AND, OR, NOT, "quoted phrases" and brackets — e.g. (welding OR fabrication) NOT apprentice`}>
+            <Input icon="search" value={f.q} onChange={e=>setF({...f,q:e.target.value})} placeholder='e.g. "red seal" AND calgary'/></Field>
         </div>
         <div className="mt-4 flex gap-2.5 items-center flex-wrap">
           <Btn kind="primary" onClick={()=>setTab("pipeline")}>Show {apps.length} candidate{apps.length===1?"":"s"}</Btn>

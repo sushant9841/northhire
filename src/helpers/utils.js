@@ -15,8 +15,56 @@ export const nowStamp=()=>{const d=new Date();return d.toLocaleTimeString("en-CA
 /* Multi-word-tolerant text search: every word in the query must appear somewhere across the
    given text fields, in any order - a plain single .includes() call fails on word order or
    extra whitespace ("electrician red seal" wouldn't match "Red Seal Electrician"). */
+/* Every word must appear somewhere, in any order — so "seal red" still finds "Red Seal". */
 export const matchesQuery=(query,...fields)=>{
   const q=query.trim().toLowerCase(); if(!q)return true;
   const haystack=fields.join(" ").toLowerCase();
   return q.split(/\s+/).every(word=>haystack.includes(word));
 };
+
+/* Boolean candidate search, for the case the plain matcher can't express: finding someone who has
+   welding OR fabrication experience but is NOT an apprentice. Supports quoted phrases, AND/OR
+   (AND implied), NOT / leading -, and parentheses.
+
+   Deliberately a small recursive-descent parser rather than a regex pile: precedence between AND
+   and OR is the entire point, and regexes can't express it. An unparseable query falls back to
+   plain word matching instead of returning nothing, because a recruiter mid-typing shouldn't
+   watch their result list empty out. */
+export function matchesBooleanQuery(query,...fields){
+  const raw=String(query||"").trim(); if(!raw)return true;
+  const haystack=fields.join(" ").toLowerCase();
+  try{
+    // A bare \S+ would swallow the closing paren into the word before it ("fabrication)"),
+    // silently breaking every grouped query - so a word is explicitly "not whitespace or parens".
+    const tokens=raw.toLowerCase().match(/"[^"]*"|\(|\)|[^\s()]+/g)||[];
+    let i=0;
+    const peek=()=>tokens[i];
+    const term=()=>{
+      let t=peek();
+      if(t==="("){i++;const v=orExpr();if(peek()===")")i++;return v;}
+      if(t==="not"){i++;return !term();}
+      if(t?.startsWith("-")&&t.length>1){i++;return !haystack.includes(t.slice(1));}
+      i++;
+      if(t===undefined)return true;
+      return haystack.includes(t.replace(/^"|"$/g,""));
+    };
+    const andExpr=()=>{
+      let v=term();
+      while(peek()&&peek()!==")"&&peek()!=="or"){
+        if(peek()==="and")i++;
+        if(!peek()||peek()===")")break;
+        const r=term(); v=v&&r;
+      }
+      return v;
+    };
+    const orExpr=()=>{
+      let v=andExpr();
+      while(peek()==="or"){i++;const r=andExpr();v=v||r;}
+      return v;
+    };
+    const result=orExpr();
+    return typeof result==="boolean"?result:matchesQuery(raw,...fields);
+  }catch{
+    return matchesQuery(raw,...fields);
+  }
+}

@@ -179,7 +179,29 @@ jobsRouter.patch("/:id", requireAuth, requireRole("employer", "admin"), (req, re
   const isAdmin = req.user.role === "admin";
   if (!isAdmin && job.employer_id !== req.user.employer_id) return res.status(403).json({ error: "Not your listing." });
 
-  const { status, flagged, approve } = req.body || {};
+  const { status, flagged, approve, scoreWeights } = req.body || {};
+
+  /* Per-job scoring weights, so a ticketed trade can weight certifications heavily while a
+     coordinator role weights experience. Values are clamped and only the four known components
+     are accepted - an arbitrary key would end up multiplied into a candidate's score. */
+  if (scoreWeights !== undefined) {
+    if (isAdmin) return res.status(403).json({ error: "Scoring is the employer's to configure, not an administrator's." });
+    if (scoreWeights === null) {
+      db.prepare("UPDATE jobs SET score_weights_json = NULL WHERE id = ?").run(req.params.id);
+    } else {
+      const keys = ["skills", "experience", "location", "category"];
+      const clean = {};
+      for (const k of keys) {
+        const v = Number(scoreWeights[k]);
+        if (!Number.isFinite(v) || v < 0 || v > 100) return res.status(400).json({ error: `Each weight must be between 0 and 100 (${k}).` });
+        clean[k] = Math.round(v);
+      }
+      if (Object.values(clean).reduce((s, v) => s + v, 0) <= 0) {
+        return res.status(400).json({ error: "At least one component has to carry some weight." });
+      }
+      db.prepare("UPDATE jobs SET score_weights_json = ? WHERE id = ?").run(JSON.stringify(clean), req.params.id);
+    }
+  }
   if (status !== undefined) {
     if (!["live", "paused", "review", "closed"].includes(status)) return res.status(400).json({ error: "Invalid status." });
     if (isAdmin && !hasAdminScope(req.user, "moderator")) return res.status(403).json({ error: "This admin account doesn't have access to listing moderation." });

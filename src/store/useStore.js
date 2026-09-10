@@ -436,6 +436,19 @@ export function useStore(){
   };
 
   /* --- matching --- */
+  /* The platform default weighting. A job may override it (jobs.scoreWeights) because roles
+     genuinely differ — a ticketed trade is almost entirely about certifications, a coordinator
+     role weights experience far more. Weights are normalised rather than required to total 100,
+     so an employer moving one slider doesn't have to rebalance the rest by hand. */
+  const DEFAULT_SCORE_WEIGHTS={skills:54,experience:16,location:14,category:16};
+  const weightsFor=j=>{
+    const w=j?.scoreWeights;
+    if(!w)return DEFAULT_SCORE_WEIGHTS;
+    const merged={...DEFAULT_SCORE_WEIGHTS,...w};
+    const total=Object.values(merged).reduce((s,v)=>s+(Number(v)||0),0);
+    if(total<=0)return DEFAULT_SCORE_WEIGHTS;
+    return Object.fromEntries(Object.entries(merged).map(([k,v])=>[k,(Number(v)||0)/total*100]));
+  };
   const scoreCandidate=(u,j)=>{
     if(!u||!j||!settings.matching)return 70;
     const req=j.skills.map(s=>s.toLowerCase()), has=(u.skills||[]).map(s=>s.toLowerCase());
@@ -445,7 +458,8 @@ export function useStore(){
     const exp=Math.min(1,expYears/8);
     const loc=u.prov===j.prov?1:j.mode==="Remote"?.9:.5;
     const catFit=u.cat===j.cat?1:.6;
-    return Math.max(38,Math.min(99,Math.round(skill*54+exp*16+loc*14+catFit*16)));
+    const w=weightsFor(j);
+    return Math.max(38,Math.min(99,Math.round(skill*w.skills+exp*w.experience+loc*w.location+catFit*w.category)));
   };
   const score=j=>scoreCandidate(user?.role==="seeker"?user:people[1],j);
   /* Employer-side equivalent of the seeker's matchReasons()/skillsGap() breakdown - shows the
@@ -486,6 +500,15 @@ export function useStore(){
     }catch(e){return {ok:false,msg:e.message};}
   };
 
+  const saveScoreWeights=async(jobId,weights)=>{
+    try{
+      const {job:updated}=await api.patch(`/jobs/${jobId}`,{scoreWeights:weights});
+      setJobs(l=>l.map(j=>j.id===jobId?mapApiJob(updated):j));
+      toast("Scoring updated for this job.","ok");
+      return {ok:true};
+    }catch(e){return {ok:false,msg:e.message};}
+  };
+
   const scoreBreakdown=(u,j)=>{
     if(!u||!j)return [];
     const req=j.skills.map(s=>s.toLowerCase()), has=(u.skills||[]).map(s=>s.toLowerCase());
@@ -495,11 +518,12 @@ export function useStore(){
     const exp=Math.min(1,expYears/8);
     const loc=u.prov===j.prov?1:j.mode==="Remote"?.9:.5;
     const catFit=u.cat===j.cat?1:.6;
+    const w=weightsFor(j);
     return [
-      {label:"Skills match",detail:`${overlap} of ${req.length||0} required skills`,weight:54,pct:Math.round(skill*100)},
-      {label:"Experience",detail:`${expYears} years (capped at 8)`,weight:16,pct:Math.round(exp*100)},
-      {label:"Location fit",detail:u.prov===j.prov?"Same province":j.mode==="Remote"?"Remote role":"Different province, on-site",weight:14,pct:Math.round(loc*100)},
-      {label:"Category fit",detail:u.cat===j.cat?"Exact category match":"Related category",weight:16,pct:Math.round(catFit*100)},
+      {label:"Skills match",detail:`${overlap} of ${req.length||0} required skills`,weight:Math.round(w.skills),pct:Math.round(skill*100)},
+      {label:"Experience",detail:`${expYears} years (capped at 8)`,weight:Math.round(w.experience),pct:Math.round(exp*100)},
+      {label:"Location fit",detail:u.prov===j.prov?"Same province":j.mode==="Remote"?"Remote role":"Different province, on-site",weight:Math.round(w.location),pct:Math.round(loc*100)},
+      {label:"Category fit",detail:u.cat===j.cat?"Exact category match":"Related category",weight:Math.round(w.category),pct:Math.round(catFit*100)},
     ];
   };
   const matchReasons=j=>{
@@ -1832,7 +1856,7 @@ export function useStore(){
     jobId,empId,blogId,trainingId,cvId,editId,candidateId,pipelineJob,applyDraft,setApplyDraft,
     contactPrefill,setContactPrefill,pendingPlan,setPendingPlan,employersPrefill,setEmployersPrefill,
     blogAuthorFilter,setBlogAuthorFilter,filterBlogsByAuthor,
-    emp,job,person,score,scoreCandidate,scoreBreakdown,matchReasons,myApps,appliedJobIds,myNotifications,defaultCv,
+    emp,job,person,score,scoreCandidate,scoreBreakdown,saveScoreWeights,DEFAULT_SCORE_WEIGHTS,matchReasons,myApps,appliedJobIds,myNotifications,defaultCv,
     stagesFor,stagesForApp,savePipelineStages,
     jobHiringType,jobHiringLabel,
     completeness,completenessHint,tabBadges,
