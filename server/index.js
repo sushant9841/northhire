@@ -21,6 +21,7 @@ import { staffingRouter } from "./routes/staffing.js";
 import { billingRouter } from "./routes/billing.js";
 import { consentRouter } from "./routes/consent.js";
 import { publicApiRouter, apiAdminRouter } from "./routes/publicApi.js";
+import { ssoRouter } from "./routes/sso.js";
 import { infinityReplacer } from "../src/helpers/jsonInfinity.js";
 
 const app = express();
@@ -98,6 +99,7 @@ app.use("/api/consent", consentRouter);
 // session-authenticated and manages the keys themselves.
 app.use("/api/v1", publicApiRouter);
 app.use("/api/api-keys", apiAdminRouter);
+app.use("/api/sso", ssoRouter);
 
 app.use((req, res) => res.status(404).json({ error: "Not found." }));
 // eslint-disable-next-line no-unused-vars

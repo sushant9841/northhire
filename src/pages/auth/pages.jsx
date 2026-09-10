@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
+import { api } from "../../helpers/api.js";
 import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
 import { Page, Card, Btn, Bar, Field, Input, Banner, Sel, Area, CheckRow, Lbl, Ring, Tag, SmartScene, SmartPortrait, HERO_QUIET } from "../../design/primitives.jsx";
@@ -307,6 +308,32 @@ export function LoginPage(){
   const [email,setEmail]=useState(""); const [pw,setPw]=useState("");
   const [err,setErr]=useState(""); const [busy,setBusy]=useState(false);
   const [mfa,setMfa]=useState(null); const [code,setCode]=useState("");
+  /* Enterprise SSO: as soon as an email's domain is recognised, offer the company's own identity
+     provider instead of a password. The lookup answers only "is SSO configured for this domain",
+     never whether an ACCOUNT exists, so it can't be used to enumerate users. */
+  const [sso,setSso]=useState(null);
+  useEffect(()=>{
+    const at=email.indexOf("@");
+    if(at<0||email.length-at<4){setSso(null);return;}
+    let cancelled=false;
+    const t=setTimeout(()=>{
+      api.get(`/sso/lookup?email=${encodeURIComponent(email)}`)
+        .then(r=>{if(!cancelled)setSso(r.sso?r:null);}).catch(()=>{});
+    },400);
+    return()=>{cancelled=true;clearTimeout(t);};
+  },[email]);
+  const startSso=async()=>{
+    setErr("");setBusy(true);
+    try{
+      const {url}=await api.get(`/sso/start?email=${encodeURIComponent(email)}`);
+      window.location.href=url;
+    }catch(e){setErr(e.message);setBusy(false);}
+  };
+  /* An SSO failure comes back as a redirect param, not a fetch error. */
+  useEffect(()=>{
+    const p=new URLSearchParams(window.location.search).get("ssoError");
+    if(p){setErr(p);window.history.replaceState({},"",window.location.pathname);}
+  },[]);
   const submit=async()=>{setErr("");setBusy(true);
     const r=await A.loginWithPassword(email,pw); setBusy(false);
     if(!r.ok&&r.mfaRequired){setMfa(r);setCode("");return;}
@@ -373,7 +400,15 @@ export function LoginPage(){
           <Input icon="lock" type="password" value={pw} onChange={e=>{setPw(e.target.value);setErr("");}} placeholder="Your password"
             onKeyDown={e=>e.key==="Enter"&&submit()}/></Field>
         {err&&<Banner tone="danger" icon="alert" title="Sign-in failed">{err}</Banner>}
-        <Btn kind="primary" size="lg" full iconR="arrowR" onClick={submit} disabled={busy}>{busy?"Signing in…":"Sign in"}</Btn>
+        {sso
+          ? <>
+              <Btn kind="primary" size="lg" full icon="shield" onClick={startSso} disabled={busy}>
+                {busy?"Redirecting…":`Continue with ${sso.company||"your company"} SSO`}</Btn>
+              <div className="text-xs text-text-3 text-center -mt-1">
+                Your organisation manages sign-in for this domain. You can still use a password below if you have one.</div>
+              <Btn kind="outline" size="lg" full onClick={submit} disabled={busy}>Sign in with password instead</Btn>
+            </>
+          : <Btn kind="primary" size="lg" full iconR="arrowR" onClick={submit} disabled={busy}>{busy?"Signing in…":"Sign in"}</Btn>}
       </div>
       {(A.oauthProviders.google||A.oauthProviders.github)&&<>
         <div className="flex items-center gap-3 my-4"><div className="flex-1 h-px bg-line"/><span className="text-xs text-text-3">or</span><div className="flex-1 h-px bg-line"/></div>

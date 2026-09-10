@@ -949,7 +949,7 @@ export function PricingPage(){
     {n:"Growth",p:A.PLANS.Growth.price,best:true,tag:"Recommended for most",summary:"Everything a growing team needs to run a real hiring pipeline.",
      f:["10 active job postings","Unlimited applications","Direct candidate messaging","Interview scheduling","Talent pool (reverse match)","CSV bulk job import","Full analytics dashboard","2 featured job upgrades per month","Employer branded page","5 recruiter seats","Priority support"]},
     {n:"Enterprise",p:A.PLANS.Enterprise.price,best:false,tag:"For large teams",summary:"Unlimited hiring + the full NorthHire HR Suite for running your whole workforce.",
-     f:["Unlimited job postings & applications","Unlimited featured upgrades","Unlimited recruiter seats","Full analytics with trend history","Custom employer branding (colors, hero)","API access","Single Sign-On (SAML / OIDC)","Dedicated account manager","","NorthHire HR Suite included:","• Employee directory & profiles","• Attendance & punch-in/out","• Leave management & approvals","• Tasks, calendar, events & trainings","• Internal chat (1:1 & groups)","• Invoices, salary, notifications","• Role management (Admin/HR/Finance/Employee)","• Feature toggles per module","• Sync with public NorthHire profiles"]}
+     f:["Unlimited job postings & applications","Unlimited featured upgrades","Unlimited recruiter seats","Full analytics with trend history","Custom employer branding (colors, hero)","API access","Single Sign-On (OIDC)","Dedicated account manager","","NorthHire HR Suite included:","• Employee directory & profiles","• Attendance & punch-in/out","• Leave management & approvals","• Tasks, calendar, events & trainings","• Internal chat (1:1 & groups)","• Invoices, salary, notifications","• Role management (Admin/HR/Finance/Employee)","• Feature toggles per module","• Sync with public NorthHire profiles"]}
   ];
   const faq=[
     ["What's included in every plan?","Applicant pipeline with AI match scoring, verified employer badge, English & French posting, no per-applicant fees, no long-term contracts."],
@@ -1028,7 +1028,7 @@ export function PricingPage(){
                   ["Featured job upgrades","—","2/mo","Unlimited"],
                   ["Branded employer page","—","✓","✓ + custom colors"],
                   ["API access","—","—","✓"],
-                  ["Single Sign-On (SSO)","—","—","✓"],
+                  ["Single Sign-On (OIDC)","—","—","✓"],
                   ["Dedicated account manager","—","—","✓"],
                   ["NorthHire HR Suite","—","—","✓ Full"]].map((row,i)=>
                   <tr key={row[0]} className={i<15?"border-b border-line-soft":""}>

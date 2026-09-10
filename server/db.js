@@ -123,6 +123,21 @@ CREATE TABLE IF NOT EXISTS employer_webhooks (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+/* Enterprise SSO over OIDC (see server/sso.js). One configuration per employer, keyed for lookup
+   by the email domain their staff sign in with — that's the only thing known before someone has
+   authenticated. SAML is deliberately not modelled; the copy says OIDC because that's what's real. */
+CREATE TABLE IF NOT EXISTS employer_sso (
+  employer_id TEXT PRIMARY KEY REFERENCES employers(id),
+  issuer TEXT NOT NULL,
+  client_id TEXT NOT NULL,
+  client_secret TEXT NOT NULL,
+  email_domain TEXT NOT NULL,
+  enabled INTEGER DEFAULT 0,
+  last_used TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_employer_sso_domain ON employer_sso(email_domain);
+
 CREATE TABLE IF NOT EXISTS employer_invoices (
   id TEXT PRIMARY KEY,
   employer_id TEXT NOT NULL REFERENCES employers(id),

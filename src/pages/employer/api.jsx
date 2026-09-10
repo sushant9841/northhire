@@ -3,7 +3,7 @@ import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { api } from "../../helpers/api.js";
 import {
-  Page, H1, Card, Btn, Banner, Lbl, Input, Field, Tag, Empty, ConfirmDialog, CheckRow,
+  Page, H1, Card, Btn, Banner, Lbl, Input, Field, Tag, Empty, ConfirmDialog, CheckRow, Switch,
 } from "../../design/primitives.jsx";
 
 /* Enterprise API keys and outbound webhooks. "API access" and "API + Zapier" sat on the pricing
@@ -12,6 +12,72 @@ import {
    Both a key and a webhook secret are shown exactly once, at creation. Neither is retrievable
    afterwards — a long-lived credential that a list endpoint hands back on every page load is a
    credential that leaks the first time someone shares their screen. */
+/* Enterprise SSO over OIDC. The tier sold "SSO / SAML" with nothing behind it; this is the OIDC
+   half, which reaches the same identity providers (Entra ID, Okta, Auth0, Google Workspace,
+   Keycloak). SAML is deliberately absent rather than half-built — validating XML signatures
+   incorrectly is an authentication bypass, not a cosmetic bug — and the pricing copy now says
+   OIDC to match. Endpoints are discovered from the issuer rather than pasted by hand. */
+function _SsoConfig({mob,isOwner}){
+  const [state,setState]=useState({available:false,config:null,callbackUrl:""});
+  const [form,setForm]=useState({issuer:"",clientId:"",clientSecret:"",emailDomain:"",enabled:false});
+  const [err,setErr]=useState(""); const [msg,setMsg]=useState(""); const [busy,setBusy]=useState(false);
+
+  const load=()=>api.get("/sso/config").then(r=>{
+    setState(r);
+    if(r.config)setForm(f=>({...f,issuer:r.config.issuer,clientId:r.config.clientId,emailDomain:r.config.emailDomain,enabled:r.config.enabled}));
+  }).catch(()=>{});
+  useEffect(()=>{load();},[]);
+
+  const save=async()=>{
+    setErr(""); setMsg(""); setBusy(true);
+    try{
+      await api.put("/sso/config",form);
+      setMsg("Single sign-on saved."); setForm(f=>({...f,clientSecret:""})); load();
+    }catch(e){setErr(e.message);}
+    finally{setBusy(false);}
+  };
+
+  if(!state.available) return null;
+
+  return <Card pad={mob?20:26} style={{marginTop:16}}>
+    <Lbl>Single sign-on (OIDC)</Lbl>
+    <div className="text-sm text-text-2 mb-4 leading-relaxed">
+      Let your team sign in with your own identity provider. Works with anything that speaks OIDC —
+      Microsoft Entra ID, Okta, Auth0, Google Workspace, Keycloak. Add this redirect URI to the
+      application you create there:
+      <div className="mt-2"><code className="text-xs bg-bg border border-line rounded px-2 py-1 break-all">{state.callbackUrl}</code></div>
+    </div>
+    {err&&<Banner tone="danger" icon="alert" style={{marginBottom:12}}>{err}</Banner>}
+    {msg&&<Banner tone="ok" icon="check" style={{marginBottom:12}}>{msg}</Banner>}
+
+    <div className={`grid gap-2.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
+      <Field label="Issuer URL" hint="We read the endpoints from its discovery document.">
+        <Input value={form.issuer} onChange={e=>setForm(f=>({...f,issuer:e.target.value}))} placeholder="https://login.microsoftonline.com/<tenant>/v2.0" disabled={!isOwner}/></Field>
+      <Field label="Email domain" hint="The domain your staff sign in with.">
+        <Input value={form.emailDomain} onChange={e=>setForm(f=>({...f,emailDomain:e.target.value}))} placeholder="yourcompany.ca" disabled={!isOwner}/></Field>
+      <Field label="Client ID">
+        <Input value={form.clientId} onChange={e=>setForm(f=>({...f,clientId:e.target.value}))} disabled={!isOwner}/></Field>
+      <Field label="Client secret" hint={state.config?.hasSecret?"A secret is on file — leave blank to keep it.":"Required."}>
+        <Input type="password" value={form.clientSecret} onChange={e=>setForm(f=>({...f,clientSecret:e.target.value}))}
+          placeholder={state.config?.hasSecret?"••••••••":""} disabled={!isOwner}/></Field>
+    </div>
+
+    <div className="flex items-center justify-between gap-3.5 py-3.5 mt-2 border-t border-line-soft">
+      <div>
+        <div className="text-sm font-semibold text-text">Enable single sign-on</div>
+        <div className="text-xs text-text-2 mt-0.5">
+          Anyone signing in with an {form.emailDomain||"your-domain"} address is sent to your provider.
+          New people are added as teammates, never as the account owner.</div>
+      </div>
+      <Switch on={form.enabled} onChange={v=>setForm(f=>({...f,enabled:v}))} disabled={!isOwner}/>
+    </div>
+
+    {isOwner
+      ? <Btn kind="primary" icon="check" onClick={save} disabled={busy}>{busy?"Verifying issuer…":"Save single sign-on"}</Btn>
+      : <div className="text-xs text-text-3">Only the account owner can configure single sign-on.</div>}
+  </Card>;
+}
+
 export function EmpApiPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [data,setData]=useState({keys:[],webhooks:[],enabled:false,events:[]});
@@ -146,6 +212,8 @@ export function EmpApiPage(){
             </div>)}
       </div>
     </Card>
+
+    <_SsoConfig mob={mob} isOwner={isOwner}/>
 
     <ConfirmDialog open={!!revokeKey} onClose={()=>setRevokeKey(null)} confirmLabel="Revoke key" danger
       title={`Revoke "${revokeKey?.name}"?`}

@@ -121,7 +121,7 @@ export function ForEmployersPage(){
               features:["10 active job postings","Full pipeline with custom stages","Interview scheduling","Talent pool search","Team seats (up to 5)","CSV import & export"],
               cta:"Start 14-day trial",featured:true},
             {name:"Enterprise",price:"$599",per:"per month",tagline:"For teams doing serious volume.",
-              features:["Unlimited job postings","All Growth features","HR Suite included","API + Zapier","SSO / SAML","Dedicated success manager","Custom SLA"],
+              features:["Unlimited job postings","All Growth features","HR Suite included","REST API + signed webhooks","Dedicated success manager","Custom SLA"],
               cta:"Book a demo",featured:false},
           ].map(t=><Card key={t.name} pad={mob?24:28} style={{borderRadius:16,position:"relative",border:t.featured?`2px solid ${C.brand}`:`1px solid ${C.line}`,transform:t.featured?"scale(1.02)":"none"}}>
             {t.featured&&<div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-brand text-white py-1 px-3.5 rounded-full text-xs font-bold tracking-wide uppercase">Most picked</div>}
@@ -333,7 +333,7 @@ export function ForEmployersPage(){
           ["Do I have to pick one product?","No. Most Enterprise clients use the Job Platform and HR Suite together. Staffing is a separate business relationship — you can use it as a client without changing anything about your job platform subscription."],
           ["What's the difference between HR Suite and Staffing?","HR Suite is software for running your own employees. Staffing is a service where we employ workers on your behalf. HR Suite manages people on your payroll; Staffing puts people from our payroll on your site."],
           ["Can Staffing workers convert to permanent hires?","Yes. If you want to hire a contract worker directly, we charge a conversion fee that scales down based on how long they've been on assignment. Details in the MSA."],
-          ["What's your ATS integration story?","Growth and Enterprise support CSV import/export. Enterprise adds direct integrations with Workday, Greenhouse, and Lever. HR Suite has its own import tool for BambooHR, Rise, and Workday."],
+          ["What's your ATS integration story?","Growth and Enterprise support CSV import and export. Enterprise adds a REST API and signed webhooks, which is what you'd point Zapier or your own scripts at to sync jobs and applications with whatever you already run. We don't ship pre-built connectors for Workday, Greenhouse or Lever — the API is the integration path, and we'd rather say so than list logos we haven't built against."],
           ["Do you support French?","The platform is English-only today, including job posts, worker communications, and HR Suite. Canadian French support is on our roadmap — no committed date yet."],
           ["Where does your data live?","Canadian data residency. AWS ca-central-1 (Montréal). SOC 2 Type II. Details on request under NDA."],
           ["Can I try Staffing without an MSA?","We can send you a small trial roster with a short-form services agreement for a week's engagement. Full MSA required for ongoing relationships."],
