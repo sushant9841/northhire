@@ -712,6 +712,7 @@ export function EmpCandidate(){
   const [ivDate,setIvDate]=useState(""); const [ivTime,setIvTime]=useState(""); const [ivMode,setIvMode]=useState("video"); const [ivNotes,setIvNotes]=useState("");
   const [confirmReject,setConfirmReject]=useState(false); const [rejectReason,setRejectReason]=useState("");
   const [showOfferLetter,setShowOfferLetter]=useState(false);
+  const [offerLink,setOfferLink]=useState(""); const [offerErr,setOfferErr]=useState(""); const [sendingOffer,setSendingOffer]=useState(false);
   const [offerDraft,setOfferDraft]=useState({startDate:"",salary:"",manager:"",deadline:""});
   const [contact,setContact]=useState(undefined); // undefined = loading, null = load failed
   const [scorecards,setScorecards]=useState([]);
@@ -810,10 +811,36 @@ export function EmpCandidate(){
           <Field label="Reporting to (optional)"><Input value={offerDraft.manager} onChange={e=>setOfferDraft({...offerDraft,manager:e.target.value})} placeholder="Hiring manager's name"/></Field>
           <Field label="Offer expires (optional)"><Input type="date" value={offerDraft.deadline} onChange={e=>setOfferDraft({...offerDraft,deadline:e.target.value})}/></Field>
         </div>
-        <Banner tone="brand" icon="info">Opens a formatted letter ready to print or save as PDF. No e-signature is collected — the candidate signs the printed copy.</Banner>
-        <div className="flex gap-2.5 justify-end">
-          <Btn kind="ghost" onClick={()=>setShowOfferLetter(false)}>Cancel</Btn>
-          <Btn kind="primary" icon="file" onClick={()=>{A.printOfferLetter(u,job,A.company,offerDraft);setShowOfferLetter(false);}}>Generate &amp; print</Btn>
+        <Field label="Offer letter text" hint="This exact text is what the candidate signs, and it's snapshotted so later edits can't change what they agreed to.">
+          <Area rows={7} value={offerDraft.body||""} onChange={e=>setOfferDraft({...offerDraft,body:e.target.value})}
+            placeholder={`Dear ${u.name},\n\nWe're pleased to offer you the position of ${job.t} at ${A.company.name}.`}/></Field>
+        {offerErr&&<Banner tone="danger" icon="alert">{offerErr}</Banner>}
+        {offerLink
+          ? <Banner tone="ok" icon="check" title="Offer sent — the candidate can sign it online">
+              <div className="text-xs text-text-2 mb-2">We emailed them this link. You can also send it yourself:</div>
+              <div className="flex gap-2 items-center flex-wrap">
+                <code className="text-xs bg-white border border-line rounded-lg px-2.5 py-1.5 break-all flex-1 min-w-0">{offerLink}</code>
+                <Btn kind="outline" size="sm" onClick={()=>navigator.clipboard?.writeText(offerLink)}>Copy</Btn>
+              </div>
+            </Banner>
+          : <Banner tone="brand" icon="info">Send it for signature and the candidate accepts online — typed legal name, explicit acknowledgement, timestamp and hashed IP recorded. Accepting moves them to Hired automatically. Or just print a copy to sign by hand.</Banner>}
+        <div className="flex gap-2.5 justify-end flex-wrap">
+          <Btn kind="ghost" onClick={()=>setShowOfferLetter(false)}>Close</Btn>
+          <Btn kind="outline" icon="file" onClick={()=>A.printOfferLetter(u,job,A.company,offerDraft)}>Print a copy</Btn>
+          <Btn kind="primary" icon="send" disabled={sendingOffer} onClick={async()=>{
+            setOfferErr("");setSendingOffer(true);
+            const body=(offerDraft.body||"").trim()||
+              `Dear ${u.name},\n\nWe're pleased to offer you the position of ${job.t} at ${A.company.name}.`+
+              (offerDraft.salary?`\n\nCompensation: ${offerDraft.salary}`:"")+
+              (offerDraft.startDate?`\nStart date: ${offerDraft.startDate}`:"")+
+              (offerDraft.manager?`\nReporting to: ${offerDraft.manager}`:"")+
+              `\n\nWe're looking forward to working with you.\n\n${A.company.name}`;
+            const r=await A.sendOfferForSignature(a.id,{
+              body,position:job.t,compensation:offerDraft.salary,
+              startDate:offerDraft.startDate,reportingTo:offerDraft.manager,expiresAt:offerDraft.deadline});
+            setSendingOffer(false);
+            if(r.ok)setOfferLink(r.link); else setOfferErr(r.msg);
+          }}>{sendingOffer?"Sending…":"Send for signature"}</Btn>
         </div>
       </div>
     </Modal>}

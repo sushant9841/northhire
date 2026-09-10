@@ -125,6 +125,9 @@ export const ROUTES = {
   empBilling:  {title:"Billing", tab:"profile", roles:["employer"], bare:true, root:true, path:"/employer/billing"},
 
   invite:      {title:"Join your team", tab:"home", bare:true, path:"/invite/:id"},
+  /* A candidate reads and signs an offer here without an account - the token in the URL is what
+     authorises it, since someone receiving an offer may have no login and shouldn't need one. */
+  offer:       {title:"Your offer", tab:"home", bare:true, path:"/offer/:id"},
 
   admHome:     {title:"Admin overview", tab:"home", roles:["admin"], root:true, bare:true, path:"/admin"},
   admUsers:    {title:"Users", tab:"search", roles:["admin"], bare:true, root:true, path:"/admin/users"},

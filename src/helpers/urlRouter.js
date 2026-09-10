@@ -8,7 +8,7 @@
 export const ID_STATE_FOR_ROUTE = {
   job: "jobId", employer: "empId", blog: "blogId", training: "trainingId",
   empCandidate: "candidateId", cvEdit: "cvId", empBlogEdit: "editId", empTrainEdit: "editId",
-  invite: "inviteToken",
+  invite: "inviteToken", offer: "offerToken",
 };
 
 export function buildPath(routes, pg, id) {

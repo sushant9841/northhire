@@ -453,6 +453,28 @@ CREATE TABLE IF NOT EXISTS hr_signatures (
   UNIQUE(document_id, employee_id)
 );
 
+/* Offer letters a candidate can actually accept in-app, with a real record of it.
+   The HR handbook module already had click-wrap signing, but only for people who are already
+   employees with an HR Suite login. A candidate isn't one yet, so this carries its own
+   unguessable token: the employer sends a link, the candidate reads the offer and signs by typing
+   their legal name against a required acknowledgement. What makes it evidence rather than a
+   button press is the record kept alongside it — what exact text they agreed to (snapshotted, so
+   later edits to the template can't rewrite history), when, and a one-way hash of their IP. */
+CREATE TABLE IF NOT EXISTS offer_letters (
+  id TEXT PRIMARY KEY,
+  application_id TEXT NOT NULL REFERENCES applications(id),
+  employer_id TEXT NOT NULL REFERENCES employers(id),
+  token TEXT NOT NULL UNIQUE,
+  body TEXT NOT NULL,
+  position TEXT, compensation TEXT, start_date TEXT, reporting_to TEXT,
+  expires_at TEXT,
+  status TEXT NOT NULL DEFAULT 'sent' CHECK(status IN ('sent','accepted','declined','withdrawn')),
+  signed_name TEXT, signed_at TEXT, ip_hash TEXT, decline_reason TEXT,
+  created_by TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_offer_letters_app ON offer_letters(application_id);
+
 /* Shared document storage (see server/uploads.js). owner_type/owner_id are deliberately loose so
    one table serves a seeker's cover letter, an employer's incorporation proof, a support-ticket
    attachment and a staffing worker's certificates — every caller does its own authorisation

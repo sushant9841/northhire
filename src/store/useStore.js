@@ -85,6 +85,7 @@ export function useStore(){
   const [trainingId,setTrainingId]=useState(()=>_idFor("trainingId")),[cvId,setCvId]=useState(()=>_idFor("cvId")),[editId,setEditId]=useState(()=>_idFor("editId"));
   const [candidateId,setCandidateId]=useState(()=>_idFor("candidateId")),[pipelineJob,setPipelineJob]=useState(null);
   const [inviteToken,setInviteToken]=useState(()=>_idFor("inviteToken"));
+  const [offerToken,setOfferToken]=useState(()=>_idFor("offerToken"));
   const [applyDraft,setApplyDraft]=useState({job:null,avail:"Within 2 weeks",expect:"",letter:"",meets:"Yes"});
   /* Lightweight prefill for ContactPage — there's no real URL/param passing between pages, so
      this is the same pattern as applyDraft: a small piece of shared state a page reads and
@@ -370,7 +371,7 @@ export function useStore(){
      explicitly (idOverride exists for callers like openJob/openBlog that set the id state and
      navigate in the same tick — reading the id back from state would still see the stale
      pre-update value, since state setters don't apply mid-render). */
-  const _idStateValues={jobId,empId,blogId,trainingId,candidateId,cvId,editId,inviteToken};
+  const _idStateValues={jobId,empId,blogId,trainingId,candidateId,cvId,editId,inviteToken,offerToken};
   const go=(p,title,idOverride)=>{
     const r=ROUTES[p];
     if(r?.roles&&(!user||!r.roles.includes(user.role))){setStack(s=>[...s,pg]);setPg("denied");setPageTitle(null);return;}
@@ -405,7 +406,7 @@ export function useStore(){
        homePg fallback instead of trying to unwind a history entry that doesn't carry our
        {depth,pg,id} shape (e.g. whatever the browser had before this page ever loaded). */
     if(!window.history.state)window.history.replaceState({depth:0,pg,id:null},"",window.location.pathname+window.location.search);
-    const SETTER_FOR_ID_KEY={jobId:setJobId,empId:setEmpId,blogId:setBlogId,trainingId:setTrainingId,candidateId:setCandidateId,cvId:setCvId,editId:setEditId,inviteToken:setInviteToken};
+    const SETTER_FOR_ID_KEY={jobId:setJobId,empId:setEmpId,blogId:setBlogId,trainingId:setTrainingId,candidateId:setCandidateId,cvId:setCvId,editId:setEditId,inviteToken:setInviteToken,offerToken:setOfferToken};
     const onPopState=()=>{
       const state=window.history.state;
       let pg2,id2;
@@ -472,6 +473,17 @@ export function useStore(){
     }catch(e){
       return {ok:false,msg:e.message};
     }
+  };
+
+  /* Sends an offer the candidate can actually sign online, rather than only producing a printable
+     document with a blank signature line. Returns the link so the employer can also send it
+     themselves - the server emails it too, but an offer is important enough to hand over directly. */
+  const sendOfferForSignature=async(applicationId,fields)=>{
+    try{
+      const r=await api.post(`/offers/application/${applicationId}`,fields);
+      log("offer.sent","Sent an offer for signature","file");
+      return {ok:true,link:r.offer.link,id:r.offer.id};
+    }catch(e){return {ok:false,msg:e.message};}
   };
 
   const scoreBreakdown=(u,j)=>{
@@ -1792,6 +1804,7 @@ export function useStore(){
   };
 
   const A={pg,go,back,pageTitle,homePg,history:stack,user,company,employers,jobs,people,applications,blogs,trainings,cvs,passwords,outbox,savedSearches,messages,interviews,reviews,impersonating,setImpersonating,hireOnboarding,setHireOnboarding,
+    offerToken,sendOfferForSignature,
     hasAccount,upsertPassword,loginWithPassword,verifyLogin2FA,resetPasswordRequest,resetPasswordConfirm,completeEmployerSignup,
     saveSearch,deleteSavedSearch,toggleSearchAlert,updateSavedSearch,editingSavedSearchId,setEditingSavedSearchId,
     salaryInsight,skillsGap,expandQuery,restoreApp,notifyFollowers,
