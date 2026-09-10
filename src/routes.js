@@ -52,6 +52,7 @@ export const ROUTES = {
   /* CASL requires the unsubscribe link in a commercial email to work without signing in. */
   unsubscribe:  {title:"Unsubscribe", tab:"home", root:false, path:"/unsubscribe"},
   matchScore:   {title:"How the match score works", tab:"home", root:false, path:"/match-score"},
+  verifyEmail:  {title:"Confirm your email", tab:"home", root:false, path:"/verify-email"},
   /* HR Suite routes */
   hrLogin:      {title:"HR Suite login", tab:"home", bare:true, path:"/hr/login"},
   /* The shared time clock authenticates as a DEVICE, not a person, so it must be reachable

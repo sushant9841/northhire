@@ -566,9 +566,9 @@ export function useStore(){
       return {ok:false,msg:e.message};
     }
   };
-  const verifyLogin2FA=async(email,code)=>{
+  const verifyLogin2FA=async(email,code,rememberDevice)=>{
     try{
-      const {user:apiUser}=await api.post("/auth/login/verify-2fa",{email,code});
+      const {user:apiUser}=await api.post("/auth/login/verify-2fa",{email,code,rememberDevice:!!rememberDevice});
       const mapped=mapApiUser(apiUser);
       setUser(mapped);
       _hardNav(mapped.role==="employer"?"empHome":mapped.role==="admin"?"admHome":"home");

@@ -344,8 +344,9 @@ export function LoginPage(){
     if(!r.ok&&r.mfaRequired){setMfa(r);setCode("");return;}
     if(!r.ok)setErr(r.msg);
   };
+  const [rememberDevice,setRememberDevice]=useState(false);
   const verify=async()=>{setErr("");setBusy(true);
-    const r=await A.verifyLogin2FA(mfa.email,code); setBusy(false);
+    const r=await A.verifyLogin2FA(mfa.email,code,rememberDevice); setBusy(false);
     if(!r.ok)setErr(r.msg);
   };
   const formCol=(inner)=><div className={`flex-1 min-w-0 flex items-center justify-center bg-white ${mob?"px-4 py-8":"px-10 py-12"}`}>
@@ -376,6 +377,9 @@ export function LoginPage(){
             <Input icon="shield" value={code} onChange={e=>{setCode(e.target.value);setErr("");}} placeholder="123456" maxLength={6}
               onKeyDown={e=>e.key==="Enter"&&verify()}/></Field>
           {err&&<Banner tone="danger" icon="alert" title="Verification failed">{err}</Banner>}
+          <CheckRow on={rememberDevice} onChange={setRememberDevice}
+            label="Remember this device for 30 days"
+            sub="Skip the code next time on this browser. Don't use this on a shared or public computer."/>
           <Btn kind="primary" size="lg" full iconR="arrowR" onClick={verify} disabled={busy||code.length<6}>{busy?"Verifying…":"Verify & sign in"}</Btn>
         </div>
       </>)}

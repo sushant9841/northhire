@@ -40,6 +40,13 @@ CREATE TABLE IF NOT EXISTS users (
   marketing_consent_at TEXT,
   marketing_consent_source TEXT,
   unsubscribe_token TEXT,
+  /* Email verification. Accounts stay usable while unverified rather than being locked out -
+     blocking someone from browsing jobs because a confirmation mail is slow helps nobody - but
+     the state is real and surfaced, and actions where a wrong address genuinely costs something
+     (a job alert going to a stranger, an employer messaging the wrong inbox) can consult it. */
+  email_verified INTEGER DEFAULT 0,
+  email_verify_token TEXT,
+  email_verify_sent_at TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -207,6 +214,22 @@ CREATE TABLE IF NOT EXISTS sessions (
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   expires_at TEXT NOT NULL
 );
+
+/* "Remember this device" for two-factor sign-in. A device that has already passed 2FA carries its
+   own long-lived token so the person isn't re-challenged on their own laptop every time, while a
+   sign-in from anywhere else still is. Deliberately separate from the session: signing out must
+   not forget the device, and revoking the device must not depend on being signed in on it.
+   Storing only a hash means a database read can't produce a token that skips someone's 2FA. */
+CREATE TABLE IF NOT EXISTS trusted_devices (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id),
+  token_hash TEXT NOT NULL,
+  label TEXT,
+  last_used TEXT,
+  expires_at TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_trusted_devices_user ON trusted_devices(user_id);
 
 /* ═══════════════ CONTENT: blogs, trainings ═══════════════ */
 CREATE TABLE IF NOT EXISTS blogs (

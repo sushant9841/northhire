@@ -6,6 +6,48 @@ import { sendAndLogMail } from "../mail.js";
 import { PROVIDERS, isConfigured, buildAuthUrl, exchangeCodeForProfile, issueState, consumeState } from "../oauth.js";
 import { verifyTurnstile, turnstileConfigured } from "../turnstile.js";
 
+/* ─── "Remember this device" for two-factor sign-in ───────────────────────────────────────
+   A device that already passed 2FA carries its own long-lived cookie so the person isn't
+   re-challenged on their own laptop every time, while a sign-in from anywhere else still is.
+   Only a hash of the token is stored, so a database read can't produce something that skips
+   somebody's second factor. */
+const DEVICE_COOKIE = "nh_device";
+const DEVICE_TTL_DAYS = 30;
+const hashDeviceToken = t => crypto.createHash("sha256").update(String(t)).digest("hex");
+
+function currentDeviceId(req, userId) {
+  const raw = req.cookies?.[DEVICE_COOKIE];
+  if (!raw) return null;
+  const row = db.prepare("SELECT id FROM trusted_devices WHERE user_id = ? AND token_hash = ? AND expires_at > datetime('now')")
+    .get(userId, hashDeviceToken(raw));
+  return row?.id || null;
+}
+
+function trustedDeviceValid(req, userId) {
+  const id = currentDeviceId(req, userId);
+  if (!id) return false;
+  db.prepare("UPDATE trusted_devices SET last_used = datetime('now') WHERE id = ?").run(id);
+  return true;
+}
+
+function rememberDevice(req, res, userId) {
+  const token = crypto.randomBytes(32).toString("hex");
+  const ua = String(req.get("user-agent") || "");
+  // A coarse, human-recognisable label so someone can tell which entry to revoke. Deliberately
+  // not the full user-agent string, which is noise to a person and fingerprinting surface to keep.
+  const label = /iPhone|Android|Mobile/i.test(ua) ? "Mobile browser"
+    : /Macintosh/i.test(ua) ? "Mac"
+    : /Windows/i.test(ua) ? "Windows PC"
+    : /Linux/i.test(ua) ? "Linux" : "Browser";
+  const expires = new Date(Date.now() + DEVICE_TTL_DAYS * 86400000);
+  db.prepare("INSERT INTO trusted_devices (id, user_id, token_hash, label, last_used, expires_at) VALUES (?,?,?,?,datetime('now'),?)")
+    .run(nextId("td", "trusted_devices"), userId, hashDeviceToken(token), label, expires.toISOString());
+  res.cookie(DEVICE_COOKIE, token, {
+    httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production",
+    maxAge: DEVICE_TTL_DAYS * 86400000,
+  });
+}
+
 export const authRouter = Router();
 
 const CODE_COOLDOWN_MS = 60 * 1000; // shared by reset-password and login-2FA code requests
@@ -125,6 +167,12 @@ authRouter.post("/login", async (req, res) => {
   }
   db.prepare("DELETE FROM failed_logins WHERE email = ? AND kind = 'main'").run(emailLower);
   const tf = db.prepare("SELECT * FROM two_factor WHERE user_id = ?").get(user.id);
+  // A device this account already passed 2FA on skips the second factor until the trust expires.
+  // The check is per-user, so someone else's trusted laptop is no help signing into this account.
+  if (tf?.enabled && trustedDeviceValid(req, user.id)) {
+    createSessionCookie(res, "session", "main", user.id);
+    return res.json({ user: publicUser(user), trustedDevice: true });
+  }
   if (tf?.enabled) {
     const code = crypto.randomInt(100000, 1000000).toString();
     db.prepare("INSERT INTO login_2fa_codes (email, code) VALUES (?, ?) ON CONFLICT(email) DO UPDATE SET code = excluded.code, created_at = datetime('now')")
@@ -162,8 +210,49 @@ authRouter.post("/login/verify-2fa", (req, res) => {
   if (backupCodes.includes(code)) {
     db.prepare("UPDATE two_factor SET backup_codes_json = ? WHERE user_id = ?").run(JSON.stringify(backupCodes.filter(c => c !== code)), user.id);
   }
+  if (req.body?.rememberDevice) rememberDevice(req, res, user.id);
   createSessionCookie(res, "session", "main", user.id);
   res.json({ user: publicUser(user) });
+});
+
+/* Trusted devices: list and revoke. Revoking is what someone reaches for after losing a laptop,
+   so it must work from a DIFFERENT device — hence keyed on the account, not on the cookie. */
+authRouter.get("/trusted-devices", requireAuth, (req, res) => {
+  const rows = db.prepare("SELECT id, label, last_used, expires_at, created_at FROM trusted_devices WHERE user_id = ? AND expires_at > datetime('now') ORDER BY created_at DESC")
+    .all(req.user.id);
+  const current = currentDeviceId(req, req.user.id);
+  res.json({ devices: rows.map(d => ({ id: d.id, label: d.label, lastUsed: d.last_used, expiresAt: d.expires_at, current: d.id === current })) });
+});
+
+authRouter.delete("/trusted-devices/:id", requireAuth, (req, res) => {
+  const r = db.prepare("DELETE FROM trusted_devices WHERE id = ? AND user_id = ?").run(req.params.id, req.user.id);
+  if (!r.changes) return res.status(404).json({ error: "Device not found." });
+  res.json({ ok: true });
+});
+
+/* ─── Email verification ───
+   The account works while unverified; the state is real and shown, rather than locking someone
+   out of browsing jobs because a confirmation mail is slow. */
+authRouter.post("/send-verification", requireAuth, async (req, res) => {
+  const user = db.prepare("SELECT * FROM users WHERE id = ?").get(req.user.id);
+  if (user.email_verified) return res.json({ ok: true, alreadyVerified: true });
+  if (user.email_verify_sent_at && Date.now() - sqlTime(user.email_verify_sent_at).getTime() < 60 * 1000) {
+    return res.status(429).json({ error: "We just sent one — check your inbox, then try again in a minute." });
+  }
+  const token = crypto.randomBytes(24).toString("hex");
+  db.prepare("UPDATE users SET email_verify_token = ?, email_verify_sent_at = datetime('now') WHERE id = ?").run(token, user.id);
+  const link = `${FRONTEND_URL}/verify-email?token=${token}`;
+  await sendAndLogMail(user.email, "Confirm your NorthHire email",
+    `Hi ${user.name},\n\nConfirm this is your address:\n${link}\n\nIf you didn't create a NorthHire account, you can ignore this.`);
+  res.json({ ok: true });
+});
+
+authRouter.get("/verify-email", (req, res) => {
+  const token = String(req.query.token || "");
+  const user = token ? db.prepare("SELECT * FROM users WHERE email_verify_token = ?").get(token) : null;
+  if (!user) return res.status(400).json({ error: "That confirmation link is invalid or has already been used." });
+  db.prepare("UPDATE users SET email_verified = 1, email_verify_token = NULL WHERE id = ?").run(user.id);
+  res.json({ ok: true, email: user.email });
 });
 
 authRouter.post("/logout", (req, res) => {

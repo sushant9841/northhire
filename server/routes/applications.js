@@ -3,6 +3,7 @@ import { db, nextId, sqlTime } from "../db.js";
 import { requireAuth, requireRole } from "../auth.js";
 import { serializeApplication } from "../serialize.js";
 import { emitWebhook } from "../webhooks.js";
+import { sendAndLogMail } from "../mail.js";
 
 export const applicationsRouter = Router();
 
@@ -175,7 +176,29 @@ applicationsRouter.patch("/:id/stage", requireAuth, requireRole("employer"), (re
   res.json({ application: serializeApplication(row) });
   emitWebhook(req.user.employer_id, "application.stage_changed",
     { ...serializeApplication(row), previousStage: app.stage });
+
+  /* Tell the candidate their application moved. This is transactional mail about something they
+     asked for, not a commercial message, so it correctly does not consult marketing consent —
+     but it does respect their in-app notification preference, and it is sent after the response
+     so the employer's drag never waits on delivery. */
+  notifyStageChange(app.user_id, row, stage, note).catch(() => {});
 });
+
+async function notifyStageChange(userId, application, stage, note) {
+  const prefs = db.prepare("SELECT settings_json FROM user_settings WHERE user_id = ?").get(userId);
+  const wantsEmail = prefs ? (JSON.parse(prefs.settings_json || "{}").appAlerts !== false) : true;
+  if (!wantsEmail) return;
+  const user = db.prepare("SELECT name, email FROM users WHERE id = ?").get(userId);
+  if (!user) return;
+  const job = db.prepare("SELECT jobs.title, employers.name AS employer FROM jobs JOIN employers ON employers.id = jobs.employer_id WHERE jobs.id = ?")
+    .get(application.job_id);
+  await sendAndLogMail(user.email, `Update on your application — ${job?.title || "your application"}`,
+    [`Hi ${user.name},`, "",
+      `${job?.employer || "The employer"} moved your application for ${job?.title || "a role"} to "${stage}".`,
+      note ? `\n${note}` : "",
+      "", `See the full status: ${process.env.FRONTEND_URL || "http://localhost:5173"}/status`,
+      "", "You can turn these updates off in Settings → Notifications."].filter(Boolean).join("\n"));
+}
 
 applicationsRouter.patch("/:id/reject", requireAuth, requireRole("employer"), (req, res) => {
   const app = loadOwnedApplication(req.params.id, req, res, "employer");

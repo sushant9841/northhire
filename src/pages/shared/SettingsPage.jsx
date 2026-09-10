@@ -1,10 +1,65 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { use } from "../../store/context.js";
+import { api } from "../../helpers/api.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
 import { Btn, Card, Switch, Field, Input, Empty, Banner, Lbl, Modal, Page, H1 } from "../../design/primitives.jsx";
 import { DeniedPage } from "./DeniedPage.jsx";
+
+/* Email verification. The account keeps working while unverified — locking someone out of
+   browsing jobs because a confirmation mail is slow helps nobody — but the state is real and
+   shown, because a wrong address means job alerts and employer messages go to a stranger. */
+function _EmailVerification({u}){
+  const [sent,setSent]=useState(false); const [err,setErr]=useState(""); const [busy,setBusy]=useState(false);
+  const [verified,setVerified]=useState(!!u.emailVerified);
+  useEffect(()=>{
+    const t=new URLSearchParams(window.location.search).get("token");
+    if(!t||!window.location.pathname.includes("verify-email"))return;
+    api.get(`/auth/verify-email?token=${encodeURIComponent(t)}`).then(()=>setVerified(true)).catch(()=>{});
+  },[]);
+  if(verified)return null;
+  const send=async()=>{
+    setErr("");setBusy(true);
+    try{await api.post("/auth/send-verification");setSent(true);}
+    catch(e){setErr(e.message);}
+    finally{setBusy(false);}
+  };
+  return <Banner tone={sent?"ok":"warn"} icon={sent?"check":"alert"} style={{marginBottom:16}}
+    title={sent?"Confirmation sent":"Confirm your email address"}
+    action={!sent&&<Btn kind="outline" size="sm" onClick={send} disabled={busy}>{busy?"Sending…":"Send link"}</Btn>}>
+    {err||(sent
+      ? `We sent a link to ${u.email}. Open it to confirm this is your address.`
+      : "Until it's confirmed, we can't be sure job alerts and employer messages are reaching you rather than someone else.")}
+  </Banner>;
+}
+
+/* Devices that skip the 2FA prompt. Revoking has to work from a DIFFERENT device — that's what
+   someone reaches for after losing a laptop — so this lists them per account, not per cookie. */
+function _TrustedDevices(){
+  const [devices,setDevices]=useState([]);
+  const load=()=>api.get("/auth/trusted-devices").then(r=>setDevices(r.devices)).catch(()=>{});
+  useEffect(()=>{load();},[]);
+  if(!devices.length)return null;
+  return <Card pad={20} style={{marginBottom:16}}>
+    <Lbl>Devices that skip two-factor</Lbl>
+    <div className="text-sm text-text-2 mb-3.5">
+      These browsers won't be asked for a sign-in code. Revoke any you don't recognise or no longer have.
+    </div>
+    <div className="flex flex-col gap-2">
+      {devices.map(d=>
+        <div key={d.id} className="flex justify-between items-center gap-3 border border-line rounded-xl py-2.5 px-3.5 flex-wrap">
+          <div className="min-w-0">
+            <div className="text-sm font-semibold text-text">{d.label}{d.current&&<span className="text-xs font-normal text-brand ml-2">this device</span>}</div>
+            <div className="text-xs text-text-3 mt-0.5">
+              {d.lastUsed?`Last used ${new Date(d.lastUsed.replace(" ","T")+"Z").toLocaleDateString("en-CA")}`:"Not used yet"}
+              {" · expires "}{new Date(d.expiresAt).toLocaleDateString("en-CA")}</div>
+          </div>
+          <Btn kind="ghost" size="xs" onClick={async()=>{await api.del(`/auth/trusted-devices/${d.id}`).catch(()=>{});load();}}>Revoke</Btn>
+        </div>)}
+    </div>
+  </Card>;
+}
 
 export function SettingsPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
@@ -20,6 +75,7 @@ export function SettingsPage(){
       {sub&&<div className="text-sm text-text-2 mt-1 leading-normal">{sub}</div>}</div>{children}</div>;
   return <Page narrow>
     <H1 sub="Account, notifications and privacy">Settings</H1>
+    <_EmailVerification u={u}/>
     <Card pad={mob?18:24} style={{marginBottom:16}}>
       <Lbl>Notifications</Lbl>
       {/* This switch IS the CASL consent record, not a cosmetic preference - the server refuses
@@ -34,6 +90,7 @@ export function SettingsPage(){
       <Row icon="mail" title="Product and career emails" sub="New articles, trainings and platform updates">
         <Switch on={S.marketing} onChange={v=>A.setUserSetting("marketing",v)}/></Row>
     </Card>
+    <_TrustedDevices/>
     {u.role==="seeker"&&<Card pad={mob?18:24} style={{marginBottom:16}}>
       <Lbl>Privacy</Lbl>
       <Row icon="eye" title="Let verified employers find my profile" sub="Only verified employers, and only for roles matching your preferences">
