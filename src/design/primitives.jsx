@@ -539,6 +539,62 @@ export function DatePicker({value,onChange,min,max}){
     onChange={e=>onChange(e.target.value)} icon="calendar"/>;
 }
 
+/* Common ranges people actually pick, so the frequent cases are one click rather than two date
+   entries. Values are resolved at click time, not at module load - a preset computed once would
+   silently go stale in a tab left open overnight. */
+export const DATE_RANGE_PRESETS=[
+  {k:"7d",label:"Last 7 days",days:7},
+  {k:"30d",label:"Last 30 days",days:30},
+  {k:"90d",label:"Last 90 days",days:90},
+  {k:"ytd",label:"Year to date"},
+  {k:"12m",label:"Last 12 months",days:365},
+];
+const _iso=d=>d.toISOString().slice(0,10);
+export function resolveDateRangePreset(k){
+  const today=new Date();
+  if(k==="ytd")return {from:_iso(new Date(Date.UTC(today.getUTCFullYear(),0,1))),to:_iso(today)};
+  const p=DATE_RANGE_PRESETS.find(x=>x.k===k);
+  if(!p?.days)return null;
+  return {from:_iso(new Date(today.getTime()-p.days*86400000)),to:_iso(today)};
+}
+
+/* A real from/to range control. The tracker's finding was that DatePicker was "just a styled
+   native date input — no range picker for anything beyond a single date", and several pages had
+   each hand-rolled their own pair of inputs plus their own validation. This is that pair, once,
+   with the ordering rule enforced in the control rather than trusted to each caller: picking a
+   "from" after the current "to" moves "to" along instead of leaving an impossible range that
+   silently returns no rows. */
+export function DateRangePicker({from,to,onChange,min,max,presets=true}){
+  const set=(k,v)=>{
+    let next={from,to,[k]:v};
+    if(next.from&&next.to&&next.from>next.to){
+      if(k==="from")next.to=v; else next.from=v;
+    }
+    onChange(next);
+  };
+  return <div className="flex flex-col gap-2.5">
+    <div className="flex gap-2.5 items-end flex-wrap">
+      <div className="flex-1 min-w-32">
+        <label className="block text-xs font-semibold text-text-2 mb-1">From</label>
+        <Input type="date" value={from||""} min={min} max={max} icon="calendar"
+          onChange={e=>set("from",e.target.value)}/>
+      </div>
+      <div className="flex-1 min-w-32">
+        <label className="block text-xs font-semibold text-text-2 mb-1">To</label>
+        <Input type="date" value={to||""} min={min} max={max} icon="calendar"
+          onChange={e=>set("to",e.target.value)}/>
+      </div>
+      {(from||to)&&<Btn kind="ghost" size="sm" onClick={()=>onChange({from:"",to:""})}>Clear</Btn>}
+    </div>
+    {presets&&<div className="flex gap-1.5 flex-wrap">
+      {DATE_RANGE_PRESETS.map(p=>
+        <button key={p.k} type="button" onClick={()=>{const r=resolveDateRangePreset(p.k); if(r)onChange(r);}}
+          className="text-xs font-medium text-text-2 bg-bg border border-line rounded-full py-1 px-2.5 cursor-pointer hover:border-brand hover:text-brand transition-colors duration-150">
+          {p.label}</button>)}
+    </div>}
+  </div>;
+}
+
 /* ═══════════════ PAGE LAYOUT WRAPPER ═══════════════ */
 export const MAXW={site:1240,narrow:820,wide:1360};
 export const PADX={mob:"16px",dt:"32px"};

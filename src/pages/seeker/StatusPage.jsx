@@ -2,7 +2,7 @@ import { useState } from "react";
 import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
-import { Btn, Card, Tag, Bar, Stat, Tabs, Empty, H1, Page, ConfirmDialog, Modal, Field, Area } from "../../design/primitives.jsx";
+import { Btn, Card, Tag, Bar, Sel, Stat, Tabs, Empty, H1, Page, ConfirmDialog, Modal, Field, Area } from "../../design/primitives.jsx";
 import { pay, payShort } from "../../helpers/utils.js";
 import { STAGES } from "../../store/seed/constants.js";
 import { EmpMark } from "../shared/cards.jsx";
@@ -43,7 +43,15 @@ export function StatusPage(){
   const [withdrawing,setWithdrawing]=useState(null); const [withdrawReason,setWithdrawReason]=useState("");
   const [viewingAnswers,setViewingAnswers]=useState(null);
   const [viewingHistory,setViewingHistory]=useState(null);
-  const mine=A.myApps;
+  /* The stat tiles were all-time counts with no way to ask "how did the last month go" - the
+     usual question after a burst of applying. Applications carry a real createdAt, so a period
+     filter is a genuine answer rather than the fabricated trend line the finding also asked for
+     (there are no historical snapshots to compute a real week-over-week delta from). */
+  const [period,setPeriod]=useState("all");
+  const periodMs={"30d":30*86400000,"90d":90*86400000,"12m":365*86400000}[period];
+  const since=periodMs?Date.now()-periodMs:null;
+  const allMine=A.myApps;
+  const mine=since?allMine.filter(a=>(a.createdAt||0)>=since):allMine;
   const counts=mine.reduce((m,a)=>({...m,[a.stage]:(m[a.stage]||0)+1}),{});
   const list=tab==="all"?mine:mine.filter(a=>a.stage===tab);
   /* Employers can define their own pipeline stages, so a seeker's filter list is the union of
@@ -56,7 +64,20 @@ export function StatusPage(){
     {k:"Withdrawn",label:"Withdrawn",n:counts.Withdrawn||0}];
   return <Page>
     <H1 sub="Live status pulled straight from each employer's pipeline"
-      action={<Btn kind="outline" size="sm" icon="bookmark" onClick={()=>A.go("saved")}>Saved ({A.saved.size})</Btn>}>My status</H1>
+      action={<div className="flex gap-2.5 items-center flex-wrap">
+        <Sel value={period} onChange={e=>setPeriod(e.target.value)} style={{width:160}} aria-label="Time period">
+          <option value="all">All time</option>
+          <option value="30d">Last 30 days</option>
+          <option value="90d">Last 90 days</option>
+          <option value="12m">Last 12 months</option>
+        </Sel>
+        <Btn kind="outline" size="sm" icon="bookmark" onClick={()=>A.go("saved")}>Saved ({A.saved.size})</Btn>
+      </div>}>My status</H1>
+    {period!=="all"&&allMine.length!==mine.length&&
+      <div className="text-sm text-text-2 -mt-3 mb-4">
+        Showing {mine.length} of {allMine.length} applications.{" "}
+        <button onClick={()=>setPeriod("all")} className="bg-transparent border-0 p-0 cursor-pointer text-sm font-semibold text-brand underline">Show all time</button>
+      </div>}
     <div className="grid gap-3 mb-5" style={{gridTemplateColumns:`repeat(auto-fit,minmax(${mob?140:160}px,1fr))`}}>
       <Stat icon="send" label="Applications" value={mine.length} tone={C.brand}/>
       <Stat icon="eye" label="Reviewed" value={(counts.Reviewed||0)+(counts.Shortlisted||0)+(counts.Interview||0)+(counts.Offer||0)}/>

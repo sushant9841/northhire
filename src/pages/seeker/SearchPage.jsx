@@ -15,8 +15,12 @@ function Filters({f,set,clear,n,q,where}){
   const A=use();
   const tog=(k,v)=>{const c=f[k]||[];set({...f,[k]:c.includes(v)?c.filter(x=>x!==v):[...c,v]});};
   const G=({t,children})=><div className="pb-6 mb-6 border-b border-line-soft"><Lbl>{t}</Lbl>{children}</div>;
-  const R=({on,onClick,label,num})=><button onClick={onClick}
-    className="flex items-center gap-3 w-full py-2.5 px-1.5 bg-transparent border-0 cursor-pointer text-left rounded-lg">
+  /* role/aria-checked so a screen reader announces these as checkboxes with real on/off state -
+     as plain buttons they read as "Full Time, button" with no indication of whether the filter
+     is currently applied, which is the entire information the control carries. */
+  const R=({on,onClick,label,num})=><button onClick={onClick} role="checkbox" aria-checked={!!on}
+    aria-label={num!=null?`${label}, ${num} job${num===1?"":"s"}`:label}
+    className="flex items-center gap-3 w-full py-2.5 px-1.5 bg-transparent border-0 cursor-pointer text-left rounded-lg focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2">
     <span className={`w-5 h-5 rounded-md shrink-0 border-2 flex items-center justify-center transition duration-150 ${on?"border-brand bg-brand":"border-line bg-white"}`}>{on&&<I n="check" s={12} c="#fff" w={3}/>}</span>
     <span className={`flex-1 text-sm text-text ${on?"font-semibold":"font-medium"}`}>{label}</span>
     {num!=null&&<span className="text-xs text-text-3">{num}</span>}</button>;
