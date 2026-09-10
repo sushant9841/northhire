@@ -1475,6 +1475,10 @@ export function useStore(){
     try{const {revisions}=await api.get(`/content/${type}s/${id}/revisions`);return revisions;}
     catch(err){toast(err.message,"danger");return [];}
   };
+  const loadArticleAnalytics=async id=>{
+    try{return await api.get(`/content/blogs/${id}/analytics`);}
+    catch(err){toast(err.message,"danger");return {total:0,uniqueSignedIn:0,byBucket:[],daily:[],topRefs:[]};}
+  };
   const restoreContentRevision=async(type,id,revisionId)=>{
     try{
       const {[type]:item}=await api.post(`/content/${type}s/${id}/restore/${revisionId}`);
@@ -1883,7 +1887,7 @@ export function useStore(){
     messageTemplates,saveMessageTemplate,deleteMessageTemplate,
     stageAutomations,loadStageAutomations,setStageAutomation,
     editBlog,editTraining,saveBlog,saveTraining,deleteBlog,deleteTraining,toggleBlogStatus,toggleTrainingStatus,
-    loadContentRevisions,restoreContentRevision,
+    loadContentRevisions,restoreContentRevision,loadArticleAnalytics,
     enrol,confirmPaidEnrol,advanceTraining,paidTrainings,newCv,importResumeToNewCv,editCv,saveCv,duplicateCv,deleteCv,setDefaultCv,
     printCv,printCert,printInvoice,printOfferLetter,exportApplicants,exportLog,exportUsers,exportEmployers,share,choosePlan,updateCard,setSetting,
     readNotif,markAllRead,logActivity:log,

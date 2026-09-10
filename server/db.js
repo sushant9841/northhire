@@ -298,6 +298,21 @@ CREATE TABLE IF NOT EXISTS trainings (
   featured INTEGER DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+/* Per-article view events. The old blogs.views counter was a raw increment with no way to look
+   at trend, referrer, or reader vs. author. This is the raw event stream: one row per rendered
+   view, with viewer identity when signed in and a rough referrer bucket. Aggregations happen in
+   the read endpoint rather than at write time so the write path stays a single insert. */
+CREATE TABLE IF NOT EXISTS content_views (
+  id TEXT PRIMARY KEY,
+  content_type TEXT NOT NULL CHECK(content_type IN ('blog','training')),
+  content_id TEXT NOT NULL,
+  viewer_user_id TEXT REFERENCES users(id),
+  viewer_bucket TEXT,
+  referrer TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_content_views_ctx ON content_views(content_type, content_id, created_at DESC);
+
 /* Revision history for both content types - a snapshot of the full row taken right before every
    edit, so "what did this look like last week" is answerable and a bad edit can be restored. */
 CREATE TABLE IF NOT EXISTS content_revisions (

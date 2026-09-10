@@ -20,11 +20,20 @@ export function AdmHome(){
       action={<div className="flex gap-2.5 flex-wrap">
         <Btn kind="outline" icon="gear" onClick={()=>A.go("admSettings")}>Settings</Btn>
         <Btn kind="primary" icon="trend" onClick={()=>A.go("admStats")}>Statistics</Btn></div>}>Platform overview</H1>
-    {(pending.length>0||flagged.length>0)&&<Banner tone="warn" icon="alert" title="Items need your attention" style={{marginBottom:18}}
-      action={<Btn kind="primary" size="sm" onClick={()=>A.go(pending.length?"admEmployers":"admJobs")}>Review</Btn>}>
-      {pending.length>0&&`${pending.length} employer${pending.length===1?"":"s"} awaiting verification`}
-      {pending.length>0&&flagged.length>0&&" • "}
-      {flagged.length>0&&`${flagged.length} flagged listing${flagged.length===1?"":"s"}`}</Banner>}
+    {/* Escalation thresholds - once a queue crosses its configured "high" number the banner
+        goes red (danger) instead of yellow (warn). Numbers come from platform_config.adminAlerts
+        so an operator can retune "backlog vs queue" without a redeploy. */}
+    {(()=>{const t=A.platformConfig?.adminAlerts||{};
+      const escalated=pending.length>=t.pendingEmployersHigh||flagged.length>=t.flaggedJobsHigh||drafts.length>=t.contentDraftsHigh;
+      if(!pending.length&&!flagged.length)return null;
+      return <Banner tone={escalated?"danger":"warn"} icon={escalated?"alert":"alert"}
+        title={escalated?"Backlog above threshold — needs immediate attention":"Items need your attention"}
+        style={{marginBottom:18}}
+        action={<Btn kind="primary" size="sm" onClick={()=>A.go(pending.length?"admEmployers":"admJobs")}>Review</Btn>}>
+        {pending.length>0&&<>{pending.length} employer{pending.length===1?"":"s"} awaiting verification{t.pendingEmployersHigh&&pending.length>=t.pendingEmployersHigh?<Tag tone="danger" sm style={{marginLeft:6}}>≥ {t.pendingEmployersHigh}</Tag>:null}</>}
+        {pending.length>0&&flagged.length>0&&" • "}
+        {flagged.length>0&&<>{flagged.length} flagged listing{flagged.length===1?"":"s"}{t.flaggedJobsHigh&&flagged.length>=t.flaggedJobsHigh?<Tag tone="danger" sm style={{marginLeft:6}}>≥ {t.flaggedJobsHigh}</Tag>:null}</>}
+      </Banner>;})()}
     <div className="grid gap-3 mb-5" style={{gridTemplateColumns:`repeat(auto-fit,minmax(${mob?140:170}px,1fr))`}}>
       <Stat icon="users" label="Job seekers" value={A.people.length.toLocaleString()} tone={C.brand} onClick={()=>A.go("admUsers")}/>
       <Stat icon="building" label="Employers" value={A.employers.length} delta={`${pending.length} pending`} onClick={()=>A.go("admEmployers")}/>
@@ -738,5 +747,6 @@ export function AdmConfig(){
     <JsonConfigEditor title="Staffing burden rates" desc="Per-province CPP/EI/EHT/WSIB/vacation/stat-holiday rates used in placement margin math." configKey="staffingRates" value={cfg.staffingRates} onSave={A.updatePlatformConfig}/>
     <JsonConfigEditor title="Overtime & holiday pay policy" desc="Weekly overtime threshold/multiplier, statutory holiday dates and pay multiplier, and night-shift differential — applied to every HR Suite employee set to hourly pay." configKey="overtimePolicy" value={cfg.overtimePolicy} onSave={A.updatePlatformConfig}/>
     <StaffingAgencyEditor value={cfg.staffingAgency} onSave={A.updatePlatformConfig}/>
+    <JsonConfigEditor title="Admin alerting thresholds" desc="Once a queue crosses its 'high' number, the admin dashboard's warning banner escalates from yellow to red. Numbers apply platform-wide." configKey="adminAlerts" value={cfg.adminAlerts} onSave={A.updatePlatformConfig}/>
   </Page>;
 }

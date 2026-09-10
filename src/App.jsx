@@ -50,6 +50,7 @@ import {
   AgencyWorkers, AgencyMargins, AgencyCompliance, AgencyBranches,
 } from "./pages/staffing/suite.jsx";
 import { AdmHome, AdmUsers, AdmEmployers, AdmJobs, AdmSettings, AdmLog, AdmStats, AdmConfig, AdmAdmins } from "./pages/admin/suite.jsx";
+import { AdmDesignSystem } from "./pages/admin/designSystem.jsx";
 import {
   HomePage, BlogsPage, BlogPage, TrainingsPage, TrainingPage, AboutPage, ContactPage, LegalPage,
   PricingPage, AccessibilityPage, PipedaPage, CreditsPage,
@@ -94,7 +95,7 @@ export default function NorthHire(){
     account:<AccountMenuPage/>,
     accessibility:<AccessibilityPage/>,pipeda:<PipedaPage/>,credits:<CreditsPage/>,unsubscribe:<UnsubscribePage/>,matchScore:<MatchScorePage/>,offer:<OfferPage/>,verifyEmail:<VerifyEmailPage/>,
     admBlogs:<AdmShell><ContentManager scope="admin"/></AdmShell>,admTrainings:<AdmShell><ContentManager scope="admin"/></AdmShell>,
-    admSettings:<AdmShell><AdmSettings/></AdmShell>,admLog:<AdmShell><AdmLog/></AdmShell>,admStats:<AdmShell><AdmStats/></AdmShell>,
+    admSettings:<AdmShell><AdmSettings/></AdmShell>,admLog:<AdmShell><AdmLog/></AdmShell>,admStats:<AdmShell><AdmStats/></AdmShell>,admDesignSystem:<AdmShell><AdmDesignSystem/></AdmShell>,admDesignSystem:<AdmShell><AdmDesignSystem/></AdmShell>,
     admConfig:<AdmShell><AdmConfig/></AdmShell>,admAdmins:<AdmShell><AdmAdmins/></AdmShell>,
     /* HR Suite */
     hrLogin:<HrLoginPage/>,hrKiosk:<KioskPage/>,

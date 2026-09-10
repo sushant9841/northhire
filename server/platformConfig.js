@@ -12,8 +12,18 @@ import { infinityReplacer, infinityReviver } from "../src/helpers/jsonInfinity.j
    parses every response with infinityReviver), since several of these configs genuinely need a
    real Infinity (Enterprise's unlimited job count, an open-ended tax bracket ceiling) and plain
    JSON.stringify would silently turn that into null. */
-const CONFIG_KEYS = ["plans", "payrollTax", "staffingRates", "staffingAgency", "overtimePolicy"];
-const DEFAULTS = { plans: PLANS, payrollTax: DEFAULT_PAYROLL_TAX_CONFIG, staffingRates: DEFAULT_STAFFING_RATES, staffingAgency: DEFAULT_STAFFING_AGENCY, overtimePolicy: DEFAULT_OVERTIME_POLICY };
+/* Admin-alerting thresholds: the number of pending items above which the AdmHome banner
+   escalates from "there is a queue" (warn) to "there is a backlog" (danger). Editable in the
+   admin business-config panel so a bigger platform can retune without a redeploy - the tracker
+   correctly flagged that the previous banner had no configurable trigger at all. */
+const DEFAULT_ADMIN_ALERTS = {
+  pendingEmployersHigh: 5,
+  flaggedJobsHigh: 3,
+  contentDraftsHigh: 20,
+  moderationBacklogHigh: 10,
+};
+const CONFIG_KEYS = ["plans", "payrollTax", "staffingRates", "staffingAgency", "overtimePolicy", "adminAlerts"];
+const DEFAULTS = { plans: PLANS, payrollTax: DEFAULT_PAYROLL_TAX_CONFIG, staffingRates: DEFAULT_STAFFING_RATES, staffingAgency: DEFAULT_STAFFING_AGENCY, overtimePolicy: DEFAULT_OVERTIME_POLICY, adminAlerts: DEFAULT_ADMIN_ALERTS };
 
 export function getConfig(key) {
   if (!CONFIG_KEYS.includes(key)) throw new Error(`Unknown platform config key: ${key}`);

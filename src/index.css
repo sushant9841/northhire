@@ -64,3 +64,30 @@
 .rich-content ol { list-style: decimal; padding-left: 1.25em; }
 .rich-content li { margin: 0.25em 0; }
 .rich-content a { color: var(--color-brand); text-decoration: underline; }
+
+/* ─── Focus-ring audit (design-system-wide) ────────────────────────────────────────────────
+   Tailwind's Preflight removes the browser's default focus outline on every interactive element
+   but does NOT replace it. Every button/link/input/select/textarea/[tabindex] on the site was
+   therefore keyboard-invisible when focused: sighted keyboard users had no way to tell where the
+   focus was after a Tab, and screen-reader users had accurate but paired-cue-broken guidance.
+   Using :focus-visible (not plain :focus) restores the ring for keyboard focus only, so mouse
+   clicks don't leave a lingering ring - the same distinction native controls make. The token is
+   the brand colour with an opaque halo so it holds contrast against both light and dark grounds
+   (WCAG 2.4.11 non-text contrast requires 3:1). Anywhere a component author needs to override
+   this (a segmented control that already draws its own focused state, say), they can set their
+   own focus-visible ring; the reset never runs. */
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+/* Skip-link visibility - the App.jsx skip-to-main link is off-screen until it takes focus.
+   Everything else that hides content with .sr-only stays hidden, since focusing an image or a
+   label shouldn't visually reveal it. */
+.skip-link { position: absolute; left: -9999px; }
+.skip-link:focus, .skip-link:focus-visible {
+  left: 8px; top: 8px; z-index: 9999;
+  background: var(--color-brand); color: #fff;
+  padding: 10px 16px; border-radius: 8px;
+  font-weight: 600; text-decoration: none;
+}

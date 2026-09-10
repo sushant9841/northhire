@@ -1002,7 +1002,9 @@ export function ContentManager({scope,only}){
   const [q,setQ]=useState(""); const [statusFilter,setStatusFilter]=useState("all");
   const [sel,setSel]=useState(new Set());
   const [viewingHistory,setViewingHistory]=useState(null); const [revisions,setRevisions]=useState([]);
+  const [viewingAnalytics,setViewingAnalytics]=useState(null); const [analytics,setAnalytics]=useState(null);
   const openHistory=async(item,type)=>{setViewingHistory({item,type}); setRevisions(await A.loadContentRevisions(type,item.id));};
+  const openAnalytics=async(item)=>{setViewingAnalytics(item); setAnalytics(null); setAnalytics(await A.loadArticleAnalytics(item.id));};
   const restore=async(revId)=>{
     const r=await A.restoreContentRevision(viewingHistory.type,viewingHistory.item.id,revId);
     if(r.ok)setViewingHistory(null);
@@ -1030,6 +1032,7 @@ export function ContentManager({scope,only}){
         {editable&&<>
           <Btn kind="outline" size="xs" icon="edit" onClick={()=>type==="blog"?A.editBlog(item.id):A.editTraining(item.id)}>Edit</Btn>
           <Btn kind="ghost" size="xs" icon="clock" title="Revision history" onClick={()=>openHistory(item,type)}/>
+          {type==="blog"&&<Btn kind="ghost" size="xs" icon="trend" title="Analytics" onClick={()=>openAnalytics(item)}/>}
           <Btn kind="ghost" size="xs" onClick={()=>type==="blog"?A.toggleBlogStatus(item.id):A.toggleTrainingStatus(item.id)}>
             {item.status==="published"?"Unpublish":"Publish"}</Btn>
           <Btn kind="ghost" size="xs" icon="trash" title="Delete"
@@ -1073,6 +1076,44 @@ export function ContentManager({scope,only}){
               Create {tab==="blogs"?"article":"training"}</Btn>:null}/>
         : pg.pageItems.map(x=><Row key={x.id} item={x} type={tab==="blogs"?"blog":"training"}/>)}</Card>
     <Pagination {...pg}/>
+    {viewingAnalytics&&<Modal onClose={()=>setViewingAnalytics(null)} title={`Analytics — ${viewingAnalytics.title}`} width={620}>
+      {!analytics
+        ? <div className="text-sm text-text-3 py-4 text-center">Loading…</div>
+        : <div className="flex flex-col gap-4">
+            <div className="grid gap-3" style={{gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))"}}>
+              <Stat icon="eye" label="Total views" value={analytics.total.toLocaleString()} tone={C.brand}/>
+              <Stat icon="users" label="Signed-in unique" value={analytics.uniqueSignedIn.toLocaleString()} tone={C.violet}/>
+            </div>
+            <div>
+              <Lbl>Views by audience</Lbl>
+              {analytics.byBucket.length===0
+                ? <div className="text-sm text-text-3">No views yet.</div>
+                : analytics.byBucket.map(b=><div key={b.bucket} className="flex justify-between py-1 text-sm">
+                    <span className="text-text-2 capitalize">{b.bucket||"unknown"}</span>
+                    <span className="font-semibold text-text tabular-nums">{b.n}</span>
+                  </div>)}
+            </div>
+            <div>
+              <Lbl>Last 30 days</Lbl>
+              {analytics.daily.length===0
+                ? <div className="text-sm text-text-3">No views in the last 30 days.</div>
+                : <div className="flex gap-0.5 items-end" style={{height:70}}>
+                    {analytics.daily.map(d=>{const max=Math.max(1,...analytics.daily.map(x=>x.n));
+                      return <div key={d.day} title={`${d.day}: ${d.n} views`}
+                        className="flex-1 bg-brand rounded-sm min-w-1" style={{height:`${(d.n/max)*100}%`}}/>;})}
+                  </div>}
+            </div>
+            <div>
+              <Lbl>Top referrers</Lbl>
+              {analytics.topRefs.length===0
+                ? <div className="text-sm text-text-3">All views arrived directly (no referrer header).</div>
+                : analytics.topRefs.map(r=><div key={r.host} className="flex justify-between py-1 text-sm">
+                    <span className="text-text-2 truncate">{r.host}</span>
+                    <span className="font-semibold text-text tabular-nums shrink-0 ml-3">{r.n}</span>
+                  </div>)}
+            </div>
+          </div>}
+    </Modal>}
     {viewingHistory&&<Modal onClose={()=>setViewingHistory(null)} title={`Revision history — ${viewingHistory.item.title}`}>
       <div className="flex flex-col gap-2" style={{maxHeight:400,overflowY:"auto"}}>
         {revisions.length===0&&<div className="text-sm text-text-3 py-3">No earlier revisions — this hasn't been edited since it was created.</div>}

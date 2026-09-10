@@ -138,6 +138,7 @@ export const ROUTES = {
   admBlogs:    {title:"Articles", tab:"matched", roles:["admin"], root:true, bare:true, path:"/admin/content/articles"},
   admTrainings:{title:"Trainings", tab:"matched", roles:["admin"], bare:true, root:true, path:"/admin/content/trainings"},
   admSettings: {title:"Platform settings", tab:"profile", roles:["admin"], bare:true, root:true, path:"/admin/settings"},
+  admDesignSystem: {title:"Design system", tab:"profile", roles:["admin"], bare:true, root:true, path:"/admin/design-system"},
   admLog:      {title:"Activity log", tab:"profile", roles:["admin"], bare:true, root:true, path:"/admin/log"},
   admStats:    {title:"Platform statistics", tab:"profile", roles:["admin"], bare:true, root:true, path:"/admin/stats"},
   admConfig:   {title:"Business config", tab:"profile", roles:["admin"], bare:true, root:true, path:"/admin/config"},

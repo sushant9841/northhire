@@ -54,6 +54,7 @@ export const ADM_MODULES=[
   {k:"admConfig",label:"Business config",icon:"wallet",section:"finance",adminScope:["finance"]},
   {k:"admAdmins",label:"Admin accounts",icon:"shield",section:"account",adminScope:[]},
   {k:"admSettings",label:"Platform settings",icon:"gear",section:"account",adminScope:[]},
+  {k:"admDesignSystem",label:"Design system",icon:"book",section:"account",adminScope:[]},
 ];
 
 export const SECTION_LABELS={main:"Hiring",staffing:"Staffing services",hrsuite:"HR Suite",content:"Content",finance:"Finance",manage:"Manage",account:"Account"};

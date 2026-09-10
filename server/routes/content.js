@@ -85,7 +85,43 @@ contentRouter.get("/blogs/mine", requireAuth, requireRole("employer", "admin"), 
 contentRouter.get("/blogs/:id", (req, res) => {
   const row = db.prepare("SELECT * FROM blogs WHERE id = ?").get(req.params.id);
   if (!row) return res.status(404).json({ error: "Article not found." });
+  // Log the view for real per-article analytics. Skips the author's own views of a draft they
+  // just saved, since that would inflate an owner's dashboard against their own edits.
+  try {
+    const viewer = req.user?.id || null;
+    const isAuthor = viewer && row.owner_employer_id && req.user.employer_id === row.owner_employer_id;
+    if (!isAuthor) {
+      const bucket = viewer ? (req.user.role === "seeker" ? "seeker" : req.user.role === "employer" ? "employer" : req.user.role) : "guest";
+      const ref = String(req.get("referer") || "").slice(0, 200) || null;
+      db.prepare("INSERT INTO content_views (id, content_type, content_id, viewer_user_id, viewer_bucket, referrer) VALUES (?, 'blog', ?, ?, ?, ?)")
+        .run(nextId("cv", "content_views"), req.params.id, viewer, bucket, ref);
+      db.prepare("UPDATE blogs SET views = views + 1 WHERE id = ?").run(req.params.id);
+    }
+  } catch (e) { console.error("view log:", e.message); }
   res.json({ blog: serializeBlog(row) });
+});
+
+// Per-article analytics: total views, breakdown by viewer type, day-by-day for the last 30 days,
+// and top referrer hosts. Owner/admin only - a seeker viewing an article does not need to see how
+// many other people did.
+contentRouter.get("/blogs/:id/analytics", requireAuth, requireRole("employer", "admin"), (req, res) => {
+  const blog = db.prepare("SELECT owner_employer_id FROM blogs WHERE id = ?").get(req.params.id);
+  if (!blog) return res.status(404).json({ error: "Article not found." });
+  if (req.user.role === "employer" && blog.owner_employer_id !== req.user.employer_id) {
+    return res.status(403).json({ error: "Not your article." });
+  }
+  const total = db.prepare("SELECT COUNT(*) AS n FROM content_views WHERE content_type = 'blog' AND content_id = ?").get(req.params.id).n;
+  const byBucket = db.prepare("SELECT viewer_bucket AS bucket, COUNT(*) AS n FROM content_views WHERE content_type = 'blog' AND content_id = ? GROUP BY viewer_bucket").all(req.params.id);
+  const daily = db.prepare("SELECT date(created_at) AS day, COUNT(*) AS n FROM content_views WHERE content_type = 'blog' AND content_id = ? AND created_at > datetime('now','-30 days') GROUP BY day ORDER BY day ASC").all(req.params.id);
+  const rawRefs = db.prepare("SELECT referrer FROM content_views WHERE content_type = 'blog' AND content_id = ? AND referrer IS NOT NULL").all(req.params.id);
+  const refHosts = {};
+  for (const r of rawRefs) {
+    try { const h = new URL(r.referrer).host || "direct"; refHosts[h] = (refHosts[h] || 0) + 1; }
+    catch { refHosts.direct = (refHosts.direct || 0) + 1; }
+  }
+  const topRefs = Object.entries(refHosts).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([host, n]) => ({ host, n }));
+  const uniqueSignedIn = db.prepare("SELECT COUNT(DISTINCT viewer_user_id) AS n FROM content_views WHERE content_type = 'blog' AND content_id = ? AND viewer_user_id IS NOT NULL").get(req.params.id).n;
+  res.json({ total, uniqueSignedIn, byBucket, daily, topRefs });
 });
 contentRouter.post("/blogs", requireAuth, requireRole("employer", "admin"), (req, res) => {
   const b = req.body || {};
