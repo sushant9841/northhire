@@ -126,6 +126,7 @@ export function serializeApplication(row) {
     avail: row.availability,
     expect: row.pay_expectation,
     letter: row.cover_letter,
+    letterUploadId: row.cover_letter_upload_id || null,
     cv: row.cv_id,
     meets: row.meets,
     screeningAnswers: JSON.parse(row.screening_answers_json || "[]"),

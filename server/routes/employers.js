@@ -1,9 +1,10 @@
 import crypto from "node:crypto";
 import { Router } from "express";
 import { db, nextId, sqlTime } from "../db.js";
-import { requireAuth, requireRole, hashPassword, createSessionCookie, publicUser, hasAdminScope } from "../auth.js";
+import { requireAuth, requireRole, requireAdminScope, hashPassword, createSessionCookie, publicUser, hasAdminScope } from "../auth.js";
 import { serializeEmployer } from "../serialize.js";
 import { getConfig } from "../platformConfig.js";
+import { storeUpload, listUploads, getUpload, deleteUpload } from "../uploads.js";
 import { sendAndLogMail } from "../mail.js";
 
 export const employersRouter = Router();
@@ -274,4 +275,46 @@ employersRouter.patch("/:id", requireAuth, (req, res) => {
 
   const updated = db.prepare(`${WITH_OWNER} WHERE employers.id = ?`).get(req.params.id);
   res.json({ employer: serializeEmployer(updated) });
+});
+
+/* ─── Incorporation / verification documents ────────────────────────────────────────────────
+   The signup wizard promises business-number and incorporation verification. The business number
+   was already collected; the document half was deferred as "needs file upload", which was stale —
+   see server/uploads.js. An employer uploads their own proof; a moderator-scope admin reviews it
+   alongside the other verification evidence. */
+employersRouter.get("/verification-documents", requireAuth, requireRole("employer"), (req, res) => {
+  res.json({ documents: listUploads("incorporation", "employer", req.user.employer_id) });
+});
+
+employersRouter.post("/verification-documents", requireAuth, requireRole("employer"), (req, res) => {
+  if (req.user.employer_role !== "owner") return res.status(403).json({ error: "Only the account owner can upload verification documents." });
+  const r = storeUpload({
+    kind: "incorporation", ownerType: "employer", ownerId: req.user.employer_id,
+    name: req.body?.name, dataUrl: req.body?.dataUrl, uploadedBy: req.user.name,
+  });
+  if (!r.ok) return res.status(r.status).json({ error: r.error });
+  res.status(201).json({ document: listUploads("incorporation", "employer", req.user.employer_id).find(d => d.id === r.id) });
+});
+
+employersRouter.delete("/verification-documents/:id", requireAuth, requireRole("employer"), (req, res) => {
+  const row = getUpload(req.params.id);
+  if (!row || row.owner_type !== "employer" || row.owner_id !== req.user.employer_id) return res.status(404).json({ error: "Not found." });
+  deleteUpload(req.params.id);
+  res.json({ ok: true });
+});
+
+/* Admin review. Scoped to moderators (the role that already approves/holds employers) — an
+   incorporation certificate carries real business identity data, so it isn't readable by every
+   admin scope, including readonly. */
+employersRouter.get("/:id/verification-documents", requireAuth, requireAdminScope("moderator"), (req, res) => {
+  res.json({ documents: listUploads("incorporation", "employer", req.params.id) });
+});
+
+employersRouter.get("/verification-documents/file/:docId", requireAuth, (req, res) => {
+  const row = getUpload(req.params.docId);
+  if (!row || row.kind !== "incorporation") return res.status(404).json({ error: "Not found." });
+  const isOwningEmployer = req.user.role === "employer" && row.owner_id === req.user.employer_id;
+  const isReviewer = req.user.role === "admin" && hasAdminScope(req.user, "moderator");
+  if (!isOwningEmployer && !isReviewer) return res.status(403).json({ error: "Not allowed." });
+  res.json({ id: row.id, name: row.name, dataUrl: row.data_url });
 });

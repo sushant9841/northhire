@@ -63,7 +63,12 @@ app.use(cors({
   credentials: true,
 }));
 app.use(cookieParser());
-app.use(express.json());
+/* express.json defaults to a 100kb body cap, which silently broke every document upload in the
+   app: HR employee documents advertised a 3 MB limit and returned a generic 500 for anything
+   over ~73 kB of real content, because the parser rejected the request before the route's own
+   size check ever ran. The limit here sits above the upload ceiling (server/uploads.js) so the
+   app's own validation - which returns a clear 413 - is what actually rejects an oversized file. */
+app.use(express.json({ limit: "6mb" }));
 
 // Baseline security headers - no helmet dependency needed for a handful of static values.
 app.use((req, res, next) => {
@@ -97,8 +102,16 @@ app.use("/api/api-keys", apiAdminRouter);
 app.use((req, res) => res.status(404).json({ error: "Not found." }));
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
-  console.error(err);
   res.locals._errMessage = err?.message || String(err);
+  // A body that overruns the parser's cap is a client-side mistake, not a server fault - saying
+  // so plainly beats logging a stack trace and returning "something went wrong".
+  if (err?.type === "entity.too.large") {
+    return res.status(413).json({ error: "That upload is too large. Please use a file under 3 MB." });
+  }
+  if (err?.type === "entity.parse.failed") {
+    return res.status(400).json({ error: "Malformed JSON in the request body." });
+  }
+  console.error(err);
   res.status(500).json({ error: "Something went wrong on the server." });
 });
 

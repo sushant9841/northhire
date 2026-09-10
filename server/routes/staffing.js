@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { Router } from "express";
 import { db, nextId, sqlTime } from "../db.js";
+import { storeUpload, listUploads, getUpload, deleteUpload } from "../uploads.js";
 import { verifyPassword, hashPassword, createSessionCookie, clearSessionCookie, requireAgencyAuth, requireAuth, requireRole } from "../auth.js";
 import { salesTaxRate } from "../../src/helpers/salesTax.js";
 import { calcNetPay } from "../../src/helpers/payrollTax.js";
@@ -825,4 +826,42 @@ staffingRouter.get("/kpis", requireAgencyAuth, (req, res) => {
     pendingTimesheets, draftTimesheets, arTotal: round2(arTotal), overdueTotal: round2(overdueTotal),
     inProgressPlacements, guaranteeExpiring, runRateWeekly: round2(runRateWeekly),
   });
+});
+
+/* ─── Worker documents (upload / replace / expire) ──────────────────────────────────────────
+   The worker "documents on file" list was read-only display of a JSON blob — you could see a
+   certificate was expiring but not actually replace it. Real uploads now sit behind the shared
+   server/uploads.js, with an expiry date carried in meta so the compliance dashboard's
+   expiring-documents roll-up reads real records rather than a hand-maintained list. */
+staffingRouter.get("/workers/:id/documents", requireAgencyAuth, (req, res) => {
+  const worker = db.prepare("SELECT * FROM staffing_workers WHERE id = ?").get(req.params.id);
+  if (!worker) return res.status(404).json({ error: "Worker not found." });
+  res.json({ documents: listUploads("worker-document", "staffing_worker", req.params.id) });
+});
+
+staffingRouter.post("/workers/:id/documents", requireAgencyAuth, (req, res) => {
+  const worker = db.prepare("SELECT * FROM staffing_workers WHERE id = ?").get(req.params.id);
+  if (!worker) return res.status(404).json({ error: "Worker not found." });
+  const expiry = String(req.body?.expiry || "").trim();
+  if (expiry && !/^\d{4}-\d{2}-\d{2}$/.test(expiry)) return res.status(400).json({ error: "Expiry must be a date (YYYY-MM-DD)." });
+  const r = storeUpload({
+    kind: "worker-document", ownerType: "staffing_worker", ownerId: req.params.id,
+    name: req.body?.name, dataUrl: req.body?.dataUrl, uploadedBy: req.agencyStaff?.name || "Agency staff",
+    meta: expiry ? { expiry } : null,
+  });
+  if (!r.ok) return res.status(r.status).json({ error: r.error });
+  res.status(201).json({ document: listUploads("worker-document", "staffing_worker", req.params.id).find(d => d.id === r.id) });
+});
+
+staffingRouter.get("/workers/documents/file/:docId", requireAgencyAuth, (req, res) => {
+  const row = getUpload(req.params.docId);
+  if (!row || row.kind !== "worker-document") return res.status(404).json({ error: "Not found." });
+  res.json({ id: row.id, name: row.name, dataUrl: row.data_url });
+});
+
+staffingRouter.delete("/workers/documents/:docId", requireAgencyAuth, (req, res) => {
+  const row = getUpload(req.params.docId);
+  if (!row || row.kind !== "worker-document") return res.status(404).json({ error: "Not found." });
+  deleteUpload(req.params.docId);
+  res.json({ ok: true });
 });

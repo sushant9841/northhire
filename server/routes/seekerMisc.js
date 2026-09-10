@@ -3,6 +3,7 @@ import { PDFParse } from "pdf-parse";
 import mammoth from "mammoth";
 import { db, nextId } from "../db.js";
 import { requireAuth, requireRole } from "../auth.js";
+import { storeUpload, listUploads, getUpload, deleteUpload } from "../uploads.js";
 import {
   serializeCv, serializeSavedSearch, serializeMessage, serializeInterview, serializeReview,
   serializeNotification, serializeReference, serializePaymentMethod,
@@ -364,4 +365,54 @@ seekerMiscRouter.post("/cv/parse-resume", requireAuth, requireRole("seeker"), as
   // lead with the person's name as the very first line of real text.
   const nameGuess = lines[0] && lines[0].length < 60 && !lines[0].includes("@") ? lines[0] : "";
   res.json({ name: nameGuess, email: emailMatch?.[0] || "", phone: phoneMatch?.[0] || "", rawText: text.trim().slice(0, 20000) });
+});
+
+/* ─── Seeker documents: cover letters and work-eligibility proof ────────────────────────────
+   Both were deferred as "needs real file storage". That was stale — HR employee documents had
+   been storing real uploads all along, so this reuses that proven path via the shared
+   server/uploads.js rather than adding a parallel one.
+
+   A seeker's documents are their own: only they can list, upload or delete them. An employer
+   sees a cover letter only through an application the seeker attached it to (below), never by
+   browsing someone's document list. */
+
+seekerMiscRouter.get("/documents/:kind", requireAuth, requireRole("seeker"), (req, res) => {
+  const kind = req.params.kind;
+  if (!["cover-letter", "work-eligibility"].includes(kind)) return res.status(400).json({ error: "Unknown document kind." });
+  res.json({ documents: listUploads(kind, "user", req.user.id) });
+});
+
+seekerMiscRouter.post("/documents/:kind", requireAuth, requireRole("seeker"), (req, res) => {
+  const kind = req.params.kind;
+  if (!["cover-letter", "work-eligibility"].includes(kind)) return res.status(400).json({ error: "Unknown document kind." });
+  const r = storeUpload({
+    kind, ownerType: "user", ownerId: req.user.id,
+    name: req.body?.name, dataUrl: req.body?.dataUrl, uploadedBy: req.user.name,
+  });
+  if (!r.ok) return res.status(r.status).json({ error: r.error });
+  res.status(201).json({ document: listUploads(kind, "user", req.user.id).find(d => d.id === r.id) });
+});
+
+seekerMiscRouter.get("/documents/file/:id", requireAuth, (req, res) => {
+  const row = getUpload(req.params.id);
+  if (!row) return res.status(404).json({ error: "Not found." });
+  // The owning seeker always may. An employer may only when this exact document is attached to
+  // an application to one of their own jobs - otherwise a document id would be enough to read
+  // any seeker's file.
+  let allowed = row.owner_type === "user" && row.owner_id === req.user.id;
+  if (!allowed && req.user.role === "employer") {
+    allowed = !!db.prepare(
+      `SELECT 1 FROM applications JOIN jobs ON jobs.id = applications.job_id
+        WHERE applications.cover_letter_upload_id = ? AND jobs.employer_id = ?`
+    ).get(req.params.id, req.user.employer_id);
+  }
+  if (!allowed) return res.status(403).json({ error: "Not your document." });
+  res.json({ id: row.id, name: row.name, dataUrl: row.data_url });
+});
+
+seekerMiscRouter.delete("/documents/file/:id", requireAuth, requireRole("seeker"), (req, res) => {
+  const row = getUpload(req.params.id);
+  if (!row || row.owner_type !== "user" || row.owner_id !== req.user.id) return res.status(404).json({ error: "Not found." });
+  deleteUpload(req.params.id);
+  res.json({ ok: true });
 });

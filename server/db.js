@@ -175,6 +175,9 @@ CREATE TABLE IF NOT EXISTS applications (
   user_id TEXT NOT NULL REFERENCES users(id),
   stage TEXT NOT NULL DEFAULT 'Applied',
   note TEXT, availability TEXT, pay_expectation TEXT, cover_letter TEXT, cv_id TEXT, meets TEXT,
+  /* An optional uploaded cover-letter file, alongside the typed cover_letter text - the seeker
+     may do either or both. */
+  cover_letter_upload_id TEXT REFERENCES uploads(id),
   screening_answers_json TEXT DEFAULT '[]',
   history_json TEXT DEFAULT '[]',
   previous_stage TEXT, withdrawn_at TEXT,
@@ -434,6 +437,20 @@ CREATE TABLE IF NOT EXISTS hr_signatures (
   signed_at TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE(document_id, employee_id)
 );
+
+/* Shared document storage (see server/uploads.js). owner_type/owner_id are deliberately loose so
+   one table serves a seeker's cover letter, an employer's incorporation proof, a support-ticket
+   attachment and a staffing worker's certificates — every caller does its own authorisation
+   before reading or writing, since "who may see this" differs completely per kind. */
+CREATE TABLE IF NOT EXISTS uploads (
+  id TEXT PRIMARY KEY,
+  kind TEXT NOT NULL,
+  owner_type TEXT NOT NULL, owner_id TEXT NOT NULL,
+  name TEXT NOT NULL, data_url TEXT NOT NULL, size INTEGER,
+  uploaded_by TEXT, meta_json TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_uploads_owner ON uploads(kind, owner_type, owner_id);
 
 CREATE TABLE IF NOT EXISTS hr_documents (
   id TEXT PRIMARY KEY,

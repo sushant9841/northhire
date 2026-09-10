@@ -1,6 +1,7 @@
 import { Router } from "express";
 import fs from "node:fs";
 import { db, nextId, sqlTime, DB_PATH } from "../db.js";
+import { storeUpload, listUploads, getUpload } from "../uploads.js";
 import { requireAuth, requireAdminScope } from "../auth.js";
 import { getAllConfig, setConfig, CONFIG_KEYS } from "../platformConfig.js";
 import { geocode } from "../geocode.js";
@@ -119,11 +120,27 @@ function serializeContactMessage(row) {
   return { id: row.id, name: row.name, email: row.email, topic: row.topic, message: row.message, status: row.status, at: sqlTime(row.created_at).getTime() };
 }
 platformRouter.post("/contact", (req, res) => {
-  const { name, email, topic, message } = req.body || {};
+  const { name, email, topic, message, attachment } = req.body || {};
   if (!email || !message) return res.status(400).json({ error: "Email and message are required." });
   const id = nextId("ct", "contact_messages");
   db.prepare("INSERT INTO contact_messages (id, name, email, topic, message) VALUES (?, ?, ?, ?, ?)").run(id, name || "", email, topic || "", message);
+  // Optional attachment - a screenshot is usually the fastest way to explain a problem. Anonymous
+  // (this endpoint has no auth by design), so it is attached to the ticket, not to a user.
+  if (attachment?.dataUrl) {
+    const up = storeUpload({ kind: "support-attachment", ownerType: "ticket", ownerId: id,
+      name: attachment.name, dataUrl: attachment.dataUrl, uploadedBy: email });
+    if (!up.ok) return res.status(up.status).json({ error: up.error });
+  }
   res.status(201).json({ ticket: id });
+});
+// Support-scope admins read a ticket's attachment while working it.
+platformRouter.get("/contact/:id/attachments", requireAuth, requireAdminScope("support"), (req, res) => {
+  res.json({ attachments: listUploads("support-attachment", "ticket", req.params.id) });
+});
+platformRouter.get("/contact/attachment/:docId", requireAuth, requireAdminScope("support"), (req, res) => {
+  const row = getUpload(req.params.docId);
+  if (!row || row.kind !== "support-attachment") return res.status(404).json({ error: "Not found." });
+  res.json({ id: row.id, name: row.name, dataUrl: row.data_url });
 });
 platformRouter.get("/contact", requireAuth, requireAdminScope("support"), (req, res) => {
   const rows = db.prepare("SELECT * FROM contact_messages ORDER BY created_at DESC").all();
