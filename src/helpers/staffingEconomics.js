@@ -25,16 +25,27 @@ export const DEFAULT_STAFFING_AGENCY = {
   markupFloor: 25, markupTarget: 38, markupCeiling: 65,
   payPeriodDays: 14, invoiceCycleDays: 7, paymentTermsDefaultDays: 30, vacationPayMode: "accrue",
   recruiterCommissionPct: 20,
+  /* Burden knobs that had been baked into the formula are now admin-editable business config.
+     eiEmployerMultiplier = 1.4 is the CRA employer share for regular pay (2026); a Quebec-only
+     account paying into QPIP would set this differently, and it needs to move with the rest of
+     the burden knobs when it does. adminFeePerHour was previously a flat $1/hr with no size
+     tiering; making it per-config lets an operator retune it as the business grows without a
+     redeploy. */
+  eiEmployerMultiplier: 1.4,
+  adminFeePerHour: 1.0,
 };
 
 export function round2(n) { return Math.round(n * 100) / 100; }
 function round1(n) { return Math.round(n * 10) / 10; }
 
-export function calcStaffingEconomics(pay, bill, prov, benefitsPerHr = 0, rates = DEFAULT_STAFFING_RATES) {
+export function calcStaffingEconomics(pay, bill, prov, benefitsPerHr = 0, rates = DEFAULT_STAFFING_RATES, agency = DEFAULT_STAFFING_AGENCY) {
   const r = rates[prov] || rates.ON;
-  const cpp = pay * r.cpp, ei = pay * r.ei * 1.4, eht = pay * r.eht;
+  /* Multiplier and flat admin fee both come from the agency config now - see the note on
+     DEFAULT_STAFFING_AGENCY for why. Old callers that don't pass agency get the seed values. */
+  const eiMul = Number(agency?.eiEmployerMultiplier ?? 1.4);
+  const admin = Number(agency?.adminFeePerHour ?? 1.0);
+  const cpp = pay * r.cpp, ei = pay * r.ei * eiMul, eht = pay * r.eht;
   const wsib = pay * r.wsib, vac = pay * r.vac, stat = pay * r.stat;
-  const admin = 1.0;
   const burden = cpp + ei + eht + wsib + vac + stat + admin + benefitsPerHr;
   const trueCost = pay + burden;
   const margin = bill - trueCost;

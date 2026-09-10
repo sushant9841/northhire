@@ -81,6 +81,19 @@ CREATE TABLE IF NOT EXISTS message_templates (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+/* Automation rule: when a candidate lands on a stage, auto-send the linked template to them,
+   with the template's merge fields substituted. One employer can have at most one rule per
+   stage - a PRIMARY KEY on (employer_id, stage) keeps that invariant at the schema level so
+   the UI can't accidentally register two rules that fire on the same event. */
+CREATE TABLE IF NOT EXISTS stage_automations (
+  employer_id TEXT NOT NULL REFERENCES employers(id),
+  stage TEXT NOT NULL,
+  template_id TEXT NOT NULL REFERENCES message_templates(id),
+  enabled INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (employer_id, stage)
+);
+
 CREATE TABLE IF NOT EXISTS employers (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -237,8 +250,12 @@ CREATE TABLE IF NOT EXISTS sessions (
   kind TEXT NOT NULL CHECK(kind IN ('main','hr','agency')),
   subject_id TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  expires_at TEXT NOT NULL
+  expires_at TEXT NOT NULL,
+  last_seen TEXT
 );
+/* Existing installs may not yet carry last_seen - added defensively so agency/HR idle timeout
+   works on already-migrated dbs without needing a hand-run ALTER. Safe no-op when the column
+   already exists (SQLite raises a duplicate-column error which the migration block swallows). */
 
 /* "Remember this device" for two-factor sign-in. A device that has already passed 2FA carries its
    own long-lived token so the person isn't re-challenged on their own laptop every time, while a
@@ -812,6 +829,15 @@ CREATE TABLE IF NOT EXISTS staffing_placements (
   commission_paid INTEGER DEFAULT 0, commission_paid_at TEXT
 );
 `);
+
+/* Ad-hoc migrations - columns added in later revisions that need to land on already-created dbs
+   without a full rebuild. Each ALTER wrapped so a "duplicate column name" on a fresh db (where
+   the CREATE TABLE above already carries it) is not fatal. */
+for (const stmt of [
+  "ALTER TABLE sessions ADD COLUMN last_seen TEXT",
+]) {
+  try { db.exec(stmt); } catch (e) { if (!/duplicate column/i.test(e.message)) console.error("migration:", stmt, e.message); }
+}
 
 export function nextId(prefix, table) {
   const row = db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get();

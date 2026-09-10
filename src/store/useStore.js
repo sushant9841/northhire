@@ -1406,6 +1406,16 @@ export function useStore(){
   const deleteMessageTemplate=async id=>{
     try{await api.del(`/employers/templates/${id}`);setMessageTemplates(l=>l.filter(t=>t.id!==id));}
     catch(err){toast(err.message,"danger");}};
+  /* Stage-change automations: one rule per stage that binds a template to a stage. Loaded lazily
+     alongside templates so an employer that never opens the automations panel doesn't take the
+     round-trip on every hydration. */
+  const [stageAutomations,setStageAutomations]=useState([]);
+  const loadStageAutomations=async()=>{
+    try{const {automations}=await api.get("/employers/automations");setStageAutomations(automations);}
+    catch{/* best-effort */}};
+  const setStageAutomation=async(stage,templateId,enabled=true)=>{
+    try{await api.put(`/employers/automations/${encodeURIComponent(stage)}`,{templateId,enabled});await loadStageAutomations();return{ok:true};}
+    catch(err){toast(err.message,"danger");return{ok:false,msg:err.message};}};
   useEffect(()=>{
     if(user?.role!=="employer"){setMessageTemplates([]);return;}
     loadMessageTemplates();
@@ -1871,6 +1881,7 @@ export function useStore(){
     publishJob,approveJob,toggleJobStatus,flagJob,reportJob,jobReports,loadJobReports,decideJobReport,setPipelineJob:setPipelineJobFn,saveCompany,verifyEmployer,holdEmployer,toggleSuspend,eraseUser,
     team,loadTeam,loadTeamAudit,inviteTeammate,revokeInvite,removeTeammate,getInvite,acceptInvite,inviteToken,
     messageTemplates,saveMessageTemplate,deleteMessageTemplate,
+    stageAutomations,loadStageAutomations,setStageAutomation,
     editBlog,editTraining,saveBlog,saveTraining,deleteBlog,deleteTraining,toggleBlogStatus,toggleTrainingStatus,
     loadContentRevisions,restoreContentRevision,
     enrol,confirmPaidEnrol,advanceTraining,paidTrainings,newCv,importResumeToNewCv,editCv,saveCv,duplicateCv,deleteCv,setDefaultCv,

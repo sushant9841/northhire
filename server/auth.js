@@ -37,13 +37,30 @@ export function clearSessionCookie(req, res, cookieName, kind) {
   res.clearCookie(cookieName);
 }
 
+/* Idle-timeout for cookie-scoped sessions. The agency console holds real payroll and PII, so an
+   unattended browser is a bigger risk than for a candidate account: 30 minutes for agency, 24
+   hours for HR, no idle timeout for the main account (which is behind ordinary consumer auth).
+   The check is per-request: last_seen is bumped on every authenticated hit, and a session that
+   went `idleWindowMs` without a hit fails auth without needing a cron to clean it up. */
+const IDLE_WINDOW_MS = { agency: 30 * 60 * 1000, hr: 24 * 60 * 60 * 1000 };
 function subjectIdFromCookie(req, cookieName, kind) {
   const token = req.cookies?.[cookieName];
   if (!token) return null;
   const row = db.prepare(
-    "SELECT subject_id FROM sessions WHERE token = ? AND kind = ? AND expires_at > datetime('now')"
+    "SELECT subject_id, last_seen FROM sessions WHERE token = ? AND kind = ? AND expires_at > datetime('now')"
   ).get(token, kind);
-  return row?.subject_id || null;
+  if (!row) return null;
+  const idleMs = IDLE_WINDOW_MS[kind];
+  if (idleMs && row.last_seen) {
+    const since = Date.now() - new Date(row.last_seen).getTime();
+    if (since > idleMs) {
+      // Bury the session so a later call to it also fails, and the cookie is worthless.
+      db.prepare("DELETE FROM sessions WHERE token = ? AND kind = ?").run(token, kind);
+      return null;
+    }
+  }
+  db.prepare("UPDATE sessions SET last_seen = datetime('now') WHERE token = ? AND kind = ?").run(token, kind);
+  return row.subject_id || null;
 }
 
 export function userFromRequest(req) {

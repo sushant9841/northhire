@@ -395,7 +395,7 @@ export function useStaffingStore(user,platformConfig){
   const assignmentMargin=(id)=>{
     const a=assignment(id); if(!a)return null;
     const w=worker(a.worker);
-    return calcStaffingEconomics(a.payRate,a.billRate,w?.province||"ON",a.benefitsPerHr||0,STAFFING_RATES);
+    return calcStaffingEconomics(a.payRate,a.billRate,w?.province||"ON",a.benefitsPerHr||0,STAFFING_RATES,STAFFING_AGENCY);
   };
 
   return {workers,staffingClients,jobOrders,assignments,timesheets,staffingPayruns,staffingInvoices,placements,staffingAuditLog,
@@ -415,6 +415,6 @@ export function useStaffingStore(user,platformConfig){
     createPlacement,acceptPlacement,invoicePlacement,clawbackPlacement,assignPlacementRecruiter,payCommission,
     upsertStaffingClient,signMsa,
     agencyKPIs,assignmentMargin,
-    calcStaffingEconomics:(pay,bill,prov,benefitsPerHr)=>calcStaffingEconomics(pay,bill,prov,benefitsPerHr,STAFFING_RATES),
+    calcStaffingEconomics:(pay,bill,prov,benefitsPerHr)=>calcStaffingEconomics(pay,bill,prov,benefitsPerHr,STAFFING_RATES,STAFFING_AGENCY),
   };
 }

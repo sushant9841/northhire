@@ -181,6 +181,35 @@ employersRouter.delete("/templates/:id", requireAuth, requireRole("employer"), (
   res.json({ ok: true });
 });
 
+/* Stage-change automations. One rule per employer per stage: when a candidate moves to `stage`,
+   the linked template is sent as a message from the person who ran the move (or the employer's
+   first-created user when the move was made by webhook or bulk action). Merge fields honour the
+   same {{name}}/{{job}}/{{company}} substitution as manual template use, so what's sent lines up
+   with what an operator sees in the preview when they built the template. */
+employersRouter.get("/automations", requireAuth, requireRole("employer"), (req, res) => {
+  const rows = db.prepare(
+    `SELECT sa.*, mt.name AS template_name FROM stage_automations sa
+     JOIN message_templates mt ON mt.id = sa.template_id
+     WHERE sa.employer_id = ? ORDER BY sa.stage ASC`
+  ).all(req.user.employer_id);
+  res.json({ automations: rows.map(r => ({ stage: r.stage, templateId: r.template_id, templateName: r.template_name, enabled: !!r.enabled })) });
+});
+employersRouter.put("/automations/:stage", requireAuth, requireRole("employer"), (req, res) => {
+  const stage = req.params.stage;
+  const { templateId, enabled = true } = req.body || {};
+  if (!templateId) {
+    db.prepare("DELETE FROM stage_automations WHERE employer_id = ? AND stage = ?").run(req.user.employer_id, stage);
+    return res.json({ ok: true });
+  }
+  const tpl = db.prepare("SELECT id FROM message_templates WHERE id = ? AND employer_id = ?").get(templateId, req.user.employer_id);
+  if (!tpl) return res.status(404).json({ error: "Template not found on your account." });
+  db.prepare(
+    `INSERT INTO stage_automations (employer_id, stage, template_id, enabled) VALUES (?, ?, ?, ?)
+     ON CONFLICT(employer_id, stage) DO UPDATE SET template_id = excluded.template_id, enabled = excluded.enabled`
+  ).run(req.user.employer_id, stage, templateId, enabled ? 1 : 0);
+  res.json({ ok: true });
+});
+
 employersRouter.get("/team", requireAuth, requireRole("employer"), (req, res) => {
   const members = db.prepare("SELECT id, name, email, employer_role, created_at FROM users WHERE employer_id = ? ORDER BY created_at ASC")
     .all(req.user.employer_id)

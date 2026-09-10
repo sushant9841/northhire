@@ -185,6 +185,28 @@ applicationsRouter.patch("/:id/stage", requireAuth, requireRole("employer"), (re
      but it does respect their in-app notification preference, and it is sent after the response
      so the employer's drag never waits on delivery. */
   notifyStageChange(app.user_id, row, stage, note).catch(() => {});
+
+  /* Run the employer's stage-change automation, if any: send the linked message template to the
+     candidate as an in-app message. Merge-field substitution mirrors what the template picker
+     shows the operator when they compose one manually, so the auto-sent copy is what they would
+     have sent by hand. Wrapped in try/catch: a failed automation must not fail the underlying
+     stage-move that succeeded, since that would leave the pipeline out of sync with what the
+     operator sees. */
+  try {
+    const rule = db.prepare(
+      "SELECT sa.template_id, mt.body FROM stage_automations sa JOIN message_templates mt ON mt.id = sa.template_id WHERE sa.employer_id = ? AND sa.stage = ? AND sa.enabled = 1"
+    ).get(req.user.employer_id, stage);
+    if (rule) {
+      const candidate = db.prepare("SELECT name FROM users WHERE id = ?").get(app.user_id);
+      const job = db.prepare("SELECT jobs.title, employers.name AS company FROM jobs JOIN employers ON employers.id = jobs.employer_id WHERE jobs.id = ?").get(app.job_id);
+      const body = String(rule.body || "")
+        .replaceAll("{{name}}", candidate?.name || "")
+        .replaceAll("{{job}}", job?.title || "")
+        .replaceAll("{{company}}", job?.company || "");
+      db.prepare("INSERT INTO messages (id, from_user_id, to_user_id, job_id, text) VALUES (?, ?, ?, ?, ?)")
+        .run(nextId("m", "messages"), req.user.id, app.user_id, app.job_id, body);
+    }
+  } catch (e) { console.error("stage automation:", e.message); }
 });
 
 async function notifyStageChange(userId, application, stage, note) {

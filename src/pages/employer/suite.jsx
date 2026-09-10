@@ -1373,6 +1373,7 @@ export function EmpCompany(){
         {dirty&&<Btn kind="ghost" onClick={()=>setConfirmDiscard(true)}>Discard</Btn>}
         <Btn kind="primary" icon="check" disabled={!dirty} onClick={()=>A.saveCompany(d)}>{dirty?"Save changes":"Saved"}</Btn></div></Card>
     <_PipelineStageEditor A={A} mob={mob}/>
+    <_StageAutomationsEditor A={A} mob={mob}/>
     <ConfirmDialog open={confirmDiscard} onClose={()=>setConfirmDiscard(false)} confirmLabel="Discard changes"
       title="Discard unsaved changes?" onConfirm={()=>setD({...A.company})}>
       This will revert every field on this page back to what's currently saved.
@@ -1433,6 +1434,40 @@ function _PipelineStageEditor({A,mob}){
       <Btn kind="primary" icon="check" disabled={!dirty||saving} onClick={save}>{saving?"Saving…":dirty?"Save stages":"Saved"}</Btn>
     </div>}
     {canCustomise&&!isOwner&&<div className="text-xs text-text-3 mt-3">Only the account owner can change pipeline stages.</div>}
+  </Card>;
+}
+
+/* One rule per stage that fires the linked template as an in-app message when a candidate moves
+   into that stage. Deliberately kept as a template BINDING rather than a "send this message"
+   editor - the template already exists as its own object, and duplicating its body inline here
+   would silently drift the moment the underlying template is edited. */
+function _StageAutomationsEditor({A,mob}){
+  const stages=A.stagesFor(A.company.id);
+  const templates=A.messageTemplates;
+  useEffect(()=>{A.loadStageAutomations();/* eslint-disable-next-line react-hooks/exhaustive-deps */},[]);
+  const byStage=Object.fromEntries((A.stageAutomations||[]).map(a=>[a.stage,a]));
+  const save=async(stage,templateId)=>{await A.setStageAutomation(stage,templateId||"",!!templateId); A.toast(templateId?`Automation set for "${stage}"`:`Automation removed for "${stage}"`,"ok");};
+  return <Card pad={mob?20:26} style={{marginTop:16}}>
+    <Lbl>Stage-change automations</Lbl>
+    <div className="text-sm text-text-2 mb-4 leading-relaxed">
+      When a candidate lands on a stage, the linked template is sent to them as a message from
+      whoever ran the move. Merge fields {"{{name}}"}, {"{{job}}"} and {"{{company}}"} are
+      substituted before sending.
+    </div>
+    {templates.length===0
+      ? <div className="text-sm text-text-3 py-2">Save a message as a template first — the picker in a candidate's message modal has a "Save this message as a template" action.</div>
+      : <div className="flex flex-col gap-2.5">{stages.map(stage=>{
+          const cur=byStage[stage]?.templateId||"";
+          return <div key={stage} className="flex gap-2.5 items-center flex-wrap">
+            <div className="text-sm font-semibold text-text w-30 shrink-0">{stage}</div>
+            <div className="flex-1 min-w-50">
+              <Sel value={cur} onChange={e=>save(stage,e.target.value)}>
+                <option value="">— No automation —</option>
+                {templates.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
+              </Sel>
+            </div>
+            {cur&&<Tag tone="ok" sm>Enabled</Tag>}
+          </div>;})}</div>}
   </Card>;
 }
 

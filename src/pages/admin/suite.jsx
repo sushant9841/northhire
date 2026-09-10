@@ -667,7 +667,11 @@ function StaffingAgencyEditor({value,onSave}){
     ["markupTarget","Markup target (%)","number"],["markupCeiling","Markup ceiling (%)","number"],
     ["payPeriodDays","Pay period (days)","number"],["invoiceCycleDays","Invoice cycle (days)","number"],
     ["paymentTermsDefaultDays","Default payment terms (days)","number"],
-    ["recruiterCommissionPct","Recruiter commission (% of placement fee)","number"]];
+    ["recruiterCommissionPct","Recruiter commission (% of placement fee)","number"],
+    /* Burden knobs previously hardcoded in the JS formula are editable here now - so retuning
+       them for a Quebec-QPIP account or a bigger admin overhead never needs a redeploy. */
+    ["eiEmployerMultiplier","EI employer multiplier (× employee premium)","number"],
+    ["adminFeePerHour","Admin fee per placed hour ($)","number"]];
   return <ConfigCard title="Staffing agency policy" desc="Markup floor/target/ceiling, pay period length, invoice cycle, licensing." dirty={dirty} saving={saving} error={error} onSave={save}>
     <div className="grid gap-3" style={{gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))"}}>
       {FIELDS.map(([key,label,kind])=><div key={key}>
@@ -678,6 +682,16 @@ function StaffingAgencyEditor({value,onSave}){
         <Input value={(d.provinces||[]).join(", ")} onChange={e=>set("provinces",e.target.value.split(",").map(s=>s.trim().toUpperCase()).filter(Boolean))}/></div>
       <div><div className="text-xs text-text-3 mb-1">WSIB provinces (comma-separated)</div>
         <Input value={(d.wsibProvinces||[]).join(", ")} onChange={e=>set("wsibProvinces",e.target.value.split(",").map(s=>s.trim().toUpperCase()).filter(Boolean))}/></div>
+      {/* Vacation pay mode is a real policy switch that changes what the payroll run does with
+          the 4% accrual: "accrue" leaves it on vac_balance to be paid out later; "payout" adds
+          it straight to each cheque. Kept as a select rather than a number because the choice is
+          discrete and mis-typing either literal silently disables one branch. */}
+      <div><div className="text-xs text-text-3 mb-1">Vacation pay mode</div>
+        <select value={d.vacationPayMode||"accrue"} onChange={e=>set("vacationPayMode",e.target.value)}
+          className="w-full py-2 px-2.5 border border-line rounded-lg bg-white text-sm text-text">
+          <option value="accrue">Accrue into worker balance (paid out separately)</option>
+          <option value="payout">Pay out on each cheque</option>
+        </select></div>
     </div>
   </ConfigCard>;
 }

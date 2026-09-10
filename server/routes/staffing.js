@@ -399,7 +399,7 @@ staffingRouter.get("/assignments/:id/margin", requireAgencyAuth, (req, res) => {
   const a = db.prepare("SELECT * FROM staffing_assignments WHERE id = ?").get(req.params.id);
   if (!a) return res.status(404).json({ error: "Not found." });
   const w = db.prepare("SELECT * FROM staffing_workers WHERE id = ?").get(a.worker_id);
-  res.json(calcStaffingEconomics(a.pay_rate, a.bill_rate, w?.province || "ON", a.benefits_per_hr || 0, getConfig("staffingRates")));
+  res.json(calcStaffingEconomics(a.pay_rate, a.bill_rate, w?.province || "ON", a.benefits_per_hr || 0, getConfig("staffingRates"), getConfig("staffingAgency")));
 });
 
 /* ─── Timesheets ─── */
@@ -509,13 +509,34 @@ staffingRouter.post("/payroll/run", requireAgencyAuth, (req, res) => {
     if (!byWorker[t.worker_id]) byWorker[t.worker_id] = { hours: 0, gross: 0, otHrs: 0 };
     byWorker[t.worker_id].hours += hours; byWorker[t.worker_id].gross += gross; byWorker[t.worker_id].otHrs += (t.ot_hours || 0);
   }
+  /* Vacation-pay mode is agency-wide policy: accrue (4% accumulates into the worker's balance,
+     paid out via the separate payout-vacation action) or payout (4% is added to each cheque).
+     Rate is taken from the worker's province in the staffing-rate table so an operator retuning
+     provincial rates (e.g. QC at a different %) applies here too. */
+  const agency = getConfig("staffingAgency");
+  const rates = getConfig("staffingRates");
+  const mode = agency?.vacationPayMode || "accrue";
   const lines = Object.entries(byWorker).map(([wid, d]) => {
     const gross = round2(d.gross);
     const w = db.prepare("SELECT province, td_on_file FROM staffing_workers WHERE id = ?").get(wid);
+    const provRate = (rates?.[w?.province] || rates?.ON || {}).vac || 0.04;
+    const vacPay = round2(gross * provRate);
+    const grossWithVac = mode === "payout" ? round2(gross + vacPay) : gross;
     const ytd = ytdByWorker[wid] || { cpp: 0, ei: 0 };
-    const calc = calcNetPay(gross, { province: w?.province, payPeriodsPerYear: 26, td1OnFile: !!w?.td_on_file, ytdCpp: ytd.cpp, ytdEi: ytd.ei }, taxConfig);
-    return { worker: wid, hours: d.hours, gross, net: round2(calc.net), otHrs: d.otHrs, cpp: calc.cpp, ei: calc.ei, fedTax: calc.fedTax, provTax: calc.provTax };
+    const calc = calcNetPay(grossWithVac, { province: w?.province, payPeriodsPerYear: 26, td1OnFile: !!w?.td_on_file, ytdCpp: ytd.cpp, ytdEi: ytd.ei }, taxConfig);
+    return {
+      worker: wid, hours: d.hours, gross: grossWithVac, net: round2(calc.net), otHrs: d.otHrs,
+      cpp: calc.cpp, ei: calc.ei, fedTax: calc.fedTax, provTax: calc.provTax,
+      vacPay, vacMode: mode,
+    };
   });
+  /* On accrue mode, credit each worker's vac_balance now so the running balance is real. On
+     payout mode we've already folded vac into gross above, so no accrual update. */
+  if (mode === "accrue") {
+    for (const l of lines) {
+      db.prepare("UPDATE staffing_workers SET vac_balance = COALESCE(vac_balance,0) + ? WHERE id = ?").run(l.vacPay, l.worker);
+    }
+  }
   const totalHours = lines.reduce((s, l) => s + l.hours, 0);
   const totalGross = round2(lines.reduce((s, l) => s + l.gross, 0));
   const totalNet = round2(lines.reduce((s, l) => s + l.net, 0));
