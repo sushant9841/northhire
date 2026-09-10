@@ -41,7 +41,7 @@ import {
 } from "./pages/hr/suite.jsx";
 import { HrPeoplePage, HrExpensesPage } from "./pages/hr/people.jsx";
 import { KioskPage } from "./pages/hr/KioskPage.jsx";
-import { EmpApiPage } from "./pages/employer/api.jsx";
+import { EmpApiPage, EmpSsoPage } from "./pages/employer/api.jsx";
 import { HireOnboardingModal } from "./pages/shared/HireOnboardingModal.jsx";
 import { ToastHost } from "./design/primitives.jsx";
 import {
@@ -89,7 +89,7 @@ export default function NorthHire(){
     empHome:<EmpShell><EmpHome/></EmpShell>,empJobs:<EmpShell><EmpJobs/></EmpShell>,empPost:<EmpShell><EmpPost/></EmpShell>,empPipeline:<EmpShell><EmpPipeline/></EmpShell>,empCandidate:<EmpShell><EmpCandidate/></EmpShell>,
     empContent:<EmpShell><ContentManager scope="employer"/></EmpShell>,
     empArticles:<EmpShell><EmpArticlesPage/></EmpShell>,empTrainings:<EmpShell><EmpTrainingsAdminPage/></EmpShell>,empBlogEdit:_roleWrap(<BlogEditor/>),empTrainEdit:_roleWrap(<TrainingEditor/>),
-    empCompany:<EmpShell><EmpCompany/></EmpShell>,empTeam:<EmpShell><EmpTeam/></EmpShell>,empBilling:<EmpShell><EmpBilling/></EmpShell>,empAnalytics:<EmpShell><EmpAnalyticsPage/></EmpShell>,empApi:<EmpShell><EmpApiPage/></EmpShell>,
+    empCompany:<EmpShell><EmpCompany/></EmpShell>,empTeam:<EmpShell><EmpTeam/></EmpShell>,empBilling:<EmpShell><EmpBilling/></EmpShell>,empAnalytics:<EmpShell><EmpAnalyticsPage/></EmpShell>,empApi:<EmpShell><EmpApiPage/></EmpShell>,empSso:<EmpShell><EmpSsoPage/></EmpShell>,
     admHome:<AdmShell><AdmHome/></AdmShell>,admUsers:<AdmShell><AdmUsers/></AdmShell>,admEmployers:<AdmShell><AdmEmployers/></AdmShell>,admJobs:<AdmShell><AdmJobs/></AdmShell>,
     account:<AccountMenuPage/>,
     accessibility:<AccessibilityPage/>,pipeda:<PipedaPage/>,credits:<CreditsPage/>,unsubscribe:<UnsubscribePage/>,matchScore:<MatchScorePage/>,offer:<OfferPage/>,verifyEmail:<VerifyEmailPage/>,

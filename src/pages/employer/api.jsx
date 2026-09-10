@@ -39,7 +39,7 @@ function _SsoConfig({mob,isOwner}){
 
   if(!state.available) return null;
 
-  return <Card pad={mob?20:26} style={{marginTop:16}}>
+  return <Card pad={mob?20:26}>
     <Lbl>Single sign-on (OIDC)</Lbl>
     <div className="text-sm text-text-2 mb-4 leading-relaxed">
       Let your team sign in with your own identity provider. Works with anything that speaks OIDC —
@@ -76,6 +76,26 @@ function _SsoConfig({mob,isOwner}){
       ? <Btn kind="primary" icon="check" onClick={save} disabled={busy}>{busy?"Verifying issuer…":"Save single sign-on"}</Btn>
       : <div className="text-xs text-text-3">Only the account owner can configure single sign-on.</div>}
   </Card>;
+}
+
+/* SSO gets its own page rather than living as a section on the API page. Both are Enterprise, but
+   they are separately sold and separately gated server-side, and a feature reachable only through
+   another feature's page can never show its own upgrade prompt — which is exactly how the `sso`
+   upgrade copy ended up as dead code. */
+export function EmpSsoPage(){
+  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const isOwner=A.user?.employerRole==="owner";
+  const allowed=A.can("sso");
+  return <Page narrow>
+    <H1 sub="Let your team sign in with your own identity provider">Single sign-on</H1>
+    {allowed
+      ? <_SsoConfig mob={mob} isOwner={isOwner}/>
+      : <Card pad={mob?20:26}>
+          <Empty icon="lock" title="Available on Enterprise"
+            body="Single sign-on connects NorthHire to your own identity provider over OIDC — Microsoft Entra ID, Okta, Auth0, Google Workspace or Keycloak — so your team signs in with the account they already have."
+            action={<Btn kind="primary" onClick={()=>A.requestUpgrade("sso","Single sign-on","shield")}>See what's included</Btn>}/>
+        </Card>}
+  </Page>;
 }
 
 export function EmpApiPage(){
@@ -212,8 +232,6 @@ export function EmpApiPage(){
             </div>)}
       </div>
     </Card>
-
-    <_SsoConfig mob={mob} isOwner={isOwner}/>
 
     <ConfirmDialog open={!!revokeKey} onClose={()=>setRevokeKey(null)} confirmLabel="Revoke key" danger
       title={`Revoke "${revokeKey?.name}"?`}

@@ -35,6 +35,7 @@ export const EMP_MODULES=[
   {k:"empTeam",label:"Team",icon:"users",section:"account"},
   {k:"empBilling",label:"Billing & plan",icon:"wallet",section:"account"},
   {k:"empApi",label:"API & webhooks",icon:"externalLink",section:"account",feature:"api"},
+  {k:"empSso",label:"Single sign-on",icon:"shield",section:"account",feature:"sso"},
   {k:"settings",label:"Settings",icon:"gear",section:"account"},
 ];
 
@@ -74,9 +75,14 @@ export function UpgradePromptModal({payload,onClose}){
     branded:{title:"Branded career pages",why:"Your logo, colors, and copy on your public NorthHire profile. Custom URL like northhire.ca/careers/your-company.",bullets:["Custom branding on job listings","Company colors and typography","Custom URL slug","Remove NorthHire watermark"]},
     messages:{title:"Unlimited messaging",why:"Free plan is limited to 20 messages per month. Growth removes the cap so you never lose a great candidate to a slow reply.",bullets:["Unlimited candidate messaging","Templates and canned responses","Read receipts","Team-shared inbox"]},
     hrSuite:{title:"NorthHire HR Suite — 16 modules",why:"After you hire, HR Suite runs everything. Attendance, leave, payroll, tasks, chat, calendar, invoices. Bundled with Enterprise, or standalone at $8/employee/month.",bullets:["Full org chart with reporting lines","Payroll, time off, attendance and punch-in","Employee recognition badges","Team chat and shared calendar","Reports on headcount, cost, turnover"]},
-    api:{title:"REST API + Zapier integration",why:"Push jobs from your careers site to NorthHire, pull applicants into your data warehouse, sync with Slack — anything you can script.",bullets:["Full REST API with OpenAPI docs","Webhooks for every event","Native Zapier integration","Rate limits: 10k requests/hr"]},
-    sso:{title:"Single sign-on and SAML",why:"Enterprise identity providers only. Okta, Azure AD, Google Workspace, one-click provisioning through SCIM.",bullets:["SAML 2.0 with Okta / Azure AD","SCIM for auto-provisioning","Enforce SSO across team","Session policy control"]},
-    manager:{title:"Dedicated success manager",why:"A named Canadian account manager, quarterly business reviews, and a private Slack channel for urgent issues.",bullets:["Named account manager","Quarterly review calls","Private Slack support","Priority response SLA"]},
+    /* Bullets describe the endpoints and webhook events that actually exist. The previous copy
+       promised OpenAPI docs, a native Zapier app and a published rate limit, none of which were
+       built - a sales promise the product could not keep the day someone paid for it. */
+    api:{title:"REST API and webhooks",why:"Read your own jobs and applications from your careers site, your data warehouse, or an automation tool, and get pushed an event the moment a candidate applies — without anyone logging in.",bullets:["Read endpoints for your jobs and applications","Signed outbound webhooks on new applications and stage changes","Multiple keys, revocable individually","Works with any tool that can call an HTTP endpoint"]},
+    /* Copy names OIDC, not SAML/SCIM: only the OIDC half is built, and an upgrade prompt that
+       sells an unbuilt protocol is the same overclaim this tracker exists to remove. */
+    sso:{title:"Single sign-on with your identity provider",why:"Your team signs in with the account they already have. Works with anything that speaks OIDC — Microsoft Entra ID, Okta, Auth0, Google Workspace, Keycloak.",bullets:["OIDC single sign-on, endpoints discovered from your issuer","Restrict sign-in to your own email domain","Owner-controlled: turn it on or off at any time","New team members provisioned on first sign-in"]},
+    manager:{title:"Dedicated success manager",why:"A named Canadian account manager who knows your account, instead of whoever picks up the general support queue.",bullets:["Named account manager","Priority response ahead of the general queue","Onboarding help migrating from another ATS","Reachable directly by email"]},
   };
   const b=featureBenefits[feature]||{title:label,why:"This feature isn't in your current plan.",bullets:[]};
   /* Which plans include this */

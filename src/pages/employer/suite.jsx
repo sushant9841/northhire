@@ -498,7 +498,15 @@ function _PipelineColumn({stage,items,job,sel,tog,selectStage,A,mob,stages}){
     <div className="flex items-center justify-between px-1">
       <span className="text-xs font-bold text-text-2 uppercase tracking-wide">{stage}</span>
       <div className="flex gap-1.5 items-center">
-        {items.length>0&&A.can("bulkActions")&&<button onClick={()=>selectStage(stage)} className="bg-transparent border-0 text-xs font-semibold cursor-pointer" style={{color:allSelected?C.brand:C.text3}}>{allSelected?"clear":"all"}</button>}
+        {/* On a plan without bulk actions this control was hidden entirely, so nothing on the
+            board ever explained that selecting candidates is a paid feature - and the upgrade copy
+            written for it was unreachable. It now shows locked and opens that prompt. */}
+        {items.length>0&&(A.can("bulkActions")
+          ? <button onClick={()=>selectStage(stage)} className="bg-transparent border-0 text-xs font-semibold cursor-pointer" style={{color:allSelected?C.brand:C.text3}}>{allSelected?"clear":"all"}</button>
+          : <button onClick={()=>A.requestUpgrade("bulkActions","Bulk actions on candidates","users")}
+              title="Selecting several candidates at once is available on Growth and Enterprise"
+              className="bg-transparent border-0 text-xs font-semibold cursor-pointer flex items-center gap-1" style={{color:C.text3}}>
+              <I n="lock" s={11}/>all</button>)}
         <span className="bg-wash text-brand border border-line-2 text-xs font-bold rounded-full flex items-center justify-center px-1.5" style={{minWidth:22,height:22}}>{items.length}</span></div></div>
     {items.map(a=>{const u=A.person(a.user); const s=A.scoreCandidate(u,job); const idx=stages.indexOf(stage);
       const notice=applicationDecisionNotice(a,postingRules({prov:job?.prov,employerSize:A.company?.size}));
@@ -1541,6 +1549,30 @@ export function EmpBilling(){
         ?<div className="text-sm text-text-3 py-2">No payment method on file — you're on the free plan.</div>
         :<Btn kind="outline" icon="wallet" disabled={portalLoading} onClick={async()=>{setPortalLoading(true);const r=await A.openBillingPortal();if(!r.ok){setPortalLoading(false);A.toast(r.msg,"danger");}}}>
           {portalLoading?"Opening…":"Manage billing in Stripe"}</Btn>}
+    </Card>
+
+    {/* Support level is the only place the "manager" plan feature was ever meant to surface. It had
+        upgrade copy written for it and no UI anywhere, so the copy was dead code. This states what
+        support the current plan actually comes with, and offers the prompt when it doesn't. */}
+    <Card style={{marginBottom:16,borderRadius:20}}>
+      <H2 sub="What support your plan comes with.">Support</H2>
+      {A.can("manager")
+        ? <div className="flex gap-2.5 items-start">
+            <Tag tone="ok">Included</Tag>
+            <div className="text-sm text-text-2 leading-relaxed">
+              Your plan includes a named Canadian account manager and priority response.
+              Reach them at <a className="text-brand font-semibold" href="mailto:enterprise@northhire.ca">enterprise@northhire.ca</a> —
+              quote your company name and we'll route it to your manager rather than the general queue.
+            </div>
+          </div>
+        : <div className="flex gap-2.5 items-start justify-between flex-wrap">
+            <div className="text-sm text-text-2 leading-relaxed grow shrink basis-70">
+              You're on standard support — email us at <a className="text-brand font-semibold" href="mailto:support@northhire.ca">support@northhire.ca</a> and
+              we answer in the order received. Enterprise adds a named account manager and priority response.
+            </div>
+            <Btn kind="outline" icon="lock" onClick={()=>A.requestUpgrade("manager","Dedicated success manager","users")}>
+              What Enterprise support adds</Btn>
+          </div>}
     </Card>
 
     {invoices.length>0&&<Card style={{borderRadius:20}}><H2>Invoices</H2>

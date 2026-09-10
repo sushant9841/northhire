@@ -24,6 +24,7 @@ export const ROUTES = {
   interviews:  {title:"Interviews", tab:"alerts", roles:["seeker","employer"], path:"/interviews"},
   empAnalytics:{title:"Analytics", tab:"empHome", roles:["employer"], bare:true, root:true, path:"/employer/analytics"},
   empApi:      {title:"API & webhooks", tab:"empHome", roles:["employer"], bare:true, root:true, path:"/employer/api"},
+  empSso:      {title:"Single sign-on", tab:"empHome", roles:["employer"], bare:true, root:true, path:"/employer/sso"},
   alerts:      {title:"Notifications", tab:"status", path:"/notifications"},
   cvs:         {title:"My CVs", tab:"profile", roles:["seeker"], path:"/cvs"},
   cvEdit:      {title:"CV builder", tab:"profile", roles:["seeker"], path:"/cvs/:id/edit"},
