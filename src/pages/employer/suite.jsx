@@ -9,6 +9,7 @@ import {
   RichText, Switch, CheckRow, DatePicker, Ring, Tabs, Lbl, SmartPortrait, SmartScene, SmartLogo, Mark, MARKS, ConfirmDialog,
   usePagination, Pagination, HERO_WIDE,
 } from "../../design/primitives.jsx";
+import { hiringSummary } from "../../helpers/hiringAnalytics.js";
 import { postingRules, checkPayRange, findCanadianExperience, applicationDecisionNotice, AI_DISCLOSURE_TEXT } from "../../helpers/jobPostingLaw.js";
 import { pay, payShort, dlText, money, uid, matchesQuery } from "../../helpers/utils.js";
 import { sanitizeHtml } from "../../helpers/sanitize.js";
@@ -1499,6 +1500,69 @@ export function EmpBilling(){
   </Page>;
 }
 
+/* Time-to-hire, time-in-stage and source-of-hire. Two of these were computable all along from the
+   real stage-transition timestamps every application already carried; the third needed genuine
+   attribution, which now exists. Applications from before that field report as "Not recorded"
+   rather than being folded into Direct, which would overstate that channel permanently. */
+function _HiringVelocity({A,mob}){
+  const myJobs=A.jobs.filter(j=>j.e===A.company.id).map(j=>j.id);
+  const apps=A.applications.filter(a=>myJobs.includes(a.job));
+  const s=hiringSummary(apps);
+  if(!apps.length) return null;
+
+  return <div className="grid gap-4 mb-5" style={{gridTemplateColumns:mob?"1fr":"1fr 1fr"}}>
+    <Card pad={mob?16:20}>
+      <Lbl>Hiring velocity</Lbl>
+      {s.hires===0
+        ? <div className="text-sm text-text-3 mt-2">No completed hires yet — time-to-hire appears once someone reaches Hired. Counting still-open applications would just measure how long ago you started looking.</div>
+        : <>
+            <div className="flex items-baseline gap-2 mt-2">
+              <span className="text-3xl font-bold text-text tabular-nums">{s.medianTimeToHire}</span>
+              <span className="text-sm text-text-2">days median time to hire</span>
+            </div>
+            <div className="text-xs text-text-3 mt-1">Across {s.hires} completed hire{s.hires===1?"":"s"}. Median, not mean — one unusually slow role shouldn't move it.</div>
+          </>}
+      {s.stageAverages.length>0&&<div className="mt-4 pt-3.5 border-t border-line-soft">
+        <div className="text-xs font-bold text-text-3 uppercase tracking-wide mb-2.5">Average days in each stage</div>
+        <div className="flex flex-col gap-2">
+          {s.stageAverages.map(x=>
+            <div key={x.stage} className="flex items-center gap-3">
+              <span className="text-sm text-text w-28 shrink-0">{x.stage}</span>
+              <div className="flex-1 min-w-0"><Bar v={Math.min(100,x.avgDays*5)}/></div>
+              <span className="text-sm text-text-2 tabular-nums w-16 text-right">{x.avgDays}d</span>
+            </div>)}
+        </div>
+      </div>}
+    </Card>
+
+    <Card pad={mob?16:20}>
+      <Lbl>Where hires came from</Lbl>
+      {s.hires===0
+        ? <div className="text-sm text-text-3 mt-2">Shows which channels actually produced hires once you've made one — a more useful question than which produced the most applications.</div>
+        : <div className="flex flex-col gap-2 mt-2">
+            {s.sourceOfHire.map(x=>
+              <div key={x.source} className="flex items-center gap-3">
+                <span className="text-sm text-text w-36 shrink-0">{x.label}</span>
+                <div className="flex-1 min-w-0"><Bar v={x.pct}/></div>
+                <span className="text-sm text-text-2 tabular-nums w-16 text-right">{x.count} ({x.pct}%)</span>
+              </div>)}
+          </div>}
+      {s.stalled.length>0&&<div className="mt-4 pt-3.5 border-t border-line-soft">
+        <div className="text-xs font-bold text-warn uppercase tracking-wide mb-2">Sitting untouched 14+ days</div>
+        <div className="flex flex-col gap-1.5">
+          {s.stalled.slice(0,4).map(({app,days})=>{
+            const u=A.person(app.user);
+            return <button key={app.id} onClick={()=>A.openCandidate(app.id)}
+              className="flex justify-between items-center gap-3 bg-transparent border-0 p-0 cursor-pointer text-left">
+              <span className="text-sm text-text truncate">{u?.name||"Candidate"} · {app.stage}</span>
+              <span className="text-sm text-warn font-semibold tabular-nums shrink-0">{days}d</span></button>;})}
+          {s.stalled.length>4&&<div className="text-xs text-text-3 mt-1">and {s.stalled.length-4} more</div>}
+        </div>
+      </div>}
+    </Card>
+  </div>;
+}
+
 export function EmpAnalyticsPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const stats=A.employerAnalytics(); if(!stats) return <Page><Empty icon="activity" title="No data" body="Post a job first."/></Page>;
@@ -1512,6 +1576,7 @@ export function EmpAnalyticsPage(){
     </section>
     <section className={`bg-bg ${mob?"pt-8 px-4 pb-14":"pt-12 px-8 pb-24"}`}>
       <div className="max-w-280 mx-auto">
+        <_HiringVelocity A={A} mob={mob}/>
         <div className={`grid gap-3.5 mb-6 ${mob?"grid-cols-2":"grid-cols-4"}`}>
           <Stat label="Live jobs" value={stats.liveJobs} icon="briefcase"/>
           <Stat label="Total views" value={stats.totalViews.toLocaleString()} icon="eye"/>

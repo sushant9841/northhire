@@ -1161,7 +1161,17 @@ export function useStore(){
   const openCandidate=id=>{setCandidateId(id);const a=applications.find(x=>x.id===id);
     go("empCandidate",a?person(a.user).name:"Candidate",id);};
 
-  const beginApply=id=>{setApplyDraft({job:id,avail:"Within 2 weeks",expect:"",letter:"",meets:"",screeningAnswers:{}});go("apply1");};
+  /* Attribution for source-of-hire analytics. Which surface the seeker came from is only knowable
+     here, at the moment they start applying — by submit time the page they arrived from is gone.
+     invitedCandidates is the real record of an employer having reached out, so an application from
+     someone who was invited is attributed to the invite rather than to wherever they happened to
+     click from. */
+  const beginApply=(id,source)=>{
+    const invited=[...invitedCandidates].some(k=>k.startsWith(`${id}:`)&&k.endsWith(`:${user?.id}`));
+    const src=invited?"invite":(source||(pg==="matched"?"matched":pg==="search"?"search":"direct"));
+    setApplyDraft({job:id,avail:"Within 2 weeks",expect:"",letter:"",meets:"",screeningAnswers:{},source:src});
+    go("apply1");
+  };
   const submitApply=async()=>{
     const j=job(applyDraft.job); const e=emp(j.e);
     /* rate limit: prevent duplicate application to same job */
@@ -1171,7 +1181,7 @@ export function useStore(){
       return go("status");
     }
     try{
-      const {application}=await api.post("/applications",{jobId:j.id,availability:applyDraft.avail,payExpectation:applyDraft.expect,coverLetter:applyDraft.letter,screeningAnswers:applyDraft.screeningAnswers||{}});
+      const {application}=await api.post("/applications",{jobId:j.id,availability:applyDraft.avail,payExpectation:applyDraft.expect,coverLetter:applyDraft.letter,screeningAnswers:applyDraft.screeningAnswers||{},source:applyDraft.source||"direct"});
       setApplications(l=>[...l,mapApiApplication(application)]);
       notify({icon:"send",title:`Application sent to ${e.name}`,body:`Your application for ${j.t} is now in their pipeline.`,for:user.id,link:"status"});
       log("application.create",`Applied to ${j.t} at ${e.name}`,"send");

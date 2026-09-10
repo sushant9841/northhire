@@ -173,6 +173,9 @@ CREATE TABLE IF NOT EXISTS jobs (
   /* Ontario Bill 149 posting disclosures (in force 2026-01-01). ai_screening defaults to 1
      because this platform genuinely does auto-score every applicant against the posting - a
      posting that didn't disclose it would be the inaccurate state, not the safe one. */
+  /* Per-job scoring weights, so an employer can say this role is mostly about tickets rather
+     than years. NULL means the platform default weighting. */
+  score_weights_json TEXT,
   ai_screening INTEGER DEFAULT 1,
   vacancy_confirmed INTEGER DEFAULT 0,
   status TEXT NOT NULL DEFAULT 'live' CHECK(status IN ('live','paused','review','closed')),
@@ -200,6 +203,12 @@ CREATE TABLE IF NOT EXISTS applications (
   /* An optional uploaded cover-letter file, alongside the typed cover_letter text - the seeker
      may do either or both. */
   cover_letter_upload_id TEXT REFERENCES uploads(id),
+  /* Where this application came from, so source-of-hire analytics reads real attribution rather
+     than being inferred. Set at apply time from how the seeker reached the posting.
+     Deliberately NULL by default, not 'direct': an application recorded before attribution
+     existed genuinely has an unknown source, and defaulting it to a real channel would overstate
+     that channel permanently while looking like data. */
+  source TEXT,
   screening_answers_json TEXT DEFAULT '[]',
   history_json TEXT DEFAULT '[]',
   previous_stage TEXT, withdrawn_at TEXT,

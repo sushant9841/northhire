@@ -67,6 +67,7 @@ export function serializeJob(row) {
     perks: JSON.parse(row.perks_json || "[]"),
     desc: row.description,
     aiScreening: !!row.ai_screening,
+    scoreWeights: row.score_weights_json ? JSON.parse(row.score_weights_json) : null,
     vacancyConfirmed: !!row.vacancy_confirmed,
     duties: JSON.parse(row.duties_json || "[]"),
     reqs: JSON.parse(row.requirements_json || "[]"),
@@ -127,6 +128,9 @@ export function serializeApplication(row) {
     expect: row.pay_expectation,
     letter: row.cover_letter,
     letterUploadId: row.cover_letter_upload_id || null,
+    // Applications recorded before source tracking existed report as unknown rather than being
+    // silently counted as direct, which would overstate that channel forever.
+    source: row.source || "unknown",
     cv: row.cv_id,
     meets: row.meets,
     screeningAnswers: JSON.parse(row.screening_answers_json || "[]"),

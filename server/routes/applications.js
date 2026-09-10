@@ -90,7 +90,7 @@ applicationsRouter.get("/job/:jobId", requireAuth, requireRole("employer"), (req
 });
 
 applicationsRouter.post("/", requireAuth, requireRole("seeker"), (req, res) => {
-  const { jobId, availability, payExpectation, coverLetter, coverLetterUploadId, screeningAnswers } = req.body || {};
+  const { jobId, availability, payExpectation, coverLetter, coverLetterUploadId, screeningAnswers, source } = req.body || {};
   const job = db.prepare("SELECT * FROM jobs WHERE id = ? AND status = 'live'").get(jobId);
   if (!job) return res.status(404).json({ error: "This listing is no longer accepting applications." });
 
@@ -112,11 +112,14 @@ applicationsRouter.post("/", requireAuth, requireRole("seeker"), (req, res) => {
   const id = nextId("a", "applications");
   const historyJson = JSON.stringify([{ stage: "Applied", note: "Waiting for employer review", at: new Date().toISOString() }]);
   db.prepare(
-    `INSERT INTO applications (id, job_id, user_id, stage, note, availability, pay_expectation, cover_letter, cover_letter_upload_id, screening_answers_json, history_json)
-     VALUES (?, ?, ?, 'Applied', 'Waiting for employer review', ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO applications (id, job_id, user_id, stage, note, availability, pay_expectation, cover_letter, cover_letter_upload_id, source, screening_answers_json, history_json)
+     VALUES (?, ?, ?, 'Applied', 'Waiting for employer review', ?, ?, ?, ?, ?, ?, ?)`
   ).run(id, jobId, req.user.id, availability || null, payExpectation || null, coverLetter || null,
     // Only accept an upload id this seeker actually owns - otherwise any document id would do.
     (coverLetterUploadId && db.prepare("SELECT 1 FROM uploads WHERE id = ? AND owner_type = 'user' AND owner_id = ?").get(coverLetterUploadId, req.user.id)) ? coverLetterUploadId : null,
+    // A caller-supplied source is a hint for analytics, not a security boundary - but it is still
+    // constrained to known values so it can never become an injection of arbitrary text.
+    ["search","matched","invite","alert","direct","api"].includes(source) ? source : "direct",
     JSON.stringify(answerSnapshot), historyJson);
 
   const row = db.prepare("SELECT * FROM applications WHERE id = ?").get(id);
