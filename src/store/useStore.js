@@ -1379,6 +1379,11 @@ export function useStore(){
   const removeTeammate=async userId=>{
     try{await api.del(`/employers/team/${userId}`);await loadTeam();log("team.remove","Removed a teammate","trash");}
     catch(err){toast(err.message,"danger");}};
+  // Per-employer audit trail of team-management actions - who invited/removed/accepted, when.
+  // Kept as a lazy loader so the Team page pulls it on open rather than on every store hydration.
+  const loadTeamAudit=async()=>{
+    try{return (await api.get("/employers/team/audit")).events;}
+    catch(err){toast(err.message,"danger");return [];}};
   const getInvite=async token=>{
     try{return {ok:true,...(await api.get(`/auth/invites/${token}`))};}
     catch(err){return {ok:false,msg:err.message};}};
@@ -1864,7 +1869,7 @@ export function useStore(){
     toggleSave,followEmployer,openJob,openEmployer,openBlog,openTraining,openCandidate,
     beginApply,submitApply,withdraw,acceptOffer,moveApp,rejectApp,
     publishJob,approveJob,toggleJobStatus,flagJob,reportJob,jobReports,loadJobReports,decideJobReport,setPipelineJob:setPipelineJobFn,saveCompany,verifyEmployer,holdEmployer,toggleSuspend,eraseUser,
-    team,loadTeam,inviteTeammate,revokeInvite,removeTeammate,getInvite,acceptInvite,inviteToken,
+    team,loadTeam,loadTeamAudit,inviteTeammate,revokeInvite,removeTeammate,getInvite,acceptInvite,inviteToken,
     messageTemplates,saveMessageTemplate,deleteMessageTemplate,
     editBlog,editTraining,saveBlog,saveTraining,deleteBlog,deleteTraining,toggleBlogStatus,toggleTrainingStatus,
     loadContentRevisions,restoreContentRevision,

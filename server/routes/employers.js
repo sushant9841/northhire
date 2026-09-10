@@ -9,6 +9,17 @@ import { sendAndLogMail } from "../mail.js";
 
 export const employersRouter = Router();
 
+// Records one team-management event. Called from the invite/remove/revoke handlers below so a
+// per-employer audit trail actually accumulates - the tracker flagged that seat management had no
+// paper trail of who did what. Never fails the request even if logging fails, since a failure to
+// audit is not a good reason to also fail the operation the audit was going to record.
+function logEmployerAudit(employerId, actor, action, detail) {
+  try {
+    db.prepare("INSERT INTO employer_audit_log (id, employer_id, actor_user_id, actor_name, action, detail) VALUES (?, ?, ?, ?, ?, ?)")
+      .run(nextId("eal", "employer_audit_log"), employerId, actor?.id || null, actor?.name || "unknown", action, detail);
+  } catch (e) { console.error("audit log:", e.message); }
+}
+
 // Employer contact/owner is a real relation (users.employer_id), not a denormalized field on
 // employers - joined in here so the frontend's existing `e.owner`/`e.ownerName` reads keep working.
 const WITH_OWNER = `
@@ -198,6 +209,7 @@ employersRouter.post("/team/invite", requireAuth, requireRole("employer"), async
   const token = crypto.randomBytes(20).toString("hex");
   db.prepare("INSERT INTO employer_invites (id, employer_id, email, invited_by, token) VALUES (?, ?, ?, ?, ?)").run(id, req.user.employer_id, email, req.user.id, token);
   await sendAndLogMail(email, "You have been invited to a NorthHire employer account", `${req.user.name} invited you to join their team on NorthHire. Your invite code: ${token}`);
+  logEmployerAudit(req.user.employer_id, req.user, "team.invite.sent", `Invited ${email}`);
   // The invited person has no account yet, so they can't check their own /auth/outbox even though
   // the email really was sent (to their Ethereal-sandboxed inbox) - also return the link straight
   // to the owner so this demo doesn't require digging up a preview URL to test the invite flow.
@@ -208,6 +220,7 @@ employersRouter.delete("/team/invite/:id", requireAuth, requireRole("employer"),
   const row = db.prepare("SELECT * FROM employer_invites WHERE id = ? AND employer_id = ?").get(req.params.id, req.user.employer_id);
   if (!row) return res.status(404).json({ error: "Invite not found." });
   db.prepare("UPDATE employer_invites SET status = 'revoked' WHERE id = ?").run(req.params.id);
+  logEmployerAudit(req.user.employer_id, req.user, "team.invite.revoked", `Revoked invite to ${row.email}`);
   res.json({ ok: true });
 });
 employersRouter.delete("/team/:userId", requireAuth, requireRole("employer"), (req, res) => {
@@ -217,7 +230,20 @@ employersRouter.delete("/team/:userId", requireAuth, requireRole("employer"), (r
   if (!target) return res.status(404).json({ error: "Teammate not found." });
   if (target.employer_role === "owner") return res.status(400).json({ error: "Transfer ownership before removing an owner." });
   db.prepare("UPDATE users SET employer_id = NULL WHERE id = ?").run(req.params.userId);
+  logEmployerAudit(req.user.employer_id, req.user, "team.member.removed", `Removed ${target.name} (${target.email})`);
   res.json({ ok: true });
+});
+
+// Read the audit trail. Any teammate on the account can see it, not just the owner - so a member
+// who was removed and later reinstated (or a new owner after a transfer) can review what happened
+// on the account they now have access to.
+employersRouter.get("/team/audit", requireAuth, requireRole("employer"), (req, res) => {
+  const rows = db.prepare("SELECT * FROM employer_audit_log WHERE employer_id = ? ORDER BY created_at DESC LIMIT 200")
+    .all(req.user.employer_id);
+  res.json({ events: rows.map(r => ({
+    id: r.id, action: r.action, detail: r.detail,
+    actorName: r.actor_name, at: sqlTime(r.created_at).getTime(),
+  })) });
 });
 
 employersRouter.get("/:id", (req, res) => {

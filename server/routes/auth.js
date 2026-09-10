@@ -131,6 +131,12 @@ authRouter.post("/invites/:token/accept", (req, res) => {
   ).run(id, name, invite.email, hash, salt, invite.employer_id, Math.floor(Math.random() * 12));
   db.prepare("INSERT INTO user_settings (user_id) VALUES (?)").run(id);
   db.prepare("UPDATE employer_invites SET status = 'accepted' WHERE id = ?").run(invite.id);
+  // Audit the acceptance from the accepter's side too - the invite row shows it was accepted,
+  // but the team audit trail is where an owner will look for "who joined and when."
+  try {
+    db.prepare("INSERT INTO employer_audit_log (id, employer_id, actor_user_id, actor_name, action, detail) VALUES (?, ?, ?, ?, ?, ?)")
+      .run(nextId("eal", "employer_audit_log"), invite.employer_id, id, name, "team.invite.accepted", `${name} accepted the invite to ${invite.email}`);
+  } catch (e) { console.error("audit log:", e.message); }
   createSessionCookie(res, "session", "main", id);
   const user = db.prepare("SELECT * FROM users WHERE id = ?").get(id);
   res.status(201).json({ user: publicUser(user) });

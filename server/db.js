@@ -155,6 +155,22 @@ CREATE TABLE IF NOT EXISTS employer_invoices (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+/* Per-employer audit trail for team-management actions - who invited/removed whom, when.
+   The platform-wide activity_log serves admin-side events; this one is scoped to a single
+   employer so its owner can see what happened on their own account without needing admin
+   access. Kept intentionally narrow: invite created/revoked/accepted, member removed, and
+   role/ownership changes; not a general "everything anyone did" log. */
+CREATE TABLE IF NOT EXISTS employer_audit_log (
+  id TEXT PRIMARY KEY,
+  employer_id TEXT NOT NULL REFERENCES employers(id),
+  actor_user_id TEXT REFERENCES users(id),
+  actor_name TEXT NOT NULL,
+  action TEXT NOT NULL,
+  detail TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_employer_audit_log_emp ON employer_audit_log(employer_id, created_at DESC);
+
 CREATE TABLE IF NOT EXISTS jobs (
   id TEXT PRIMARY KEY,
   employer_id TEXT NOT NULL REFERENCES employers(id),

@@ -1442,6 +1442,17 @@ export function EmpTeam(){
   const {members,invites,seatLimit,seatsUsed}=A.team;
   const [inviteEmail,setInviteEmail]=useState(""); const [inviting,setInviting]=useState(false); const [err,setErr]=useState("");
   const [removing,setRemoving]=useState(null); const [lastInviteLink,setLastInviteLink]=useState(null);
+  /* Audit trail is lazy-loaded on mount and after every mutating action, so anyone opening this
+     page sees the current state without needing to refresh. */
+  const [audit,setAudit]=useState([]);
+  const refreshAudit=async()=>setAudit(await A.loadTeamAudit());
+  useEffect(()=>{refreshAudit();/* eslint-disable-next-line react-hooks/exhaustive-deps */},[members.length,invites.length]);
+  const actionLabel={
+    "team.invite.sent":{icon:"mail",tone:"neutral",label:"Invite sent"},
+    "team.invite.revoked":{icon:"x",tone:"warn",label:"Invite revoked"},
+    "team.invite.accepted":{icon:"check",tone:"ok",label:"Invite accepted"},
+    "team.member.removed":{icon:"trash",tone:"danger",label:"Member removed"},
+  };
   const unlimited=seatLimit==null; // server sends null for Infinity - JSON has no Infinity of its own
   const atLimit=!unlimited&&seatsUsed>=seatLimit;
   const send=async()=>{
@@ -1499,6 +1510,23 @@ export function EmpTeam(){
         </div>)}
       </div>
     </Card>}
+    {/* Audit trail - who did what on this account, and when. Any teammate can read it; the tracker
+        called out the missing paper trail for team-management actions specifically. */}
+    <Card pad={mob?20:26} style={{marginTop:16}}>
+      <Lbl>Team activity</Lbl>
+      {audit.length===0
+        ? <div className="text-sm text-text-3 py-2">Nothing yet. Invites, member removals and acceptances show up here.</div>
+        : <div className="flex flex-col">{audit.map(ev=>{
+            const meta=actionLabel[ev.action]||{icon:"file",tone:"neutral",label:ev.action};
+            const when=new Date(ev.at).toLocaleString("en-CA",{day:"numeric",month:"short",year:"numeric",hour:"numeric",minute:"2-digit"});
+            return <div key={ev.id} className="flex items-center gap-3 py-2.5 border-b border-line-soft">
+              <div className="w-9 h-9 rounded-lg bg-wash text-brand flex items-center justify-center shrink-0"><I n={meta.icon} s={16}/></div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-semibold text-text">{ev.detail}</div>
+                <div className="text-xs text-text-3 mt-0.5">by {ev.actorName} • {when}</div></div>
+              <Tag tone={meta.tone} sm>{meta.label}</Tag>
+            </div>;})}</div>}
+    </Card>
     <ConfirmDialog open={!!removing} onClose={()=>setRemoving(null)} confirmLabel="Remove"
       title={`Remove ${removing?.name}?`} onConfirm={()=>{A.removeTeammate(removing.id);setRemoving(null);}}>
       They'll immediately lose access to this employer account. This can't be undone from here.
