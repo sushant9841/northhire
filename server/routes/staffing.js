@@ -7,6 +7,7 @@ import { salesTaxRate } from "../../src/helpers/salesTax.js";
 import { calcNetPay } from "../../src/helpers/payrollTax.js";
 import { calcStaffingEconomics } from "../../src/helpers/staffingEconomics.js";
 import { getConfig } from "../platformConfig.js";
+import { buildAllT4s, buildRoe, payrollYears } from "../../src/helpers/taxSlips.js";
 import { sendAndLogMail } from "../mail.js";
 import {
   serializeWorker, serializeWorkerForClient, serializeStaffingClient, serializeStaffingBranch, serializeJobOrder, serializeAssignment, serializeSubmittal,
@@ -15,6 +16,10 @@ import {
 } from "../serialize.js";
 
 export const staffingRouter = Router();
+
+// The agency operating this console. A single-tenant constant today; if the product ever hosts
+// multiple agencies this becomes a lookup, which is why it is named rather than inlined.
+const AGENCY_NAME = "NorthHire Staffing";
 
 function logStaffingAudit(actorStaffId, action, detail) {
   db.prepare("INSERT INTO staffing_audit_log (id, actor_staff_id, action, detail) VALUES (?, ?, ?, ?)")
@@ -864,4 +869,56 @@ staffingRouter.delete("/workers/documents/:docId", requireAgencyAuth, (req, res)
   if (!row || row.kind !== "worker-document") return res.status(404).json({ error: "Not found." });
   deleteUpload(req.params.docId);
   res.json({ ok: true });
+});
+
+/* ─── Year-end slips for placed workers ─────────────────────────────────────────────────────
+   The agency is the employer of record for the workers it places, so it owes them T4s exactly as
+   the HR Suite does for direct employees. Same shared computation (src/helpers/taxSlips.js), same
+   honest limits: this generates the slip, it does not file anything with CRA.
+
+   One difference worth stating: a payroll run executed before per-line withholding was recorded
+   carries only gross and net. Those runs are reported as incomplete rather than being folded in
+   with zero CPP/EI/tax, which would produce a confidently wrong slip. */
+staffingRouter.get("/tax-slips/years", requireAgencyAuth, (req, res) => {
+  const runs = db.prepare("SELECT * FROM staffing_payruns").all().map(serializeStaffingPayrun);
+  res.json({ years: payrollYears(runs) });
+});
+
+staffingRouter.get("/tax-slips/:year", requireAgencyAuth, (req, res) => {
+  const year = Number(req.params.year);
+  if (!Number.isInteger(year)) return res.status(400).json({ error: "Invalid year." });
+  const runs = db.prepare("SELECT * FROM staffing_payruns").all().map(serializeStaffingPayrun);
+  // A staffing worker's name lives on the linked person record, not on the worker row itself.
+  const workers = db.prepare(
+    "SELECT sw.id, sw.province, users.name FROM staffing_workers sw LEFT JOIN users ON users.id = sw.person_id"
+  ).all().map(w => ({ id: w.id, name: w.name || "Unnamed worker", prov: w.province, hired: null, terminatedAt: null }));
+  const cfg = getConfig("payrollTax");
+  const slips = buildAllT4s({ employees: workers, runs, year, caps: { cppYmpe: cfg.cppYmpe, eiMaxInsurable: cfg.eiMaxInsurable }, lineKey: "worker" });
+
+  // Flag any slip whose underlying runs didn't record withholding, so nobody hands out a T4
+  // showing $0 of tax deducted when the real answer is "we don't have that breakdown".
+  const incomplete = new Set();
+  for (const run of runs) {
+    if (String(run.status).toLowerCase() !== "paid") continue;
+    for (const l of run.lines || []) {
+      if (l.cpp === undefined && l.fedTax === undefined) incomplete.add(l.worker);
+    }
+  }
+  res.json({
+    year,
+    slips: slips.map(s => ({ ...s, incomplete: incomplete.has(s.employeeId) })),
+    agency: { name: AGENCY_NAME },
+  });
+});
+
+staffingRouter.get("/roe/:workerId", requireAgencyAuth, (req, res) => {
+  const w = db.prepare("SELECT sw.*, users.name FROM staffing_workers sw LEFT JOIN users ON users.id = sw.person_id WHERE sw.id = ?").get(req.params.workerId);
+  if (!w) return res.status(404).json({ error: "Worker not found." });
+  const runs = db.prepare("SELECT * FROM staffing_payruns").all().map(serializeStaffingPayrun);
+  const roe = buildRoe({
+    employee: { id: w.id, name: w.name || "Unnamed worker", hired: null, terminatedAt: null },
+    runs, reason: String(req.query.reason || "A").toUpperCase(), lineKey: "worker",
+  });
+  if (!roe) return res.status(404).json({ error: "No paid payroll on record for this worker, so there are no insurable earnings to report." });
+  res.json({ roe, agency: { name: AGENCY_NAME } });
 });

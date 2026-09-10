@@ -42,12 +42,15 @@ export function runCountsForYear(run, year) {
 /* Sums one employee's lines across every paid run in the year into real T4 box amounts.
    `caps` carries the statutory maximums so insurable/pensionable earnings can be reported
    correctly for someone who earned above them. */
-export function buildT4({ employee, runs, year, caps = {} }) {
+/* lineKey exists because HR payroll lines identify the person as `employee` while staffing runs
+   use `worker`. One shared computation with a configurable key beats two near-identical copies
+   that drift apart the first time a box definition changes. */
+export function buildT4({ employee, runs, year, caps = {}, lineKey = "employee" }) {
   const lines = [];
   for (const run of runs) {
     if (!runCountsForYear(run, year)) continue;
     const runLines = Array.isArray(run.lines) ? run.lines : [];
-    const mine = runLines.filter(l => l.employee === employee.id);
+    const mine = runLines.filter(l => l[lineKey] === employee.id);
     for (const l of mine) lines.push(l);
   }
   if (!lines.length) return null;
@@ -72,9 +75,9 @@ export function buildT4({ employee, runs, year, caps = {} }) {
   };
 }
 
-export function buildAllT4s({ employees, runs, year, caps }) {
+export function buildAllT4s({ employees, runs, year, caps, lineKey }) {
   return employees
-    .map(e => buildT4({ employee: e, runs, year, caps }))
+    .map(e => buildT4({ employee: e, runs, year, caps, lineKey }))
     .filter(Boolean)
     .sort((a, b) => a.name.localeCompare(b.name));
 }
@@ -105,17 +108,17 @@ export const ROE_REASONS = {
    records hours for hourly employees only; for a salaried employee the hours are derived from
    the standard full-time week rather than measured, and the result flags that so whoever signs
    the ROE knows which figure was assumed rather than observed. */
-export function buildRoe({ employee, runs, reason = "K", standardWeeklyHours = 40 }) {
+export function buildRoe({ employee, runs, reason = "K", standardWeeklyHours = 40, lineKey = "employee" }) {
   const paid = runs
     .filter(r => String(r.status || "").toLowerCase() === "paid")
-    .filter(r => (Array.isArray(r.lines) ? r.lines : []).some(l => l.employee === employee.id))
+    .filter(r => (Array.isArray(r.lines) ? r.lines : []).some(l => l[lineKey] === employee.id))
     .sort((a, b) => String(a.periodStart || "").localeCompare(String(b.periodStart || "")));
 
   if (!paid.length) return null;
 
   let insurableEarnings = 0, measuredHours = 0, assumedHours = 0, periods = 0;
   for (const run of paid) {
-    const mine = (run.lines || []).filter(l => l.employee === employee.id);
+    const mine = (run.lines || []).filter(l => l[lineKey] === employee.id);
     for (const l of mine) {
       periods++;
       insurableEarnings += Number(l.gross) || 0;
