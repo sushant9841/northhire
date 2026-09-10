@@ -13,7 +13,11 @@ export const HR_ROLES=[
 export const HR_COMPANY_SETTINGS_DEFAULT={
   modules:{directory:true,attendance:true,leave:true,tasks:true,calendar:true,chat:true,invoices:true,payroll:true,trainings:true,badges:true},
   attendance:{allowRemotePunch:true,workingHoursStart:"08:00",workingHoursEnd:"17:00",lateThresholdMin:15},
-  leave:{annualVacationDays:15,sickDays:10,personalDays:3,requireApproval:true,advanceNoticeDays:14},
+  leave:{annualVacationDays:15,sickDays:10,personalDays:3,requireApproval:true,advanceNoticeDays:14,
+    /* Year-boundary carryover. Defaults to the common Canadian arrangement (a small capped
+       carryover with a use-by date) rather than silently discarding unused days on 1 January,
+       which was the old behaviour and is not lawful in several provinces. */
+    carryoverMode:"capped",carryoverMaxDays:5,carryoverExpiryMonths:3},
   chat:{allowEmployeeInitiate:true,allowDirectMessages:true,allowGroupCreation:false,allowFileShare:true,allowCalls:true},
   privacy:{
     defaultPublicVisibility:true,

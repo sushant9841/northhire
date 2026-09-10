@@ -12,6 +12,7 @@ import { _fmtDate } from "../../helpers/utils.js";
 import { invoiceTone } from "../../helpers/statusTone.js";
 import { salesTaxRate, salesTaxLabel } from "../../helpers/salesTax.js";
 import { ROE_REASONS } from "../../helpers/taxSlips.js";
+import { vacationBalance, usedDaysByYear } from "../../helpers/leaveAccrual.js";
 import { HR_ROLES, HR_COMPANY_SETTINGS_DEFAULT, PUNCH_VENDORS, PRIOR_HR_VENDORS, HR_MODULES } from "../../store/seed/hrCompanySettings.js";
 import { HR_DEPARTMENTS } from "../../store/seed/hrDepartments.js";
 import { InlineList } from "../shared/formControls.jsx";
@@ -554,13 +555,17 @@ export function HrLeave(){
   /* Real per-pay-period accrual instead of the flat annual number being available on day one -
      prorated by how much of the calendar year has actually elapsed (and by first-year tenure,
      so someone hired in October doesn't accrue as if they'd been here since January). */
-  const yearStart=new Date(new Date().getFullYear(),0,1);
-  const hireDate=new Date(emp.hired);
-  const accrualStart=hireDate>yearStart?hireDate:yearStart;
-  const daysElapsed=Math.max(0,(Date.now()-accrualStart.getTime())/86400000);
-  const daysInYear=(new Date(new Date().getFullYear(),11,31)-yearStart)/86400000+1;
-  const accruedVacation=Math.round(settings.leave.annualVacationDays*Math.min(1,daysElapsed/daysInYear)*10)/10;
-  const vacationBalance=Math.round((accruedVacation-usedVacation)*10)/10;
+  /* Accrual now also handles the year boundary. Unused days used to simply vanish on 1 January,
+     which is both wrong and, in several provinces, not lawful — carryover is a real policy
+     (none / capped / unlimited, with an optional expiry) rather than an assumption. */
+  const bal=vacationBalance({
+    annualDays:settings.leave.annualVacationDays,
+    hired:emp.hired,
+    usedByYear:usedDaysByYear(myLeave,"Vacation"),
+    policy:settings.leave,
+  });
+  const accruedVacation=bal.accrued;
+  const vacationBalanceDays=bal.available;
   const usedSick=myLeave.filter(l=>l.status==="approved"&&l.type==="Sick").reduce((s,l)=>s+l.days,0);
   const usedPersonal=myLeave.filter(l=>l.status==="approved"&&l.type==="Personal").reduce((s,l)=>s+l.days,0);
   const scopedLeave=isPriv?A.hrLeave:A.hrLeave.filter(l=>myReports.some(r=>r.id===l.employee)||l.employee===emp.id);
@@ -584,17 +589,23 @@ export function HrLeave(){
     let days=0; const d=new Date(req.from); const end=new Date(req.to);
     for(;d<=end;d.setDate(d.getDate()+1)){if(d.getDay()!==0&&d.getDay()!==6)days++;}
     days=Math.max(1,days);
-    if(req.type==="Vacation"&&days>vacationBalance){
-      setReqErr(`This request is for ${days} day${days===1?"":"s"}, but you've only accrued ${vacationBalance} day${vacationBalance===1?"":"s"} of vacation balance so far this year.`);
+    if(req.type==="Vacation"&&days>vacationBalanceDays){
+      setReqErr(`This request is for ${days} day${days===1?"":"s"}, but you have ${vacationBalanceDays} day${vacationBalanceDays===1?"":"s"} available (accrued so far this year, plus any carried over).`);
       return;
     }
     A.requestLeave({...req,days}); setReq({type:"Vacation",from:"",to:"",reason:""}); setShowReq(false);};
 
   return <div>
+    {/* Warn before carried days are lost, not after - the point of an expiry policy is that
+        someone can still act on it. */}
+    {bal.carriedIn>0&&bal.carryoverExpiresOn&&
+      <Banner tone="warn" icon="clock" style={{marginBottom:14}}>
+        {bal.carriedIn} day{bal.carriedIn===1?"":"s"} carried over from last year expire on {bal.carryoverExpiresOn}. Book them before then or they are lost.
+      </Banner>}
     <div className={`grid gap-3 mb-4 ${mob?"grid-cols-2":"grid-cols-4"}`}>
       {[
-        {l:"Vacation balance available",v:vacationBalance,tone:vacationBalance<0?C.danger:C.brand,
-          sub:`${accruedVacation} accrued so far · ${settings.leave.annualVacationDays}/yr allowance`},
+        {l:"Vacation balance available",v:vacationBalanceDays,tone:vacationBalanceDays<0?C.danger:C.brand,
+          sub:`${accruedVacation} accrued this year${bal.carriedIn>0?` · ${bal.carriedIn} carried over`:""} · ${settings.leave.annualVacationDays}/yr`},
         {l:"Sick days used",v:usedSick,total:settings.leave.sickDays,tone:C.ok},
         {l:"Personal days used",v:usedPersonal,total:settings.leave.personalDays,tone:C.violet},
         {l:"My open requests",v:myLeave.filter(l=>l.status==="pending").length,tone:C.warn}
@@ -1885,6 +1896,34 @@ export function HrSettings(){
         <Field label="Personal days"><Input type="number" value={d.leave.personalDays} onChange={e=>setSection("leave","personalDays",Number(e.target.value)||3)}/></Field>
       </div>
       <Field label="Minimum advance notice (days)"><Input type="number" value={d.leave.advanceNoticeDays} onChange={e=>setSection("leave","advanceNoticeDays",Number(e.target.value)||14)}/></Field>
+
+      <div className="mt-4 pt-4 border-t border-line-soft">
+        <div className="text-sm font-semibold text-text mb-1">Year-end carryover</div>
+        <div className="text-xs text-text-2 mb-3.5 leading-relaxed">
+          What happens to unused vacation on 1 January. Several provinces don't permit simply
+          discarding it, so choose deliberately rather than leaving it to chance.
+        </div>
+        <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-3"}`}>
+          <Field label="Carryover policy">
+            <Sel value={d.leave.carryoverMode||"capped"} onChange={e=>setSection("leave","carryoverMode",e.target.value)}>
+              <option value="none">Use it or lose it</option>
+              <option value="capped">Carry over up to a cap</option>
+              <option value="unlimited">Carry over everything</option>
+            </Sel></Field>
+          {(d.leave.carryoverMode||"capped")==="capped"&&
+            <Field label="Maximum days carried">
+              <Input type="number" min="0" value={d.leave.carryoverMaxDays??5}
+                onChange={e=>setSection("leave","carryoverMaxDays",Math.max(0,Number(e.target.value)||0))}/></Field>}
+          {(d.leave.carryoverMode||"capped")!=="none"&&
+            <Field label="Carried days expire after" hint="0 = they don't expire">
+              <Sel value={d.leave.carryoverExpiryMonths??3} onChange={e=>setSection("leave","carryoverExpiryMonths",Number(e.target.value))}>
+                <option value={0}>No expiry</option>
+                <option value={3}>3 months (31 March)</option>
+                <option value={6}>6 months (30 June)</option>
+                <option value={12}>12 months</option>
+              </Sel></Field>}
+        </div>
+      </div>
     </Card>
 
     <Card pad={mob?20:26} style={{borderRadius:16,marginBottom:16}}>
