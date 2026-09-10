@@ -469,6 +469,32 @@ CREATE TABLE IF NOT EXISTS hr_shifts (
    a hashed IP, never the raw IP) - the same acknowledgment pattern plenty of real lightweight HR
    systems use for handbook/policy sign-off, not a full DocuSign-style envelope-and-witness flow.
    requiredFor lets a document target specific employees or every active one at creation time. */
+/* Comments on a task, so the discussion lives with the work rather than in a chat thread nobody
+   can find later. Attachments deliberately reuse the shared uploads table rather than adding a
+   parallel one. */
+CREATE TABLE IF NOT EXISTS hr_task_comments (
+  id TEXT PRIMARY KEY,
+  task_id TEXT NOT NULL REFERENCES hr_tasks(id),
+  employee_id TEXT NOT NULL REFERENCES hr_employees(id),
+  body TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_hr_task_comments ON hr_task_comments(task_id);
+
+/* Per-company expense categories with their GL code. Previously a hardcoded list, so a company
+   whose chart of accounts didn't match had no way to record expenses correctly. NULL rows mean
+   the company hasn't customised and gets the platform defaults. */
+CREATE TABLE IF NOT EXISTS hr_expense_categories (
+  id TEXT PRIMARY KEY,
+  company_id TEXT NOT NULL REFERENCES employers(id),
+  name TEXT NOT NULL,
+  gl_code TEXT,
+  active INTEGER DEFAULT 1,
+  sort_order INTEGER DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_hr_expense_cats ON hr_expense_categories(company_id);
+
 CREATE TABLE IF NOT EXISTS hr_sign_documents (
   id TEXT PRIMARY KEY,
   company_id TEXT NOT NULL REFERENCES employers(id),

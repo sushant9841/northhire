@@ -394,6 +394,22 @@ export function useHrStore(){
   const hrMyTaxSlip=year=>api.get(`/hr/tax-slips/${year}/mine`);
   const hrRoe=(employeeId,reason="K")=>api.get(`/hr/roe/${employeeId}?reason=${encodeURIComponent(reason)}`);
 
+  /* --- Task comments and expense categories --- */
+  const hrTaskComments=taskId=>api.get(`/hr/tasks/${taskId}/comments`).then(r=>r.comments).catch(()=>[]);
+  const hrAddTaskComment=async(taskId,body)=>{
+    try{const r=await api.post(`/hr/tasks/${taskId}/comments`,{body});return {ok:true,comment:r.comment};}
+    catch(e){return {ok:false,msg:e.message};}
+  };
+  const hrDeleteTaskComment=async id=>{
+    try{await api.del(`/hr/task-comments/${id}`);return {ok:true};}
+    catch(e){return {ok:false,msg:e.message};}
+  };
+  const hrExpenseCategories=()=>api.get("/hr/expense-categories").catch(()=>({categories:[],isCustom:false}));
+  const hrSaveExpenseCategories=async categories=>{
+    try{await api.put("/hr/expense-categories",{categories});return {ok:true};}
+    catch(e){return {ok:false,msg:e.message};}
+  };
+
   /* --- Shared time clocks (kiosk terminals) ---
      The pairing token comes back only from the create call; the list endpoint deliberately never
      returns it again. */
@@ -626,6 +642,7 @@ export function useHrStore(){
     myPayslips,printPayslip,
     hrTaxSlipYears,hrTaxSlips,hrMyTaxSlip,hrRoe,printT4,printRoe,
     hrKioskDevices,hrCreateKioskDevice,hrRevokeKioskDevice,hrSetPunchPin,
+    hrTaskComments,hrAddTaskComment,hrDeleteTaskComment,hrExpenseCategories,hrSaveExpenseCategories,
     hrDeptsAtCompany,addDepartment,updateDepartment,removeDepartment,
     empExpenses,companyExpenses,submitExpense,decideExpense,payExpense,
     runPayroll,approvePayroll,executePayroll,reversePayroll,

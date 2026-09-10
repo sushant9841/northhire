@@ -662,7 +662,7 @@ export function HrLeave(){
 
 /* ─── Tasks: kanban board, real drag-and-drop via @dnd-kit on top of the existing ←/→ buttons
    (kept as the accessible, no-pointer-required path). ─── */
-function _TaskCard({t,col,cols,emp,A}){
+function _TaskCard({t,col,cols,emp,A,onComments}){
   const {attributes,listeners,setNodeRef,transform,isDragging}=useDraggable({id:t.id});
   const style=transform?{transform:`translate3d(${transform.x}px,${transform.y}px,0)`,zIndex:50,opacity:0.9}:undefined;
   const assn=A.hrEmp(t.assignee);
@@ -682,11 +682,53 @@ function _TaskCard({t,col,cols,emp,A}){
     <div className="flex gap-1" onPointerDown={e=>e.stopPropagation()}>
       {col.k!=="todo"&&<Btn kind="ghost" size="xs" aria-label={`Move "${t.title}" back to ${cols[cols.findIndex(c=>c.k===col.k)-1].label}`} onClick={()=>A.updateTaskStatus(t.id,cols[cols.findIndex(c=>c.k===col.k)-1].k)}>←</Btn>}
       {col.k!=="done"&&<Btn kind="ghost" size="xs" aria-label={`Move "${t.title}" forward to ${cols[cols.findIndex(c=>c.k===col.k)+1].label}`} onClick={()=>A.updateTaskStatus(t.id,cols[cols.findIndex(c=>c.k===col.k)+1].k)}>→</Btn>}
+      <Btn kind="ghost" size="xs" aria-label={`Comments on "${t.title}"`} onClick={()=>onComments&&onComments(t)}>💬</Btn>
       {(t.assignedBy===emp.id||emp.role==="owner"||emp.role==="admin")&&<Btn kind="ghost" size="xs" icon="trash" aria-label={`Delete task "${t.title}"`} onClick={()=>A.deleteTask(t.id)}/>}
     </div>
   </div>;
 }
-function _TaskColumn({col,tasks,cols,emp,A}){
+
+/* Discussion on a task, kept with the work rather than in a chat thread nobody can find later. */
+function _TaskCommentsModal({task,emp,A,onClose}){
+  const [comments,setComments]=useState([]);
+  const [body,setBody]=useState(""); const [busy,setBusy]=useState(false); const [err,setErr]=useState("");
+  const load=()=>A.hrTaskComments(task.id).then(setComments);
+  useEffect(()=>{load();},[task.id]);
+  const send=async()=>{
+    if(!body.trim())return;
+    setBusy(true);setErr("");
+    const r=await A.hrAddTaskComment(task.id,body.trim());
+    setBusy(false);
+    if(r.ok){setBody("");load();}else setErr(r.msg);
+  };
+  return <Modal onClose={onClose} title={`Comments — ${task.title}`}>
+    {err&&<Banner tone="danger" icon="alert" style={{marginBottom:12}}>{err}</Banner>}
+    <div className="flex flex-col gap-3 mb-4" style={{maxHeight:320,overflowY:"auto"}}>
+      {comments.length===0
+        ? <div className="text-sm text-text-3">No comments yet.</div>
+        : comments.map(c=>
+          <div key={c.id} className="bg-bg border border-line rounded-xl py-2.5 px-3">
+            <div className="flex justify-between items-center gap-2 mb-1">
+              <span className="text-xs font-semibold text-text">{c.author}</span>
+              <div className="flex gap-2 items-center">
+                <span className="text-xs text-text-3">{new Date(c.at).toLocaleDateString("en-CA")}</span>
+                {(c.authorId===emp.id||["owner","admin","hr"].includes(emp.role))&&
+                  <button onClick={async()=>{await A.hrDeleteTaskComment(c.id);load();}}
+                    className="bg-transparent border-0 p-0 cursor-pointer text-xs text-text-3 hover:text-red">Remove</button>}
+              </div>
+            </div>
+            <div className="text-sm text-text-2 whitespace-pre-wrap">{c.body}</div>
+          </div>)}
+    </div>
+    <Field label="Add a comment">
+      <Area rows={3} value={body} onChange={e=>setBody(e.target.value)} placeholder="Anything the next person needs to know"/></Field>
+    <div className="flex gap-2.5 justify-end mt-3">
+      <Btn kind="ghost" onClick={onClose}>Close</Btn>
+      <Btn kind="primary" onClick={send} disabled={busy||!body.trim()}>{busy?"Posting…":"Comment"}</Btn>
+    </div>
+  </Modal>;
+}
+function _TaskColumn({col,tasks,cols,emp,A,onComments}){
   const {setNodeRef,isOver}=useDroppable({id:col.k});
   return <div ref={setNodeRef} className="bg-bg rounded-2xl p-3 transition-colors duration-150" style={{minHeight:200,outline:isOver?`2px solid ${C.brand}`:"none"}}>
     <div className="flex justify-between items-center py-1 px-1.5 mb-2.5">
@@ -697,12 +739,12 @@ function _TaskColumn({col,tasks,cols,emp,A}){
       <Tag tone="neutral" sm>{tasks.length}</Tag>
     </div>
     <div className="flex flex-col gap-2">
-      {[...tasks].sort((a,b)=>a.due.localeCompare(b.due)).map(t=><_TaskCard key={t.id} t={t} col={col} cols={cols} emp={emp} A={A}/>)}
+      {[...tasks].sort((a,b)=>a.due.localeCompare(b.due)).map(t=><_TaskCard key={t.id} t={t} col={col} cols={cols} emp={emp} A={A} onComments={onComments}/>)}
       {tasks.length===0&&<div className="p-5 text-center text-xs text-text-3">No tasks here.</div>}
     </div>
   </div>;
 }
-function _TaskBoard({cols,source,emp,A,mob}){
+function _TaskBoard({cols,source,emp,A,mob,onComments}){
   const sensors=useSensors(useSensor(PointerSensor,{activationConstraint:{distance:8}}));
   const onDragEnd=({active,over})=>{
     if(!over)return;
@@ -711,7 +753,7 @@ function _TaskBoard({cols,source,emp,A,mob}){
   };
   return <DndContext sensors={sensors} onDragEnd={onDragEnd}>
     <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-3"}`}>
-      {cols.map(col=><_TaskColumn key={col.k} col={col} tasks={source.filter(t=>t.status===col.k)} cols={cols} emp={emp} A={A}/>)}
+      {cols.map(col=><_TaskColumn key={col.k} col={col} tasks={source.filter(t=>t.status===col.k)} cols={cols} emp={emp} A={A} onComments={onComments}/>)}
     </div>
   </DndContext>;
 }
@@ -722,6 +764,7 @@ export function HrTasks(){
   const [scope,setScope]=useState("mine"); /* mine | assigned | all */
   const [assigneeFilter,setAssigneeFilter]=useState("");
   const [showAdd,setShowAdd]=useState(false);
+  const [taskComments,setTaskComments]=useState(null);
   const [nt,setNt]=useState({title:"",assignee:emp.id,due:"",priority:"medium",tags:[]});
   const scoped=scope==="mine"?A.hrTasks.filter(t=>t.assignee===emp.id)
     :scope==="assigned"?A.hrTasks.filter(t=>t.assignedBy===emp.id)
@@ -744,7 +787,8 @@ export function HrTasks(){
       <Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowAdd(true)}>New task</Btn>
     </div>
 
-    <_TaskBoard cols={cols} source={source} emp={emp} A={A} mob={mob}/>
+    <_TaskBoard cols={cols} source={source} emp={emp} A={A} mob={mob} onComments={setTaskComments}/>
+    {taskComments&&<_TaskCommentsModal task={taskComments} emp={emp} A={A} onClose={()=>setTaskComments(null)}/>}
 
     {showAdd&&<Modal onClose={()=>setShowAdd(false)} title="New task">
       <div className="flex flex-col gap-3.5">

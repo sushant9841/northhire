@@ -564,6 +564,24 @@ const EXPENSE_CATEGORIES=[
 ];
 const glCodeFor=cat=>EXPENSE_CATEGORIES.find(c=>c.k===cat)?.glCode||"—";
 
+/* Categories were a fixed list, so a company whose chart of accounts didn't match had no correct
+   option to file an expense under. A company that hasn't customised keeps these defaults, so
+   nothing has to be configured before expenses work. */
+function useExpenseCategories(A){
+  const [cats,setCats]=useState(EXPENSE_CATEGORIES);
+  useEffect(()=>{
+    let off=false;
+    A.hrExpenseCategories().then(r=>{
+      if(off||!r?.categories?.length)return;
+      setCats(r.isCustom
+        ? r.categories.map(c=>({k:c.name,icon:"file",about:c.glCode?`GL ${c.glCode}`:"",glCode:c.glCode||"—"}))
+        : EXPENSE_CATEGORIES);
+    }).catch(()=>{});
+    return()=>{off=true;};
+  },[]);
+  return cats;
+}
+
 export function HrExpensesPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const emp0=A.hrCurrentEmp();
@@ -661,6 +679,7 @@ export function HrExpensesPage(){
 }
 
 function ExpenseSubmitModal({onClose,onSubmit}){
+  const categories=useExpenseCategories(use());
   const mob=useMedia("(max-width: 900px)");
   const [cat,setCat]=useState("Travel"); const [merchant,setMerchant]=useState(""); const [amount,setAmount]=useState("");
   const [description,setDescription]=useState(""); const [date,setDate]=useState(_fmtDate(new Date()));
@@ -669,7 +688,7 @@ function ExpenseSubmitModal({onClose,onSubmit}){
     <div className="flex flex-col gap-3.5">
       <Field label="Category" required>
         <div className={`grid gap-2 ${mob?"grid-cols-2":"grid-cols-4"}`}>
-          {EXPENSE_CATEGORIES.map(c=><button key={c.k} onClick={()=>setCat(c.k)} type="button"
+          {categories.map(c=><button key={c.k} onClick={()=>setCat(c.k)} type="button"
             className={`rounded-xl py-2.5 px-3 cursor-pointer text-xs text-left flex gap-2 items-center border-2 ${cat===c.k?"bg-tint border-brand font-bold text-brand":"bg-white border-line font-medium text-text-2"}`}>
             <I n={c.icon} s={15}/>{c.k}
           </button>)}

@@ -992,3 +992,88 @@ hrRouter.post("/sign-documents/:id/sign", requireHrAuth, (req, res) => {
   logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "document_signed", `${req.hrEmployee.name} signed "${row.title}"`);
   res.status(201).json({ signature: serializeHrSignature(db.prepare("SELECT * FROM hr_signatures WHERE id = ?").get(id)) });
 });
+
+/* ─── Task comments ─────────────────────────────────────────────────────────────────────────
+   Discussion belongs with the work. Anyone who can see the task can comment; a comment can be
+   removed by its author or by a privileged role, since a task board that nobody can tidy fills
+   up with mistakes. */
+hrRouter.get("/tasks/:id/comments", requireHrAuth, (req, res) => {
+  const task = db.prepare("SELECT * FROM hr_tasks WHERE id = ? AND company_id = ?").get(req.params.id, req.hrEmployee.company_id);
+  if (!task) return res.status(404).json({ error: "Task not found." });
+  const rows = db.prepare(
+    `SELECT c.*, e.name AS author FROM hr_task_comments c JOIN hr_employees e ON e.id = c.employee_id
+      WHERE c.task_id = ? ORDER BY c.created_at ASC`
+  ).all(req.params.id);
+  res.json({ comments: rows.map(r => ({ id: r.id, task: r.task_id, author: r.author, authorId: r.employee_id, body: r.body, at: sqlTime(r.created_at).getTime() })) });
+});
+
+hrRouter.post("/tasks/:id/comments", requireHrAuth, (req, res) => {
+  const task = db.prepare("SELECT * FROM hr_tasks WHERE id = ? AND company_id = ?").get(req.params.id, req.hrEmployee.company_id);
+  if (!task) return res.status(404).json({ error: "Task not found." });
+  const body = String(req.body?.body || "").trim();
+  if (!body) return res.status(400).json({ error: "Write something first." });
+  if (body.length > 2000) return res.status(400).json({ error: "Keep a comment under 2000 characters." });
+  const id = nextId("tc", "hr_task_comments");
+  db.prepare("INSERT INTO hr_task_comments (id, task_id, employee_id, body) VALUES (?,?,?,?)")
+    .run(id, req.params.id, req.hrEmployee.id, body);
+  res.status(201).json({ comment: { id, task: req.params.id, author: req.hrEmployee.name, authorId: req.hrEmployee.id, body, at: Date.now() } });
+});
+
+hrRouter.delete("/task-comments/:id", requireHrAuth, (req, res) => {
+  const row = db.prepare(
+    `SELECT c.* FROM hr_task_comments c JOIN hr_tasks t ON t.id = c.task_id
+      WHERE c.id = ? AND t.company_id = ?`
+  ).get(req.params.id, req.hrEmployee.company_id);
+  if (!row) return res.status(404).json({ error: "Comment not found." });
+  if (row.employee_id !== req.hrEmployee.id && !isPriv(req.hrEmployee)) {
+    return res.status(403).json({ error: "You can only remove your own comments." });
+  }
+  db.prepare("DELETE FROM hr_task_comments WHERE id = ?").run(req.params.id);
+  res.json({ ok: true });
+});
+
+/* ─── Expense categories ────────────────────────────────────────────────────────────────────
+   Was a hardcoded list, so a company whose chart of accounts didn't match had no correct option
+   to file an expense under. A company with no rows gets the platform defaults, so nothing has to
+   be configured before expenses work. */
+const DEFAULT_EXPENSE_CATEGORIES = [
+  { name: "Travel", glCode: "6100" }, { name: "Meals & entertainment", glCode: "6200" },
+  { name: "Equipment & tools", glCode: "6300" }, { name: "Training & certification", glCode: "6400" },
+  { name: "Mileage", glCode: "6110" }, { name: "Other", glCode: "6900" },
+];
+
+hrRouter.get("/expense-categories", requireHrAuth, (req, res) => {
+  const rows = db.prepare("SELECT * FROM hr_expense_categories WHERE company_id = ? AND active = 1 ORDER BY sort_order, name")
+    .all(req.hrEmployee.company_id);
+  if (!rows.length) return res.json({ categories: DEFAULT_EXPENSE_CATEGORIES, isCustom: false });
+  res.json({ categories: rows.map(r => ({ id: r.id, name: r.name, glCode: r.gl_code })), isCustom: true });
+});
+
+hrRouter.put("/expense-categories", requireHrAuth, requireHrPriv, (req, res) => {
+  const list = Array.isArray(req.body?.categories) ? req.body.categories : null;
+  if (!list) return res.status(400).json({ error: "Send a `categories` array." });
+  const clean = list
+    .map(c => ({ name: String(c?.name || "").trim().slice(0, 60), glCode: String(c?.glCode || "").trim().slice(0, 20) }))
+    .filter(c => c.name);
+  if (!clean.length) return res.status(400).json({ error: "Keep at least one category." });
+  if (new Set(clean.map(c => c.name.toLowerCase())).size !== clean.length) {
+    return res.status(400).json({ error: "Category names have to be unique." });
+  }
+  // Categories already used by an expense are deactivated rather than deleted, so historical
+  // expenses keep reporting under the category they were actually filed against.
+  const existing = db.prepare("SELECT * FROM hr_expense_categories WHERE company_id = ?").all(req.hrEmployee.company_id);
+  const keep = new Set(clean.map(c => c.name.toLowerCase()));
+  for (const row of existing) {
+    if (!keep.has(row.name.toLowerCase())) {
+      db.prepare("UPDATE hr_expense_categories SET active = 0 WHERE id = ?").run(row.id);
+    }
+  }
+  clean.forEach((c, i) => {
+    const match = existing.find(e => e.name.toLowerCase() === c.name.toLowerCase());
+    if (match) db.prepare("UPDATE hr_expense_categories SET gl_code = ?, active = 1, sort_order = ? WHERE id = ?").run(c.glCode || null, i, match.id);
+    else db.prepare("INSERT INTO hr_expense_categories (id, company_id, name, gl_code, sort_order) VALUES (?,?,?,?,?)")
+      .run(nextId("ec", "hr_expense_categories"), req.hrEmployee.company_id, c.name, c.glCode || null, i);
+  });
+  logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "expense_categories_updated", `Updated expense categories (${clean.length})`);
+  res.json({ ok: true, categories: clean });
+});
