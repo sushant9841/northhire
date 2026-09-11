@@ -13,6 +13,11 @@ export const en = {
     keepAccount: "Keep my account", deletePermanently: "Delete permanently",
     sending: "Sending…", getHelp: "Get help", status: "Status", due: "due", there: "there",
   },
+  primitives: {
+    showingOfTotal: "Showing {from}–{to} of {total}",
+    firstPageAria: "First page", previousPageAria: "Previous page", nextPageAria: "Next page", lastPageAria: "Last page",
+    pageOfTotal: "Page {page} of {totalPages}",
+  },
   nav: {
     browseJobs: "Browse jobs", findJobs: "Find jobs", trainings: "Trainings",
     resources: "Resources", forEmployers: "For employers", bySector: "By sector",

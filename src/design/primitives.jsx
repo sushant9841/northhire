@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { C, SH } from "./tokens.js";
 import { I } from "./icons.jsx";
 import { useMedia } from "../helpers/hooks.js";
+import { useTranslation } from "../i18n/i18n.jsx";
 
 /* ═══════════════ VECTOR ART + SMART IMAGE (real URL first, SVG fallback) ═══════════════
    Every visual has a real-image URL AND an SVG fallback. The <SmartImg> component
@@ -488,14 +489,15 @@ export function Modal({open=true,onClose,title,sub,children,footer,width=520}){
 /* Shared "are you sure?" dialog — replaces the native confirm()/window.confirm() calls scattered
    across destructive actions (offboard, wipe data, execute payroll, remove badge). Renders nothing
    when closed, so a caller can mount it unconditionally and just flip `open`. */
-export function ConfirmDialog({open,onClose,onConfirm,title,children,confirmLabel="Confirm",kind="danger"}){
+export function ConfirmDialog({open,onClose,onConfirm,title,children,confirmLabel,kind="danger"}){
+ const {t}=useTranslation();
  if(!open)return null;
  return <Modal onClose={onClose} title={title} width={440}>
   <div className="flex flex-col gap-4">
    {children&&<div className="text-sm text-text-2 leading-relaxed">{children}</div>}
    <div className="flex gap-2.5 justify-end">
-    <Btn kind="ghost" onClick={onClose}>Cancel</Btn>
-    <Btn kind={kind} onClick={()=>{onConfirm();onClose();}}>{confirmLabel}</Btn>
+    <Btn kind="ghost" onClick={onClose}>{t("common.cancel")}</Btn>
+    <Btn kind={kind} onClick={()=>{onConfirm();onClose();}}>{confirmLabel||t("common.confirm")}</Btn>
    </div>
   </div>
  </Modal>;
@@ -754,17 +756,18 @@ export function usePagination(items,pageSize=20){
   return {page:safePage,setPage,totalPages,pageSize,total:items.length,pageItems:items.slice(start,start+pageSize)};
 }
 export function Pagination({page,setPage,totalPages,total,pageSize}){
+  const {t}=useTranslation();
   if(totalPages<=1)return null;
   const from=total===0?0:(page-1)*pageSize+1; const to=Math.min(page*pageSize,total);
   const navBtn="w-8 h-8 rounded-lg border border-line bg-white text-text-2 flex items-center justify-center cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed hover:bg-bg";
   return <div className="flex items-center justify-between flex-wrap gap-3 pt-4 mt-1">
-    <div className="text-sm text-text-3">Showing {from}–{to} of {total}</div>
+    <div className="text-sm text-text-3">{t("primitives.showingOfTotal",{from,to,total})}</div>
     <div className="flex items-center gap-1.5">
-      <button className={navBtn} disabled={page===1} onClick={()=>setPage(1)} aria-label="First page"><I n="arrowL" s={13} w={2.4}/><I n="arrowL" s={13} w={2.4} style={{marginLeft:-8}}/></button>
-      <button className={navBtn} disabled={page===1} onClick={()=>setPage(page-1)} aria-label="Previous page"><I n="arrowL" s={14} w={2.4}/></button>
-      <span className="text-sm text-text-2 px-2 font-medium">Page {page} of {totalPages}</span>
-      <button className={navBtn} disabled={page===totalPages} onClick={()=>setPage(page+1)} aria-label="Next page"><I n="arrowR" s={14} w={2.4}/></button>
-      <button className={navBtn} disabled={page===totalPages} onClick={()=>setPage(totalPages)} aria-label="Last page"><I n="arrowR" s={13} w={2.4}/><I n="arrowR" s={13} w={2.4} style={{marginLeft:-8}}/></button>
+      <button className={navBtn} disabled={page===1} onClick={()=>setPage(1)} aria-label={t("primitives.firstPageAria")}><I n="arrowL" s={13} w={2.4}/><I n="arrowL" s={13} w={2.4} style={{marginLeft:-8}}/></button>
+      <button className={navBtn} disabled={page===1} onClick={()=>setPage(page-1)} aria-label={t("primitives.previousPageAria")}><I n="arrowL" s={14} w={2.4}/></button>
+      <span className="text-sm text-text-2 px-2 font-medium">{t("primitives.pageOfTotal",{page,totalPages})}</span>
+      <button className={navBtn} disabled={page===totalPages} onClick={()=>setPage(page+1)} aria-label={t("primitives.nextPageAria")}><I n="arrowR" s={14} w={2.4}/></button>
+      <button className={navBtn} disabled={page===totalPages} onClick={()=>setPage(totalPages)} aria-label={t("primitives.lastPageAria")}><I n="arrowR" s={13} w={2.4}/><I n="arrowR" s={13} w={2.4} style={{marginLeft:-8}}/></button>
     </div>
   </div>;
 }

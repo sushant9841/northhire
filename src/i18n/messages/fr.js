@@ -14,6 +14,11 @@ export const fr = {
     keepAccount: "Conserver mon compte", deletePermanently: "Supprimer définitivement",
     sending: "Envoi en cours…", getHelp: "Obtenir de l'aide", status: "Statut", due: "échéance", there: "là",
   },
+  primitives: {
+    showingOfTotal: "Affichage de {from} à {to} sur {total}",
+    firstPageAria: "Première page", previousPageAria: "Page précédente", nextPageAria: "Page suivante", lastPageAria: "Dernière page",
+    pageOfTotal: "Page {page} sur {totalPages}",
+  },
   nav: {
     browseJobs: "Parcourir les emplois", findJobs: "Trouver un emploi", trainings: "Formations",
     resources: "Ressources", forEmployers: "Pour les employeurs", bySector: "Par secteur",
