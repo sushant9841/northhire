@@ -127,32 +127,32 @@ export function HrDashboard(){
   /* Role-specific hero KPIs */
   const kpis=(()=>{
     if(emp.role==="owner"||emp.role==="admin")return [
-      {label:"Employees",value:teamSize,icon:"users"},
-      {label:"Pending leave",value:pendingLeave.length,icon:"calendar",tone:pendingLeave.length?C.warn:C.text},
-      {label:"Open invoices",value:openInvoices.length,icon:"wallet",tone:overdueInvoices.length?C.danger:C.text},
-      {label:"Open tasks · company",value:A.hrTasks.filter(t=>t.status!=="done").length,icon:"check"}];
+      {label:t("hr.dashboard.kpiEmployees"),value:teamSize,icon:"users"},
+      {label:t("hr.dashboard.kpiPendingLeave"),value:pendingLeave.length,icon:"calendar",tone:pendingLeave.length?C.warn:C.text},
+      {label:t("hr.dashboard.kpiOpenInvoices"),value:openInvoices.length,icon:"wallet",tone:overdueInvoices.length?C.danger:C.text},
+      {label:t("hr.dashboard.kpiOpenTasksCompany"),value:A.hrTasks.filter(t=>t.status!=="done").length,icon:"check"}];
     if(emp.role==="hr")return [
-      {label:"Employees",value:teamSize,icon:"users"},
-      {label:"Pending leave",value:pendingLeave.length,icon:"calendar",tone:pendingLeave.length?C.warn:C.text},
-      {label:"Trainings this week",value:A.hrEvents.filter(e=>e.type==="training").length,icon:"cap"},
-      {label:"My tasks",value:myTasks.length,icon:"check"}];
+      {label:t("hr.dashboard.kpiEmployees"),value:teamSize,icon:"users"},
+      {label:t("hr.dashboard.kpiPendingLeave"),value:pendingLeave.length,icon:"calendar",tone:pendingLeave.length?C.warn:C.text},
+      {label:t("hr.dashboard.kpiTrainingsThisWeek"),value:A.hrEvents.filter(e=>e.type==="training").length,icon:"cap"},
+      {label:t("hr.dashboard.kpiMyTasks"),value:myTasks.length,icon:"check"}];
     if(emp.role==="finance")return [
-      {label:"Open invoices",value:openInvoices.length,icon:"wallet",tone:overdueInvoices.length?C.danger:C.text},
-      {label:"Overdue",value:overdueInvoices.length,icon:"alert",tone:overdueInvoices.length?C.danger:C.text},
-      {label:"Next payroll",value:A.hrPayruns.find(p=>p.status==="scheduled")?.period||"—",icon:"wallet"},
-      {label:"My tasks",value:myTasks.length,icon:"check"}];
+      {label:t("hr.dashboard.kpiOpenInvoices"),value:openInvoices.length,icon:"wallet",tone:overdueInvoices.length?C.danger:C.text},
+      {label:t("hr.dashboard.kpiOverdue"),value:overdueInvoices.length,icon:"alert",tone:overdueInvoices.length?C.danger:C.text},
+      {label:t("hr.dashboard.kpiNextPayroll"),value:A.hrPayruns.find(p=>p.status==="scheduled")?.period||"—",icon:"wallet"},
+      {label:t("hr.dashboard.kpiMyTasks"),value:myTasks.length,icon:"check"}];
     return [
-      {label:"My tasks",value:myTasks.length,icon:"check"},
-      {label:"Today's status",value:todayAttendance?(todayAttendance.clockOut?"Signed out":"Working"):"Not clocked in",icon:"clock",tone:todayAttendance?C.ok:C.text3},
-      {label:"Leave balance",value:settings.leave.annualVacationDays-myLeave.filter(l=>l.status==="approved"&&l.type==="Vacation").reduce((s,l)=>s+l.days,0),icon:"calendar"},
-      {label:"Badges",value:emp.badges.length,icon:"award"}];
+      {label:t("hr.dashboard.kpiMyTasks"),value:myTasks.length,icon:"check"},
+      {label:t("hr.dashboard.kpiTodaysStatus"),value:todayAttendance?(todayAttendance.clockOut?t("hr.dashboard.statusSignedOut"):t("hr.dashboard.statusWorking")):t("hr.dashboard.statusNotClockedIn"),icon:"clock",tone:todayAttendance?C.ok:C.text3},
+      {label:t("hr.dashboard.kpiLeaveBalance"),value:settings.leave.annualVacationDays-myLeave.filter(l=>l.status==="approved"&&l.type==="Vacation").reduce((s,l)=>s+l.days,0),icon:"calendar"},
+      {label:t("hr.dashboard.kpiBadges"),value:emp.badges.length,icon:"award"}];
   })();
 
   return <div>
     <div className="mb-6">
-      <div className={`font-bold text-text tracking-tight ${mob?"text-2xl":"text-3xl"}`}>Welcome back, {emp.name.split(" ")[0]}.</div>
+      <div className={`font-bold text-text tracking-tight ${mob?"text-2xl":"text-3xl"}`}>{t("hr.dashboard.welcomeBack",{name:emp.name.split(" ")[0]})}</div>
       <div className="text-sm text-text-2 mt-1.5">
-        {new Date().toLocaleDateString("en-CA",{weekday:"long",month:"long",day:"numeric",year:"numeric"})}
+        {new Date().toLocaleDateString(locale==="fr"?"fr-CA":"en-CA",{weekday:"long",month:"long",day:"numeric",year:"numeric"})}
         {/* Live daily-signal after the date instead of the department name, which was filler
             (the reader already knows their own department). Pending leave for a manager, open
             invoices for finance, own open tasks otherwise - each is a real number that gives
@@ -161,12 +161,12 @@ export function HrDashboard(){
           const inv=A.hrInvoices.filter(i=>i.status==="unpaid").length;
           const myOpen=A.hrTasks.filter(t=>t.status!=="done"&&t.assignee===emp.id).length;
           if(emp.role==="owner"||emp.role==="hr"||emp.role==="admin"){
-            const bits=[]; if(p)bits.push(`${p} pending leave decision${p===1?"":"s"}`);
-            if(inv)bits.push(`${inv} open invoice${inv===1?"":"s"}`);
+            const bits=[]; if(p)bits.push(t(p===1?"hr.dashboard.pendingLeaveDecisionSingle":"hr.dashboard.pendingLeaveDecisionPlural",{count:p}));
+            if(inv)bits.push(t(inv===1?"hr.dashboard.openInvoiceSingle":"hr.dashboard.openInvoicePlural",{count:inv}));
             return bits.length?<> • {bits.join(" · ")}</>:null;
           }
-          if(emp.role==="finance") return inv?<> • {inv} open invoice{inv===1?"":"s"}</>:null;
-          return myOpen?<> • {myOpen} task{myOpen===1?"":"s"} on your list</>:null;})()}</div>
+          if(emp.role==="finance") return inv?<> • {t(inv===1?"hr.dashboard.openInvoiceSingle":"hr.dashboard.openInvoicePlural",{count:inv})}</>:null;
+          return myOpen?<> • {t(myOpen===1?"hr.dashboard.taskSingle":"hr.dashboard.taskPlural",{count:myOpen})}</>:null;})()}</div>
     </div>
 
     <div className={`grid gap-3 mb-6 ${mob?"grid-cols-2":"grid-cols-4"}`}>
@@ -183,34 +183,34 @@ export function HrDashboard(){
       <div>
         <Card pad={mob?20:26} style={{borderRadius:20,marginBottom:16}}>
           <div className="flex justify-between items-center mb-4">
-            <Lbl style={{margin:0}}>Attendance today</Lbl>
-            <Tag tone={todayAttendance?"ok":"neutral"} sm>{todayAttendance?(todayAttendance.clockOut?"Signed out":"On the clock"):"Not clocked in"}</Tag>
+            <Lbl style={{margin:0}}>{t("hr.dashboard.attendanceTodayLabel")}</Lbl>
+            <Tag tone={todayAttendance?"ok":"neutral"} sm>{todayAttendance?(todayAttendance.clockOut?t("hr.dashboard.statusSignedOut"):t("hr.dashboard.statusWorking")):t("hr.dashboard.statusNotClockedIn")}</Tag>
           </div>
           {!todayAttendance?<div>
-            <p className="text-sm text-text-2 mb-3.5 leading-relaxed">Start your day by punching in.</p>
-            <Btn kind="primary" icon="clock" onClick={async()=>{const r=await A.punchIn(emp.id,"web"); if(!r.ok)A.toast(r.msg,"danger");}}>Punch in</Btn>
+            <p className="text-sm text-text-2 mb-3.5 leading-relaxed">{t("hr.dashboard.punchInPrompt")}</p>
+            <Btn kind="primary" icon="clock" onClick={async()=>{const r=await A.punchIn(emp.id,"web"); if(!r.ok)A.toast(r.msg,"danger");}}>{t("hr.dashboard.punchInBtn")}</Btn>
           </div>:!todayAttendance.clockOut?<div>
-            <div className="text-base text-text mb-2">Punched in at <strong>{todayAttendance.clockIn}</strong></div>
-            <p className="text-sm text-text-2 mb-3.5">Have a great day. Punch out when you're wrapping up.</p>
-            <Btn kind="outline" icon="clock" onClick={async()=>{const r=await A.punchOut(emp.id); if(!r.ok)A.toast(r.msg,"danger"); else if(r.earlyLeave)A.toast("Punched out before end of day","warn");}}>Punch out</Btn>
+            <div className="text-base text-text mb-2">{t("hr.dashboard.punchedInAt")} <strong>{todayAttendance.clockIn}</strong></div>
+            <p className="text-sm text-text-2 mb-3.5">{t("hr.dashboard.punchOutReminder")}</p>
+            <Btn kind="outline" icon="clock" onClick={async()=>{const r=await A.punchOut(emp.id); if(!r.ok)A.toast(r.msg,"danger"); else if(r.earlyLeave)A.toast(t("hr.dashboard.punchOutEarlyLeave"),"warn");}}>{t("hr.dashboard.punchOutBtn")}</Btn>
           </div>:<div>
-            <div className="text-sm text-text">In: <strong>{todayAttendance.clockIn}</strong> · Out: <strong>{todayAttendance.clockOut}</strong> · Total: <strong className="text-brand">{todayAttendance.hours}h</strong></div>
-            <p className="text-sm text-text-2 mt-2">Good work today. See you tomorrow.</p></div>}
+            <div className="text-sm text-text">{t("hr.dashboard.attendanceSummary",{in:todayAttendance.clockIn,out:todayAttendance.clockOut,hours:todayAttendance.hours})}</div>
+            <p className="text-sm text-text-2 mt-2">{t("hr.dashboard.goodWorkToday")}</p></div>}
         </Card>
 
         <Card pad={mob?20:26} style={{borderRadius:20}}>
           <div className="flex justify-between items-center mb-3.5">
-            <Lbl style={{margin:0}}>My tasks</Lbl>
-            <Btn kind="ghost" size="sm" onClick={()=>A.go("hrTasks")}>View all</Btn>
+            <Lbl style={{margin:0}}>{t("hr.dashboard.myTasksLabel")}</Lbl>
+            <Btn kind="ghost" size="sm" onClick={()=>A.go("hrTasks")}>{t("hr.dashboard.viewAllTasks")}</Btn>
           </div>
-          {myTasks.length===0?<div className="py-4 text-text-3 text-sm">No open tasks — nicely done.</div>
+          {myTasks.length===0?<div className="py-4 text-text-3 text-sm">{t("hr.dashboard.noOpenTasks")}</div>
             :<div className="flex flex-col gap-2">
-              {myTasks.slice(0,5).map(t=><div key={t.id} className="flex gap-3 items-center py-3 px-3.5 bg-bg rounded-lg border border-line">
-                <input type="checkbox" checked={t.status==="done"} onChange={()=>A.updateTaskStatus(t.id,t.status==="done"?"todo":"done")} className="w-5 h-5 cursor-pointer shrink-0"/>
+              {myTasks.slice(0,5).map(task=><div key={task.id} className="flex gap-3 items-center py-3 px-3.5 bg-bg rounded-lg border border-line">
+                <input type="checkbox" checked={task.status==="done"} onChange={()=>A.updateTaskStatus(task.id,task.status==="done"?"todo":"done")} className="w-5 h-5 cursor-pointer shrink-0"/>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold text-text">{t.title}</div>
-                  <div className="text-xs text-text-3 mt-0.5">Due {t.due}</div></div>
-                <Tag tone={t.priority==="high"?"danger":t.priority==="medium"?"warn":"neutral"} sm>{t.priority}</Tag>
+                  <div className="text-sm font-semibold text-text">{task.title}</div>
+                  <div className="text-xs text-text-3 mt-0.5">{t("hr.dashboard.dueLabel")} {task.due}</div></div>
+                <Tag tone={task.priority==="high"?"danger":task.priority==="medium"?"warn":"neutral"} sm>{task.priority}</Tag>
               </div>)}</div>}
         </Card>
       </div>
@@ -218,23 +218,23 @@ export function HrDashboard(){
       <div>
         <Card pad={mob?20:24} style={{borderRadius:20,marginBottom:16}}>
           <div className="flex justify-between items-center mb-3">
-            <Lbl style={{margin:0}}>Upcoming events</Lbl>
-            <Btn kind="ghost" size="sm" onClick={()=>A.go("hrCalendar")}>Calendar</Btn>
+            <Lbl style={{margin:0}}>{t("hr.dashboard.upcomingEventsLabel")}</Lbl>
+            <Btn kind="ghost" size="sm" onClick={()=>A.go("hrCalendar")}>{t("hr.dashboard.upcomingEventsViewCalendar")}</Btn>
           </div>
-          {upcomingEvents.length===0?<div className="py-3 text-text-3 text-sm">Nothing coming up.</div>
+          {upcomingEvents.length===0?<div className="py-3 text-text-3 text-sm">{t("hr.dashboard.nothingComing")}</div>
             :<div className="flex flex-col gap-2">
               {upcomingEvents.map(ev=><div key={ev.id} className="py-2.5 px-3 bg-bg rounded-lg border border-line">
                 <div className="text-sm font-semibold text-text">{ev.title}</div>
-                <div className="text-xs text-text-3 mt-0.5">{new Date(ev.when).toLocaleDateString("en-CA",{weekday:"short",month:"short",day:"numeric"})} • {ev.time}</div>
+                <div className="text-xs text-text-3 mt-0.5">{new Date(ev.when).toLocaleDateString(locale==="fr"?"fr-CA":"en-CA",{weekday:"short",month:"short",day:"numeric"})} • {ev.time}</div>
               </div>)}</div>}
         </Card>
 
         {(emp.role==="hr"||emp.role==="admin"||emp.role==="owner")&&<Card pad={mob?20:24} style={{borderRadius:20,marginBottom:16}}>
           <div className="flex justify-between items-center mb-3">
-            <Lbl style={{margin:0}}>Pending leave requests</Lbl>
-            <Btn kind="ghost" size="sm" onClick={()=>A.go("hrLeave")}>Review</Btn>
+            <Lbl style={{margin:0}}>{t("hr.dashboard.pendingLeaveRequestsLabel")}</Lbl>
+            <Btn kind="ghost" size="sm" onClick={()=>A.go("hrLeave")}>{t("hr.dashboard.pendingLeaveReview")}</Btn>
           </div>
-          {pendingLeave.length===0?<div className="py-3 text-text-3 text-sm">Nothing to review.</div>
+          {pendingLeave.length===0?<div className="py-3 text-text-3 text-sm">{t("hr.dashboard.nothingToReview")}</div>
             :<div className="flex flex-col gap-2">
               {pendingLeave.slice(0,3).map(r=>{const who=A.hrEmp(r.employee);
                 return <div key={r.id} className="py-2.5 px-3 bg-bg rounded-lg border border-line">
@@ -244,11 +244,11 @@ export function HrDashboard(){
         </Card>}
 
         <Card pad={mob?20:24} style={{borderRadius:20}}>
-          <Lbl>Quick actions</Lbl>
+          <Lbl>{t("hr.dashboard.quickActionsLabel")}</Lbl>
           <div className="flex flex-col gap-2">
-            <Btn kind="outline" size="sm" full icon="calendar" onClick={()=>A.go("hrLeave")}>Request leave</Btn>
-            <Btn kind="outline" size="sm" full icon="mail" onClick={()=>A.go("hrChat")}>Open chat</Btn>
-            <Btn kind="outline" size="sm" full icon="user" onClick={()=>A.go("hrProfile")}>Edit my profile</Btn>
+            <Btn kind="outline" size="sm" full icon="calendar" onClick={()=>A.go("hrLeave")}>{t("hr.dashboard.quickActionRequestLeave")}</Btn>
+            <Btn kind="outline" size="sm" full icon="mail" onClick={()=>A.go("hrChat")}>{t("hr.dashboard.quickActionOpenChat")}</Btn>
+            <Btn kind="outline" size="sm" full icon="user" onClick={()=>A.go("hrProfile")}>{t("hr.dashboard.quickActionEditProfile")}</Btn>
           </div>
         </Card>
       </div>
