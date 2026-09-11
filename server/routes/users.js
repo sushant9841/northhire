@@ -9,12 +9,18 @@ const OWN_PROFILE_FIELDS = {
   title: "title", cat: "cat", city: "city", prov: "prov", years: "years", phone: "phone",
   edu: "edu", eligible: "eligible", payMin: "pay_min", payUnit: "pay_unit", summary: "summary",
   defaultCv: "default_cv", startWhen: "start_when",
+  // Bill 96: UI/email language preference. Validated against the two supported locales rather
+  // than accepted verbatim, same reasoning as any other user-writable enum column.
+  locale: "locale",
 };
+const VALID_LOCALES = ["en-CA", "fr-CA"];
 usersRouter.patch("/me", requireAuth, (req, res) => {
   const body = req.body || {};
   const setCols = []; const params = [];
   for (const [key, col] of Object.entries(OWN_PROFILE_FIELDS)) {
-    if (body[key] !== undefined) { setCols.push(`${col} = ?`); params.push(body[key]); }
+    if (body[key] === undefined) continue;
+    if (key === "locale" && !VALID_LOCALES.includes(body[key])) continue;
+    setCols.push(`${col} = ?`); params.push(body[key]);
   }
   if (body.skills !== undefined) { setCols.push("skills_json = ?"); params.push(JSON.stringify(body.skills)); }
   if (body.types !== undefined) { setCols.push("types_json = ?"); params.push(JSON.stringify(body.types)); }

@@ -882,6 +882,18 @@ for (const stmt of [
   "ALTER TABLE jobs ADD COLUMN recruiting_cost REAL DEFAULT 0",
   // Multi-tier benefits: coverage tier alongside the existing per-pay amount.
   "ALTER TABLE hr_employees ADD COLUMN benefits_tier TEXT",
+  // Bill 96 (Quebec French language law): each user's preferred UI/email language. Quebec-registered
+  // employers default new accounts to fr-CA at signup (client patches this right after signup, once
+  // the employer's province is known); every other account defaults to en-CA.
+  "ALTER TABLE users ADD COLUMN locale TEXT DEFAULT 'en-CA'",
+  // Bill 96 Content Manager: employer-authored articles/trainings can carry a French version
+  // alongside the English original, edited from a language tab in the same editor. NULL means
+  // "no French version yet" - the public blog/training pages fall back to the English fields.
+  "ALTER TABLE blogs ADD COLUMN title_fr TEXT",
+  "ALTER TABLE blogs ADD COLUMN excerpt_fr TEXT",
+  "ALTER TABLE blogs ADD COLUMN body_json_fr TEXT",
+  "ALTER TABLE trainings ADD COLUMN title_fr TEXT",
+  "ALTER TABLE trainings ADD COLUMN about_fr TEXT",
 ]) {
   try { db.exec(stmt); } catch (e) { if (!/duplicate column/i.test(e.message)) console.error("migration:", stmt, e.message); }
 }

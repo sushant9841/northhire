@@ -637,9 +637,14 @@ export function useStore(){
       /* The signup endpoint only takes name/email/password/role - everything else the wizard
          collected (title/cat/city/skills/pay expectations...) is a profile update on top,
          same two-step shape saveProfile already uses elsewhere. */
-      const patch={title:d.title,cat:d.cat,city:d.city,prov:PCODE[d.prov],years:yearsMap[d.years]??2,phone:d.phone,
+      const provCode=PCODE[d.prov];
+      const patch={title:d.title,cat:d.cat,city:d.city,prov:provCode,years:yearsMap[d.years]??2,phone:d.phone,
         skills:d.skills,edu:d.edu,eligible:d.eligible,payMin:Number(d.payMin)||0,payUnit:d.payUnit,
         types:d.types,modes:d.modes};
+      // Bill 96: a Quebec-registered account defaults to fr-CA rather than the platform default
+      // en-CA. Sent as a second small patch (rather than folded into the profile patch above)
+      // since locale isn't one of the profile fields /users/me's whitelist already covered.
+      if(provCode==="QC")patch.locale="fr-CA";
       await api.patch("/users/me",patch); /* persisted server-side so it survives a refresh, unlike before this store was cookie/API-backed */
       const u={...mapApiUser(apiUser),...patch,startWhen:d.startWhen,summary:"",defaultCv:null,joined:_fmtDate(new Date())};
       setUser(u); setPeople(p=>[u,...p]); _hardNav("welcome");
@@ -663,10 +668,19 @@ export function useStore(){
       /* The employer record itself was created server-side by signup (its id lives on the
          returned user as employer_id) - patch in the extra profile fields the wizard collected
          that /auth/signup doesn't take. */
-      const patch={industry:d.industry||"Other",city:d.city||"Toronto",prov:PCODE[d.prov||"Ontario"],
+      const provCode=PCODE[d.prov||"Ontario"];
+      const patch={industry:d.industry||"Other",city:d.city||"Toronto",prov:provCode,
         size:d.size||"1-50",site:domain,about:d.about||`${d.company.trim()} is hiring on NorthHire.`,
         businessNumber:(d.businessNumber||"").replace(/\s/g,"")||undefined};
       const {employer}=await api.patch(`/employers/${apiUser.employer_id}`,patch);
+      // Bill 96: a Quebec-registered employer must be able to conduct hiring in French - default
+      // the owner account (and, by extension, the emails we send them) to fr-CA rather than
+      // making them find the toggle in Settings themselves.
+      let localePatch={};
+      if(provCode==="QC"){
+        await api.patch("/users/me",{locale:"fr-CA"}).catch(()=>{});
+        localePatch={locale:"fr-CA"};
+      }
       // A paid pendingPlan (chosen on the pricing page before signing up) can't be silently
       // granted here for free - the account is created on Free, then handed straight to real
       // Stripe checkout for the plan they actually picked. A free pendingPlan (or none) applies
@@ -675,7 +689,7 @@ export function useStore(){
       if(!wantsPaidPlan&&pendingPlan&&PLANS[pendingPlan])await api.patch(`/employers/${apiUser.employer_id}`,{plan:pendingPlan});
       const e=mapApiEmployer({...employer,plan:(!wantsPaidPlan&&pendingPlan&&PLANS[pendingPlan])?pendingPlan:employer.plan});
       setEmployers(list=>[e,...list]);
-      setUser({...mapApiUser(apiUser),name:e.ownerName,skills:[]});
+      setUser({...mapApiUser(apiUser),name:e.ownerName,skills:[],...localePatch});
       log("auth.signup.employer",`New employer registered: ${e.name}`,"building");
       notify({icon:"sparkle",title:"Welcome to NorthHire",body:"Post your first job to start receiving applicants. Verification usually takes 1 business day.",for:apiUser.id,link:"empPost"});
       if(wantsPaidPlan){
@@ -717,6 +731,18 @@ export function useStore(){
   const setUserSetting=(k,v)=>{
     setUserSettings(s=>({...s,[k]:v}));
     api.patch("/seeker/user-settings",{[k]:v}).catch(err=>toast(`Setting saved locally, but couldn't sync to the server: ${err.message}`,"warn"));
+  };
+  /* Bill 96: persists the signed-in account's UI/email language preference server-side (so it
+     survives a device switch, and so server-sent emails go out in the right language) — the
+     LocaleProvider context is what actually flips the UI immediately; this just keeps the
+     account record in sync once someone is signed in. A guest toggling the footer/header
+     language switch only affects LocaleProvider's own localStorage-backed state, which is fine -
+     there's no account to persist it to yet. */
+  const setUserLocale=async locale=>{
+    if(!user)return;
+    setUser(u=>u?{...u,locale}:u);
+    try{await api.patch("/users/me",{locale});}
+    catch(err){toast(`Language saved locally, but couldn't sync to the server: ${err.message}`,"warn");}
   };
 
   /* CASL consent for job-alert email. Kept separate from the local user_settings row above
@@ -1923,7 +1949,7 @@ export function useStore(){
     stagesFor,stagesForApp,savePipelineStages,
     jobHiringType,jobHiringLabel,
     completeness,completenessHint,tabBadges,
-    logout,completeSignup,saveProfile,deleteAccount,exportData,setUserSetting,marketingConsent,setMarketingConsent,
+    logout,completeSignup,saveProfile,deleteAccount,exportData,setUserSetting,setUserLocale,marketingConsent,setMarketingConsent,
     toggleSave,followEmployer,openJob,openEmployer,openBlog,openTraining,openCandidate,
     beginApply,submitApply,withdraw,acceptOffer,moveApp,rejectApp,
     publishJob,approveJob,toggleJobStatus,flagJob,reportJob,jobReports,loadJobReports,decideJobReport,setPipelineJob:setPipelineJobFn,saveCompany,verifyEmployer,holdEmployer,toggleSuspend,eraseUser,

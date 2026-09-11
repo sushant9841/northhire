@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import { db, nextId } from "./db.js";
+import { localeForUserId, emailStrings } from "./emailLocale.js";
 
 /* Real SMTP delivery via Ethereal - a free, no-signup testing service built for exactly this: it
    hands out a disposable inbox and never actually delivers to a real recipient, which is also the
@@ -68,12 +69,13 @@ export function unsubscribeTokenFor(userId) {
   return token;
 }
 
-function caslFooter(token) {
+function caslFooter(token, locale = "en-CA") {
+  const es = emailStrings(locale);
   return [
     "",
     "———",
-    `You are receiving this because you asked NorthHire to email you about matching jobs.`,
-    `Unsubscribe instantly: ${FRONTEND_URL}/unsubscribe?token=${token}`,
+    es.caslIntro,
+    es.caslUnsub(`${FRONTEND_URL}/unsubscribe?token=${token}`),
     "",
     `${SENDER_IDENTIFICATION.legalName}`,
     `${SENDER_IDENTIFICATION.address}`,
@@ -93,7 +95,7 @@ export async function sendCommercialMail({ userId, subject, body }) {
   if (!user) return { sent: false, reason: "no-such-user" };
   if (!user.marketing_consent) return { sent: false, reason: "no-consent" };
   const token = unsubscribeTokenFor(user.id);
-  const fullBody = `${body}\n${caslFooter(token)}`;
+  const fullBody = `${body}\n${caslFooter(token, localeForUserId(user.id))}`;
   const previewUrl = await sendAndLogMail(user.email, subject, fullBody);
   return { sent: true, previewUrl, to: user.email };
 }

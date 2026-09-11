@@ -3,6 +3,7 @@ import { Router } from "express";
 import { db, nextId, sqlTime } from "../db.js";
 import { hashPassword, verifyPassword, createSessionCookie, clearSessionCookie, publicUser, requireAuth } from "../auth.js";
 import { sendAndLogMail } from "../mail.js";
+import { localeForEmail, emailStrings } from "../emailLocale.js";
 import { PROVIDERS, isConfigured, buildAuthUrl, exchangeCodeForProfile, issueState, consumeState } from "../oauth.js";
 import { verifyTurnstile, turnstileConfigured } from "../turnstile.js";
 
@@ -193,7 +194,8 @@ authRouter.post("/login", async (req, res) => {
     const code = crypto.randomInt(100000, 1000000).toString();
     db.prepare("INSERT INTO login_2fa_codes (email, code) VALUES (?, ?) ON CONFLICT(email) DO UPDATE SET code = excluded.code, created_at = datetime('now')")
       .run(user.email, code);
-    await sendAndLogMail(user.email, "Your NorthHire sign-in code", `Your sign-in code is ${code}. It expires in 15 minutes.`);
+    const es = emailStrings(localeForEmail(user.email));
+    await sendAndLogMail(user.email, es.signinCodeSubject, es.signinCodeBody(code));
     // Returning the code in the response defeats 2FA entirely for anyone who already has the
     // password (the whole point of a second factor) - only ever expose it outside production. The
     // email above is now genuinely sent (via Ethereal), but its preview link takes an extra click
@@ -258,8 +260,10 @@ authRouter.post("/send-verification", requireAuth, async (req, res) => {
   const token = crypto.randomBytes(24).toString("hex");
   db.prepare("UPDATE users SET email_verify_token = ?, email_verify_sent_at = datetime('now') WHERE id = ?").run(token, user.id);
   const link = `${FRONTEND_URL}/verify-email?token=${token}`;
-  await sendAndLogMail(user.email, "Confirm your NorthHire email",
-    `Hi ${user.name},\n\nConfirm this is your address:\n${link}\n\nIf you didn't create a NorthHire account, you can ignore this.`);
+  {
+    const es = emailStrings(localeForEmail(user.email));
+    await sendAndLogMail(user.email, es.verifySubject, es.verifyBody(user.name, link));
+  }
   res.json({ ok: true });
 });
 
@@ -298,7 +302,10 @@ authRouter.post("/reset/request", async (req, res) => {
   }
   const code = crypto.randomInt(100000, 1000000).toString();
   db.prepare("INSERT INTO reset_codes (email, code, attempts) VALUES (?, ?, 0) ON CONFLICT(email) DO UPDATE SET code = excluded.code, attempts = 0, created_at = datetime('now')").run(email, code);
-  await sendAndLogMail(email, "Reset your NorthHire password", `Your reset code is ${code}. It expires in 15 minutes.`);
+  {
+    const es = emailStrings(localeForEmail(email));
+    await sendAndLogMail(email, es.resetSubject, es.resetBody(code));
+  }
   // Returning the code to whoever merely knows the target email defeats password reset entirely -
   // anyone could take over any account, admin included, without ever touching the real inbox.
   // Only exposed outside production, where there's no real email delivery to demo the flow with.

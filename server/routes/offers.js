@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import { db, nextId, sqlTime } from "../db.js";
 import { requireAuth, requireRole } from "../auth.js";
 import { sendAndLogMail } from "../mail.js";
+import { localeForEmail, emailStrings } from "../emailLocale.js";
 
 export const offersRouter = Router();
 
@@ -86,12 +87,12 @@ offersRouter.post("/application/:applicationId", requireAuth, requireRole("emplo
 
   // Sent after responding - an offer is transactional mail (not a CEM), so it doesn't consult
   // marketing consent, but it still must not make the employer wait on delivery.
-  sendAndLogMail(app.candidate_email, `Your offer from ${employer?.name || "NorthHire"}`,
-    [`Hello ${app.candidate_name},`, "",
-      `${employer?.name || "The employer"} has sent you an offer for ${req.body?.position || app.job_title}.`,
-      "", `Read and respond here: ${link}`,
-      expiresAt ? `\nThis offer is open until ${expiresAt}.` : ""].join("\n")
-  ).catch(() => {});
+  {
+    const es = emailStrings(localeForEmail(app.candidate_email));
+    sendAndLogMail(app.candidate_email, es.offerSubject(employer?.name || "NorthHire"),
+      es.offerBody(app.candidate_name, employer?.name || "The employer", req.body?.position || app.job_title, link, expiresAt)
+    ).catch(() => {});
+  }
 });
 
 offersRouter.post("/:id/withdraw", requireAuth, requireRole("employer"), (req, res) => {
