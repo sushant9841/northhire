@@ -2272,5 +2272,18 @@ export const fr = {
       tryStaffingBody: "Obtenez un contrat de travail. Nous vous payons, nous couvrons les impôts, la CSPAAT et les vacances.",
       signOut: "Se déconnecter",
     },
+    matched: {
+      matchedTag: "Correspondances pour vous", heroTitle: "Noté selon votre profil.",
+      heroSub: "Classé par compétences, billets, emplacement et attentes salariales.",
+      tunePreferences: "Ajuster mes préférences",
+      strongMatchesCount: "{count} fortes correspondances cette semaine",
+      addingWouldTurn: "Ajouter {skills} transformerait vos correspondances les plus proches en fortes correspondances.",
+      addSkillsWiden: "Ajoutez plus de compétences et de billets pour élargir vos correspondances dans les {count} secteurs.",
+      addSkillsBtn: "Ajouter des compétences",
+      strongMatchesTitle: "Fortes correspondances", strongMatchesSub: "Vous répondez à la plupart des critères de ces employeurs",
+      worthLookTitle: "À considérer", worthLookSub: "Proche sur les compétences, ou un petit effort sur l'expérience",
+      noMatchesTitle: "Aucune correspondance pour l'instant", noMatchesBody: "Ajoutez quelques compétences à votre profil et les correspondances apparaissent immédiatement.",
+      updateProfileBtn: "Mettre à jour le profil", jobOne: "emploi", jobOther: "emplois", matchLabel: "Correspondance",
+    },
   },
 };

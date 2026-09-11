@@ -2159,5 +2159,18 @@ export const en = {
       tryStaffingBody: "Get placed on contract work. We pay you, we cover taxes, WSIB, and vacation.",
       signOut: "Sign out",
     },
+    matched: {
+      matchedTag: "Matched for you", heroTitle: "Scored against your profile.",
+      heroSub: "Ranked by skills, tickets, location and pay expectation.",
+      tunePreferences: "Tune preferences",
+      strongMatchesCount: "{count} strong matches this week",
+      addingWouldTurn: "Adding {skills} would turn your closest near-misses into strong matches.",
+      addSkillsWiden: "Add more skills and tickets to widen matches across all {count} sectors.",
+      addSkillsBtn: "Add skills",
+      strongMatchesTitle: "Strong matches", strongMatchesSub: "You meet most of what these employers asked for",
+      worthLookTitle: "Worth a look", worthLookSub: "Close on skills, or a small stretch on experience",
+      noMatchesTitle: "No matches yet", noMatchesBody: "Add a few skills to your profile and matches appear immediately.",
+      updateProfileBtn: "Update profile", jobOne: "job", jobOther: "jobs", matchLabel: "Match",
+    },
   },
 };
