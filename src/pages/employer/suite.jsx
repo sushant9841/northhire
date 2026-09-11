@@ -761,7 +761,7 @@ export function EmpPipeline(){
           <div className="w-7 h-7 rounded-lg bg-white border border-line flex items-center justify-center shrink-0 mt-0.5"><I n={outreachIcon[ev.type]||"activity"} s={13} c={C.brand}/></div>
           <div className="flex-1 min-w-0">
             <div className="text-sm text-text leading-snug">{ev.detail}</div>
-            <div className="text-xs text-text-3 mt-0.5">{new Date(ev.at).toLocaleString("en-CA")}</div>
+            <div className="text-xs text-text-3 mt-0.5">{formatDateTime(ev.at,locale)}</div>
           </div>
         </div>)}
       </div>
@@ -818,7 +818,7 @@ export function EmpCandidate(){
               <span className="text-sm text-warn font-bold">{"★".repeat(c.rating)}{"☆".repeat(5-c.rating)}</span>
             </div>
             {c.notes&&<div className="text-sm text-text-2">{c.notes}</div>}
-            <div className="text-xs text-text-3 mt-1">{new Date(c.at).toLocaleDateString("en-CA")}</div>
+            <div className="text-xs text-text-3 mt-1">{formatDate(c.at,locale)}</div>
           </div>)}
         </div>}
     </Card>
@@ -937,7 +937,7 @@ export function EmpCandidate(){
             <div className="rounded-xl text-sm leading-snug py-2.5 px-3.5" style={{maxWidth:"75%",
               background:mine?C.brand:C.bg,color:mine?"#fff":C.text,border:mine?"none":`1px solid ${C.line}`}}>
               {m.text}
-              <div className="text-xs opacity-70 mt-1.5">{new Date(m.at).toLocaleString("en-CA")}</div></div></div>;})}</div></Card>}
+              <div className="text-xs opacity-70 mt-1.5">{formatDateTime(m.at,locale)}</div></div></div>;})}</div></Card>}
 
     {upcomingInterviews.length>0&&<Card style={{marginBottom:16}}><Lbl>{t("employer.candidate.scheduleInterviewsCard")}</Lbl>
       <div className="flex flex-col gap-2.5">
@@ -1025,7 +1025,7 @@ export function ContentManager({scope,only}){
           <span>{type==="blog"?`${item.mins} min read`:`${item.hours} h · ${item.price===0?"Free":money(item.price)}`}</span>
           {isAdmin&&<><span>•</span><span>{item.owner==="admin"?"NorthHire":A.emp(item.owner)?.name||item.owner}</span></>}</div></div>
       {item.scheduledAt
-        ?<Tag tone="brand" sm icon="clock">Scheduled {new Date(item.scheduledAt).toLocaleString("en-CA",{dateStyle:"short",timeStyle:"short"})}</Tag>
+        ?<Tag tone="brand" sm icon="clock">{t("employer.content.scheduledFor",{date:formatDateTime(item.scheduledAt,locale,{dateStyle:"short",timeStyle:"short"})})}</Tag>
         :<Tag tone={item.status==="published"?"ok":item.status==="draft"?"warn":"neutral"} sm>
           {item.status==="published"?"Published":item.status==="draft"?"Draft":"Hidden"}</Tag>}
       {/* Every icon-only button carries an aria-label matching its title, so a keyboard user
@@ -1125,7 +1125,7 @@ export function ContentManager({scope,only}){
         {revisions.map(r=><div key={r.id} className="flex justify-between items-center gap-3 py-2.5 px-3 bg-bg rounded-lg">
           <div className="min-w-0">
             <div className="text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap">{r.snapshot.title}</div>
-            <div className="text-xs text-text-3 mt-0.5">{new Date(r.createdAt).toLocaleString("en-CA")}</div>
+            <div className="text-xs text-text-3 mt-0.5">{formatDateTime(r.createdAt,locale)}</div>
           </div>
           <Btn kind="outline" size="xs" onClick={()=>restore(r.id)}>Restore this version</Btn>
         </div>)}
@@ -1645,7 +1645,7 @@ export function EmpTeam(){
         ? <div className="text-sm text-text-3 py-2">{t("employer.team.noActivity")}</div>
         : <div className="flex flex-col">{audit.map(ev=>{
             const meta=actionLabel[ev.action]||{icon:"file",tone:"neutral",label:ev.action};
-            const when=new Date(ev.at).toLocaleString("en-CA",{day:"numeric",month:"short",year:"numeric",hour:"numeric",minute:"2-digit"});
+            const when=formatDateTime(ev.at,locale,{day:"numeric",month:"short",year:"numeric",hour:"numeric",minute:"2-digit"});
             return <div key={ev.id} className="flex items-center gap-3 py-2.5 border-b border-line-soft">
               <div className="w-9 h-9 rounded-lg bg-wash text-brand flex items-center justify-center shrink-0"><I n={meta.icon} s={16}/></div>
               <div className="flex-1 min-w-0">
@@ -1662,13 +1662,13 @@ export function EmpTeam(){
 }
 
 export function EmpBilling(){
-  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t}=useTranslation();
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const live=A.jobs.filter(j=>j.e===A.company.id&&j.status==="live").length;
   const plan=A.company.plan||"Free";
   const limit=A.PLANS[plan]?.jobs??1;
   const price=A.PLANS[plan]?.price||0;
-  const nextRenewal=(()=>{const d=new Date();d.setMonth(d.getMonth()+1,1);return d.toLocaleDateString("en-CA",{day:"numeric",month:"long",year:"numeric"});})();
-  const invoices=A.employerInvoices.map(inv=>({id:inv.id,date:new Date(inv.createdAt).toLocaleDateString("en-CA",{day:"numeric",month:"short",year:"numeric"}),
+  const nextRenewal=(()=>{const d=new Date();d.setMonth(d.getMonth()+1,1);return formatDate(d,locale,{day:"numeric",month:"long",year:"numeric"});})();
+  const invoices=A.employerInvoices.map(inv=>({id:inv.id,date:formatDate(inv.createdAt,locale,{day:"numeric",month:"short",year:"numeric"}),
     amt:inv.amountPretax,tax:inv.tax,taxLabel:inv.taxLabel,total:inv.total,plan:inv.plan}));
   // Lands here on the real redirect back from Stripe Checkout (see server/stripe.js's success_url)
   // - verifies the session server-side (never trusts the URL alone) and shows the outcome once,

@@ -4,9 +4,10 @@ import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
 import { Btn, Card, Tag, Input, Empty, SmartPortrait, Page, HERO_TIGHT } from "../../design/primitives.jsx";
 import { useTranslation } from "../../i18n/i18n.jsx";
+import { formatDate, formatDateTime } from "../../i18n/format.js";
 
 export function MessagesPage(){
-  const A=use(); const { t } = useTranslation(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const { t, locale } = useTranslation(); const mob=useMedia("(max-width: 900px)");
   /* All hooks before any early return - a conditional useState/useEffect is a Rules-of-Hooks
      violation and crashes the tab with "Rendered more hooks than during the previous render"
      the moment A.user goes from null (guest) to signed-in without a route change. */
@@ -74,7 +75,7 @@ export function MessagesPage(){
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between gap-2 items-baseline">
                         <span className={`text-sm text-text overflow-hidden text-ellipsis whitespace-nowrap ${t.unread?"font-bold":"font-semibold"}`}>{p.name}</span>
-                        <span className="text-xs text-text-3 shrink-0">{new Date(t.last.at).toLocaleDateString("en-CA")}</span></div>
+                        <span className="text-xs text-text-3 shrink-0">{formatDate(t.last.at,locale)}</span></div>
                       <div className="text-xs text-text-2 mt-1 overflow-hidden text-ellipsis whitespace-nowrap leading-snug">{t.last.text}</div></div>
                     {t.unread>0&&<span className="bg-brand text-white text-xs font-bold py-0.5 px-2 rounded-full shrink-0">{t.unread}</span>}
                   </button>;})}</Card>
@@ -88,7 +89,7 @@ export function MessagesPage(){
                     return <div key={m.id} className={`flex ${mine?"justify-end":"justify-start"}`}>
                       <div className={`max-w-3/4 py-2.5 px-3.5 rounded-xl text-sm leading-normal ${mine?"bg-brand text-white border-0":"bg-bg text-text border border-line"}`}>
                         {m.text}
-                        <div className="text-xs opacity-70 mt-1.5">{new Date(m.at).toLocaleString("en-CA",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})}</div></div></div>;})}</div>
+                        <div className="text-xs opacity-70 mt-1.5">{formatDateTime(m.at,locale,{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})}</div></div></div>;})}</div>
                 <div className="p-3.5 border-t border-line-soft flex gap-2">
                   <Input value={reply[openThread]||""} onChange={e=>setReply(r=>({...r,[openThread]:e.target.value}))}
                     onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}} placeholder={t("messages.replyPlaceholder")}/>

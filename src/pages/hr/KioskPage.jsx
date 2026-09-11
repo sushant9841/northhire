@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { api } from "../../helpers/api.js";
 import { I } from "../../design/icons.jsx";
 import { Btn, Card, Input, Field, Banner } from "../../design/primitives.jsx";
+import { useTranslation } from "../../i18n/i18n.jsx";
+import { formatTime, formatDate } from "../../i18n/format.js";
 
 /* The shared time clock: a tablet mounted by the site entrance. Deliberately its own full-screen
    surface with no navigation — whoever walks up to it is punching in, not browsing the HR Suite,
@@ -19,6 +21,7 @@ const TOKEN_KEY = "northhire_kiosk_token";
 const KEYS = ["1","2","3","4","5","6","7","8","9","clear","0","enter"];
 
 export function KioskPage(){
+  const {t,locale}=useTranslation();
   const [token,setToken]=useState(()=>{try{return localStorage.getItem(TOKEN_KEY)||"";}catch{return "";}});
   const [pairInput,setPairInput]=useState("");
   const [pin,setPin]=useState("");
@@ -48,7 +51,7 @@ export function KioskPage(){
 
   const submit=async(value)=>{
     const code=value??pin;
-    if(code.length<4){setErr("Enter your 4–6 digit PIN.");setPin("");return;}
+    if(code.length<4){setErr(t("hr.kiosk.enterPinError"));setPin("");return;}
     setBusy(true); setErr(""); setResult(null);
     try{
       const r=await api.post("/hr/kiosk/punch",{pin:code,deviceToken:token});
@@ -71,26 +74,25 @@ export function KioskPage(){
     });
   };
 
-  const hhmm=clock.toLocaleTimeString("en-CA",{hour:"2-digit",minute:"2-digit",hour12:false});
-  const dateStr=clock.toLocaleDateString("en-CA",{weekday:"long",month:"long",day:"numeric"});
+  const hhmm=formatTime(clock,locale,{hour:"2-digit",minute:"2-digit",hour12:false});
+  const dateStr=formatDate(clock,locale,{weekday:"long",month:"long",day:"numeric"});
 
   if(!token) return <div className="min-h-screen bg-ink flex items-center justify-center p-6">
     <Card pad={30} style={{maxWidth:460,width:"100%"}}>
       <div className="flex items-center gap-2.5 mb-4">
         <div className="w-10 h-10 rounded-xl bg-brand text-white flex items-center justify-center"><I n="clock" s={20}/></div>
         <div>
-          <div className="text-base font-bold text-text">Pair this time clock</div>
-          <div className="text-xs text-text-2 mt-0.5">One-time setup for this device</div>
+          <div className="text-base font-bold text-text">{t("hr.kiosk.pairTitle")}</div>
+          <div className="text-xs text-text-2 mt-0.5">{t("hr.kiosk.pairSubtitle")}</div>
         </div>
       </div>
       <p className="text-sm text-text-2 leading-relaxed mb-4">
-        An administrator creates a terminal under <strong className="text-text">HR Suite → Settings → Time clocks</strong> and
-        gets a pairing code. Paste it here once; this tablet remembers it.
+        {t("hr.kiosk.pairInstructions",{path:t("hr.kiosk.pairInstructionsPath")})}
       </p>
-      <Field label="Pairing code">
+      <Field label={t("hr.kiosk.pairingCodeLabel")}>
         <Input value={pairInput} onChange={e=>setPairInput(e.target.value)} placeholder="kiosk_…" autoFocus/>
       </Field>
-      <Btn kind="primary" full size="lg" style={{marginTop:14}} onClick={pair} disabled={!pairInput.trim()}>Pair terminal</Btn>
+      <Btn kind="primary" full size="lg" style={{marginTop:14}} onClick={pair} disabled={!pairInput.trim()}>{t("hr.kiosk.pairTerminalBtn")}</Btn>
     </Card>
   </div>;
 
@@ -108,15 +110,15 @@ export function KioskPage(){
             <div className="text-lg font-bold text-text mt-3.5">{result.name}</div>
             <div className="text-sm text-text-2 mt-1">
               {result.action==="in"
-                ? `Punched in at ${result.time}${result.late?" — marked late":""}`
-                : `Punched out at ${result.time} — ${result.hours} hours`}
+                ? t("hr.kiosk.punchedInAt",{time:result.time,lateSuffix:result.late?t("hr.kiosk.markedLateSuffix"):""})
+                : t("hr.kiosk.punchedOutAt",{time:result.time,hours:result.hours})}
             </div>
             {result.site&&<div className="text-xs text-text-3 mt-1">{result.site}</div>}
           </div>
         : <>
           <div className="text-center mb-4">
-            <div className="text-sm font-semibold text-text">Enter your PIN to punch in or out</div>
-            <div className="flex justify-center gap-2 mt-3.5" aria-live="polite" aria-label={`${pin.length} digits entered`}>
+            <div className="text-sm font-semibold text-text">{t("hr.kiosk.enterPinPrompt")}</div>
+            <div className="flex justify-center gap-2 mt-3.5" aria-live="polite" aria-label={t("hr.kiosk.digitsEnteredAria",{count:pin.length})}>
               {[0,1,2,3,4,5].map(i=>
                 <span key={i} className={`w-3 h-3 rounded-full transition-colors duration-150 ${i<pin.length?"bg-brand":"bg-line"}`}/>)}
             </div>
@@ -125,19 +127,19 @@ export function KioskPage(){
           <div className="grid grid-cols-3 gap-2.5">
             {KEYS.map(k=>
               <button key={k} type="button" disabled={busy} onClick={()=>press(k)}
-                aria-label={k==="clear"?"Clear":k==="enter"?"Submit PIN":`Digit ${k}`}
+                aria-label={k==="clear"?t("hr.kiosk.clearAria"):k==="enter"?t("hr.kiosk.submitPinAria"):t("hr.kiosk.digitAria",{digit:k})}
                 className={`h-16 rounded-xl text-xl font-semibold cursor-pointer transition-colors duration-100 border
                   ${k==="enter"?"bg-brand text-white border-brand hover:bg-brand-dark"
                     :k==="clear"?"bg-bg text-text-2 border-line hover:bg-line-soft"
                     :"bg-white text-text border-line hover:bg-bg"} disabled:opacity-50`}>
-                {k==="clear"?"Clear":k==="enter"?(busy?"…":"Enter"):k}
+                {k==="clear"?t("hr.kiosk.clearBtn"):k==="enter"?(busy?"…":t("hr.kiosk.enterBtn")):k}
               </button>)}
           </div>
         </>}
     </Card>
 
     <button onClick={unpair} className="mt-5 bg-transparent border-0 cursor-pointer text-xs text-white/35 hover:text-white/70">
-      Unpair this terminal
+      {t("hr.kiosk.unpairBtn")}
     </button>
   </div>;
 }

@@ -17,8 +17,11 @@ import { mapApiJob, mapApiEmployer, mapApiApplication, mapApiUser } from "../hel
 import { buildPath, matchPath, ID_STATE_FOR_ROUTE } from "../helpers/urlRouter.js";
 import { parseCsvLine } from "../helpers/csv.js";
 import { expandQuery } from "../helpers/synonyms.js";
+import { useTranslation } from "../i18n/i18n.jsx";
+import { formatDate, formatDateTime } from "../i18n/format.js";
 
 export function useStore(){
+  const {locale}=useTranslation();
   /* Real URL support: computed once at mount (this hook is only ever instantiated once at the
      app root) so every entity-id useState below can seed itself from whatever the visitor
      actually landed on - a shared link, a bookmark, or a hard refresh. */
@@ -298,7 +301,7 @@ export function useStore(){
     (async()=>{
       try{
         const {activity:a}=await api.get("/platform/activity");
-        if(!cancelled)setActivity(a.map(e=>({id:e.id,action:e.action,text:e.text,icon:e.icon,actor:e.actor,at:new Date(e.at).toLocaleString("en-CA")})));
+        if(!cancelled)setActivity(a.map(e=>({id:e.id,action:e.action,text:e.text,icon:e.icon,actor:e.actor,at:formatDateTime(e.at,locale)})));
       }catch(e){
         if(typeof console!=="undefined")console.warn(`[NorthHire] Activity log sync failed: ${e.message}`);
       }
@@ -1724,7 +1727,7 @@ export function useStore(){
     /* Build a proper printable certificate page rather than a text file */
     if(typeof window==="undefined"){
       downloadText(`certificate-${t.id}.txt`,
-        `NorthHire Certificate of Completion\n\nAwarded to: ${user.name||"—"}\nCourse: ${t.title||"—"}\nProvider: ${t.provider||"NorthHire Learning"}\nHours: ${t.hours||0}\nDate: ${new Date().toLocaleDateString("en-CA")}`);
+        `NorthHire Certificate of Completion\n\nAwarded to: ${user.name||"—"}\nCourse: ${t.title||"—"}\nProvider: ${t.provider||"NorthHire Learning"}\nHours: ${t.hours||0}\nDate: ${formatDate(new Date(),locale)}`);
       return;
     }
     const html=`<!DOCTYPE html><html><head><title>Certificate — ${t.title}</title>
@@ -1749,7 +1752,7 @@ export function useStore(){
         <div class="prov">delivered by ${(t.provider||"NorthHire Learning").replace(/[<>]/g,"")}${t.trainerName?` · Instructor: ${t.trainerName.replace(/[<>]/g,"")}`:""}</div>
         <div class="meta">
           <div><div class="lbl">Hours</div><div>${t.hours||0}</div></div>
-          <div><div class="lbl">Date issued</div><div>${new Date().toLocaleDateString("en-CA",{year:"numeric",month:"long",day:"numeric"})}</div></div>
+          <div><div class="lbl">Date issued</div><div>${formatDate(new Date(),locale,{year:"numeric",month:"long",day:"numeric"})}</div></div>
           <div><div class="lbl">Certificate ID</div><div>NH-${t.id?.toUpperCase()}-${Date.now().toString().slice(-6)}</div></div>
         </div>
       </div>
@@ -1759,7 +1762,7 @@ export function useStore(){
     if(!w){
       /* Popup blocked — fall back to text file */
       downloadText(`certificate-${t.id}.txt`,
-        `NorthHire Certificate of Completion\n\nAwarded to: ${user.name}\nCourse: ${t.title}\nProvider: ${t.provider}\nHours: ${t.hours}\nDate: ${new Date().toLocaleDateString("en-CA")}`);
+        `NorthHire Certificate of Completion\n\nAwarded to: ${user.name}\nCourse: ${t.title}\nProvider: ${t.provider}\nHours: ${t.hours}\nDate: ${formatDate(new Date(),locale)}`);
       toast("Enable pop-ups to print a professionally formatted certificate — a text version was downloaded instead.","warn");
       return;
     }
@@ -1812,7 +1815,7 @@ export function useStore(){
      one-line stage label pretending to be an offer process. */
   const printOfferLetter=(candidate,j,e,draft)=>{
     if(typeof window==="undefined")return;
-    const today=new Date().toLocaleDateString("en-CA",{year:"numeric",month:"long",day:"numeric"});
+    const today=formatDate(new Date(),locale,{year:"numeric",month:"long",day:"numeric"});
     const html=`<!DOCTYPE html><html><head><title>Offer letter — ${candidate.name}</title>
       <style>body{font-family:Georgia,serif;max-width:720px;margin:40px auto;padding:0 40px;color:#111;line-height:1.65}
         .brand{font-size:14pt;font-weight:700;color:#005CCC;margin-bottom:2px}.sub{font-size:9pt;color:#888;margin-bottom:30px}

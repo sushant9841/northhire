@@ -7,6 +7,7 @@ import { I } from "../../design/icons.jsx";
 import { Btn, Card, Switch, Field, Input, Empty, Banner, Lbl, Modal, Page, H1 } from "../../design/primitives.jsx";
 import { DeniedPage } from "./DeniedPage.jsx";
 import { useTranslation } from "../../i18n/i18n.jsx";
+import { formatDate } from "../../i18n/format.js";
 
 /* Email verification. The account keeps working while unverified — locking someone out of
    browsing jobs because a confirmation mail is slow helps nobody — but the state is real and
@@ -37,7 +38,7 @@ function _EmailVerification({u,t}){
 
 /* Devices that skip the 2FA prompt. Revoking has to work from a DIFFERENT device — that's what
    someone reaches for after losing a laptop — so this lists them per account, not per cookie. */
-function _TrustedDevices({t}){
+function _TrustedDevices({t,locale}){
   const [devices,setDevices]=useState([]);
   const load=()=>api.get("/auth/trusted-devices").then(r=>setDevices(r.devices)).catch(()=>{});
   useEffect(()=>{load();},[]);
@@ -53,8 +54,8 @@ function _TrustedDevices({t}){
           <div className="min-w-0">
             <div className="text-sm font-semibold text-text">{d.label}{d.current&&<span className="text-xs font-normal text-brand ml-2">{t("settings.thisDevice")}</span>}</div>
             <div className="text-xs text-text-3 mt-0.5">
-              {d.lastUsed?t("settings.lastUsed",{date:new Date(d.lastUsed.replace(" ","T")+"Z").toLocaleDateString("en-CA")}):t("settings.notUsedYet")}
-              {" · "}{t("settings.expires")} {new Date(d.expiresAt).toLocaleDateString("en-CA")}</div>
+              {d.lastUsed?t("settings.lastUsed",{date:formatDate(d.lastUsed.replace(" ","T")+"Z",locale)}):t("settings.notUsedYet")}
+              {" · "}{t("settings.expires")} {formatDate(d.expiresAt,locale)}</div>
           </div>
           <Btn kind="ghost" size="xs" onClick={async()=>{await api.del(`/auth/trusted-devices/${d.id}`).catch(()=>{});load();}}>{t("settings.revokeBtn")}</Btn>
         </div>)}
@@ -97,7 +98,7 @@ export function SettingsPage(){
           to send a job-alert email without it, and stores when and how it was given. */}
       <Row icon="bell" title={t("settings.newJobsTitle")}
         sub={A.marketingConsent?.consent
-          ? `${t("settings.newJobsBody")}${A.marketingConsent.at?` ${t("settings.emailVerifyConsentRecorded",{date:new Date(A.marketingConsent.at).toLocaleDateString()})}`:""}`
+          ? `${t("settings.newJobsBody")}${A.marketingConsent.at?` ${t("settings.emailVerifyConsentRecorded",{date:formatDate(A.marketingConsent.at,locale)})}`:""}`
           : t("settings.jobAlertsOff")}>
         <Switch on={!!A.marketingConsent?.consent} onChange={v=>A.setMarketingConsent(v)}/></Row>
       <Row icon="activity" title={t("settings.jobAlertsTitle")} sub={t("settings.jobAlertsSub")}>
@@ -105,7 +106,7 @@ export function SettingsPage(){
       <Row icon="mail" title={t("settings.marketingTitle")} sub={t("settings.marketingSub")}>
         <Switch on={S.marketing} onChange={v=>A.setUserSetting("marketing",v)}/></Row>
     </Card>
-    <_TrustedDevices t={t}/>
+    <_TrustedDevices t={t} locale={locale}/>
     {u.role==="seeker"&&<Card pad={mob?18:24} style={{marginBottom:16}}>
       <Lbl>{t("settings.privacy")}</Lbl>
       <Row icon="eye" title={t("settings.privacyProfileTitle")} sub={t("settings.privacyProfileSub")}>

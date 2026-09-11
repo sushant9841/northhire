@@ -34,3 +34,9 @@ export function formatCurrency(amount, locale, currency = "CAD") {
 export function formatNumber(n, locale, opts) {
   return new Intl.NumberFormat(intlLocale(locale), opts).format(Number(n) || 0);
 }
+
+export function formatTime(date, locale, opts) {
+  const d = date instanceof Date ? date : new Date(date);
+  if (isNaN(d.getTime())) return "";
+  return new Intl.DateTimeFormat(intlLocale(locale), opts || { hour: "2-digit", minute: "2-digit" }).format(d);
+}

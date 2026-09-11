@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { useTranslation } from "../../i18n/i18n.jsx";
+import { formatDate } from "../../i18n/format.js";
 import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
 import { Btn, Tag, Input, Empty, Lbl, Modal, Field, Area, CheckRow, Page, SmartPortrait, HERO_WIDE, HERO_TIGHT, SECTION_CLS } from "../../design/primitives.jsx";
@@ -53,7 +54,7 @@ export function EmployersPage(){
 }
 
 export function EmployerPublicPage(){
-  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t}=useTranslation();
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   /* Hooks before conditional return - conditionally-called hooks crash the tab. */
   const [showRev,setShowRev]=useState(false); const [revD,setRevD]=useState({rating:0,text:"",anon:false});
   const e=A.emp(A.empId);
@@ -112,7 +113,7 @@ export function EmployerPublicPage(){
                         {!rv.anon&&author?<SmartPortrait seed={author.seed} size={36}/>:<div className="w-9 h-9 rounded-full bg-wash text-brand flex items-center justify-center"><I n="user" s={18}/></div>}
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-semibold text-text">{rv.anon?t("shared.employers.anonymousWorker"):author?.name||t("shared.employers.formerEmployee")}</div>
-                          <div className="text-xs text-text-3 mt-0.5">{new Date(rv.at).toLocaleDateString("en-CA",{year:"numeric",month:"long"})}</div></div>
+                          <div className="text-xs text-text-3 mt-0.5">{formatDate(rv.at,locale,{year:"numeric",month:"long"})}</div></div>
                         <div className="text-warn flex gap-px">{[1,2,3,4,5].map(n=><I key={n} n="star" s={13} fill={n<=rv.rating?C.warn:"none"} c={C.warn} w={1.5}/>)}</div>
                       </div>
                       <p className="text-sm text-text-2 leading-relaxed whitespace-pre-wrap">{rv.text}</p>

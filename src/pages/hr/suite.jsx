@@ -1712,7 +1712,7 @@ export function HrBadges(){
         </div>
         <div className="flex flex-wrap gap-1.5">
           {[...e.badges].sort((a,b)=>new Date(b.awardedAt||0)-new Date(a.awardedAt||0)).map(b=>
-            <div key={b.name} title={b.awardedAt?new Date(b.awardedAt).toLocaleDateString("en-CA"):undefined}
+            <div key={b.name} title={b.awardedAt?formatDate(b.awardedAt,locale):undefined}
               className="inline-flex gap-1 items-center py-1 pr-2 pl-2.5 bg-warn-bg text-warn border border-warn-ln rounded-full text-xs font-semibold">
             <I n="award" s={11}/>{b.name}
             {canAward&&<button onClick={()=>setRemoving({emp:e,badge:b.name})} className="bg-transparent border-0 p-0 ml-1 cursor-pointer text-warn opacity-60 flex"><I n="x" s={11}/></button>}
