@@ -1745,32 +1745,33 @@ export function AgencyCompliance(){
   const bgcMissing=activeOnAssignment.filter(w=>!w.backgroundCheck||["not-started","in-progress","failed"].includes(w.backgroundCheck?.status));
 
   const items=[
-    {ok:workersMissingDocs.length===0, title:"Worker files complete", body:workersMissingDocs.length===0?"All active workers have TD1s, direct deposit, and work eligibility on file.":`${workersMissingDocs.length} workers missing documents.`, count:workersMissingDocs.length,
+    {ok:workersMissingDocs.length===0, title:t("staffing.compliance.workerFiles"), body:workersMissingDocs.length===0?t("staffing.compliance.workerFilesOk"):t("staffing.compliance.workerFilesFail",{n:workersMissingDocs.length}), count:workersMissingDocs.length,
       drillRows:workersMissingDocs.map(w=>{const p=(A.people||[]).find(pp=>pp.id===w.personId);
-        const missing=[!w.tdOnFile&&"TD1",!w.directDepositOnFile&&"Direct deposit",!w.workEligibility&&"Work eligibility"].filter(Boolean);
-        return {name:p?.name||w.id,detail:`Missing: ${missing.join(", ")}`};})},
-    {ok:workersExpiringWE.length===0, title:"Work permits current", body:workersExpiringWE.length===0?"No permits expiring in the next 90 days.":`${workersExpiringWE.length} permits expiring within 90 days.`, count:workersExpiringWE.length,
+        const missing=[!w.tdOnFile&&t("staffing.compliance.td1"),!w.directDepositOnFile&&t("staffing.compliance.directDeposit"),!w.workEligibility&&t("staffing.compliance.workEligibility")].filter(Boolean);
+        return {name:p?.name||w.id,detail:`${t("staffing.compliance.missing")}: ${missing.join(", ")}`};})},
+    {ok:workersExpiringWE.length===0, title:t("staffing.compliance.workPermits"), body:workersExpiringWE.length===0?t("staffing.compliance.workPermitsOk"):t("staffing.compliance.workPermitsFail",{n:workersExpiringWE.length}), count:workersExpiringWE.length,
       drillRows:workersExpiringWE.map(w=>{const p=(A.people||[]).find(pp=>pp.id===w.personId);
-        return {name:p?.name||w.id,detail:`${w.workEligibility} expires ${w.weExpiry}`};})},
-    {ok:expiringDocs.length===0, title:"Worker documents current", body:expiringDocs.length===0?"No worker documents expired or expiring in the next 90 days.":`${expiringDocs.length} document(s) expired or expiring within 90 days.`, count:expiringDocs.length,
+        return {name:p?.name||w.id,detail:`${w.workEligibility} ${t("staffing.compliance.expires")} ${w.weExpiry}`};})},
+    {ok:expiringDocs.length===0, title:t("staffing.compliance.workerDocs"), body:expiringDocs.length===0?t("staffing.compliance.workerDocsOk"):t("staffing.compliance.workerDocsFail",{n:expiringDocs.length}), count:expiringDocs.length,
       drillRows:expiringDocs.map(({w,d})=>{const p=(A.people||[]).find(pp=>pp.id===w.personId);
         const expired=new Date(d.expires)<Date.now();
-        return {name:p?.name||w.id,detail:`${d.label} ${expired?"expired":"expires"} ${d.expires}`};})},
-    {ok:clientsMissingMsa.length===0, title:"MSAs signed for all active clients", body:clientsMissingMsa.length===0?"Every active client has a signed Master Services Agreement.":`${clientsMissingMsa.length} clients billing without signed MSA.`, count:clientsMissingMsa.length,
+        return {name:p?.name||w.id,detail:`${d.label} ${expired?t("staffing.compliance.expired"):t("staffing.compliance.expires")} ${d.expires}`};})},
+    {ok:clientsMissingMsa.length===0, title:t("staffing.compliance.msas"), body:clientsMissingMsa.length===0?t("staffing.compliance.msasOk"):t("staffing.compliance.msasFail",{n:clientsMissingMsa.length}), count:clientsMissingMsa.length,
       drillRows:clientsMissingMsa.map(c=>{const emp=A.employers.find(e=>e.id===c.employerId);
-        return {name:emp?.name||c.id,detail:`${A.jobOrders.filter(j=>j.client===c.id&&j.status==="open").length} open order(s)`};})},
-    {ok:bgcMissing.length===0, title:"Background checks (workers on assignment)", body:bgcMissing.length===0?"Every worker currently on assignment has a completed background check.":`${bgcMissing.length} worker${bgcMissing.length===1?"":"s"} on assignment without a completed check.`, count:bgcMissing.length,
+        return {name:emp?.name||c.id,detail:`${A.jobOrders.filter(j=>j.client===c.id&&j.status==="open").length} ${t("staffing.compliance.openOrders")}`};})},
+    {ok:bgcMissing.length===0, title:t("staffing.compliance.bgc"), body:bgcMissing.length===0?t("staffing.compliance.bgcOk"):t("staffing.compliance.bgcFail",{n:bgcMissing.length,plural:bgcMissing.length===1?"":"s"}), count:bgcMissing.length,
       drillRows:bgcMissing.map(w=>{const p=(A.people||[]).find(pp=>pp.id===w.personId);
-        return {name:p?.name||w.id,detail:`Status: ${(w.backgroundCheck?.status||"not started").replace("-"," ")}`};})},
-    {ok:overdueInvoices.length===0, title:"Aging under control", body:overdueInvoices.length===0?"No overdue invoices past terms.":`${overdueInvoices.length} invoices overdue. Chase or refer to collections.`, count:overdueInvoices.length,
+        const statusMap={notStarted:t("staffing.compliance.notStarted"),"in-progress":t("staffing.compliance.inProgress"),failed:t("staffing.compliance.failed"),passed:t("staffing.compliance.passed")};
+        const status=w.backgroundCheck?.status||"notStarted"; return {name:p?.name||w.id,detail:`${t("common.status")}: ${statusMap[status]||status.replace("-"," ")}`};})},
+    {ok:overdueInvoices.length===0, title:t("staffing.compliance.invoices"), body:overdueInvoices.length===0?t("staffing.compliance.invoicesOk"):t("staffing.compliance.invoicesFail",{n:overdueInvoices.length}), count:overdueInvoices.length,
       drillRows:overdueInvoices.map(i=>{const c=A.staffingClients.find(x=>x.id===i.client); const emp=c?A.employers.find(e=>e.id===c.employerId):null;
-        return {name:emp?.name||i.client,detail:`$${i.total?.toLocaleString?.()||i.total} · due ${i.dueDate}`};})},
+        return {name:emp?.name||i.client,detail:`$${i.total?.toLocaleString(locale==="fr-CA"?"fr-CA":"en-CA",{minimumFractionDigits:2,maximumFractionDigits:2})||i.total} · ${t("common.due")} ${i.dueDate}`};})},
     /* Was static hardcoded text (a fake expiry date, a fake LOC amount) that would silently go
        stale forever - now derived from STAFFING_AGENCY fields and a real expiry check. */
     (()=>{const expiresIn=Math.ceil((new Date(A.STAFFING_AGENCY.licenseExpiry)-Date.now())/864e5); const expiringSoon=expiresIn<=90;
-      return {ok:!expiringSoon, title:"Ontario THA license active",
-        body:`License ${SEED_AGENCY_LICENSE} ${expiringSoon?`expires in ${expiresIn} days`:`valid through ${A.STAFFING_AGENCY.licenseExpiry}`}. $${A.STAFFING_AGENCY.licenseLocAmount.toLocaleString()} LOC on file.`, count:0};})(),
-    {ok:true, title:"WSIB coverage", body:`Registered in ${A.STAFFING_AGENCY.wsibProvinces.join(", ")}. Rate group ${A.STAFFING_AGENCY.wsibRateGroup}.`, count:0},
+      return {ok:!expiringSoon, title:t("staffing.compliance.license"),
+        body:expiringSoon?t("staffing.compliance.licenseExpires",{license:SEED_AGENCY_LICENSE,days:expiresIn,amount:A.STAFFING_AGENCY.licenseLocAmount.toLocaleString(locale==="fr-CA"?"fr-CA":"en-CA")}):t("staffing.compliance.licenseValid",{license:SEED_AGENCY_LICENSE,date:A.STAFFING_AGENCY.licenseExpiry,amount:A.STAFFING_AGENCY.licenseLocAmount.toLocaleString(locale==="fr-CA"?"fr-CA":"en-CA")}), count:0};})(),
+    {ok:true, title:t("staffing.compliance.wsib"), body:t("staffing.compliance.wsibBody",{provinces:A.STAFFING_AGENCY.wsibProvinces.join(", "),group:A.STAFFING_AGENCY.wsibRateGroup}), count:0},
   ];
 
   return <div className="print-target">
@@ -1829,12 +1830,12 @@ export function AgencyCompliance(){
     </Card>
 
     <Card pad={mob?18:22} style={{marginTop:16,borderRadius:14}}>
-      <Lbl>Audit log — payroll, invoicing &amp; MSA changes</Lbl>
-      {A.staffingAuditLog.length===0?<Empty icon="shield" title="No audited changes yet" body="Payroll finalization, invoice generation, and MSA signing are recorded here as they happen."/>
+      <Lbl>{t("staffing.compliance.auditLogTitle")}</Lbl>
+      {A.staffingAuditLog.length===0?<Empty icon="shield" title={t("staffing.compliance.auditLogEmpty")} body={t("staffing.compliance.auditLogEmptyDesc")}/>
       :<div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:480}}>
-        <thead><tr className="border-b-2 border-line text-left">{["When","Staff","Detail"].map(h=><th key={h} className={TH_CLS}>{h}</th>)}</tr></thead>
+        <thead><tr className="border-b-2 border-line text-left">{[t("staffing.compliance.auditLogWhen"),t("staffing.compliance.auditLogStaff"),t("staffing.compliance.auditLogDetail")].map(h=><th key={h} className={TH_CLS}>{h}</th>)}</tr></thead>
         <tbody>{A.staffingAuditLog.slice(0,50).map(e=><tr key={e.id} className="border-b border-line-soft">
-          <td className="py-2.5 px-2.5 text-xs text-text-3 whitespace-nowrap">{new Date(e.at).toLocaleString("en-CA")}</td>
+          <td className="py-2.5 px-2.5 text-xs text-text-3 whitespace-nowrap">{new Date(e.at).toLocaleString(locale==="fr-CA"?"fr-CA":"en-CA")}</td>
           <td className="py-2.5 px-2.5 text-xs text-text font-semibold whitespace-nowrap">{e.actorName}</td>
           <td className="py-2.5 px-2.5 text-sm text-text-2">{e.detail}</td>
         </tr>)}</tbody>

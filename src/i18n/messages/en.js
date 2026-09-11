@@ -11,7 +11,7 @@ export const en = {
     submit: "Submit", required: "Required", optional: "Optional", export: "Export",
     revoke: "Revoke", enable: "Enable", disable: "Disable", confirm: "Confirm",
     keepAccount: "Keep my account", deletePermanently: "Delete permanently",
-    sending: "Sending…", getHelp: "Get help",
+    sending: "Sending…", getHelp: "Get help", status: "Status", due: "due",
   },
   nav: {
     browseJobs: "Browse jobs", findJobs: "Find jobs", trainings: "Trainings",
@@ -639,7 +639,11 @@ export const en = {
       vacation: "Vacation pay accrues at 4% of gross (federally) — configured to accrue rather than pay-out per pay period.",
       payEquity: "Pay equity certification required for Ontario assignments over 3 months. Client to certify equivalent-role rates.",
       missing: "Missing", td1: "TD1", directDeposit: "Direct deposit", workEligibility: "Work eligibility",
-      expired: "expired", expires: "expires", notStarted: "not started",
+      expired: "expired", expires: "expires", notStarted: "not started", openOrders: "open order(s)",
+      inProgress: "in progress", failed: "failed", passed: "passed",
+      auditLogTitle: "Audit log — payroll, invoicing & MSA changes",
+      auditLogEmpty: "No audited changes yet", auditLogEmptyDesc: "Payroll finalization, invoice generation, and MSA signing are recorded here as they happen.",
+      auditLogWhen: "When", auditLogStaff: "Staff", auditLogDetail: "Detail",
     },
   },
   hr: {

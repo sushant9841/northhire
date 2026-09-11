@@ -12,7 +12,7 @@ export const fr = {
     submit: "Soumettre", required: "Obligatoire", optional: "Facultatif", export: "Exporter",
     revoke: "Révoquer", enable: "Activer", disable: "Désactiver", confirm: "Confirmer",
     keepAccount: "Conserver mon compte", deletePermanently: "Supprimer définitivement",
-    sending: "Envoi en cours…", getHelp: "Obtenir de l'aide",
+    sending: "Envoi en cours…", getHelp: "Obtenir de l'aide", status: "Statut", due: "échéance",
   },
   nav: {
     browseJobs: "Parcourir les emplois", findJobs: "Trouver un emploi", trainings: "Formations",
@@ -759,7 +759,11 @@ export const fr = {
       vacation: "La paie de congé s'accumule à 4% du brut (fédéral) — configurée pour s'accumuler plutôt que d'être versée par période de paie.",
       payEquity: "Certification d'équité salariale requise pour les assignations Ontario de plus de 3 mois. Client·e à certifier taux équivalents.",
       missing: "Manquant", td1: "TD1", directDeposit: "Dépôt direct", workEligibility: "Admissibilité au travail",
-      expired: "expiré", expires: "expire", notStarted: "non commencée",
+      expired: "expiré·e", expires: "expire", notStarted: "non commencée", openOrders: "commande(s) ouverte(s)",
+      inProgress: "en cours", failed: "échouée", passed: "réussi·e",
+      auditLogTitle: "Journal d'audit — paie, facturation et modifications de convention",
+      auditLogEmpty: "Aucun changement audité pour le moment", auditLogEmptyDesc: "La finalisation de la paie, la génération de factures et la signature de conventions sont enregistrées ici au fur et à mesure.",
+      auditLogWhen: "Quand", auditLogStaff: "Personnel", auditLogDetail: "Détail",
     },
   },
   hr: {
