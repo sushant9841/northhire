@@ -63,6 +63,14 @@ export const fr = {
     incorrectCredentials: "Courriel ou mot de passe incorrect.",
     companyNameRequired: "Le nom de l'entreprise est requis",
   },
+  alerts: {
+    title: "Notifications", unreadCount: "{unread} non lu·e·s", allCaughtUp: "Vous êtes à jour",
+    markAllRead: "Tout marquer comme lu", unreadOnly: "Non lu seulement", allTypes: "Tous les types",
+    nothingYetTitle: "Rien pour le moment", nothingYetBody: "Les mises à jour concernant vos candidatures, vos correspondances et vos formations s'afficheront ici.",
+    noMatchTitle: "Aucune notification ne correspond", noMatchBody: "Modifiez ou effacez les filtres ci-dessus pour voir tout.",
+    moreCount: "+{count} autres", expandCollapse: "cliquez pour {action} {count} autres comme celui-ci", expand: "développer", collapse: "réduire",
+    showMore: "Afficher plus", moreGroups: "({count} autres groupes, {items} éléments)",
+  },
   legal: {
     lastUpdated: "Dernière mise à jour", readFull: "Lire le document complet",
   },

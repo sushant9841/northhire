@@ -62,6 +62,14 @@ export const en = {
     incorrectCredentials: "Incorrect email or password.",
     companyNameRequired: "Company name required",
   },
+  alerts: {
+    title: "Notifications", unreadCount: "{unread} unread", allCaughtUp: "You are all caught up",
+    markAllRead: "Mark all read", unreadOnly: "Unread only", allTypes: "All types",
+    nothingYetTitle: "Nothing yet", nothingYetBody: "Updates about your applications, matches and trainings appear here.",
+    noMatchTitle: "No notifications match", noMatchBody: "Change or clear the filters above to see everything.",
+    moreCount: "+{count} more", expandCollapse: "click to {action} {count} more like this", expand: "expand", collapse: "collapse",
+    showMore: "Show more", moreGroups: "({count} more groups, {items} items)",
+  },
   legal: {
     lastUpdated: "Last updated", readFull: "Read the full document",
   },

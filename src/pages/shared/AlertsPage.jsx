@@ -3,6 +3,7 @@ import { use } from "../../store/context.js";
 import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
 import { Btn, Card, Empty, H1, Page, Tag } from "../../design/primitives.jsx";
+import { useTranslation } from "../../i18n/i18n.jsx";
 
 const PAGE_SIZE=20;
 
@@ -33,6 +34,7 @@ function groupAlerts(list, windowMs = 6 * 60 * 60 * 1000) {
 
 export function AlertsPage(){
   const A=use();
+  const { t } = useTranslation();
   const [unreadOnly,setUnreadOnly]=useState(false);
   const [typeFilter,setTypeFilter]=useState("all"); // "all" | icon-kind
   const [shown,setShown]=useState(PAGE_SIZE);
@@ -57,25 +59,25 @@ export function AlertsPage(){
   };
 
   return <Page narrow>
-    <H1 sub={unread?`${unread} unread`:"You are all caught up"}
-      action={unread>0?<Btn kind="outline" size="sm" onClick={A.markAllRead}>Mark all read</Btn>:null}>Notifications</H1>
+    <H1 sub={unread?t("alerts.unreadCount",{unread}):t("alerts.allCaughtUp")}
+      action={unread>0?<Btn kind="outline" size="sm" onClick={A.markAllRead}>{t("alerts.markAllRead")}</Btn>:null}>{t("alerts.title")}</H1>
     {all.length>0&&<div className="flex gap-2 flex-wrap mb-4">
       <button onClick={()=>{setUnreadOnly(v=>!v);setShown(PAGE_SIZE);}}
         className={`text-sm font-semibold py-2.5 px-4 rounded-xl border cursor-pointer transition-colors duration-150 ${unreadOnly?"bg-brand text-white border-brand":"bg-white text-text-2 border-line"}`}>
-        Unread only</button>
+        {t("alerts.unreadOnly")}</button>
       {/* Type filter chips - only render when there is more than one kind, otherwise they add
           noise without carrying information. */}
       {kinds.length>1&&<>
         <button onClick={()=>{setTypeFilter("all");setShown(PAGE_SIZE);}}
-          className={`text-sm font-semibold py-2.5 px-4 rounded-xl border cursor-pointer transition-colors duration-150 ${typeFilter==="all"?"bg-brand text-white border-brand":"bg-white text-text-2 border-line"}`}>All types</button>
+          className={`text-sm font-semibold py-2.5 px-4 rounded-xl border cursor-pointer transition-colors duration-150 ${typeFilter==="all"?"bg-brand text-white border-brand":"bg-white text-text-2 border-line"}`}>{t("alerts.allTypes")}</button>
         {kinds.map(([k,n])=><button key={k} onClick={()=>{setTypeFilter(k);setShown(PAGE_SIZE);}}
           className={`text-sm font-semibold py-2.5 px-4 rounded-xl border cursor-pointer transition-colors duration-150 flex items-center gap-1.5 ${typeFilter===k?"bg-brand text-white border-brand":"bg-white text-text-2 border-line"}`}>
           <I n={k} s={13}/>{k} <span className="text-xs opacity-70">·{n}</span></button>)}
       </>}
     </div>}
-    {all.length===0?<Empty icon="bell" title="Nothing yet"
-      body="Updates about your applications, matches and trainings appear here."/>
-      :filtered.length===0?<Empty icon="bell" title="No notifications match" body="Change or clear the filters above to see everything."/>
+    {all.length===0?<Empty icon="bell" title={t("alerts.nothingYetTitle")}
+      body={t("alerts.nothingYetBody")}/>
+      :filtered.length===0?<Empty icon="bell" title={t("alerts.noMatchTitle")} body={t("alerts.noMatchBody")}/>
       :<>
       <Card pad={0} style={{overflow:"hidden"}}>
         {visibleGroups.map((g,i)=>{
@@ -88,11 +90,11 @@ export function AlertsPage(){
               <div className="flex-1 min-w-0">
                 <div className="flex gap-2.5 items-start">
                   <div className="flex-1 text-sm font-bold text-text">{first.title}
-                    {g.members.length>1&&<Tag tone="neutral" sm style={{marginLeft:8}}>+{g.members.length-1} more</Tag>}
+                    {g.members.length>1&&<Tag tone="neutral" sm style={{marginLeft:8}}>{t("alerts.moreCount",{count:g.members.length-1})}</Tag>}
                   </div>
                   {g.unread&&<div className="w-2 h-2 rounded-full bg-brand shrink-0 mt-1.5"/>}</div>
                 <div className="text-sm text-text-2 mt-1 leading-normal">{first.body}</div>
-                <div className="text-xs text-text-3 mt-2">{first.at}{g.members.length>1?` — click to ${collapsed?"expand":"collapse"} ${g.members.length-1} more like this`:""}</div>
+                <div className="text-xs text-text-3 mt-2">{first.at}{g.members.length>1?` — ${t("alerts.expandCollapse",{action:collapsed?t("alerts.expand"):t("alerts.collapse"),count:g.members.length-1})}`:""}</div>
               </div>
             </div>
             {!collapsed&&g.members.slice(1).map(n=><div key={n.id} onClick={e=>{e.stopPropagation();A.readNotif(n.id,n.link);}}
@@ -107,7 +109,7 @@ export function AlertsPage(){
           </div>;})}
       </Card>
       {groups.length>shown&&<Btn kind="outline" full style={{marginTop:14}} onClick={()=>setShown(s=>s+PAGE_SIZE)}>
-        Show more ({groups.length-shown} more groups, {totalHidden} items)</Btn>}
+        {t("alerts.showMore")} {t("alerts.moreGroups",{count:groups.length-shown,items:totalHidden})}</Btn>}
       </>}
   </Page>;
 }
