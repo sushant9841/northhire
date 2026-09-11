@@ -1130,20 +1130,20 @@ export function HrInvoices(){
   };
   return <div>
     <div className={`grid gap-3 mb-4 ${mob?"grid-cols-1":"grid-cols-3"}`}>
-      {[["Paid this year",totals.paid,C.ok],["Pending",totals.pending,C.warn],["Overdue",totals.overdue,C.danger]].map(([l,v,t])=>
+      {[[t("hr.invoices.paidThisYear"),totals.paid,C.ok],[t("hr.invoices.pending"),totals.pending,C.warn],[t("hr.invoices.overdue"),totals.overdue,C.danger]].map(([l,v,c])=>
         <Card key={l} pad={mob?16:20} style={{borderRadius:14}}>
-          <div className={`font-bold tracking-tight ${mob?"text-xl":"text-2xl"}`} style={{color:t}}>${(v/1000).toFixed(0)}k</div>
+          <div className={`font-bold tracking-tight ${mob?"text-xl":"text-2xl"}`} style={{color:c}}>${(v/1000).toFixed(0)}k</div>
           <div className="text-xs text-text-3 mt-1.5">{l}</div>
         </Card>)}
     </div>
     <div className="flex justify-between items-center mb-3.5 flex-wrap gap-2.5">
-      <_PillTabs items={[["all","All"],["pending","Pending"],["paid","Paid"],["overdue","Overdue"]]} value={tab} onChange={setTab}/>
-      {canManage&&<Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowAdd(true)}>New invoice</Btn>}
+      <_PillTabs items={[["all",t("hr.invoices.allTab")],["pending",t("hr.invoices.pending")],["paid",t("hr.invoices.paid")],["overdue",t("hr.invoices.overdue")]]} value={tab} onChange={setTab}/>
+      {canManage&&<Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowAdd(true)}>{t("hr.invoices.newInvoiceBtn")}</Btn>}
     </div>
     <Card pad={0} style={{borderRadius:14,overflow:"hidden"}}>
       <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:720}}>
         <thead><tr className="border-b-2 border-line text-left">
-          {["Number","Client","Amount","Issued","Due","Status","Actions"].map(h=>
+          {[t("hr.invoices.number"),t("hr.invoices.client"),t("hr.invoices.amount"),t("hr.invoices.issued"),t("hr.invoices.dueDate"),t("hr.invoices.status"),t("hr.invoices.actions")].map(h=>
             <th key={h} className={TH_CLS}>{h}</th>)}
         </tr></thead>
         <tbody>{pg.pageItems.map(inv=><tr key={inv.id} className="border-b border-line-soft cursor-pointer" onClick={()=>setDetail(inv)}>
@@ -1154,23 +1154,23 @@ export function HrInvoices(){
           <td className={`${TD_CLS} text-xs text-text-3`}>{inv.due}</td>
           <td className={TD_CLS}><Tag tone={invoiceTone(inv.status)} sm>{inv.status}</Tag></td>
           <td className={TD_CLS} onClick={e=>e.stopPropagation()}><div className="flex gap-1">
-            <Btn kind="ghost" size="xs" onClick={()=>setDetail(inv)}>View</Btn>
-            {canManage&&inv.status==="pending"&&<Btn kind="primary" size="xs" onClick={()=>A.markInvoicePaid(inv.id)}>Mark paid</Btn>}
-            {canManage&&inv.status==="draft"&&<Btn kind="primary" size="xs" onClick={()=>A.sendInvoice(inv.id)}>Send</Btn>}
+            <Btn kind="ghost" size="xs" onClick={()=>setDetail(inv)}>{t("hr.invoices.viewBtn")}</Btn>
+            {canManage&&inv.status==="pending"&&<Btn kind="primary" size="xs" onClick={()=>A.markInvoicePaid(inv.id)}>{t("hr.invoices.markPaidBtn")}</Btn>}
+            {canManage&&inv.status==="draft"&&<Btn kind="primary" size="xs" onClick={()=>A.sendInvoice(inv.id)}>{t("hr.invoices.sendBtn")}</Btn>}
           </div></td>
         </tr>)}</tbody>
       </table></div>
     </Card>
     <Pagination {...pg}/>
 
-    {showAdd&&<Modal onClose={()=>setShowAdd(false)} title="New invoice" wide>
+    {showAdd&&<Modal onClose={()=>setShowAdd(false)} title={t("hr.invoices.newInvoiceModal")} wide>
       <div className="flex flex-col gap-3.5">
         <div className="grid gap-3" style={{gridTemplateColumns:mob?"1fr":"2fr 1fr 1fr"}}>
-          <Field label="Client" required><Input value={nInv.client} onChange={e=>setNInv({...nInv,client:e.target.value})} placeholder="Client company name"/></Field>
-          <Field label="Due date" required><Input type="date" value={nInv.due} onChange={e=>setNInv({...nInv,due:e.target.value})} min={_fmtDate(new Date())}/></Field>
-          <Field label="PO number"><Input value={nInv.po} onChange={e=>setNInv({...nInv,po:e.target.value})} placeholder="Optional"/></Field>
+          <Field label={t("hr.invoices.clientLabel")} required><Input value={nInv.client} onChange={e=>setNInv({...nInv,client:e.target.value})} placeholder={t("hr.invoices.clientPlaceholder")}/></Field>
+          <Field label={t("hr.invoices.dueDateLabel")} required><Input type="date" value={nInv.due} onChange={e=>setNInv({...nInv,due:e.target.value})} min={_fmtDate(new Date())}/></Field>
+          <Field label={t("hr.invoices.poNumberLabel")}><Input value={nInv.po} onChange={e=>setNInv({...nInv,po:e.target.value})} placeholder={t("hr.invoices.poNumberPlaceholder")}/></Field>
         </div>
-        <Field label="Client province" hint="Determines the sales tax rate applied below.">
+        <Field label={t("hr.invoices.clientProvinceLabel")} hint={t("hr.invoices.clientProvinceHint")}>
           <Sel value={nInv.prov} onChange={e=>setNInv({...nInv,prov:e.target.value})}>
             {[["ON","Ontario"],["QC","Québec"],["BC","British Columbia"],["AB","Alberta"],["MB","Manitoba"],["SK","Saskatchewan"],
               ["NS","Nova Scotia"],["NB","New Brunswick"],["NL","Newfoundland and Labrador"],["PE","Prince Edward Island"],
@@ -1178,10 +1178,10 @@ export function HrInvoices(){
           </Sel></Field>
 
         <div>
-          <Lbl style={{marginTop:6}}>Line items</Lbl>
+          <Lbl style={{marginTop:6}}>{t("hr.invoices.lineItems")}</Lbl>
           <div className="border border-line rounded-lg overflow-hidden">
             <div className="grid gap-2 py-2.5 px-3 bg-bg text-xs font-bold text-text-3 tracking-wide uppercase" style={{gridTemplateColumns:"3fr 60px 100px 90px 32px"}}>
-              <div>Description</div><div>Qty</div><div>Unit price</div><div className="text-right">Line total</div><div/>
+              <div>{t("hr.invoices.descriptionHeader")}</div><div>{t("hr.invoices.qtyHeader")}</div><div>{t("hr.invoices.unitPriceHeader")}</div><div className="text-right">{t("hr.invoices.lineTotalHeader")}</div><div/>
             </div>
             {nInv.items.map((it,i)=><div key={i} className="grid gap-2 py-2 px-3 border-t border-line-soft items-center" style={{gridTemplateColumns:"3fr 60px 100px 90px 32px"}}>
               <Input value={it.desc} onChange={e=>updateItem(i,{desc:e.target.value})} placeholder="Consulting services · June 2026"/>
@@ -1191,24 +1191,24 @@ export function HrInvoices(){
               <button onClick={()=>removeItem(i)} disabled={nInv.items.length===1} className="bg-transparent border-0 p-1" style={{cursor:nInv.items.length===1?"default":"pointer",color:nInv.items.length===1?C.text3:C.danger,opacity:nInv.items.length===1?0.3:1}}><I n="x" s={16}/></button>
             </div>)}
           </div>
-          <Btn kind="ghost" size="sm" icon="plus" style={{marginTop:8}} onClick={addItem}>Add line</Btn>
+          <Btn kind="ghost" size="sm" icon="plus" style={{marginTop:8}} onClick={addItem}>{t("hr.invoices.addLineBtn")}</Btn>
         </div>
 
         <div className="p-3.5 bg-bg rounded-lg">
           <div className="flex justify-between text-sm text-text-2 mb-1.5">
-            <span>Subtotal</span><span>${itemsTotal.toLocaleString()}</span>
+            <span>{t("hr.invoices.subtotal")}</span><span>${itemsTotal.toLocaleString()}</span>
           </div>
           <div className="flex justify-between text-sm text-text-2 mb-1.5">
             <span>{salesTaxLabel(nInv.prov)}</span><span>${hst.toLocaleString()}</span>
           </div>
           <div className="flex justify-between text-base text-text font-bold pt-2 border-t border-line">
-            <span>Total</span><span className="text-brand">${invTotal.toLocaleString()}</span>
+            <span>{t("hr.invoices.total")}</span><span className="text-brand">${invTotal.toLocaleString()}</span>
           </div>
         </div>
 
         <div className="flex gap-2.5 justify-end">
-          <Btn kind="ghost" onClick={()=>setShowAdd(false)}>Cancel</Btn>
-          <Btn kind="primary" icon="check" onClick={submit} disabled={!nInv.client||!nInv.due||itemsTotal<=0}>Create invoice</Btn>
+          <Btn kind="ghost" onClick={()=>setShowAdd(false)}>{t("hr.invoices.cancelBtn")}</Btn>
+          <Btn kind="primary" icon="check" onClick={submit} disabled={!nInv.client||!nInv.due||itemsTotal<=0}>{t("hr.invoices.createInvoiceBtn")}</Btn>
         </div>
       </div>
     </Modal>}
