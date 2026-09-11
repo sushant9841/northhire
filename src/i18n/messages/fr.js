@@ -777,7 +777,26 @@ export const fr = {
     },
   },
   hr: {
-    login: { title: "Connexion RH", email: "Courriel RH", password: "Mot de passe", signIn: "Se connecter" },
+    login: {
+      title: "Connexion RH", email: "Courriel RH", password: "Mot de passe", signIn: "Se connecter",
+      enterpriseTitle: "Suite RH Entreprise", heroHeading: "Votre effectif complet.\nEn un seul endroit.",
+      heroBody: "Répertoire, présence, congés, tâches, clavardage, calendrier, factures et paie — chaque dossier synchronisé avec le profil NorthHire public de chaque employé·e.",
+      roleAccess: "Accès basé sur les rôles", roles: "Propriétaire, Admin, RH, Finance, Employé·e",
+      backToNorthHire: "← Retour à NorthHire",
+      signInTitle: "Connexion à la Suite RH", signInSubtitle: "Votre identifiant de connexion Enterprise.",
+      companyLabel: "Entreprise", companyPlaceholder: "p. ex. PCL Construction",
+      loginIdLabel: "Identifiant de connexion", loginIdHint: "Votre courriel professionnel ou la partie avant @ (p. ex. sofia.r).", loginIdPlaceholder: "jean.dupuis",
+      passwordLabel: "Mot de passe", passwordPlaceholder: "Votre mot de passe",
+      signInFailed: "Connexion échouée", signingIn: "Connexion en cours…", enterHrSuite: "Entrer dans la Suite RH",
+      demoTitle: "Comptes de démonstration — PCL Construction", demoPassword: "Mot de passe pour tous les comptes de démonstration :",
+      demoAccounts: [
+        {id: "rachel.martel", role: "Propriétaire"},
+        {id: "priya.r", role: "Admin"},
+        {id: "linda.o", role: "RH"},
+        {id: "isaac.c", role: "Finance"},
+        {id: "daniel.k", role: "Employé·e"}
+      ]
+    },
     dashboard: { title: "Tableau de bord RH", overview: "Aperçu", thisWeek: "Cette semaine", thisMonth: "Ce mois" },
     profile: { title: "Profil d'employé·e", name: "Nom", email: "Courriel", phone: "Téléphone", department: "Département" },
     attendance: { title: "Présence", present: "Présent·e", absent: "Absent·e", late: "En retard", pending: "En attente" },

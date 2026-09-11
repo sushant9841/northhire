@@ -657,7 +657,26 @@ export const en = {
     },
   },
   hr: {
-    login: { title: "HR login", email: "HR email", password: "Password", signIn: "Sign in" },
+    login: {
+      title: "HR login", email: "HR email", password: "Password", signIn: "Sign in",
+      enterpriseTitle: "Enterprise HR Suite", heroHeading: "Your entire workforce.\nOne place.",
+      heroBody: "Directory, attendance, leave, tasks, chat, calendar, invoices and payroll — every record synced with each employee's public NorthHire profile.",
+      roleAccess: "Role-based access", roles: "Owner, Admin, HR, Finance, Employee",
+      backToNorthHire: "← Back to NorthHire",
+      signInTitle: "Sign in to HR Suite", signInSubtitle: "Your Enterprise workforce login.",
+      companyLabel: "Company", companyPlaceholder: "e.g. PCL Construction",
+      loginIdLabel: "Login ID", loginIdHint: "Your work email or the part before @ (e.g. sofia.r).", loginIdPlaceholder: "jean.dupuis",
+      passwordLabel: "Password", passwordPlaceholder: "Your password",
+      signInFailed: "Sign-in failed", signingIn: "Signing in…", enterHrSuite: "Enter HR Suite",
+      demoTitle: "Demo accounts — PCL Construction", demoPassword: "Password for all demo accounts:",
+      demoAccounts: [
+        {id: "rachel.martel", role: "Owner"},
+        {id: "priya.r", role: "Admin"},
+        {id: "linda.o", role: "HR"},
+        {id: "isaac.c", role: "Finance"},
+        {id: "daniel.k", role: "Employee"}
+      ]
+    },
     dashboard: { title: "HR dashboard", overview: "Overview", thisWeek: "This week", thisMonth: "This month" },
     profile: { title: "Employee profile", name: "Name", email: "Email", phone: "Phone", department: "Department" },
     attendance: { title: "Attendance", present: "Present", absent: "Absent", late: "Late", pending: "Pending" },

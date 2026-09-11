@@ -54,47 +54,47 @@ export function HrLoginPage(){
     <SmartScene kind="office" tone={C.ink} w="100%" h="100%" seed={2} style={{position:"absolute",inset:0}}/>
     <div className="absolute inset-0" style={{background:"linear-gradient(180deg,rgba(10,25,41,0) 40%,rgba(10,25,41,.6) 100%)"}}/>
     <div className="absolute left-8 right-8 bottom-9 text-white">
-      <div className="text-sm font-bold text-accent tracking-wide uppercase mb-3">Enterprise HR Suite</div>
-      <div className="text-2xl font-bold tracking-tight leading-snug mb-2">Your entire workforce.<br/>One place.</div>
-      <p className="text-sm text-white/80 leading-relaxed max-w-90">Directory, attendance, leave, tasks, chat, calendar, invoices and payroll — every record synced with each employee's public NorthHire profile.</p></div>
+      <div className="text-sm font-bold text-accent tracking-wide uppercase mb-3">{t("hr.login.enterpriseTitle")}</div>
+      <div className="text-2xl font-bold tracking-tight leading-snug mb-2">{t("hr.login.heroHeading").split("\n").map((line,i)=><span key={i}>{line}{i===0&&<br/>}</span>)}</div>
+      <p className="text-sm text-white/80 leading-relaxed max-w-90">{t("hr.login.heroBody")}</p></div>
     <div className="absolute right-7 top-7 bg-white rounded-2xl py-3 px-4 shadow-lg flex items-center gap-2.5">
       <div className="flex">{[2,4,7].map((s,i)=><div key={s} className={`${i?"-ml-3":""} border-2 border-white rounded-full flex`}><SmartPortrait seed={s} size={28}/></div>)}</div>
-      <div><div className="text-sm font-bold text-text">Role-based access</div>
-        <div className="text-xs text-text-2 mt-0.5">Owner, Admin, HR, Finance, Employee</div></div></div>
+      <div><div className="text-sm font-bold text-text">{t("hr.login.roleAccess")}</div>
+        <div className="text-xs text-text-2 mt-0.5">{t("hr.login.roles")}</div></div></div>
   </div>;
 
   return <div className="bg-white min-h-screen flex flex-col">
     <div className={`flex items-center justify-between border-b border-line-soft ${mob?"py-4 px-5":"py-5 px-10"}`}>
       <button onClick={()=>A.go("home")} className="flex items-center gap-2.5 bg-transparent border-0 text-text cursor-pointer">
         <div className="w-9 h-9 rounded-lg bg-wash border border-line-2 flex items-center justify-center"><I n="sparkle" s={18} c={C.brand}/></div>
-        <span className="font-bold tracking-tight" style={{fontSize:16.5}}>NorthHire <span className="text-brand font-semibold">HR Suite</span></span>
+        <span className="font-bold tracking-tight" style={{fontSize:16.5}}>NorthHire <span className="text-brand font-semibold">{t("hr.login.title")}</span></span>
       </button>
-      <button onClick={()=>A.go("home")} className="bg-transparent border border-line text-text-2 py-1.5 px-3.5 rounded-lg cursor-pointer text-sm font-semibold hover:bg-bg">← Back to NorthHire</button>
+      <button onClick={()=>A.go("home")} className="bg-transparent border border-line text-text-2 py-1.5 px-3.5 rounded-lg cursor-pointer text-sm font-semibold hover:bg-bg">{t("hr.login.backToNorthHire")}</button>
     </div>
     <div className="flex-1 flex min-h-0">
       {illusCol}
       {formCol(<>
-        <h2 className="text-2xl font-bold tracking-tight mb-2">Sign in to HR Suite</h2>
-        <p className="text-sm text-text-2 mb-6">Your Enterprise workforce login.</p>
+        <h2 className="text-2xl font-bold tracking-tight mb-2">{t("hr.login.signInTitle")}</h2>
+        <p className="text-sm text-text-2 mb-6">{t("hr.login.signInSubtitle")}</p>
         <div className="flex flex-col gap-3.5">
-          <Field label="Company"><Input icon="building" value={company} onChange={e=>{setCompany(e.target.value);setErr("");}}
-            placeholder="e.g. PCL Construction" onKeyDown={e=>e.key==="Enter"&&submit()}/></Field>
-          <Field label="Login ID" hint="Your work email or the part before @ (e.g. sofia.r).">
-            <Input icon="user" value={loginId} onChange={e=>{setLoginId(e.target.value);setErr("");}} placeholder="jean.dupuis"
+          <Field label={t("hr.login.companyLabel")}><Input icon="building" value={company} onChange={e=>{setCompany(e.target.value);setErr("");}}
+            placeholder={t("hr.login.companyPlaceholder")} onKeyDown={e=>e.key==="Enter"&&submit()}/></Field>
+          <Field label={t("hr.login.loginIdLabel")} hint={t("hr.login.loginIdHint")}>
+            <Input icon="user" value={loginId} onChange={e=>{setLoginId(e.target.value);setErr("");}} placeholder={t("hr.login.loginIdPlaceholder")}
               onKeyDown={e=>e.key==="Enter"&&submit()}/></Field>
-          <Field label="Password"><Input icon="lock" type="password" value={pw} onChange={e=>{setPw(e.target.value);setErr("");}}
-            placeholder="Your password" onKeyDown={e=>e.key==="Enter"&&submit()}/></Field>
-          {err&&<Banner tone="danger" icon="alert" title="Sign-in failed">{err}</Banner>}
-          <Btn kind="primary" size="lg" full iconR="arrowR" onClick={submit} disabled={busy}>{busy?"Signing in…":"Enter HR Suite"}</Btn>
+          <Field label={t("hr.login.passwordLabel")}><Input icon="lock" type="password" value={pw} onChange={e=>{setPw(e.target.value);setErr("");}}
+            placeholder={t("hr.login.passwordPlaceholder")} onKeyDown={e=>e.key==="Enter"&&submit()}/></Field>
+          {err&&<Banner tone="danger" icon="alert" title={t("hr.login.signInFailed")}>{err}</Banner>}
+          <Btn kind="primary" size="lg" full iconR="arrowR" onClick={submit} disabled={busy}>{busy?t("hr.login.signingIn"):t("hr.login.enterHrSuite")}</Btn>
         </div>
         <div className="mt-5 p-3.5 bg-tint rounded-xl border border-line-2">
-          <div className="text-xs font-bold text-brand tracking-wide uppercase mb-2">Demo accounts — PCL Construction</div>
+          <div className="text-xs font-bold text-brand tracking-wide uppercase mb-2">{t("hr.login.demoTitle")}</div>
           <div className="grid gap-1.5">
-            {[["rachel.martel","Owner"],["priya.r","Admin"],["linda.o","HR"],["isaac.c","Finance"],["daniel.k","Employee"]].map(([id,r])=>
+            {t("hr.login.demoAccounts").map(({id,role})=>
               <button key={id} onClick={()=>demoAs(id)} className="flex justify-between items-center bg-white border border-line rounded-lg py-2 px-3 cursor-pointer">
                 <span className="text-xs font-semibold text-text">{id}</span>
-                <span className="text-xs font-semibold text-brand">{r} →</span></button>)}
-            <div className="text-xs text-text-3 mt-1.5 text-center">Password for all demo accounts: <strong className="text-text">pcl2026</strong></div>
+                <span className="text-xs font-semibold text-brand">{role} →</span></button>)}
+            <div className="text-xs text-text-3 mt-1.5 text-center">{t("hr.login.demoPassword")} <strong className="text-text">pcl2026</strong></div>
           </div>
         </div>
       </>)}
