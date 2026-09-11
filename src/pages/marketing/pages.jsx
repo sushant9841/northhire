@@ -342,10 +342,10 @@ export function BlogsPage(){
 
 export function BlogPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
-  const {locale}=useTranslation();
+  const {locale,t}=useTranslation();
   const b=A.blogs.find(x=>x.id===A.blogId);
-  if(!b) return <Page><Empty icon="book" title="Article not found" body="It may have been unpublished."
-    action={<Btn kind="primary" onClick={()=>A.go("blogs")}>All articles</Btn>}/></Page>;
+  if(!b) return <Page><Empty icon="book" title={t("blogs.articleNotFound")} body={t("blogs.articleNotFoundBody")}
+    action={<Btn kind="primary" onClick={()=>A.go("blogs")}>{t("blog.allArticlesBtn")}</Btn>}/></Page>;
   // Bill 96: render the employer/admin-authored French version when the reader's locale is
   // fr-CA and one was actually written in the Content Manager; otherwise fall back to English
   // rather than showing a half-French, half-English article.
@@ -359,7 +359,7 @@ export function BlogPage(){
 
     <section className={`bg-white ${pad}`}>
       <div className="max-w-190 mx-auto text-center">
-        {!mob&&<button onClick={A.back} className="inline-flex items-center gap-1.5 bg-transparent border-0 p-0 cursor-pointer text-sm text-text-2 mb-7"><I n="arrowL" s={17}/>All articles</button>}
+        {!mob&&<button onClick={A.back} className="inline-flex items-center gap-1.5 bg-transparent border-0 p-0 cursor-pointer text-sm text-text-2 mb-7"><I n="arrowL" s={17}/>{t("blog.allArticlesBtn")}</button>}
         <Tag tone="brand" sm>{b.cat}</Tag>
         <h1 className={`${HERO_WRAP} my-5 ${mob?"text-3xl":"text-5xl"}`}>{bTitle}</h1>
         <p className={`text-text-2 leading-snug mx-auto mb-7 max-w-160 ${mob?"text-base":"text-xl"}`}>{bExcerpt}</p>
@@ -400,8 +400,8 @@ export function BlogPage(){
     <section className={`bg-bg border-t border-line ${pad}`}>
       <div className="max-w-280 mx-auto">
         <div className="mb-9">
-          <Tag tone="brand">Keep reading</Tag>
-          <h2 className={`${SECTION_CLS} leading-tight mt-3.5 ${mob?"text-2xl":"text-4xl"}`}>More from the careers desk.</h2></div>
+          <Tag tone="brand">{t("blogs.keepReading")}</Tag>
+          <h2 className={`${SECTION_CLS} leading-tight mt-3.5 ${mob?"text-2xl":"text-4xl"}`}>{t("blogs.moreFromDesk")}</h2></div>
         <div className={`grid ${mob?"grid-cols-1 gap-3.5":"grid-cols-3 gap-5"}`}>
           {more.map(x=><BlogCard key={x.id} b={x}/>)}</div>
       </div>
@@ -459,53 +459,53 @@ export function TrainingPage(){
   /* Hooks before conditional return - a useState after an early return is a Rules-of-Hooks
      violation and crashes the tab the moment a not-found training becomes findable. */
   const [payConfirm,setPayConfirm]=useState(null); /* {price,title} */
-  const {locale}=useTranslation();
-  const t=A.trainings.find(x=>x.id===A.trainingId);
-  if(!t) return <Page><Empty icon="cap" title="Training not found" body="It may have been unpublished."
-    action={<Btn kind="primary" onClick={()=>A.go("trainings")}>All trainings</Btn>}/></Page>;
+  const {locale,t}=useTranslation();
+  const training=A.trainings.find(x=>x.id===A.trainingId);
+  if(!training) return <Page><Empty icon="cap" title={t("training.notFound")} body={t("training.unpublishedBody")}
+    action={<Btn kind="primary" onClick={()=>A.go("trainings")}>{t("training.allTrainingsBtn")}</Btn>}/></Page>;
   // Bill 96: same French-if-available, English-otherwise fallback as BlogPage.
-  const useFr=locale==="fr-CA"&&(t.titleFr||t.aboutFr);
-  const tTitle=useFr&&t.titleFr?t.titleFr:t.title;
-  const tAbout=useFr&&t.aboutFr?t.aboutFr:t.about;
-  const enrolled=A.enrolled.has(t.id);
-  const prog=A.trainingProgress[t.id]||0;
+  const useFr=locale==="fr-CA"&&(training.titleFr||training.aboutFr);
+  const tTitle=useFr&&training.titleFr?training.titleFr:training.title;
+  const tAbout=useFr&&training.aboutFr?training.aboutFr:training.about;
+  const enrolled=A.enrolled.has(training.id);
+  const prog=A.trainingProgress[training.id]||0;
   const pad=mob?"py-11 px-4":"py-18 px-8";
   const tryEnrol=()=>{
-    const r=A.enrol(t.id);
+    const r=A.enrol(training.id);
     if(r&&r.needsPayment)setPayConfirm(r);
   };
   return <div className="bg-white min-h-full">
 
     <section className={`bg-white ${pad}`}>
       <div className="max-w-280 mx-auto">
-        {!mob&&<button onClick={A.back} className="inline-flex items-center gap-1.5 bg-transparent border-0 p-0 cursor-pointer text-sm text-text-2 mb-8"><I n="arrowL" s={17}/>All trainings</button>}
+        {!mob&&<button onClick={A.back} className="inline-flex items-center gap-1.5 bg-transparent border-0 p-0 cursor-pointer text-sm text-text-2 mb-8"><I n="arrowL" s={17}/>{t("training.allTrainingsBtn")}</button>}
         <div className={`grid items-start ${mob?"grid-cols-1 gap-7":"gap-11"}`} style={{gridTemplateColumns:mob?undefined:"1fr 380px"}}>
           <div>
             <div className="flex gap-2 flex-wrap mb-5">
-              <Tag tone="brand">{t.cat}</Tag><Tag>{t.level}</Tag><Tag icon="clock">{t.hours} hours</Tag>
-              {t.price===0&&<Tag tone="ok">Free</Tag>}</div>
+              <Tag tone="brand">{training.cat}</Tag><Tag>{training.level}</Tag><Tag icon="clock">{t("training.hoursTag",{hours:training.hours})}</Tag>
+              {training.price===0&&<Tag tone="ok">{t("trainings.freePriceLabel")}</Tag>}</div>
             <h1 className={`${HERO_WRAP} mb-5 ${mob?"text-3xl":"text-5xl"}`}>{tTitle}</h1>
             <p className={`text-text-2 leading-snug mb-6 ${mob?"text-base":"text-lg"}`}>{tAbout}</p>
             <div className="flex items-center gap-4 flex-wrap text-sm text-text-2 pt-6 border-t border-line-soft">
-              <span className="flex items-center gap-2"><SmartPortrait seed={t.providerSeed} size={34}/><strong className="text-text font-semibold">{t.provider}</strong></span>
-              <span className="text-warn flex items-center gap-1 font-semibold"><I n="star" s={14} fill={C.warn} w={0}/>{t.rating}</span>
-              <span className="text-text-3">{t.enrolled.toLocaleString()} enrolled</span></div></div>
+              <span className="flex items-center gap-2"><SmartPortrait seed={training.providerSeed} size={34}/><strong className="text-text font-semibold">{training.provider}</strong></span>
+              <span className="text-warn flex items-center gap-1 font-semibold"><I n="star" s={14} fill={C.warn} w={0}/>{training.rating}</span>
+              <span className="text-text-3">{t("training.enrolledLabel",{count:training.enrolled})}</span></div></div>
           <div className="bg-white rounded-2xl overflow-hidden border border-line shadow-md">
-            <div className="bg-bg" style={{aspectRatio:"16/10"}}><SmartScene kind={t.scene} tone={t.tone} w="100%" h="100%" seed={t.id.length}/></div>
+            <div className="bg-bg" style={{aspectRatio:"16/10"}}><SmartScene kind={training.scene} tone={training.tone} w="100%" h="100%" seed={training.id.length}/></div>
             <div className={mob?"p-6":"p-7"}>
-              <div className={`font-extrabold text-text tracking-tight mb-1.5 leading-none ${mob?"text-4xl":"text-5xl"}`}>{t.price===0?"Free":money(t.price)}</div>
-              <div className="text-sm text-text-2 mb-6">{t.price===0?"No cost, certificate included":"One-time payment, lifetime access"}</div>
+              <div className={`font-extrabold text-text tracking-tight mb-1.5 leading-none ${mob?"text-4xl":"text-5xl"}`}>{training.price===0?t("trainings.freePriceLabel"):money(training.price)}</div>
+              <div className="text-sm text-text-2 mb-6">{training.price===0?t("training.freePriceLabel"):t("training.paidPriceLabel")}</div>
               {enrolled?<>
                 <div className="mb-4">
                   <div className="flex justify-between text-sm mb-2">
-                    <span className="text-text-2">Your progress</span><span className="font-bold text-brand">{prog}%</span></div>
+                    <span className="text-text-2">{t("training.yourProgress")}</span><span className="font-bold text-brand">{prog}%</span></div>
                   <Bar v={prog}/></div>
-                <Btn kind="primary" size="lg" full icon="play" onClick={()=>A.advanceTraining(t.id)}>
-                  {prog>=100?"Review course":"Continue learning"}</Btn>
-                {prog>=100&&<Btn kind="outline" full icon="download" style={{marginTop:10}} onClick={()=>A.printCert(t)}>Download certificate</Btn>}
-              </>:<Btn kind="primary" size="lg" full icon="cap" onClick={tryEnrol}>Enrol now</Btn>}
+                <Btn kind="primary" size="lg" full icon="play" onClick={()=>A.advanceTraining(training.id)}>
+                  {prog>=100?t("training.reviewCourseBtn"):t("training.continueLearnBtn")}</Btn>
+                {prog>=100&&<Btn kind="outline" full icon="download" style={{marginTop:10}} onClick={()=>A.printCert(training)}>{t("training.downloadCertBtn")}</Btn>}
+              </>:<Btn kind="primary" size="lg" full icon="cap" onClick={tryEnrol}>{t("training.enrolNowBtn")}</Btn>}
               <div className="mt-5 pt-5 border-t border-line-soft flex flex-col gap-2.5">
-                {[["clock",`${t.hours} hours of content`],["file","Certificate on completion"],["globe","Fully online, self-paced"],["refresh","Lifetime access to updates"]].map(([ic,l])=>
+                {[[t("training.featureHours",{hours:training.hours}),"clock"],[t("training.featureCert"),"file"],[t("training.featureOnline"),"globe"],[t("training.featureAccess"),"refresh"]].map(([l,ic])=>
                   <div key={l} className="flex items-center gap-2.5 text-sm text-text-2"><I n={ic} s={16} c={C.brand}/>{l}</div>)}</div></div></div>
         </div>
       </div>
@@ -515,22 +515,22 @@ export function TrainingPage(){
       <div className={`max-w-280 mx-auto grid items-start ${mob?"grid-cols-1 gap-6":"gap-8"}`} style={{gridTemplateColumns:mob?undefined:"1fr 340px"}}>
         <div>
           <div className={`bg-white rounded-2xl border border-line mb-5 ${mob?"p-7":"p-9"}`}>
-            <div className={`font-bold text-text tracking-tight mb-5 leading-tight ${mob?"text-2xl":"text-3xl"}`}>What you will learn</div>
+            <div className={`font-bold text-text tracking-tight mb-5 leading-tight ${mob?"text-2xl":"text-3xl"}`}>{t("training.whatYouLearn")}</div>
             <div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
-              {t.outcomes.map(o=><div key={o} className="flex gap-3 items-start text-sm text-text-2 leading-snug">
+              {training.outcomes.map(o=><div key={o} className="flex gap-3 items-start text-sm text-text-2 leading-snug">
                 <span className="text-ok mt-0.5 shrink-0 flex"><I n="check" s={17} w={2.4}/></span>{o}</div>)}</div></div>
           <div className={`bg-white rounded-2xl border border-line ${mob?"p-7":"p-9"}`}>
             <div className="flex justify-between items-end mb-5 flex-wrap gap-3">
-              <div className={`font-bold text-text tracking-tight leading-tight ${mob?"text-2xl":"text-3xl"}`}>Course content</div>
-              <div className="text-sm text-text-3">{t.mods.length} modules • {t.hours} hours</div></div>
-            {t.mods.map((m,i)=>{const done=enrolled&&prog>=Math.round(((i+1)/t.mods.length)*100);
-              return <div key={m} className={`flex items-center gap-3.5 py-4 ${i<t.mods.length-1?"border-b border-line-soft":""}`}>
+              <div className={`font-bold text-text tracking-tight leading-tight ${mob?"text-2xl":"text-3xl"}`}>{t("training.courseContent")}</div>
+              <div className="text-sm text-text-3">{t("training.moduleCount",{count:training.mods.length,hours:training.hours})}</div></div>
+            {training.mods.map((m,i)=>{const done=enrolled&&prog>=Math.round(((i+1)/training.mods.length)*100);
+              return <div key={m} className={`flex items-center gap-3.5 py-4 ${i<training.mods.length-1?"border-b border-line-soft":""}`}>
                 <div className={`w-9 h-9 rounded-lg shrink-0 flex items-center justify-center text-sm font-bold ${done?"bg-ok-bg text-ok":"bg-bg text-text-3"}`}>
                   {done?<I n="check" s={17} w={2.6}/>:i+1}</div>
                 <div className="flex-1 min-w-0 text-base text-text font-medium">{m}</div>
-                <span className="text-sm text-text-3 shrink-0">{Math.round(t.hours/t.mods.length*10)/10} h</span></div>;})}</div></div>
+                <span className="text-sm text-text-3 shrink-0">{Math.round(training.hours/training.mods.length*10)/10} h</span></div>;})}</div></div>
         <div className={`bg-white rounded-2xl border border-line ${mob?"p-6":"p-7"}`}>
-          <Lbl>Related jobs</Lbl>
+          <Lbl>{t("training.relatedJobs")}</Lbl>
           {A.jobs.filter(j=>j.status==="live").slice(0,4).map((j,i,arr)=>{const e=A.emp(j.e);
             return <button key={j.id} onClick={()=>A.openJob(j.id)} className={`flex gap-3 items-center w-full py-3.5 bg-transparent border-0 cursor-pointer text-left ${i<arr.length-1?"border-b border-line-soft":""}`}>
               <EmpMark e={e} size={40} radius={10}/>
@@ -540,9 +540,9 @@ export function TrainingPage(){
       </div>
     </section>
 
-    <ConfirmDialog open={!!payConfirm} onClose={()=>setPayConfirm(null)} confirmLabel={payConfirm?`Pay ${money(payConfirm.price)}`:"Pay"}
-      title="Confirm payment" onConfirm={()=>A.confirmPaidEnrol(t.id)}>
-      {payConfirm&&<>This training costs <strong>{money(payConfirm.price)}</strong>. Enrol and charge your default payment method on file?</>}
+    <ConfirmDialog open={!!payConfirm} onClose={()=>setPayConfirm(null)} confirmLabel={payConfirm?t("training.payButtonLabel",{price:money(payConfirm.price)}):"Pay"}
+      title={t("training.confirmPaymentTitle")} onConfirm={()=>A.confirmPaidEnrol(training.id)}>
+      {payConfirm&&<>{t("training.paymentConfirmMsg",{price:money(payConfirm.price)})}</>}
     </ConfirmDialog>
   </div>;
 }
