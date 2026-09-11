@@ -771,7 +771,7 @@ export function EmpPipeline(){
 
 
 export function EmpCandidate(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const [showMsg,setShowMsg]=useState(false); const [msgText,setMsgText]=useState("");
   const [savingTemplate,setSavingTemplate]=useState(false); const [templateName,setTemplateName]=useState("");
   const [showSched,setShowSched]=useState(false);
@@ -787,8 +787,8 @@ export function EmpCandidate(){
   useEffect(()=>{if(!a)return; let cancelled=false;A.loadCandidateContact(a.id).then(c=>{if(!cancelled)setContact(c);});return()=>{cancelled=true;};},[a?.id]);
   const refreshScorecards=()=>{if(a)A.loadScorecards(a.id).then(setScorecards);};
   useEffect(()=>{refreshScorecards();},[a?.id]);
-  if(!a) return <Page><Empty icon="users" title="Candidate not found" body="This application may have been withdrawn."
-    action={<Btn kind="primary" onClick={()=>A.go("empPipeline")}>Back to pipeline</Btn>}/></Page>;
+  if(!a) return <Page><Empty icon="users" title={t("employer.candidate.candidateTitle")} body={t("employer.post.reviewPublishSub")}
+    action={<Btn kind="primary" onClick={()=>A.go("empPipeline")}>{t("employer.pipeline.moveBack")}</Btn>}/></Page>;
   const u=A.person(a.user), job=A.job(a.job), s=A.scoreCandidate(u,job);
   const candStages=A.stagesForApp(a); const idx=candStages.indexOf(a.stage);
   const threadMessages=A.messages.filter(m=>(m.from===u.id&&m.to===A.user?.id)||(m.to===u.id&&m.from===A.user?.id)).slice().reverse();
