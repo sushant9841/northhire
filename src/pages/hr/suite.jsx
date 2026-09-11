@@ -519,7 +519,7 @@ export function HrAttendance(){
   const sorted=[...records].sort((a,b)=>b.date.localeCompare(a.date));
   const exportCsv=()=>{
     const who=r=>A.hrEmp(r.employee)?.name||r.employee;
-    const rows=[["Date","Employee","In","Out","Hours","Source"],
+    const rows=[[t("hr.attendance.csvDateHeader"),t("hr.attendance.csvEmployeeHeader"),t("hr.attendance.csvInHeader"),t("hr.attendance.csvOutHeader"),t("hr.attendance.csvHoursHeader"),t("hr.attendance.csvSourceHeader")],
       ...sorted.map(r=>[r.date,who(r),r.clockIn||"",r.clockOut||"",r.hours??"",r.source||""])];
     const csv=rows.map(row=>row.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
     const blob=new Blob([csv],{type:"text/csv"}); const url=URL.createObjectURL(blob);
@@ -533,74 +533,74 @@ export function HrAttendance(){
     <Card pad={mob?20:24} style={{marginBottom:16,borderRadius:16}}>
       <div className="flex justify-between items-center mb-3.5 flex-wrap gap-3">
         <div>
-          <Lbl style={{margin:0}}>Your attendance today</Lbl>
-          <div className="text-xs text-text-3 mt-1">{new Date().toLocaleDateString("en-CA",{weekday:"long",month:"long",day:"numeric"})}</div>
+          <Lbl style={{margin:0}}>{t("hr.attendance.yourAttendanceTodayLabel")}</Lbl>
+          <div className="text-xs text-text-3 mt-1">{new Date().toLocaleDateString(locale==="fr"?"fr-CA":"en-CA",{weekday:"long",month:"long",day:"numeric"})}</div>
         </div>
-        <Tag tone={todayRecord?"ok":"neutral"} sm>{todayRecord?(todayRecord.clockOut?"Signed out":"On the clock"):"Not clocked in"}</Tag>
+        <Tag tone={todayRecord?"ok":"neutral"} sm>{todayRecord?(todayRecord.clockOut?t("hr.dashboard.statusSignedOut"):t("hr.dashboard.statusWorking")):t("hr.dashboard.statusNotClockedIn")}</Tag>
       </div>
       {!todayRecord?
-        <Btn kind="primary" size="lg" icon="clock" onClick={async()=>{const r=await A.punchIn(emp.id,"web"); if(!r.ok)A.toast(r.msg,"danger");}}>Punch in now</Btn>
+        <Btn kind="primary" size="lg" icon="clock" onClick={async()=>{const r=await A.punchIn(emp.id,"web"); if(!r.ok)A.toast(r.msg,"danger");}}>{t("hr.attendance.punchInNowBtn")}</Btn>
         :!todayRecord.clockOut?
         <div className="flex gap-3 flex-wrap items-center">
-          <div className="text-base text-text-2">Punched in at <strong className="text-text">{todayRecord.clockIn}</strong> via {todayRecord.source}</div>
-          <Btn kind="outline" icon="clock" onClick={async()=>{const r=await A.punchOut(emp.id); if(!r.ok)A.toast(r.msg,"danger"); else if(r.earlyLeave)A.toast("Punched out before end of day","warn");}}>Punch out</Btn>
+          <div className="text-base text-text-2">{t("hr.attendance.punchedInAtVia",{time:todayRecord.clockIn,source:todayRecord.source})}</div>
+          <Btn kind="outline" icon="clock" onClick={async()=>{const r=await A.punchOut(emp.id); if(!r.ok)A.toast(r.msg,"danger"); else if(r.earlyLeave)A.toast(t("hr.attendance.punchOutEarlyLeave"),"warn");}}>{t("hr.attendance.punchOutBtn")}</Btn>
         </div>
         :
-        <div className="text-base text-text-2">In: <strong>{todayRecord.clockIn}</strong> · Out: <strong>{todayRecord.clockOut}</strong> · Total: <strong className="text-brand">{todayRecord.hours}h</strong></div>}
+        <div className="text-base text-text-2">{t("hr.attendance.attendanceSummary",{in:todayRecord.clockIn,out:todayRecord.clockOut,hours:todayRecord.hours})}</div>}
     </Card>
 
     {canSeeAll&&<Card pad={mob?16:20} style={{marginBottom:16,borderRadius:14,background:punchConn?C.okBg:C.warnBg,border:`1px solid ${punchConn?C.okLn:C.warnLn}`}}>
       <div className="flex gap-3 items-center flex-wrap">
         <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center shrink-0" style={{color:punchConn?C.ok:C.warn}}><I n={punchConn?"check":"clock"} s={20}/></div>
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-semibold text-text">{punchConn?`Punch machine connected: ${settings.integrations.punchMachine.vendor}`:"No punch machine connected"}</div>
-          <div className="text-xs text-text-2 mt-1">{punchConn?`Last sync: ${new Date(settings.integrations.punchMachine.lastSync).toLocaleString("en-CA")}`:"Connect your on-site punch clock or biometric reader to auto-sync attendance."}</div>
+          <div className="text-sm font-semibold text-text">{punchConn?t("hr.attendance.punchMachineConnected",{vendor:settings.integrations.punchMachine.vendor}):t("hr.attendance.noPunchMachineConnected")}</div>
+          <div className="text-xs text-text-2 mt-1">{punchConn?t("hr.attendance.lastSync",{date:new Date(settings.integrations.punchMachine.lastSync).toLocaleString(locale==="fr"?"fr-CA":"en-CA")}):t("hr.attendance.connectPunchMachine")}</div>
         </div>
-        <Btn kind={punchConn?"outline":"primary"} size="sm" onClick={()=>A.go("hrIntegrations")}>{punchConn?"Manage":"Connect"}</Btn>
+        <Btn kind={punchConn?"outline":"primary"} size="sm" onClick={()=>A.go("hrIntegrations")}>{punchConn?t("hr.attendance.manageBtn"):t("hr.attendance.connectBtn")}</Btn>
       </div>
     </Card>}
 
     <Card pad={mob?16:20} style={{borderRadius:14}}>
       <div className="flex gap-2.5 items-center mb-3.5 flex-wrap">
-        <Lbl style={{margin:0,flex:1}}>{view==="mine"?"My history":"Team log"}</Lbl>
-        {canSeeAll&&<_PillTabs items={[["mine","Mine"],["team","Team"]]} value={view} onChange={setView}/>}
+        <Lbl style={{margin:0,flex:1}}>{view==="mine"?t("hr.attendance.myHistoryLabel"):t("hr.attendance.teamLogLabel")}</Lbl>
+        {canSeeAll&&<_PillTabs items={[["mine",t("hr.attendance.mineTab")],["team",t("hr.attendance.teamTab")]]} value={view} onChange={setView}/>}
         {canSeeAll&&view==="team"&&<Sel value={empFilter} onChange={e=>setEmpFilter(e.target.value)} style={{maxWidth:200}}>
-          <option value="all">All employees</option>
+          <option value="all">{t("hr.attendance.allEmployeesOption")}</option>
           {A.hrEmpsAtCompany(company.id).map(e=><option key={e.id} value={e.id}>{e.name}</option>)}</Sel>}
       </div>
       <div className="flex gap-2.5 items-center mb-3.5 flex-wrap">
         <Input type="date" value={fromDate} onChange={e=>{setFromDate(e.target.value);setShown(50);}} style={{maxWidth:170}}/>
-        <span className="text-xs text-text-3">to</span>
+        <span className="text-xs text-text-3">{t("hr.attendance.toLabel")}</span>
         <Input type="date" value={toDate} onChange={e=>{setToDate(e.target.value);setShown(50);}} style={{maxWidth:170}}/>
-        {(fromDate||toDate)&&<button onClick={()=>{setFromDate("");setToDate("");}} className="bg-transparent border-0 p-0 cursor-pointer text-sm text-brand font-semibold">Clear dates</button>}
+        {(fromDate||toDate)&&<button onClick={()=>{setFromDate("");setToDate("");}} className="bg-transparent border-0 p-0 cursor-pointer text-sm text-brand font-semibold">{t("hr.attendance.clearDatesBtn")}</button>}
         <div className="flex-1"/>
-        <Btn kind="outline" size="sm" icon="download" onClick={exportCsv}>Export CSV</Btn>
+        <Btn kind="outline" size="sm" icon="download" onClick={exportCsv}>{t("hr.attendance.exportCsvBtn")}</Btn>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full border-collapse" style={{minWidth:600}}>
           <thead><tr className="border-b-2 border-line text-left">
-            <th className={TH_CLS}>Date</th>
-            {view==="team"&&<th className={TH_CLS}>Employee</th>}
-            <th className={TH_CLS}>In</th>
-            <th className={TH_CLS}>Out</th>
-            <th className={TH_CLS}>Hours</th>
-            <th className={TH_CLS}>Source</th>
+            <th className={TH_CLS}>{t("hr.attendance.dateHeader")}</th>
+            {view==="team"&&<th className={TH_CLS}>{t("hr.attendance.employeeHeader")}</th>}
+            <th className={TH_CLS}>{t("hr.attendance.inHeader")}</th>
+            <th className={TH_CLS}>{t("hr.attendance.outHeader")}</th>
+            <th className={TH_CLS}>{t("hr.attendance.hoursHeader")}</th>
+            <th className={TH_CLS}>{t("hr.attendance.sourceHeader")}</th>
           </tr></thead>
           <tbody>
             {sorted.slice(0,shown).map(r=>{const who=A.hrEmp(r.employee);
               return <tr key={r.id} className="border-b border-line-soft transition-colors duration-150 hover:bg-bg">
                 <td className={`${TD_CLS} text-sm text-text`}>{r.date}</td>
-                {view==="team"&&<td className={`${TD_CLS} text-sm text-text`}>{who?.name||"—"}</td>}
-                <td className={`${TD_CLS} text-sm text-text`}>{r.clockIn||"—"}{r.late&&<Tag tone="warn" sm style={{marginLeft:6}}>Late</Tag>}</td>
-                <td className={`${TD_CLS} text-sm text-text-2`}>{r.clockOut||"—"}</td>
+                {view==="team"&&<td className={`${TD_CLS} text-sm text-text`}>{who?.name||t("hr.attendance.dash")}</td>}
+                <td className={`${TD_CLS} text-sm text-text`}>{r.clockIn||t("hr.attendance.dash")}{r.late&&<Tag tone="warn" sm style={{marginLeft:6}}>{t("hr.attendance.lateTag")}</Tag>}</td>
+                <td className={`${TD_CLS} text-sm text-text-2`}>{r.clockOut||t("hr.attendance.dash")}</td>
                 <td className={`${TD_CLS} text-sm text-brand font-semibold`}>{r.hours||0}h</td>
                 <td className={`${TD_CLS} text-xs text-text-3`}>{r.source}</td>
               </tr>;})}
-            {sorted.length===0&&<tr><td colSpan={view==="team"?6:5} className="p-5"><Empty icon="clock" title="No attendance records yet" body="Punch-in history will show up here."/></td></tr>}
+            {sorted.length===0&&<tr><td colSpan={view==="team"?6:5} className="p-5"><Empty icon="clock" title={t("hr.attendance.noAttendanceRecords")} body={t("hr.attendance.punchInHistory")}/></td></tr>}
           </tbody>
         </table>
       </div>
-      {sorted.length>shown&&<Btn kind="outline" full style={{marginTop:14}} onClick={()=>setShown(s=>s+50)}>Show more ({sorted.length-shown} remaining)</Btn>}
+      {sorted.length>shown&&<Btn kind="outline" full style={{marginTop:14}} onClick={()=>setShown(s=>s+50)}>{t("hr.attendance.showMoreBtn",{remaining:sorted.length-shown})}</Btn>}
     </Card>
   </div>;
 }
