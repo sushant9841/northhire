@@ -991,7 +991,7 @@ export function HrChat(){
   return <div className="grid gap-3" style={{gridTemplateColumns:mob?"1fr":"280px 1fr",height:"calc(100vh - 130px)"}}>
     {(showThreads||!mob)&&<Card pad={0} style={{borderRadius:14,overflow:"hidden",display:"flex",flexDirection:"column"}}>
       <div className="py-3.5 px-4 border-b border-line-soft flex justify-between items-center">
-        <div className="text-sm font-semibold text-text">Conversations</div>
+        <div className="text-sm font-semibold text-text">{t("hr.chat.conversations")}</div>
         {(chatSettings.allowDirectMessages||chatSettings.allowGroupCreation)&&<Btn kind="ghost" size="xs" icon="plus" onClick={()=>setShowNew(true)}/>}
       </div>
       <div className="flex-1 overflow-y-auto">
@@ -1002,7 +1002,7 @@ export function HrChat(){
             <div className="flex justify-between items-baseline gap-2 mb-1">
               <div className={`text-sm overflow-hidden text-ellipsis whitespace-nowrap ${isActive||unread?"font-bold":"font-semibold"} text-text`}>{c.name}</div>
               <div className="flex gap-1.5 items-center shrink-0">
-                {lastMsg&&<div className="text-xs text-text-3" style={{fontSize:10.5}}>{new Date(lastMsg.at).toLocaleDateString("en-CA",{month:"short",day:"numeric"})}</div>}
+                {lastMsg&&<div className="text-xs text-text-3" style={{fontSize:10.5}}>{new Intl.DateTimeFormat(locale==="fr-CA"?"fr-CA":"en-CA",{month:"short",day:"numeric"}).format(new Date(lastMsg.at))}</div>}
                 {unread&&<span className="min-w-4.5 h-4.5 px-1 rounded-full bg-brand text-white text-xs font-bold flex items-center justify-center" style={{fontSize:10}}>{c.unreadCount}</span>}
               </div>
             </div>
@@ -1014,43 +1014,43 @@ export function HrChat(){
     {(!showThreads||!mob)&&chat&&<Card pad={0} style={{borderRadius:14,overflow:"hidden",display:"flex",flexDirection:"column"}}>
       <div className="py-3.5 px-5 border-b border-line-soft flex justify-between items-center bg-white">
         <div>
-          {mob&&<Btn kind="ghost" size="xs" icon="chevL" onClick={()=>setShowThreads(true)}>Back</Btn>}
+          {mob&&<Btn kind="ghost" size="xs" icon="chevL" onClick={()=>setShowThreads(true)}>{t("hr.chat.back")}</Btn>}
           <div className="text-base font-semibold text-text">{chat.name}</div>
           <div className="text-xs text-text-3 mt-0.5">{chat.about}</div>
         </div>
         {chatSettings.allowCalls&&<div className="flex gap-1.5">
-          <Btn kind="ghost" size="xs" icon="phone" title={`Call ${chat.name}`} onClick={()=>A.toast("Voice/video calling isn't available in this preview build.")}/>
-          <Btn kind="ghost" size="xs" icon="play" title={`Video call ${chat.name}`} onClick={()=>A.toast("Voice/video calling isn't available in this preview build.")}/>
+          <Btn kind="ghost" size="xs" icon="phone" title={t("hr.chat.callBtn",{name:chat.name})} onClick={()=>A.toast(t("hr.chat.voiceVideoNotAvailable"))}/>
+          <Btn kind="ghost" size="xs" icon="play" title={t("hr.chat.videoCallBtn",{name:chat.name})} onClick={()=>A.toast(t("hr.chat.voiceVideoNotAvailable"))}/>
         </div>}
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 bg-bg flex flex-col gap-2.5">
         {messages.length===0
-          ? <Empty icon="mail" title="No messages yet" body="Start the conversation below."/>
+          ? <Empty icon="mail" title={t("hr.chat.noMessagesYetTitle")} body={t("hr.chat.noMessagesYetBody")}/>
           : messages.map(m=>{const from=A.hrEmp(m.from); const isMe=m.from===emp.id;
               return <div key={m.id} className={`flex gap-2.5 ${isMe?"flex-row-reverse self-end":"flex-row self-start"}`} style={{maxWidth:"85%"}}>
                 {!isMe&&<SmartPortrait seed={from?.seed||0} size={30} radius={8}/>}
                 <div className="rounded-xl py-2.5 px-3.5" style={{background:isMe?C.brand:"#fff",color:isMe?"#fff":C.text,boxShadow:isMe?"none":SH.sm}}>
-                  {!isMe&&<div className="text-xs font-semibold mb-1 text-text-3">{from?.name||"Unknown"}</div>}
+                  {!isMe&&<div className="text-xs font-semibold mb-1 text-text-3">{from?.name||t("hr.chat.unknown")}</div>}
                   <div className="text-sm leading-snug whitespace-pre-wrap">{m.text}</div>
-                  <div className={`text-xs mt-1.5 opacity-70 ${isMe?"text-right":"text-left"}`} style={{fontSize:10.5}}>{new Date(m.at).toLocaleTimeString("en-CA",{hour:"2-digit",minute:"2-digit"})}</div>
+                  <div className={`text-xs mt-1.5 opacity-70 ${isMe?"text-right":"text-left"}`} style={{fontSize:10.5}}>{formatDateTime(m.at,locale,{hour:"2-digit",minute:"2-digit"})}</div>
                 </div>
               </div>;})}
       </div>
 
       <div className="p-3.5 border-t border-line-soft flex gap-2">
-        <div className="flex-1"><Input value={msg} onChange={e=>setMsg(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault(); send();}}} placeholder="Type a message…"/></div>
-        <Btn kind="primary" icon="send" onClick={send} disabled={!msg.trim()}>Send</Btn>
+        <div className="flex-1"><Input value={msg} onChange={e=>setMsg(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault(); send();}}} placeholder={t("hr.chat.typeMessagePlaceholder")}/></div>
+        <Btn kind="primary" icon="send" onClick={send} disabled={!msg.trim()}>{t("hr.chat.send")}</Btn>
       </div>
     </Card>}
 
-    {showNew&&<Modal onClose={()=>setShowNew(false)} title="Start a new conversation">
-      <_HrNewChat allowDm={chatSettings.allowDirectMessages} allowGroup={chatSettings.allowGroupCreation}
+    {showNew&&<Modal onClose={()=>setShowNew(false)} title={t("hr.chat.startNewConversation")}>
+      <_HrNewChat allowDm={chatSettings.allowDirectMessages} allowGroup={chatSettings.allowGroupCreation} t={t}
         onClose={()=>setShowNew(false)} onCreate={id=>{setSelected(id); setShowNew(false);}}/>
     </Modal>}
   </div>;
 }
-function _HrNewChat({onClose,onCreate,allowDm=true,allowGroup=true}){
+function _HrNewChat({onClose,onCreate,allowDm=true,allowGroup=true,t}){
   const A=use(); const emp=A.hrCurrentEmp();
   const [kind,setKind]=useState(allowDm?"dm":"group"); /* dm | group */
   const [name,setName]=useState("");
@@ -1060,21 +1060,21 @@ function _HrNewChat({onClose,onCreate,allowDm=true,allowGroup=true}){
   const create=async()=>{
     if(kind==="dm"&&selected.length===1){
       const other=A.hrEmp(selected[0]);
-      const c=await A.createHrChat({kind:"dm",name:other.name,members:`${emp.id},${selected[0]}`,about:"Direct message"});
+      const c=await A.createHrChat({kind:"dm",name:other.name,members:`${emp.id},${selected[0]}`,about:t("hr.chat.directMessageAbout")});
       onCreate(c.id);
     } else if(kind==="group"&&name.trim()&&selected.length>0){
-      const c=await A.createHrChat({kind:"group",name:`# ${name.trim()}`,members:`${emp.id},${selected.join(",")}`,about:`Group of ${selected.length+1}`});
+      const c=await A.createHrChat({kind:"group",name:`# ${name.trim()}`,members:`${emp.id},${selected.join(",")}`,about:t("hr.chat.groupAbout",{count:selected.length+1})});
       onCreate(c.id);
     }
   };
   return <div className="flex flex-col gap-3.5">
     <div className="grid grid-cols-2 gap-2.5">
-      {[["dm","Direct message",allowDm],["group","Group chat",allowGroup]].filter(([,,allowed])=>allowed).map(([k,l])=>
+      {[["dm",t("hr.chat.directMessage"),allowDm],["group",t("hr.chat.groupChat"),allowGroup]].filter(([,,allowed])=>allowed).map(([k,l])=>
         <button key={k} onClick={()=>setKind(k)} className={`p-3.5 rounded-xl cursor-pointer text-sm border-2 ${kind===k?"border-brand bg-tint font-bold text-brand":"border-line bg-white font-medium text-text"}`}>{l}</button>)}
     </div>
-    {kind==="group"&&<Field label="Group name"><Input value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. field-crew-calgary"/></Field>}
+    {kind==="group"&&<Field label={t("hr.chat.groupNameLabel")}><Input value={name} onChange={e=>setName(e.target.value)} placeholder={t("hr.chat.groupNamePlaceholder")}/></Field>}
     <div>
-      <Lbl>Select {kind==="dm"?"someone":"members"}</Lbl>
+      <Lbl>{kind==="dm"?t("hr.chat.selectSomeone"):t("hr.chat.selectMembers")}</Lbl>
       <div className="border border-line rounded-lg overflow-y-auto" style={{maxHeight:280}}>
         {all.map(e=><label key={e.id} className="flex gap-2.5 items-center py-2.5 px-3.5 border-b border-line-soft cursor-pointer">
           <input type={kind==="dm"?"radio":"checkbox"} name="who" checked={selected.includes(e.id)}
@@ -1088,8 +1088,8 @@ function _HrNewChat({onClose,onCreate,allowDm=true,allowGroup=true}){
       </div>
     </div>
     <div className="flex gap-2.5 justify-end">
-      <Btn kind="ghost" onClick={onClose}>Cancel</Btn>
-      <Btn kind="primary" onClick={create} disabled={selected.length===0||(kind==="group"&&!name.trim())}>Start conversation</Btn>
+      <Btn kind="ghost" onClick={onClose}>{t("hr.chat.cancelBtn")}</Btn>
+      <Btn kind="primary" onClick={create} disabled={selected.length===0||(kind==="group"&&!name.trim())}>{t("hr.chat.startConversationBtn")}</Btn>
     </div>
   </div>;
 }
