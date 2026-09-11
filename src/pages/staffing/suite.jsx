@@ -308,17 +308,17 @@ export function AgencyJobOrders(){
   return <div>
     <div className="flex justify-between items-center mb-4 flex-wrap gap-2.5">
       <div>
-        <div className="text-lg font-bold text-text tracking-tight">{list.length} job orders</div>
-        <div className="text-sm text-text-3 mt-0.5">Client requests for workers.</div>
+        <div className="text-lg font-bold text-text tracking-tight">{t("staffing.jobOrders.count",{n:list.length})}</div>
+        <div className="text-sm text-text-3 mt-0.5">{t("staffing.jobOrders.desc")}</div>
       </div>
-      <Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowAdd(true)}>New job order</Btn>
+      <Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowAdd(true)}>{t("staffing.jobOrders.new")}</Btn>
     </div>
 
     <Card pad={mob?14:18} style={{marginBottom:14,borderRadius:12}}>
       <div className="flex gap-2.5 flex-wrap items-center">
-        <_PillTabs items={[["open","Open"],["filled","Filled"],["closed","Closed"],["all","All"]]} value={tab} onChange={setTab}/>
+        <_PillTabs items={[["open",t("staffing.jobOrders.status.open")],["filled",t("staffing.jobOrders.status.filled")],["closed",t("staffing.jobOrders.status.closed")],["all",t("staffing.jobOrders.status.all")]]} value={tab} onChange={setTab}/>
         <div className="grow shrink basis-55 min-w-0">
-          <Input icon="search" value={q} onChange={e=>setQ(e.target.value)} placeholder="Search title or location"/></div>
+          <Input icon="search" value={q} onChange={e=>setQ(e.target.value)} placeholder={t("staffing.jobOrders.search")}/></div>
       </div>
     </Card>
 
@@ -331,23 +331,23 @@ export function AgencyJobOrders(){
           <div className="flex gap-2 items-center mb-2 flex-wrap">
             <Tag tone={jo.urgency==="high"?"danger":jo.urgency==="medium"?"warn":"neutral"} sm>{jo.urgency}</Tag>
             <Tag tone={jo.status==="open"?"brand":jo.status==="filled"?"ok":"neutral"} sm>{jo.status}</Tag>
-            <span className="text-xs text-text-3 ml-auto">{daysOld}d old</span>
+            <span className="text-xs text-text-3 ml-auto">{daysOld}{t("staffing.jobOrders.daysOld")}</span>
           </div>
           <div className="font-semibold text-text tracking-tight leading-snug mb-1.5" style={{fontSize:15}}>{jo.title}</div>
           <div className="text-xs text-text-2 mb-3">{client?.name} · {jo.location.split(" — ")[0]}</div>
           <div className="grid grid-cols-2 gap-2 mb-3">
             <div className="py-2.5 px-3 bg-bg rounded-lg">
-              <div className="text-xs text-text-3 font-semibold tracking-wide uppercase" style={{fontSize:10.5}}>Pay/Bill</div>
-              <div className="text-sm font-semibold text-text mt-1">${jo.payRate} / ${jo.billRate}/hr</div>
+              <div className="text-xs text-text-3 font-semibold tracking-wide uppercase" style={{fontSize:10.5}}>{t("staffing.jobOrders.payBill")}</div>
+              <div className="text-sm font-semibold text-text mt-1">${jo.payRate} / ${jo.billRate}/h</div>
             </div>
             <div className="py-2.5 px-3 bg-bg rounded-lg">
-              <div className="text-xs text-text-3 font-semibold tracking-wide uppercase" style={{fontSize:10.5}}>Filled</div>
-              <div className="text-sm font-semibold text-brand mt-1">{jo.filled}/{jo.positions}{remaining>0?` (${remaining} left)`:""}</div>
+              <div className="text-xs text-text-3 font-semibold tracking-wide uppercase" style={{fontSize:10.5}}>{t("staffing.jobOrders.filled_label")}</div>
+              <div className="text-sm font-semibold text-brand mt-1">{jo.filled}/{jo.positions}{remaining>0?` (${remaining} ${t("staffing.jobOrders.left")})`:""}</div>
             </div>
           </div>
-          <div className="text-xs text-text-3">Starts {jo.startDate} · {jo.ongoing?"Ongoing":`Ends ${jo.endDate}`}</div>
+          <div className="text-xs text-text-3">{t("staffing.jobOrders.starts")} {jo.startDate} · {jo.ongoing?t("staffing.jobOrders.ongoing"):`${t("staffing.jobOrders.ends")} ${jo.endDate}`}</div>
         </div>;})}
-      {list.length===0&&<Empty icon="briefcase" title="No job orders" body="Add a new order or change the filter."/>}
+      {list.length===0&&<Empty icon="briefcase" title={t("staffing.jobOrders.empty")} body={t("staffing.jobOrders.emptyDesc")}/>}
     </div>
     <Pagination {...pg}/>
 
@@ -356,10 +356,10 @@ export function AgencyJobOrders(){
   </div>;
 }
 
-const SUBMITTAL_STAGE_LABEL={submitted:"Submitted",client_review:"Client review",interview:"Interview",offer:"Offer",placed:"Placed",rejected:"Rejected"};
 const SUBMITTAL_STAGE_ORDER=["submitted","client_review","interview","offer"];
 function _JobOrderDetail({id,onClose}){
   const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
+  const SUBMITTAL_STAGE_LABEL={submitted:t("staffing.jobOrders.stage_submitted"),client_review:t("staffing.jobOrders.stage_client_review"),interview:t("staffing.jobOrders.stage_interview"),offer:t("staffing.jobOrders.stage_offer"),placed:t("staffing.jobOrders.stage_placed"),rejected:t("staffing.jobOrders.stage_rejected")};
   const jo=A.jobOrder(id); if(!jo)return null;
   const client=A.staffingClient(jo.client);
   const filled=A.assignments.filter(a=>a.jobOrder===jo.id);
@@ -385,7 +385,7 @@ function _JobOrderDetail({id,onClose}){
     return {w,score,hasAll:has.length===jo.mustHave.length};
   }).sort((a,b)=>b.score-a.score);
 
-  return <Modal onClose={onClose} title="Job order" wide>
+  return <Modal onClose={onClose} title={t("staffing.jobOrders.detail_title")} wide>
     <div className="grid gap-5" style={{gridTemplateColumns:mob?"1fr":"1fr 320px"}}>
       <div>
         <div className="flex gap-2 mb-3 flex-wrap">
@@ -396,30 +396,31 @@ function _JobOrderDetail({id,onClose}){
         <div className="text-sm text-text-2 mt-1.5">{client?.name} · {jo.location}</div>
 
         <div className="grid grid-cols-2 gap-3 mt-5 mb-4">
-          {[["Positions",`${jo.filled}/${jo.positions}`],
-            ["Pay/Bill",`$${jo.payRate}/$${jo.billRate}/hr`],
-            ["Starts",jo.startDate],
-            ["Ends",jo.ongoing?"Ongoing":jo.endDate],
-            ["Shift",jo.shiftPattern],
-            ["OT",jo.overtimeAvailable?"Available (1.5x)":"None"]].map(([l,v])=>
+          {[[t("staffing.jobOrders.positions"),`${jo.filled}/${jo.positions}`],
+            [t("staffing.jobOrders.pay_rate"),`$${jo.payRate}`],
+            [`${t("staffing.jobOrders.bill_rate")}`,`$${jo.billRate}/h`],
+            [t("staffing.jobOrders.starts"),jo.startDate],
+            [t("staffing.jobOrders.ends"),jo.ongoing?t("staffing.jobOrders.ongoing"):jo.endDate],
+            [t("staffing.jobOrders.shift"),jo.shiftPattern],
+            [t("staffing.jobOrders.ot"),jo.overtimeAvailable?t("staffing.jobOrders.ot_available"):t("staffing.jobOrders.ot_none")]].map(([l,v])=>
             <div key={l}><div className="text-xs font-bold text-text-3 tracking-wide uppercase mb-1">{l}</div>
               <div className="text-sm text-text">{v}</div></div>)}
         </div>
 
         <div className="mb-3.5">
-          <Lbl>Must-have tickets</Lbl>
+          <Lbl>{t("staffing.jobOrders.mustHave")}</Lbl>
           <div className="flex flex-wrap gap-1.5">
             {jo.mustHave.map(m=><Tag key={m} tone="danger" sm icon="alert">{m}</Tag>)}
           </div>
         </div>
         {jo.niceToHave.length>0&&<div className="mb-3.5">
-          <Lbl>Nice to have</Lbl>
+          <Lbl>{t("staffing.jobOrders.niceToHave")}</Lbl>
           <div className="flex flex-wrap gap-1.5">
             {jo.niceToHave.map(m=><Tag key={m} tone="brand" sm>{m}</Tag>)}
           </div>
         </div>}
 
-        <Lbl>Supervisor</Lbl>
+        <Lbl>{t("staffing.jobOrders.supervisor")}</Lbl>
         <div className="p-3 bg-bg rounded-lg mb-3.5">
           <div className="text-sm font-semibold text-text">{jo.supervisor}</div>
           <div className="text-xs text-text-3 mt-1">{jo.supervisorEmail}{jo.supervisorPhone?` · ${jo.supervisorPhone}`:""}</div>
@@ -437,7 +438,7 @@ function _JobOrderDetail({id,onClose}){
 
       <div>
         {submittalList.length>0&&<div className="mb-4">
-          <Lbl>Submittal pipeline</Lbl>
+          <Lbl>{t("staffing.jobOrders.pipeline")}</Lbl>
           <div className="flex flex-col gap-2">
             {submittalList.map(s=>{const w=A.worker(s.worker); const person=w?(A.people||[]).find(p=>p.id===w.personId):null;
               return <div key={s.id} className="py-2.5 px-3 bg-bg rounded-lg">
@@ -449,13 +450,13 @@ function _JobOrderDetail({id,onClose}){
                   </div>
                 </div>
                 <div className="flex gap-1.5">
-                  <Btn kind="outline" size="xs" full onClick={()=>advanceSubmittal(s)}>{s.stage==="offer"?"Place":`Advance to ${SUBMITTAL_STAGE_LABEL[SUBMITTAL_STAGE_ORDER[SUBMITTAL_STAGE_ORDER.indexOf(s.stage)+1]]}`}</Btn>
-                  <Btn kind="ghost" size="xs" onClick={()=>A.updateSubmittal(s.id,jo.id,{stage:"rejected"})}>Reject</Btn>
+                  <Btn kind="outline" size="xs" full onClick={()=>advanceSubmittal(s)}>{s.stage==="offer"?t("staffing.jobOrders.place"):`${t("staffing.jobOrders.advance")} ${SUBMITTAL_STAGE_LABEL[SUBMITTAL_STAGE_ORDER[SUBMITTAL_STAGE_ORDER.indexOf(s.stage)+1]]}`}</Btn>
+                  <Btn kind="ghost" size="xs" onClick={()=>A.updateSubmittal(s.id,jo.id,{stage:"rejected"})}>{t("staffing.jobOrders.reject")}</Btn>
                 </div>
               </div>;})}
           </div>
         </div>}
-        <Lbl>Matched from bench</Lbl>
+        <Lbl>{t("staffing.jobOrders.matched")}</Lbl>
         <div className="flex flex-col gap-2 mb-3">
           {matched.slice(0,showAllMatches?matched.length:6).map(({w,score,hasAll})=>{const person=(A.people||[]).find(p=>p.id===w.personId);
             const alreadySubmitted=submittedWorkerIds.has(w.id);
@@ -470,11 +471,11 @@ function _JobOrderDetail({id,onClose}){
                 {jo.status==="open"&&!alreadySubmitted&&<Btn kind="ghost" size="xs" onClick={()=>A.submitWorker(jo.id,w.id)}>Submit</Btn>}
               </div>
             </div>;})}
-          {matched.length===0&&<div className="text-xs text-text-3 p-3 text-center">No available workers.</div>}
+          {matched.length===0&&<div className="text-xs text-text-3 p-3 text-center">{t("staffing.jobOrders.noWorkers")}</div>}
           {matched.length>6&&<button onClick={()=>setShowAllMatches(v=>!v)} className="bg-transparent border-0 p-0 cursor-pointer text-sm text-brand font-semibold text-center">
-            {showAllMatches?"Show fewer":`Show all ${matched.length} matches`}</button>}
+            {showAllMatches?t("staffing.jobOrders.showFewer"):t("staffing.jobOrders.showAll",{n:matched.length})}</button>}
         </div>
-        {jo.status==="open"&&<Btn kind="primary" size="sm" full icon="plus" onClick={()=>setShowPlace(true)}>Place a worker directly</Btn>}
+        {jo.status==="open"&&<Btn kind="primary" size="sm" full icon="plus" onClick={()=>setShowPlace(true)}>{t("staffing.jobOrders.placeDirectly")}</Btn>}
       </div>
     </div>
 
@@ -510,11 +511,11 @@ function _PlaceWorkerModal({jobOrder,onClose,onPlace,preselectWorkerId,onSubmitt
     onPlace();
   };
 
-  return <Modal onClose={onClose} title="Place a worker">
+  return <Modal onClose={onClose} title={t("staffing.jobOrders.placeModal")}>
     <div className="flex flex-col gap-3.5">
-      <Field label="Worker" required>
+      <Field label={t("staffing.jobOrders.worker")} required>
         <Sel value={workerId} onChange={e=>{setWorkerId(e.target.value); const w=availableWorkers.find(x=>x.id===e.target.value); if(w){setPayRate(w.payRateTarget||jobOrder.payRate); setBenefitsPerHr(w.defaultBenefitsPerHr||0);}}}>
-          <option value="">Select from bench…</option>
+          <option value="">{t("staffing.jobOrders.selectBench")}</option>
           {availableWorkers.map(w=>{const p=(A.people||[]).find(pp=>pp.id===w.personId);
             return <option key={w.id} value={w.id}>{p?.name||w.id} — {w.city}, {w.province}</option>;})}
         </Sel>
@@ -529,38 +530,38 @@ function _PlaceWorkerModal({jobOrder,onClose,onPlace,preselectWorkerId,onSubmitt
         </div>
       </div>}
       <div className="grid grid-cols-2 gap-2.5">
-        <Field label="Pay rate ($/hr)" required><Input type="number" min="0" step="0.5" value={payRate} onChange={e=>setPayRate(e.target.value)}/></Field>
-        <Field label="Bill rate ($/hr)" required><Input type="number" min="0" step="0.5" value={billRate} onChange={e=>setBillRate(e.target.value)}/></Field>
+        <Field label={t("staffing.jobOrders.payRateLabel")} required><Input type="number" min="0" step="0.5" value={payRate} onChange={e=>setPayRate(e.target.value)}/></Field>
+        <Field label={t("staffing.jobOrders.billRateLabel")} required><Input type="number" min="0" step="0.5" value={billRate} onChange={e=>setBillRate(e.target.value)}/></Field>
       </div>
-      <Field label="Benefits/hr" hint="Health/dental/RRSP burden for this placement — defaults to the worker's profile default.">
+      <Field label={t("staffing.jobOrders.benefitsLabel")} hint={t("staffing.jobOrders.benefitsHint")}>
         <Input type="number" min="0" step="0.05" value={benefitsPerHr} onChange={e=>setBenefitsPerHr(e.target.value)}/>
       </Field>
-      {rateInvalid&&<Banner tone="danger" icon="alert">Bill rate can't be below pay rate — that's a guaranteed loss before burden is even added.</Banner>}
+      {rateInvalid&&<Banner tone="danger" icon="alert">{t("staffing.jobOrders.billBelowPay")}</Banner>}
       {selectedW&&<Card pad={14} style={{borderRadius:11,background:marginOk?C.okBg:C.warnBg,border:`1px solid ${marginOk?C.okLn:C.warnLn}`}}>
         <div className="flex justify-between text-xs mb-1.5">
-          <span className="text-text-3 font-semibold">MARKUP</span>
+          <span className="text-text-3 font-semibold">{t("staffing.jobOrders.markup")}</span>
           <span className="font-bold" style={{color:marginOk?C.ok:C.warn}}>{econ.markupPct}%</span>
         </div>
         <div className="flex justify-between text-xs mb-1.5">
-          <span className="text-text-3 font-semibold">BURDEN/HR ({selectedW.province})</span>
+          <span className="text-text-3 font-semibold">{t("staffing.jobOrders.burden_prov",{prov:selectedW.province})}</span>
           <span className="font-bold text-text">${econ.burden}</span>
         </div>
         <div className="flex justify-between text-xs mb-1.5">
-          <span className="text-text-3 font-semibold">TRUE COST/HR (after burden)</span>
+          <span className="text-text-3 font-semibold">{t("staffing.jobOrders.trueCost")}</span>
           <span className="font-bold text-text">${econ.trueCost}</span>
         </div>
         <div className="flex justify-between text-xs">
-          <span className="text-text-3 font-semibold">MARGIN/HR</span>
+          <span className="text-text-3 font-semibold">{t("staffing.jobOrders.marginHr")}</span>
           <span className="font-bold" style={{color:econ.margin>0?C.ok:C.danger}}>${econ.margin}</span>
         </div>
         <div className="text-xs text-text-3 mt-2 pt-2 border-t border-line-soft">
-          Burden rates are province-specific — the same pay/bill rate can carry a different margin in another province.</div>
+          {t("staffing.jobOrders.burdenNote")}</div>
         {!marginOk&&<div className="text-xs text-warn mt-2 pt-2 border-t border-warn-ln">
-          Below {A.STAFFING_AGENCY.markupFloor}% markup floor. Reconsider rates or you're losing money on WSIB claims.</div>}
+          {t("staffing.jobOrders.belowFloor",{floor:A.STAFFING_AGENCY.markupFloor})}</div>}
       </Card>}
       <div className="flex gap-2.5 justify-end">
-        <Btn kind="ghost" onClick={onClose}>Cancel</Btn>
-        <Btn kind="primary" onClick={place} disabled={!workerId||!payRate||!billRate||rateInvalid}>Confirm placement</Btn>
+        <Btn kind="ghost" onClick={onClose}>{t("staffing.jobOrders.cancel")}</Btn>
+        <Btn kind="primary" onClick={place} disabled={!workerId||!payRate||!billRate||rateInvalid}>{t("staffing.jobOrders.confirm")}</Btn>
       </div>
     </div>
   </Modal>;
