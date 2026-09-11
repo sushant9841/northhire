@@ -538,6 +538,15 @@ export const en = {
       viewerDesc: "Can view jobs and pipeline only (read-only).",
       changeRole: "Change role", removeFromTeam: "Remove from team", pending: "Pending",
       inviteSent: "Invitation sent to {email}", resendInvite: "Resend invite",
+      // EmpTeam tail translations
+      teamSub: "Who has access to your NorthHire employer account", seatsLabel: "Seats", used: "used",
+      sending: "Sending…", sendInvite: "Send invite", inviteCreatedTitle: "Invite created — no real email delivery exists yet, so copy this link and send it yourself",
+      copyLink: "Copy", seatLimitTitle: "You're at your plan's seat limit", seePlan: "See plans",
+      seatLimitBody: "Remove a teammate, or upgrade to invite more people.",
+      peopleWithAccess: "People with access", member: "Member", pendingInvites: "Pending invites",
+      referOtherCompany: "Refer another company", referralDesc: "Your code is {code}. When another company signs up with your code, we credit both accounts one month of their plan tier once they've paid for their first month.",
+      copyShareLink: "Copy link", teamActivity: "Team activity", noActivity: "Nothing yet. Invites, member removals and acceptances show up here.",
+      removeTitle: "Remove {name}?", removeBody: "They'll immediately lose access to this employer account. This can't be undone from here.",
     },
     billing: {
       billingTitle: "Billing and plan", currentPlan: "Current plan", planFeatures: "Features", upgrade: "Upgrade",

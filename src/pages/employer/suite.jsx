@@ -1573,44 +1573,44 @@ export function EmpTeam(){
     setInviteEmail("");
   };
   return <Page narrow>
-    <H1 sub="Who has access to your NorthHire employer account">Team</H1>
+    <H1 sub={t("employer.team.teamSub")}>{t("employer.team.teamTitle")}</H1>
     <Card pad={mob?20:26} style={{marginBottom:16}}>
       <div className="flex justify-between items-center mb-4">
-        <Lbl style={{marginBottom:0}}>Seats</Lbl>
-        <Tag tone={atLimit?"warn":"neutral"} sm>{seatsUsed} of {unlimited?"unlimited":seatLimit} used</Tag>
+        <Lbl style={{marginBottom:0}}>{t("employer.team.seatsLabel")}</Lbl>
+        <Tag tone={atLimit?"warn":"neutral"} sm>{seatsUsed} of {unlimited?"unlimited":seatLimit} {t("employer.team.used")}</Tag>
       </div>
       {isOwner&&<>
         <div className="flex gap-2.5 flex-wrap">
           <div className="flex-1 min-w-50"><Input icon="mail" type="email" value={inviteEmail} onChange={e=>{setInviteEmail(e.target.value);setErr("");}} placeholder="teammate@yourcompany.ca" disabled={atLimit}/></div>
-          <Btn kind="primary" icon="mail" onClick={send} disabled={inviting||!inviteEmail.trim()||atLimit}>{inviting?"Sending…":"Send invite"}</Btn>
+          <Btn kind="primary" icon="mail" onClick={send} disabled={inviting||!inviteEmail.trim()||atLimit}>{inviting?t("employer.team.sending"):t("employer.team.sendInvite")}</Btn>
         </div>
         {err&&<div className="text-sm mt-2" style={{color:C.danger}}>{err}</div>}
-        {lastInviteLink&&<Banner tone="ok" icon="mail" style={{marginTop:12}} title="Invite created — no real email delivery exists yet, so copy this link and send it yourself">
+        {lastInviteLink&&<Banner tone="ok" icon="mail" style={{marginTop:12}} title={t("employer.team.inviteCreatedTitle")}>
           <div className="flex gap-2 items-center flex-wrap">
             <code className="text-xs bg-white border border-line-2 rounded-lg py-1.5 px-2.5 break-all">{lastInviteLink}</code>
-            <Btn kind="outline" size="sm" icon="copy" onClick={()=>{navigator.clipboard?.writeText(lastInviteLink);A.toast("Invite link copied");}}>Copy</Btn>
+            <Btn kind="outline" size="sm" icon="copy" onClick={()=>{navigator.clipboard?.writeText(lastInviteLink);A.toast("Invite link copied");}}>{t("employer.team.copyLink")}</Btn>
           </div>
         </Banner>}
-        {atLimit&&<Banner tone="warn" icon="alert" style={{marginTop:12}} title="You're at your plan's seat limit"
-          action={<Btn kind="primary" size="sm" onClick={()=>A.go("pricing")}>See plans</Btn>}>
-          Remove a teammate, or upgrade to invite more people.</Banner>}
+        {atLimit&&<Banner tone="warn" icon="alert" style={{marginTop:12}} title={t("employer.team.seatLimitTitle")}
+          action={<Btn kind="primary" size="sm" onClick={()=>A.go("pricing")}>{t("employer.team.seePlan")}</Btn>}>
+          {t("employer.team.seatLimitBody")}</Banner>}
       </>}
     </Card>
     <Card pad={mob?20:26} style={{marginBottom:16}}>
-      <Lbl>People with access</Lbl>
+      <Lbl>{t("employer.team.peopleWithAccess")}</Lbl>
       <div className="flex flex-col gap-2">
         {members.map(m=><div key={m.id} className="flex items-center gap-3 py-2.5 border-b border-line-soft">
           <SmartPortrait seed={0} size={36} radius={10}/>
           <div className="flex-1 min-w-0">
             <div className="text-sm font-semibold text-text">{m.name}{m.id===A.user?.id&&<span className="text-text-3 font-normal"> (you)</span>}</div>
             <div className="text-xs text-text-3 overflow-hidden text-ellipsis whitespace-nowrap">{m.email}</div></div>
-          <Tag tone={m.role==="owner"?"brand":"neutral"} sm>{m.role==="owner"?"Owner":"Member"}</Tag>
+          <Tag tone={m.role==="owner"?"brand":"neutral"} sm>{m.role==="owner"?t("employer.team.owner"):t("employer.team.member")}</Tag>
           {isOwner&&m.role!=="owner"&&<Btn kind="ghost" size="xs" icon="trash" onClick={()=>setRemoving(m)}/>}
         </div>)}
       </div>
     </Card>
     {isOwner&&invites.length>0&&<Card pad={mob?20:26}>
-      <Lbl>Pending invites</Lbl>
+      <Lbl>{t("employer.team.pendingInvites")}</Lbl>
       <div className="flex flex-col gap-2">
         {invites.map(inv=><div key={inv.id} className="flex items-center gap-3 py-2.5 border-b border-line-soft">
           <div className="w-9 h-9 rounded-lg bg-wash text-brand flex items-center justify-center shrink-0"><I n="mail" s={16}/></div>
@@ -1626,24 +1626,23 @@ export function EmpTeam(){
         display + share-URL only for now - no fake "you've earned $X" until the credit
         pipeline is real. */}
     {A.company?.referralCode&&<Card pad={mob?20:26} style={{marginTop:16}}>
-      <Lbl>Refer another company</Lbl>
+      <Lbl>{t("employer.team.referOtherCompany")}</Lbl>
       <div className="text-sm text-text-2 mb-3 leading-relaxed">
-        Your code is <code className="bg-brand-wash border border-brand-line text-brand rounded px-2 py-0.5 font-semibold">{A.company.referralCode}</code>.
-        When another company signs up with your code, we credit both accounts one month of their plan tier once they've paid for their first month.
+        {t("employer.team.referralDesc",{code:<code className="bg-brand-wash border border-brand-line text-brand rounded px-2 py-0.5 font-semibold">{A.company.referralCode}</code>})}
       </div>
       {(()=>{const url=`${window.location.origin}/signup?ref=${encodeURIComponent(A.company.referralCode)}`;
         return <div className="flex gap-2 items-center flex-wrap">
           <code className="text-xs bg-white border border-line-2 rounded-lg py-1.5 px-2.5 break-all flex-1 min-w-50">{url}</code>
-          <Btn kind="outline" size="sm" icon="copy" onClick={()=>{navigator.clipboard?.writeText(url); A.toast("Share link copied");}}>Copy link</Btn>
+          <Btn kind="outline" size="sm" icon="copy" onClick={()=>{navigator.clipboard?.writeText(url); A.toast("Share link copied");}}>{t("employer.team.copyShareLink")}</Btn>
         </div>;})()}
     </Card>}
 
     {/* Audit trail - who did what on this account, and when. Any teammate can read it; the tracker
         called out the missing paper trail for team-management actions specifically. */}
     <Card pad={mob?20:26} style={{marginTop:16}}>
-      <Lbl>Team activity</Lbl>
+      <Lbl>{t("employer.team.teamActivity")}</Lbl>
       {audit.length===0
-        ? <div className="text-sm text-text-3 py-2">Nothing yet. Invites, member removals and acceptances show up here.</div>
+        ? <div className="text-sm text-text-3 py-2">{t("employer.team.noActivity")}</div>
         : <div className="flex flex-col">{audit.map(ev=>{
             const meta=actionLabel[ev.action]||{icon:"file",tone:"neutral",label:ev.action};
             const when=new Date(ev.at).toLocaleString("en-CA",{day:"numeric",month:"short",year:"numeric",hour:"numeric",minute:"2-digit"});
@@ -1655,9 +1654,9 @@ export function EmpTeam(){
               <Tag tone={meta.tone} sm>{meta.label}</Tag>
             </div>;})}</div>}
     </Card>
-    <ConfirmDialog open={!!removing} onClose={()=>setRemoving(null)} confirmLabel="Remove"
-      title={`Remove ${removing?.name}?`} onConfirm={()=>{A.removeTeammate(removing.id);setRemoving(null);}}>
-      They'll immediately lose access to this employer account. This can't be undone from here.
+    <ConfirmDialog open={!!removing} onClose={()=>setRemoving(null)} confirmLabel={t("common.delete")}
+      title={t("employer.team.removeTitle",{name:removing?.name})} onConfirm={()=>{A.removeTeammate(removing.id);setRemoving(null);}}>
+      {t("employer.team.removeBody")}
     </ConfirmDialog>
   </Page>;
 }

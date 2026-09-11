@@ -540,6 +540,15 @@ export const fr = {
       viewerDesc: "Peut afficher les emplois et le pipeline uniquement (lecture seule).",
       changeRole: "Modifier le rôle", removeFromTeam: "Retirer de l'équipe", pending: "En attente",
       inviteSent: "Invitation envoyée à {email}", resendInvite: "Renvoyer l'invitation",
+      // EmpTeam tail translations
+      teamSub: "Qui a accès à votre compte d'employeur NorthHire", seatsLabel: "Sièges", used: "utilisé",
+      sending: "Envoi…", sendInvite: "Envoyer une invitation", inviteCreatedTitle: "Invitation créée — il n'y a pas de livraison de courriel réelle pour l'instant, alors copiez ce lien et envoyez-le vous-même",
+      copyLink: "Copier", seatLimitTitle: "Vous êtes au limite de sièges de votre forfait", seePlan: "Afficher les forfaits",
+      seatLimitBody: "Retirez un coéquipier ou améliorez votre forfait pour inviter davantage de personnes.",
+      peopleWithAccess: "Personnes ayant accès", member: "Membre", pendingInvites: "Invitations en attente",
+      referOtherCompany: "Référer une autre entreprise", referralDesc: "Votre code est {code}. Lorsqu'une autre entreprise s'inscrit avec votre code, nous créditons les deux comptes un mois de leur niveau de forfait une fois qu'ils ont payé leur premier mois.",
+      copyShareLink: "Copier le lien", teamActivity: "Activité de l'équipe", noActivity: "Rien pour l'instant. Les invitations, les retraits de membres et les acceptations s'affichent ici.",
+      removeTitle: "Retirer {name} ?", removeBody: "Iel perdra immédiatement l'accès à ce compte d'employeur. Ceci ne peut pas être annulé d'ici.",
     },
     billing: {
       billingTitle: "Facturation et forfait", currentPlan: "Forfait actuel", planFeatures: "Fonctionnalités", upgrade: "Passer à la version supérieure",
