@@ -6,9 +6,10 @@ import { I } from "../../design/icons.jsx";
 import { Btn, Tag, Card, Input, Sel, Field, Area, Bar, Tabs, H2, Lbl, Empty, Modal, SmartPortrait, SmartScene, Page, H1, HERO_TIGHT } from "../../design/primitives.jsx";
 import { CATS, CATM, PROVS, PCODE } from "../../store/seed/constants.js";
 import { EmpMark } from "./cards.jsx";
+import { useTranslation } from "../../i18n/i18n.jsx";
 
 export function ProfilePage(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const { t } = useTranslation(); const mob=useMedia("(max-width: 900px)");
   const u=A.user;
   /* All hooks live at the top before any conditional return - conditionally-called hooks are a
      Rules-of-Hooks violation and crash the tab with "Rendered more hooks than during the
@@ -21,11 +22,11 @@ export function ProfilePage(){
   const [showRef,setShowRef]=useState(false);
   const [ref,setRef]=useState({name:"",title:"",company:"",email:"",phone:"",relationship:""});
   useEffect(()=>{ if(u) setD({...u}); },[u]);
-  if(!u) return <Page narrow><Empty icon="user" title="Sign in to view your profile"
-    body="Create a free account to build a profile, save jobs and track applications."
+  if(!u) return <Page narrow><Empty icon="user" title={t("profile.signInTitle")}
+    body={t("profile.signInBody")}
     action={<div className="flex gap-2.5 justify-center flex-wrap">
-      <Btn kind="primary" onClick={()=>A.go("signup")}>Create account</Btn>
-      <Btn kind="outline" onClick={()=>A.go("login")}>Sign in</Btn></div>}/></Page>;
+      <Btn kind="primary" onClick={()=>A.go("signup")}>{t("profile.signInCreateBtn")}</Btn>
+      <Btn kind="outline" onClick={()=>A.go("login")}>{t("profile.signInSignInBtn")}</Btn></div>}/></Page>;
   if(u.role!=="seeker") return <EmployerAccountPage/>;
   const dirty=JSON.stringify(d)!==JSON.stringify(u);
   const set=(k,v)=>setD(p=>({...p,[k]:v}));
@@ -53,12 +54,12 @@ export function ProfilePage(){
     <section className={`${heroPad} bg-white border-b border-line-soft`}>
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-end gap-5 flex-wrap">
-          <div><Tag tone="brand" icon="user">Profile</Tag>
-            <h1 className={`${HERO_TIGHT} mt-5 mb-3 ${mob?"text-3xl":"text-5xl"}`}>Hi, {u.name.split(" ")[0]}.</h1>
-            <p className={`text-text-2 leading-normal max-w-lg ${mob?"text-base":"text-lg"}`}>This is what employers see when you apply.</p></div>
+          <div><Tag tone="brand" icon="user">{t("profile.pageTag")}</Tag>
+            <h1 className={`${HERO_TIGHT} mt-5 mb-3 ${mob?"text-3xl":"text-5xl"}`}>{t("profile.pageGreeting",{firstName:u.name.split(" ")[0]})}</h1>
+            <p className={`text-text-2 leading-normal max-w-lg ${mob?"text-base":"text-lg"}`}>{t("profile.pageSub")}</p></div>
           <div className="flex gap-2.5 flex-wrap">
-            <Btn kind="outline" icon="file" onClick={()=>A.go("cvs")}>My CVs ({A.cvs.length})</Btn>
-            <Btn kind="outline" icon="gear" onClick={()=>A.go("settings")}>Settings</Btn></div></div>
+            <Btn kind="outline" icon="file" onClick={()=>A.go("cvs")}>{t("profile.myCvsBtn",{count:A.cvs.length})}</Btn>
+            <Btn kind="outline" icon="gear" onClick={()=>A.go("settings")}>{t("profile.settingsBtn")}</Btn></div></div>
       </div>
     </section>
     <section className={`bg-bg min-h-100 ${mob?"pt-8 px-4 pb-14":"pt-12 px-8 pb-24"}`}>
