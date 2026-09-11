@@ -1589,6 +1589,24 @@ export function EmpTeam(){
         </div>)}
       </div>
     </Card>}
+    {/* Referral program: every employer account has a stable code. Sharing the signup URL with
+        another company owner records the attribution when they sign up; future work is to
+        actually issue a credit note when the referred account starts paying. Kept as a
+        display + share-URL only for now - no fake "you've earned $X" until the credit
+        pipeline is real. */}
+    {A.company?.referralCode&&<Card pad={mob?20:26} style={{marginTop:16}}>
+      <Lbl>Refer another company</Lbl>
+      <div className="text-sm text-text-2 mb-3 leading-relaxed">
+        Your code is <code className="bg-brand-wash border border-brand-line text-brand rounded px-2 py-0.5 font-semibold">{A.company.referralCode}</code>.
+        When another company signs up with your code, we credit both accounts one month of their plan tier once they've paid for their first month.
+      </div>
+      {(()=>{const url=`${window.location.origin}/signup?ref=${encodeURIComponent(A.company.referralCode)}`;
+        return <div className="flex gap-2 items-center flex-wrap">
+          <code className="text-xs bg-white border border-line-2 rounded-lg py-1.5 px-2.5 break-all flex-1 min-w-50">{url}</code>
+          <Btn kind="outline" size="sm" icon="copy" onClick={()=>{navigator.clipboard?.writeText(url); A.toast("Share link copied");}}>Copy link</Btn>
+        </div>;})()}
+    </Card>}
+
     {/* Audit trail - who did what on this account, and when. Any teammate can read it; the tracker
         called out the missing paper trail for team-management actions specifically. */}
     <Card pad={mob?20:26} style={{marginTop:16}}>
@@ -1759,7 +1777,11 @@ function _HiringVelocity({A,mob}){
 
 export function EmpAnalyticsPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
-  const stats=A.employerAnalytics(); if(!stats) return <Page><Empty icon="activity" title="No data" body="Post a job first."/></Page>;
+  // Range picker applies to application counts / conversion / pipeline / trend. View totals
+  // stay all-time because the app doesn't have per-day view events to slice.
+  const [range,setRange]=useState(null); // null = all-time
+  const stats=A.employerAnalytics(range); if(!stats) return <Page><Empty icon="activity" title="No data" body="Post a job first."/></Page>;
+  const ranges=[[null,"All time"],[7,"Last 7d"],[30,"Last 30d"],[90,"Last 90d"],[365,"Last 12mo"]];
   const pad=mob?"py-11 px-4":"py-18 px-8";
   return <div className="bg-white min-h-full">
     <section className={`bg-white border-b border-line-soft ${pad}`}>
@@ -1771,6 +1793,11 @@ export function EmpAnalyticsPage(){
     <section className={`bg-bg ${mob?"pt-8 px-4 pb-14":"pt-12 px-8 pb-24"}`}>
       <div className="max-w-280 mx-auto">
         <_HiringVelocity A={A} mob={mob}/>
+        <div className="flex gap-1.5 mb-4 flex-wrap">
+          {ranges.map(([v,label])=><button key={label} onClick={()=>setRange(v)}
+            className={`text-sm font-semibold py-2 px-3.5 rounded-lg border cursor-pointer transition-colors duration-150 ${range===v?"bg-brand text-white border-brand":"bg-white text-text-2 border-line hover:border-brand"}`}>
+            {label}</button>)}
+        </div>
         <div className={`grid gap-3.5 mb-6 ${mob?"grid-cols-2":"grid-cols-4"}`}>
           <Stat label="Live jobs" value={stats.liveJobs} icon="briefcase"/>
           <Stat label="Total views" value={stats.totalViews.toLocaleString()} icon="eye"/>

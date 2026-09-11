@@ -91,3 +91,20 @@
   padding: 10px 16px; border-radius: 8px;
   font-weight: 600; text-decoration: none;
 }
+
+/* ─── Print stylesheet ────────────────────────────────────────────────────────────────────
+   For pages that are expected to be printed - org chart, employee directory, compliance
+   dashboard, invoices, CVs, offer letters - opt in with .print-target on the container that
+   should be the whole printable region. Everything outside it hides. */
+@media print {
+  body { background: #fff !important; color: #000 !important; }
+  .print-hide { display: none !important; }
+  /* When any .print-target is present, hide siblings; when none is set, print the whole page. */
+  body:has(.print-target) > *:not(:has(.print-target)) { display: none; }
+  body:has(.print-target) header, body:has(.print-target) footer,
+  body:has(.print-target) nav, body:has(.print-target) aside { display: none; }
+  .print-target { padding: 0 !important; margin: 0 !important; }
+  .print-target * { color: #000 !important; background: transparent !important; box-shadow: none !important; }
+  .print-target a { color: #000 !important; text-decoration: underline; }
+  a[href]::after { content: ""; } /* don't append URLs after every link */
+}

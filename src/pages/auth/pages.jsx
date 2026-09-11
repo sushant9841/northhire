@@ -25,7 +25,7 @@ const _defaultSignupData=()=>({role:"",email:"",password:"",phone:"",first:"",la
     /* CASL: express consent to a commercial electronic message has to be an affirmative act by
        the recipient, so this box starts UNCHECKED - a pre-ticked box is not consent. */
     startWhen:"Within 2 weeks",alerts:false,
-    company:"",industry:"",size:"1-50",about:"",name:"",businessNumber:"",turnstileToken:null});
+    company:"",industry:"",size:"1-50",about:"",name:"",businessNumber:"",referralCode:"",turnstileToken:null});
 const _loadSignupDraft=()=>{try{return JSON.parse(sessionStorage.getItem(SIGNUP_DRAFT_KEY)||"null");}catch{return null;}};
 
 export function SignupPage(){
@@ -39,6 +39,14 @@ export function SignupPage(){
      the wizard's state so it survives, and let the person explicitly discard it if they'd rather
      start clean. */
   useEffect(()=>{try{sessionStorage.setItem(SIGNUP_DRAFT_KEY,JSON.stringify({i,d}));}catch{}},[i,d]);
+  /* Referral: if the signup URL carries ?ref=CODE, pre-fill the referralCode field and jump
+     the wizard into the employer track (only employers can be referred). Strips the query so a
+     reload doesn't re-apply. */
+  useEffect(()=>{
+    const ref=new URLSearchParams(window.location.search).get("ref");
+    if(ref){setD(prev=>({...prev,role:prev.role||"employer",referralCode:ref.toUpperCase()}));
+      window.history.replaceState({},"",window.location.pathname);}
+  },[]);
   const startOver=()=>{try{sessionStorage.removeItem(SIGNUP_DRAFT_KEY);}catch{} setI(0); setD(_defaultSignupData()); setErr({}); setSubmitErr("");};
   const step=STEPS[i];
   const set=(k,v)=>{setD(p=>({...p,[k]:v}));setErr(e=>({...e,[k]:undefined}));setSubmitErr("");};
@@ -169,6 +177,8 @@ export function SignupPage(){
               <Area rows={3} value={d.about} onChange={e=>set("about",e.target.value)} placeholder="What you do, and why someone would want to work with you."/></Field>
             <Field label="CRA business number (optional)" error={err.businessNumber} hint="9 digits, e.g. 123456789. Speeds up verification — you can add this later from Company settings instead.">
               <Input icon="file" value={d.businessNumber} onChange={e=>set("businessNumber",e.target.value)} placeholder="123456789" invalid={!!err.businessNumber}/></Field>
+            <Field label="Referral code (optional)" hint="If another NorthHire company referred you, drop their code here — you both get one month credited after your first paid month.">
+              <Input icon="gift" value={d.referralCode} onChange={e=>set("referralCode",e.target.value.toUpperCase())} placeholder="NH-XXXXXX"/></Field>
             <Banner tone="brand" icon="shield" title="Verification usually takes 1 business day">
               Our Toronto team checks your business number and incorporation. Your listings go live immediately, with the verified badge added once approved.</Banner></div>}
 

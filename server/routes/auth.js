@@ -84,9 +84,19 @@ authRouter.post("/signup", async (req, res) => {
   let employerId = null;
   if (role === "employer") {
     employerId = nextId("e", "employers");
+    // Referral: if a valid code was supplied at signup, record the referrer for future credit
+    // issuance. Own-referral-code (a stable per-employer slug) is generated at the same time.
+    let referredBy = null;
+    const referralCode = String(req.body?.referralCode || "").trim().toUpperCase();
+    if (referralCode) {
+      const referrer = db.prepare("SELECT id FROM employers WHERE referral_code = ?").get(referralCode);
+      if (referrer) referredBy = referrer.id;
+    }
+    const ownCode = `NH-${employerId.slice(-6).toUpperCase()}`;
     db.prepare(
-      `INSERT INTO employers (id, name, mark, a, b, plan, verified) VALUES (?, ?, 'hex', '#005CCC', '#FFFFFF', 'Free', 0)`
-    ).run(employerId, companyName);
+      `INSERT INTO employers (id, name, mark, a, b, plan, verified, referral_code, referred_by_employer_id)
+       VALUES (?, ?, 'hex', '#005CCC', '#FFFFFF', 'Free', 0, ?, ?)`
+    ).run(employerId, companyName, ownCode, referredBy);
   }
 
   const { hash, salt } = hashPassword(password);

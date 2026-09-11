@@ -111,6 +111,7 @@ export function serializeEmployer(row) {
     pipelineStages: row.pipeline_stages_json ? JSON.parse(row.pipeline_stages_json) : null,
     owner: row.owner || null,
     ownerName: row.ownerName || null,
+    referralCode: row.referral_code || null,
   };
 }
 

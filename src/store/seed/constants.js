@@ -25,6 +25,8 @@ export const CV_TEMPLATES=[
  {id:"classic",name:"Classic",desc:"Single column, ATS-safe. The default choice for trades, healthcare and office roles."},
  {id:"modern",name:"Modern",desc:"Accent sidebar with skills and contact details. Good for office and tech roles."},
  {id:"compact",name:"Compact",desc:"Dense one-page layout. Best when you have a long history to fit."},
+ {id:"executive",name:"Executive",desc:"Serif headings with generous spacing. Good for senior, leadership or professional-services roles."},
+ {id:"skills-first",name:"Skills-first",desc:"Skills and certifications at the top, experience below. Best for early-career and career-change applications."},
 ];
 
 export const PLANS={

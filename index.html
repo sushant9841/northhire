@@ -4,7 +4,17 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>northhire-spa</title>
+    <!-- Progressive Web App: manifest + theme colour so a field worker on a construction site
+         with no fixed terminal can Add to Home Screen and punch in from their own phone. Kept as a
+         lightweight PWA (manifest only, no service worker yet) so an offline-tolerant punch
+         becomes a follow-up rather than a scope change here. -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#005CCC" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="NorthHire" />
+    <meta name="description" content="Real Canadian jobs. Wages published upfront. Hire the trades, care, transport, kitchen, warehouse and office workers keeping Canada running." />
+    <title>NorthHire — Real Canadian jobs, wages published upfront</title>
   </head>
   <body>
     <div id="root"></div>

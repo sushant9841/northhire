@@ -288,7 +288,7 @@ export function SmartPortrait({ seed = 0, size = 48, radius = 999, bg }) {
 }
 
 /* ═══════════════ CORE UI ATOMS ═══════════════ */
-export function Btn({children,onClick,kind="primary",size="md",full,disabled,loading,icon,iconR,style,title,type,"aria-label":ariaLabel}){
+export function Btn({children,onClick,kind="primary",size="md",full,disabled,loading,icon,iconR,style,title,type,"aria-label":ariaLabel,className=""}){
  const S={xs:"text-xs py-2 px-3 rounded-lg gap-1.5",sm:"text-sm py-2.5 px-4 rounded-xl gap-2",
    md:"text-sm py-3 px-5 rounded-xl gap-2",lg:"text-base py-4 px-7 rounded-xl gap-2.5"}[size];
  const I_SIZE={xs:14,sm:16,md:18,lg:19}[size];
@@ -305,7 +305,7 @@ export function Btn({children,onClick,kind="primary",size="md",full,disabled,loa
  return <button type={type||"button"} title={title} aria-label={ariaLabel||(!children&&(icon||iconR)?title:undefined)} aria-busy={loading||undefined} disabled={isDisabled} onClick={isDisabled?undefined:onClick}
   className={`inline-flex items-center justify-center font-semibold leading-tight whitespace-nowrap cursor-pointer
    transition duration-150 hover:-translate-y-px active:scale-95 disabled:opacity-45 disabled:cursor-not-allowed disabled:pointer-events-none
-   ${full?"w-full":""} ${S} ${K}`}
+   ${full?"w-full":""} ${S} ${K} ${className}`}
   style={style}>
   {loading?<span className="inline-block rounded-full border-2 border-current border-t-transparent animate-spin" style={{width:I_SIZE,height:I_SIZE}}/>:icon&&<I n={icon} s={I_SIZE} w={2}/>}
   {children}{!loading&&iconR&&<I n={iconR} s={I_SIZE} w={2}/>}</button>;
@@ -330,9 +330,9 @@ function clickableA11y(onClick){
  if(!onClick)return{};
  return{role:"button",tabIndex:0,onKeyDown:e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();onClick(e);}}};
 }
-export function Card({children,style,onClick,hover,pad=24,delay=0}){
+export function Card({children,style,onClick,hover,pad=24,delay=0,className=""}){
  return <div onClick={onClick} {...clickableA11y(onClick)}
-  className={`bg-white border rounded-2xl transition-[border-color,box-shadow,transform] duration-200 ${onClick?"cursor-pointer":"cursor-default"} ${hover?"border-line hover:border-line-2 hover:shadow-md hover:-translate-y-1":"border-line"}`}
+  className={`bg-white border rounded-2xl transition-[border-color,box-shadow,transform] duration-200 ${onClick?"cursor-pointer":"cursor-default"} ${hover?"border-line hover:border-line-2 hover:shadow-md hover:-translate-y-1":"border-line"} ${className}`}
   style={{padding:pad,...style}}>{children}</div>;
 }
 export const inp = "w-full bg-white border border-line rounded-xl py-3.5 px-4 text-base text-text outline-none transition-[border-color,box-shadow] duration-150 disabled:bg-bg disabled:text-text-3 disabled:cursor-not-allowed disabled:opacity-70";

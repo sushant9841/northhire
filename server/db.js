@@ -853,6 +853,11 @@ for (const stmt of [
   "ALTER TABLE employer_api_keys ADD COLUMN calls_this_hour INTEGER DEFAULT 0",
   "ALTER TABLE employer_api_keys ADD COLUMN calls_hour_start TEXT",
   "ALTER TABLE employer_api_keys ADD COLUMN calls_total INTEGER DEFAULT 0",
+  /* Employer referral: every company gets a stable code, and any new employer signup can
+     record who referred them. Credit issuance is a follow-up (needs Stripe integration to
+     actually apply a credit note) - this is the relationship + attribution half. */
+  "ALTER TABLE employers ADD COLUMN referral_code TEXT",
+  "ALTER TABLE employers ADD COLUMN referred_by_employer_id TEXT",
 ]) {
   try { db.exec(stmt); } catch (e) { if (!/duplicate column/i.test(e.message)) console.error("migration:", stmt, e.message); }
 }

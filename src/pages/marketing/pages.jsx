@@ -960,8 +960,15 @@ export function PricingPage(){
     ["Can I switch plans?","Any time. Upgrades take effect immediately, downgrades at the next billing cycle."],
     ["Is there a free trial?","The Free plan is permanently free with 1 job posting. Growth and Enterprise both offer 14-day trials — no card required."],
     ["What payment methods work?","Visa, Mastercard, Amex, Interac direct debit. Invoices with net-30 terms available on Enterprise."],
+    ["Do you offer annual billing?","Yes — 15% off the monthly price when paid up front for a full year. Toggle the pricing above to see the annual figures. Contact billing@northhire.ca to switch an existing subscription to annual."],
   ];
   const [open,setOpen]=useState(-1);
+  // Annual billing gets 15% off (a common SaaS discount). This is display-only until Stripe
+  // actually offers an annual price - checkout still creates the monthly subscription, and the
+  // FAQ notes annual is by request. Removes the parity gap versus every competitor's pricing
+  // page having a toggle.
+  const [billing,setBilling]=useState("monthly");
+  const annualPct=0.15;
   const pad=mob?"py-14 px-4":"py-24 px-8";
   const currentPlan=A.company?.plan||null;
 
@@ -979,6 +986,13 @@ export function PricingPage(){
 
     <section className={`bg-white ${mob?"px-4 pb-14":"px-8 pb-24"}`}>
       <div className="max-w-300 mx-auto">
+        <div className="flex justify-center mb-6">
+          <div className="inline-flex bg-bg border border-line rounded-full p-1">
+            {[["monthly","Monthly"],["annual",<>Annual <span className="text-xs font-normal opacity-80">· save 15%</span></>]].map(([v,l])=>
+              <button key={v} onClick={()=>setBilling(v)}
+                className={`text-sm font-semibold py-2 px-5 rounded-full transition-colors duration-150 ${billing===v?"bg-white text-brand shadow-sm":"text-text-2 bg-transparent"}`}>{l}</button>)}
+          </div>
+        </div>
         <div className={`grid items-stretch ${mob?"grid-cols-1 gap-3.5":"grid-cols-3 gap-5"}`}>
           {plans.map(p=>{const isCurrent=currentPlan===p.n;
           return <div key={p.n} className="bg-white rounded-3xl overflow-hidden relative flex flex-col" style={{border:`${p.best?2:1}px solid ${p.best?C.brand:C.line}`,boxShadow:p.best?SH.lg:"none"}}>
@@ -987,9 +1001,11 @@ export function PricingPage(){
               {!p.best&&<div className="text-xs font-semibold text-text-3 tracking-wide uppercase mb-3.5">{p.tag}</div>}
               <div className={`font-bold text-text tracking-tight mb-2 ${mob?"text-2xl":"text-3xl"}`}>{p.n}</div>
               <div className={`text-sm text-text-2 leading-snug mb-5 ${mob?"":"min-h-11"}`}>{p.summary}</div>
-              <div className="flex items-baseline gap-1.5 mb-6 pb-6 border-b border-line-soft">
-                <span className={`font-extrabold text-text tracking-tight leading-none ${mob?"text-5xl":"text-6xl"}`}>${p.p}</span>
-                <span className="text-base text-text-3">{p.p===0?"forever":"/month"}</span></div>
+              <div className="flex items-baseline gap-1.5 mb-6 pb-6 border-b border-line-soft flex-wrap">
+                <span className={`font-extrabold text-text tracking-tight leading-none ${mob?"text-5xl":"text-6xl"}`}>${billing==="annual"&&p.p>0?Math.round(p.p*(1-annualPct)):p.p}</span>
+                <span className="text-base text-text-3">{p.p===0?"forever":"/month"}</span>
+                {billing==="annual"&&p.p>0&&<span className="text-xs text-text-3 basis-full mt-1">billed ${Math.round(p.p*(1-annualPct)*12).toLocaleString()}/year · save ${Math.round(p.p*annualPct*12).toLocaleString()} vs. monthly</span>}
+              </div>
               <div className="flex flex-col gap-3 mb-7 flex-1">
                 {p.f.map((x,i)=>{if(!x)return <div key={i} className="h-2"/>;
                   const isHeader=x.endsWith(":");

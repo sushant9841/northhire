@@ -650,7 +650,9 @@ export function useStore(){
     if(!d.company||!d.company.trim())return {ok:false,msg:"Company name required"};
     try{
       const {user:apiUser}=await api.post("/auth/signup",{
-        name:d.name||"Hiring Team",email,password:d.password,role:"employer",companyName:d.company.trim(),turnstileToken:d.turnstileToken});
+        name:d.name||"Hiring Team",email,password:d.password,role:"employer",companyName:d.company.trim(),
+        referralCode:(d.referralCode||"").trim().toUpperCase()||undefined,
+        turnstileToken:d.turnstileToken});
       const domain=email.split("@")[1]||"example.com";
       /* The employer record itself was created server-side by signup (its id lives on the
          returned user as employer_id) - patch in the extra profile fields the wizard collected
@@ -1086,11 +1088,17 @@ export function useStore(){
   };
 
   /* --- employer analytics --- */
-  const employerAnalytics=()=>{
+  const employerAnalytics=(rangeDays=null)=>{
     if(!company)return null;
     const myJobs=jobs.filter(j=>j.e===company.id);
     const myAppIds=myJobs.map(j=>j.id);
-    const myApps=applications.filter(a=>myAppIds.includes(a.job));
+    // Time-range filter applies to applications counted in every stat that varies by window:
+    // total applications, conversion, pipeline breakdown, avg score. Views stay all-time
+    // because we don't track per-day view counts (would need a new events stream). `rangeDays`
+    // null = all-time; a number = only apps within that many days.
+    const now=Date.now();
+    const inRange=a=>rangeDays==null||(a.createdAt&&now-a.createdAt<=rangeDays*86400000);
+    const myApps=applications.filter(a=>myAppIds.includes(a.job)&&inRange(a));
     const totalViews=myJobs.reduce((s,j)=>s+j.views,0);
     const totalApps=myApps.length;
     /* A CSV-imported job can start with 0 views but nonzero applicants (views only start
@@ -1107,10 +1115,12 @@ export function useStore(){
        application's actual created_at timestamp (added specifically for this chart - the
        old `at` field was only ever a frozen "3 days ago" display string, not real enough to
        bucket by day). */
-    const days=30;
+    // Trend window follows the outer filter but caps at 90 days so a 1-year filter doesn't
+    // collapse 365 skinny bars into unreadable slivers.
+    const trendDays=Math.min(rangeDays||30,90);
     const dayKey=ms=>new Date(ms).toISOString().slice(0,10);
     const byDay={};
-    for(let i=days-1;i>=0;i--){const d=new Date(Date.now()-i*86400000);byDay[dayKey(d.getTime())]=0;}
+    for(let i=trendDays-1;i>=0;i--){const d=new Date(Date.now()-i*86400000);byDay[dayKey(d.getTime())]=0;}
     myApps.forEach(a=>{if(a.createdAt){const k=dayKey(a.createdAt);if(k in byDay)byDay[k]++;}});
     const applicationTrend=Object.entries(byDay).map(([date,count])=>({date,count}));
     /* Work-authorization mix, for real compliance reporting - built from the seeker profile's

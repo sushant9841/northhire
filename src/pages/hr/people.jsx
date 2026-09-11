@@ -72,8 +72,9 @@ function HrPeople_Directory(){
         {depts.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}
       </Sel>
       <Btn kind="outline" size="sm" icon="download" onClick={exportDirectory}>Export {filtered.length<all.length?`filtered (${filtered.length})`:"CSV"}</Btn>
+      <Btn kind="outline" size="sm" icon="file" onClick={()=>window.print()}>Print directory</Btn>
     </div>
-    <div className="grid gap-3" style={{gridTemplateColumns:mob?"1fr":"repeat(auto-fill,minmax(280px,1fr))"}}>
+    <div className="print-target grid gap-3" style={{gridTemplateColumns:mob?"1fr":"repeat(auto-fill,minmax(280px,1fr))"}}>
       {pg.pageItems.map(e=>{const d=depts.find(x=>x.id===e.dept);
         const mgr=A.hrEmp(e.manager);
         return <Card key={e.id} pad={16} style={{borderRadius:12,cursor:"pointer",transition:"all .15s"}}
@@ -159,14 +160,17 @@ function HrPeople_OrgChart(){
   };
 
   return <div>
-    <div className="flex justify-between items-center mb-4 flex-wrap gap-2.5">
+    <div className="flex justify-between items-center mb-4 flex-wrap gap-2.5 print-hide">
       <div>
         <div className="text-base font-semibold text-text">Reporting structure</div>
         <div className="text-xs text-text-3 mt-0.5">{all.length} people · {roots.length} report{roots.length===1?"s":""} at the top level</div>
       </div>
-      <Input icon="search" placeholder="Find a person" value={q} onChange={e=>setQ(e.target.value)} style={{width:220}}/>
+      <div className="flex gap-2 items-center">
+        <Input icon="search" placeholder="Find a person" value={q} onChange={e=>setQ(e.target.value)} style={{width:220}}/>
+        <Btn kind="outline" size="sm" icon="file" onClick={()=>window.print()}>Print</Btn>
+      </div>
     </div>
-    <Card pad={mob?16:24} style={{borderRadius:14}}>
+    <Card pad={mob?16:24} style={{borderRadius:14}} className="print-target">
       <div className="flex flex-col gap-1.5">
         {roots.map(r=><Node key={r.id} e={r}/>)}
         {searchActive&&roots.every(r=>!subtreeMatches(r))&&<Empty icon="search" title="No one matches that search" body="Try a different name."/>}

@@ -1773,10 +1773,13 @@ export function AgencyCompliance(){
     {ok:true, title:"WSIB coverage", body:`Registered in ${A.STAFFING_AGENCY.wsibProvinces.join(", ")}. Rate group ${A.STAFFING_AGENCY.wsibRateGroup}.`, count:0},
   ];
 
-  return <div>
-    <div className="mb-3.5">
-      <div className="text-lg font-bold text-text">Compliance dashboard</div>
-      <div className="text-sm text-text-3 mt-0.5">Licensing, documentation, and audit-readiness across the desk.</div>
+  return <div className="print-target">
+    <div className="mb-3.5 flex justify-between items-start gap-3 flex-wrap">
+      <div>
+        <div className="text-lg font-bold text-text">Compliance dashboard</div>
+        <div className="text-sm text-text-3 mt-0.5">Licensing, documentation, and audit-readiness across the desk.</div>
+      </div>
+      <Btn kind="outline" size="sm" icon="file" className="print-hide" onClick={()=>window.print()}>Print / Save as PDF</Btn>
     </div>
 
     <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>

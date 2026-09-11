@@ -70,6 +70,38 @@ export function CvPreview({cv,u,scale=1,mob=false}){
           {cv.skills.map(s=><span key={s} style={{fontSize:11*scale,color:"rgba(255,255,255,.9)"}}>{s}</span>)}</div></>}
     </div>
     <div style={{flex:1,padding:24*scale,boxSizing:"border-box",minWidth:0}}><Head/><Body/></div></div>;
+  /* Executive template: serif headline treatment, wider top margin, small-caps section headers.
+     Aimed at senior/leadership/professional-services applications where the resume expected
+     to read as a document rather than a data card. Still single-column so ATS parsers reading
+     it top-to-bottom don't skip a sidebar. */
+  if(T==="executive") return <div style={{...wrap,padding:36*scale,fontFamily:'Georgia,"Times New Roman",serif'}}>
+    <div style={{textAlign:"center",borderBottom:`1px solid #0E1727`,paddingBottom:14*scale,marginBottom:18*scale}}>
+      <div style={{fontSize:30*scale,fontWeight:700,letterSpacing:"-.01em",color:"#0E1727"}}>{cv.name0||u.name}</div>
+      <div style={{fontSize:14*scale,color:"#4A5A73",fontStyle:"italic",marginTop:4*scale}}>{cv.title||u.title}</div>
+      <div style={{fontSize:11*scale,color:"#4A5A73",marginTop:8*scale,letterSpacing:".02em"}}>
+        {[cv.email||u.email,cv.phone||u.phone,`${cv.city||u.city}, ${cv.prov||u.prov}`].filter(Boolean).join("   ·   ")}</div>
+    </div>
+    <Body/>
+    {cv.skills?.length>0&&<><SecT>Skills</SecT>
+      <div style={{fontSize:11.5*scale,color:"#333",lineHeight:1.9}}>{cv.skills.join(" · ")}</div></>}
+  </div>;
+
+  /* Skills-first template: skills + certifications lead, work experience follows. Aimed at
+     career-change or early-career applicants whose skill set carries more weight than a short
+     job history. */
+  if(T==="skills-first") return <div style={wrap}>
+    <Head/>
+    {cv.skills?.length>0&&<><SecT>Key skills</SecT>
+      <div style={{display:"flex",flexWrap:"wrap",gap:5*scale,marginBottom:6*scale}}>
+        {cv.skills.map(s=><span key={s} style={{fontSize:11.5*scale,background:C.wash,color:C.brand,
+          border:`1px solid ${C.line2}`,padding:`${4*scale}px ${9*scale}px`,borderRadius:6*scale,fontWeight:600}}>{s}</span>)}</div></>}
+    {cv.certs?.length>0&&<><SecT>Certifications</SecT>
+      <div style={{display:"flex",flexWrap:"wrap",gap:5*scale,marginBottom:6*scale}}>
+        {cv.certs.map(c=><span key={c} style={{fontSize:11*scale,background:C.okBg,color:C.ok,
+          border:`1px solid ${C.okLn}`,padding:`${3*scale}px ${7*scale}px`,borderRadius:5*scale,fontWeight:600}}>{c}</span>)}</div></>}
+    <Body/>
+  </div>;
+
   return <div style={wrap}>
     <div style={{borderBottom:T==="classic"?`2px solid #0E1727`:"none",paddingBottom:12*scale}}><Head/></div>
     {T==="compact"&&cv.skills?.length>0&&<div style={{fontSize:11*scale,color:"#4A5A73",marginTop:8*scale}}>

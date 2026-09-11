@@ -1,0 +1,21 @@
+{
+  "name": "NorthHire",
+  "short_name": "NorthHire",
+  "description": "Real Canadian jobs. Wages published upfront. Punch in, submit hours, browse jobs from any device.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F7F9FC",
+  "theme_color": "#005CCC",
+  "lang": "en-CA",
+  "categories": ["business", "productivity"],
+  "icons": [
+    { "src": "/how-it-works/home.png", "sizes": "1440x1440", "type": "image/png", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "Punch in", "short_name": "Punch in", "description": "Clock in from any device", "url": "/hr/attendance" },
+    { "name": "Submit timesheet", "short_name": "Timesheet", "description": "Submit weekly hours", "url": "/worker/timesheet" },
+    { "name": "Browse jobs", "short_name": "Jobs", "description": "Find new opportunities", "url": "/jobs" }
+  ]
+}
