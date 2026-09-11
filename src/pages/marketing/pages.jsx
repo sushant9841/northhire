@@ -202,7 +202,7 @@ export function HomePage(){
     <section className={`bg-bg ${pad}`}>
       <div className={wrapCls}>
         {H("Featured openings","Roles that employers are highlighting this week.","Featured this week",
-          <Btn kind="outline" iconR="arrowR" onClick={()=>A.go("search")}>See all jobs</Btn>)}
+          <Btn kind="outline" iconR="arrowR" onClick={()=>A.go("search")}>{t("home.allJobsBtn")}</Btn>)}
         <div className="grid gap-3.5" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:300}px,1fr))`}}>
           {featured.map(j=><JobCard key={j.id} job={j}/>)}</div>
       </div>
@@ -210,7 +210,7 @@ export function HomePage(){
 
     <section className={`bg-white ${pad}`}>
       <div className={wrapCls}>
-        {H("Trending across Canada","The most-viewed listings on NorthHire this week.","Trending",null)}
+        {H(t("home.trendingTitle"),t("home.trendingSub"),"Trending",null)}
         <div className="grid gap-3.5" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:300}px,1fr))`}}>
           {trending.map(j=><JobCard key={j.id} job={j}/>)}</div>
       </div>
@@ -218,31 +218,31 @@ export function HomePage(){
 
     <section className={`bg-bg ${pad}`}>
       <div className={wrapCls}>
-        {H("Closing soon","Application windows that end in the next two weeks.","Deadlines",null)}
+        {H(t("home.closingSoonTitle"),t("home.closingSoonSub"),"Deadlines",null)}
         <div className="grid gap-3.5" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:300}px,1fr))`}}>
-          {closingSoon.length?closingSoon.map(j=><JobCard key={j.id} job={j}/>):<div className="text-text-3 text-sm text-center p-5" style={{gridColumn:"1/-1"}}>No deadlines coming up.</div>}</div>
+          {closingSoon.length?closingSoon.map(j=><JobCard key={j.id} job={j}/>):<div className="text-text-3 text-sm text-center p-5" style={{gridColumn:"1/-1"}}>{t("home.noClosingSoonMsg")}</div>}</div>
       </div>
     </section>
 
     <section className={`bg-white ${pad}`}>
       <div className={wrapCls}>
-        {H("Three steps, about ten minutes","From setting up your account to sending your first application.","How it works")}
+        {H(t("home.howItWorksTitle"),t("home.howItWorksSub"),t("home.howItWorksTag"))}
         <div className={`grid ${mob?"grid-cols-1 gap-3.5":"grid-cols-3 gap-5"}`}>
-          {[["user","Build your profile","Add your trade, tickets and the wage you need. Takes about five minutes and works on any device."],
-            ["target","Get matched, not spammed","We score every opening against your skills, certifications and location so you only see jobs you can realistically get."],
-            ["send","Apply in one tap","Your profile and CV go straight to the employer. Track every application from submission to offer in one place."]].map(([ic,t,b],i)=>
-            <div key={t} data-card className={`bg-bg rounded-3xl border border-line ${mob?"p-7":"p-9"}`}>
+          {[[t("home.step1Icon"),t("home.step1Title"),t("home.step1Body")],
+            [t("home.step2Icon"),t("home.step2Title"),t("home.step2Body")],
+            [t("home.step3Icon"),t("home.step3Title"),t("home.step3Body")]].map(([ic,title,body],i)=>
+            <div key={title} data-card className={`bg-bg rounded-3xl border border-line ${mob?"p-7":"p-9"}`}>
               <div className={`font-extrabold text-brand tracking-tight leading-none mb-5 ${mob?"text-4xl":"text-5xl"}`}>0{i+1}</div>
               <div className="w-11 h-11 rounded-xl bg-wash text-brand flex items-center justify-center mb-5"><I n={ic} s={22}/></div>
-              <div className={`font-bold text-text tracking-tight mb-2.5 leading-tight ${mob?"text-xl":"text-2xl"}`}>{t}</div>
-              <p className={`text-text-2 leading-relaxed m-0 ${mob?"text-sm":"text-base"}`}>{b}</p></div>)}</div>
+              <div className={`font-bold text-text tracking-tight mb-2.5 leading-tight ${mob?"text-xl":"text-2xl"}`}>{title}</div>
+              <p className={`text-text-2 leading-relaxed m-0 ${mob?"text-sm":"text-base"}`}>{body}</p></div>)}</div>
       </div>
     </section>
 
     <section className={`bg-bg ${pad}`}>
       <div className={wrapCls}>
-        {H("Certifications that get you hired","Free and paid trainings from providers Canadian employers recognize.","Trainings",
-          <Btn kind="outline" iconR="arrowR" onClick={()=>A.go("trainings")}>All trainings</Btn>)}
+        {H(t("home.certificationsTitle"),t("home.certificationsSub"),t("home.certificationsTag"),
+          <Btn kind="outline" iconR="arrowR" onClick={()=>A.go("trainings")}>{t("home.allTrainingsBtn")}</Btn>)}
         <div className="grid gap-4" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:280}px,1fr))`}}>
           {trainings.map(t=><TrainingCard key={t.id} t={t}/>)}</div>
       </div>
@@ -250,8 +250,8 @@ export function HomePage(){
 
     <section className={`bg-white ${pad}`}>
       <div className={wrapCls}>
-        {H("From the resource centre","Career guides written by people with hands-on Canadian workplace experience.","Career resources",
-          <Btn kind="outline" iconR="arrowR" onClick={()=>A.go("blogs")}>All articles</Btn>)}
+        {H(t("home.resourceCentreTitle"),t("home.resourceCentreSub"),undefined,
+          <Btn kind="outline" iconR="arrowR" onClick={()=>A.go("blogs")}>{t("home.allArticlesBtn")}</Btn>)}
         <div className={`grid ${mob?"grid-cols-1 gap-3.5":"grid-cols-3 gap-5"}`}>
           {blogs.map(b=><BlogCard key={b.id} b={b}/>)}</div>
       </div>
@@ -260,18 +260,18 @@ export function HomePage(){
     <section className={`bg-bg ${pad}`}>
       <div className={`${wrapCls} grid ${mob?"grid-cols-1":"grid-cols-2"} gap-4`}>
         <div className={`bg-brand rounded-3xl text-white ${mob?"p-8":"p-12"}`}>
-          <Tag tone="onDark">Job seekers — always free</Tag>
-          <h3 className={`font-bold tracking-tight leading-tight my-5 ${mob?"text-2xl":"text-3xl"}`}>Set up your profile once, apply to anything.</h3>
+          <Tag tone="onDark">{t("home.seekersAlwaysFreeLabel")}</Tag>
+          <h3 className={`font-bold tracking-tight leading-tight my-5 ${mob?"text-2xl":"text-3xl"}`}>{t("home.seekersAlwaysFreeCta")}</h3>
           <p className={`text-white/85 leading-relaxed mb-7 ${mob?"text-sm":"text-base"}`}>
-            Add your tickets, your trade and the wage you're looking for. Build up to five CVs for different job types and apply in a tap.</p>
+            {t("home.seekersFreeBody")}</p>
           <Btn kind="onDark" size="lg" iconR="arrowR" onClick={()=>A.go(A.user?.role==="seeker"?"profile":"signup")}>
-            {A.user?.role==="seeker"?"Go to my profile":"Create free account"}</Btn></div>
+            {A.user?.role==="seeker"?t("home.seekerCta"):t("home.seekerCta2")}</Btn></div>
         <div className={`bg-ink rounded-3xl text-white ${mob?"p-8":"p-12"}`}>
-          <Tag tone="onDark">For employers — from free</Tag>
-          <h3 className={`font-bold tracking-tight leading-tight my-5 ${mob?"text-2xl":"text-3xl"}`}>Post a role and reach real candidates.</h3>
+          <Tag tone="onDark">{t("home.employersFreeLabel")}</Tag>
+          <h3 className={`font-bold tracking-tight leading-tight my-5 ${mob?"text-2xl":"text-3xl"}`}>{t("home.employersFreeCta")}</h3>
           <p className={`text-white/70 leading-relaxed mb-7 ${mob?"text-sm":"text-base"}`}>
-            Every applicant is scored against your requirements before you open a single CV. Enterprise unlocks the full HR Suite for managing your workforce.</p>
-          <Btn kind="primary" size="lg" iconR="arrowR" onClick={()=>A.go(A.user?.role==="employer"?"empPost":"forEmployers")}>Explore employer plans</Btn></div>
+            {t("home.employersBody")}</p>
+          <Btn kind="primary" size="lg" iconR="arrowR" onClick={()=>A.go(A.user?.role==="employer"?"empPost":"forEmployers")}>{t("home.employerCta")}</Btn></div>
       </div>
     </section>
 
