@@ -4,36 +4,38 @@ import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
 import { Btn, Card, Empty, SmartPortrait, Page, ConfirmDialog, Lbl } from "../../design/primitives.jsx";
+import { useTranslation } from "../../i18n/i18n.jsx";
 
 export function AccountMenuPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
+  const {t}=useTranslation();
   const u=A.user;
   const [confirmHide,setConfirmHide]=useState(false);
-  if(!u) return <Page><Empty title="Not signed in" body="Sign in to view your account."/></Page>;
+  if(!u) return <Page><Empty title={t("seeker.accountMenu.notSignedIn")} body={t("seeker.accountMenu.signInBody")}/></Page>;
   const seeking=u.actively_seeking!==false;
   /* 15 items in one flat list with no grouping - split into sections so "my activity" (things
      someone checks often) isn't visually identical to "legal & support" (things checked rarely). */
   const sections=[
-    {label:"My activity",items:[
-      {k:"status",l:"My applications",s:`${A.applications.filter(a=>a.user===u.id).length} sent`,ic:"activity"},
-      {k:"saved",l:"Saved jobs",s:`${A.saved.size} saved`,ic:"bookmark"},
-      {k:"savedSearches",l:"Saved searches",s:`${(A.savedSearches||[]).length} active`,ic:"search"},
-      {k:"alerts",l:"Notifications",s:`${A.notifications.filter(n=>!n.read).length} unread`,ic:"bell"},
-      {k:"messages",l:"Messages",s:`${(A.messages||[]).filter(m=>m.to===u.id).length} conversations`,ic:"mail"},
-      {k:"interviews",l:"Interviews",s:`${(A.interviews||[]).filter(i=>i.user===u.id).length} scheduled`,ic:"calendar"},
-      {k:"trainings",l:"My trainings",s:"Enrolled + completed",ic:"cap"},
+    {label:t("seeker.accountMenu.activityHead"),items:[
+      {k:"status",l:t("seeker.accountMenu.myApplications"),s:t("seeker.accountMenu.sentCount",{count:A.applications.filter(a=>a.user===u.id).length}),ic:"activity"},
+      {k:"saved",l:t("seeker.accountMenu.savedJobs"),s:t("seeker.accountMenu.savedCount",{count:A.saved.size}),ic:"bookmark"},
+      {k:"savedSearches",l:t("seeker.accountMenu.savedSearches"),s:t("seeker.accountMenu.activeCount",{count:(A.savedSearches||[]).length}),ic:"search"},
+      {k:"alerts",l:t("seeker.accountMenu.notifications"),s:t("seeker.accountMenu.unreadCount",{count:A.notifications.filter(n=>!n.read).length}),ic:"bell"},
+      {k:"messages",l:t("seeker.accountMenu.messages"),s:t("seeker.accountMenu.conversationsCount",{count:(A.messages||[]).filter(m=>m.to===u.id).length}),ic:"mail"},
+      {k:"interviews",l:t("seeker.accountMenu.interviews"),s:t("seeker.accountMenu.scheduledCount",{count:(A.interviews||[]).filter(i=>i.user===u.id).length}),ic:"calendar"},
+      {k:"trainings",l:t("seeker.accountMenu.myTrainings"),s:t("seeker.accountMenu.enrolledCompleted"),ic:"cap"},
     ]},
-    {label:"Profile & account",items:[
-      {k:"profile",l:"Edit my profile",s:"Contact details, work eligibility, headline",ic:"user"},
-      {k:"cvs",l:"My CVs & profiles",s:`Manage up to 5 CVs — you have ${(A.cvs||[]).filter(c=>c.user===u.id).length}`,ic:"file"},
-      {k:"settings",l:"Account settings",s:"Password, notifications, privacy",ic:"gear"},
+    {label:t("seeker.accountMenu.profileHead"),items:[
+      {k:"profile",l:t("seeker.accountMenu.editProfile"),s:t("seeker.accountMenu.editProfileSub"),ic:"user"},
+      {k:"cvs",l:t("seeker.accountMenu.myCvs"),s:t("seeker.accountMenu.myCvsSub",{count:(A.cvs||[]).filter(c=>c.user===u.id).length}),ic:"file"},
+      {k:"settings",l:t("seeker.accountMenu.accountSettings"),s:t("seeker.accountMenu.accountSettingsSub"),ic:"gear"},
     ]},
-    {label:"Legal & support",items:[
-      {k:"privacy",l:"Privacy policy",s:"How your data is handled",ic:"lock"},
-      {k:"pipeda",l:"PIPEDA compliance",s:"Canadian privacy law",ic:"shield"},
-      {k:"accessibility",l:"Accessibility (AODA)",s:"Our accessibility statement",ic:"heart"},
-      {k:"terms",l:"Terms of service",s:"Read the full terms",ic:"file"},
-      {k:"contact",l:"Contact support",s:"Get help from a real person",ic:"phone"},
+    {label:t("seeker.accountMenu.legalHead"),items:[
+      {k:"privacy",l:t("seeker.accountMenu.privacyPolicy"),s:t("seeker.accountMenu.privacyPolicySub"),ic:"lock"},
+      {k:"pipeda",l:t("seeker.accountMenu.pipeda"),s:t("seeker.accountMenu.pipedaSub"),ic:"shield"},
+      {k:"accessibility",l:t("seeker.accountMenu.accessibility"),s:t("seeker.accountMenu.accessibilitySub"),ic:"heart"},
+      {k:"terms",l:t("seeker.accountMenu.termsOfService"),s:t("seeker.accountMenu.termsOfServiceSub"),ic:"file"},
+      {k:"contact",l:t("seeker.accountMenu.contactSupport"),s:t("seeker.accountMenu.contactSupportSub"),ic:"phone"},
     ]},
   ];
   return <Page narrow>
@@ -41,24 +43,24 @@ export function AccountMenuPage(){
       <SmartPortrait seed={u.seed??0} size={64} radius={16}/>
       <div className="flex-1 min-w-0">
         <div className="text-2xl font-bold text-text tracking-tight">{u.name}</div>
-        <div className="text-sm text-text-2 mt-1">{u.city?`${u.city}, ${u.prov}`:"Add your location"}</div>
+        <div className="text-sm text-text-2 mt-1">{u.city?`${u.city}, ${u.prov}`:t("seeker.accountMenu.addLocation")}</div>
       </div>
     </div>
 
     <Card pad={mob?18:22} style={{marginBottom:16,borderRadius:14,background:seeking?C.okBg:C.bg,border:`1px solid ${seeking?C.okLn:C.line}`}}>
       <div className="flex justify-between items-center gap-3">
         <div className="flex-1">
-          <div className="text-sm font-bold text-text">Actively seeking work</div>
-          <div className="text-xs text-text-2 mt-1">{seeking?"Employers can find your profile when browsing candidates.":"Your profile is hidden from employer searches."}</div>
+          <div className="text-sm font-bold text-text">{t("seeker.accountMenu.activelySeeking")}</div>
+          <div className="text-xs text-text-2 mt-1">{seeking?t("seeker.accountMenu.seekingOnBody"):t("seeker.accountMenu.seekingOffBody")}</div>
         </div>
         <button onClick={()=>seeking?setConfirmHide(true):A.updateProfile({actively_seeking:true})} className={`border-0 w-11 h-6 rounded-full cursor-pointer relative transition-colors duration-200 ${seeking?"bg-ok":"bg-text-3"}`}>
           <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-[left] duration-200 ${seeking?"left-6":"left-0.5"}`}/>
         </button>
       </div>
     </Card>
-    <ConfirmDialog open={confirmHide} onClose={()=>setConfirmHide(false)} kind="primary" confirmLabel="Hide my profile"
-      title="Hide your profile from employers?" onConfirm={()=>A.updateProfile({actively_seeking:false})}>
-      Employers browsing candidates won't be able to find you. You can turn this back on any time from this same screen.
+    <ConfirmDialog open={confirmHide} onClose={()=>setConfirmHide(false)} kind="primary" confirmLabel={t("seeker.accountMenu.hideProfileBtn")}
+      title={t("seeker.accountMenu.hideProfileTitle")} onConfirm={()=>A.updateProfile({actively_seeking:false})}>
+      {t("seeker.accountMenu.hideProfileBody")}
     </ConfirmDialog>
 
     {(()=>{const w=A.workerByPersonId?.(u.id);
@@ -66,9 +68,9 @@ export function AccountMenuPage(){
         <div className="flex gap-3.5 items-center">
           <div className="w-11 h-11 rounded-xl bg-accent/20 border border-accent/35 flex items-center justify-center shrink-0"><I n="users" s={20} c="#6AACFF"/></div>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-bold text-white">{w?"NorthHire Staffing worker":"Try NorthHire Staffing"}</div>
+            <div className="text-sm font-bold text-white">{w?t("seeker.accountMenu.staffingWorker"):t("seeker.accountMenu.tryStaffing")}</div>
             <div className="text-xs text-white/65 mt-1 leading-normal">
-              {w?`Assignments, timesheets, pay stubs. ${w.availability==="on-assignment"?"Currently on assignment.":"Available for work."}`:"Get placed on contract work. We pay you, we cover taxes, WSIB, and vacation."}</div>
+              {w?t("seeker.accountMenu.staffingWorkerBody",{status:w.availability==="on-assignment"?t("seeker.accountMenu.onAssignment"):t("seeker.accountMenu.availableForWork")}):t("seeker.accountMenu.tryStaffingBody")}</div>
           </div>
           <I n="chevR" s={17} c="rgba(255,255,255,.5)"/>
         </div>
@@ -90,7 +92,7 @@ export function AccountMenuPage(){
     </div>)}
 
     <div className="mt-4 text-center">
-      <Btn kind="ghost" size="sm" onClick={()=>{A.logout(); A.go("home");}}>Sign out</Btn>
+      <Btn kind="ghost" size="sm" onClick={()=>{A.logout(); A.go("home");}}>{t("seeker.accountMenu.signOut")}</Btn>
     </div>
   </Page>;
 }
