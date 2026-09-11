@@ -1636,19 +1636,19 @@ function PayrollDetailModal({run,onClose,canApprove,onApprove,onExecute,onRevers
 /* ─── Trainings ─── */
 export function HrTrainings(){
   const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
-  const list=A.trainings.filter(t=>t.status==="published");
+  const list=A.trainings.filter(training=>training.status==="published");
   return <div>
     <Card pad={mob?20:24} style={{borderRadius:14,marginBottom:16,background:`linear-gradient(135deg,${C.tint} 0%,#F0F7FF 100%)`,border:`1px solid ${C.line2}`}}>
       <div className="flex gap-3.5 items-center flex-wrap">
         <div className="w-12 h-12 rounded-xl bg-brand text-white flex items-center justify-center shrink-0"><I n="cap" s={22}/></div>
         <div className="flex-1 min-w-0">
-          <div className="text-base font-semibold text-text">Assign trainings to your team</div>
-          <div className="text-xs text-text-2 mt-1">Track completion, issue certificates, and view team progress.</div>
+          <div className="text-base font-semibold text-text">{t("hr.trainings.assignTrainingsTitle")}</div>
+          <div className="text-xs text-text-2 mt-1">{t("hr.trainings.assignTrainingsDescription")}</div>
         </div>
       </div>
     </Card>
     <div className="grid gap-3.5" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:300}px,1fr))`}}>
-      {list.map(t=><TrainingCard key={t.id} t={t}/>)}
+      {list.map(training=><TrainingCard key={training.id} t={training}/>)}
     </div>
   </div>;
 }
@@ -1681,26 +1681,26 @@ export function HrBadges(){
         <div className="flex gap-3.5 items-center" style={{flex:"1 1 240px"}}>
           <div className="w-13 h-13 rounded-2xl bg-warn text-white flex items-center justify-center shrink-0"><I n="award" s={26}/></div>
           <div>
-            <div className="text-base font-bold text-text">Team recognition wall</div>
-            <div className="text-sm text-text-2 mt-1">Every badge earned across the company · {withBadges.reduce((s,e)=>s+e.badges.length,0)} total</div>
+            <div className="text-base font-bold text-text">{t("hr.badges.teamRecognitionWall")}</div>
+            <div className="text-sm text-text-2 mt-1">{t("hr.badges.badgesEarnedAcrossCompany",{count:withBadges.reduce((s,e)=>s+e.badges.length,0)})}</div>
           </div>
         </div>
-        {canAward&&<Btn kind="primary" icon="plus" onClick={()=>setShowAward(true)} style={{background:C.warn,borderColor:C.warn}}>Award a badge</Btn>}
+        {canAward&&<Btn kind="primary" icon="plus" onClick={()=>setShowAward(true)} style={{background:C.warn,borderColor:C.warn}}>{t("hr.badges.awardBadgeBtn")}</Btn>}
       </div>
     </Card>
     {recentAwards.length>0&&<Card pad={mob?18:20} style={{borderRadius:14,marginBottom:16}}>
-      <Lbl>Recently awarded</Lbl>
+      <Lbl>{t("hr.badges.recentlyAwarded")}</Lbl>
       <div className="flex flex-col gap-1.5">
         {recentAwards.map((b,i)=><div key={i} className="flex justify-between items-center py-1.5 text-sm">
           <span className="text-text"><strong className="font-semibold">{b.name}</strong> · {b.emp.name}</span>
-          <span className="text-xs text-text-3">{new Date(b.awardedAt).toLocaleDateString("en-CA",{month:"short",day:"numeric",year:"numeric"})}</span>
+          <span className="text-xs text-text-3">{new Date(b.awardedAt).toLocaleDateString(locale==="fr"?"fr-CA":"en-CA",{month:"short",day:"numeric",year:"numeric"})}</span>
         </div>)}
       </div>
     </Card>}
     <div className="flex justify-end mb-3">
       <Sel value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{maxWidth:200}}>
-        <option value="count">Sort: Most badges</option>
-        <option value="recent">Sort: Most recent award</option>
+        <option value="count">{t("hr.badges.sortMostBadges")}</option>
+        <option value="recent">{t("hr.badges.sortMostRecent")}</option>
       </Sel>
     </div>
     <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
@@ -1722,20 +1722,20 @@ export function HrBadges(){
           </div>)}
         </div>
       </Card>)}
-      {withBadges.length===0&&<div style={{gridColumn:"1/-1"}}><Empty icon="award" title="No badges awarded yet" body={canAward?"Award the first badge to celebrate a teammate.":"Ask HR to start awarding badges."}/></div>}
+      {withBadges.length===0&&<div style={{gridColumn:"1/-1"}}><Empty icon="award" title={t("hr.badges.noBadgesAwarded")} body={canAward?t("hr.badges.noBadgesCanAward"):t("hr.badges.noBadgesCannotAward")}/></div>}
     </div>
 
-    {showAward&&<Modal onClose={()=>setShowAward(false)} title="Award a badge" wide>
+    {showAward&&<Modal onClose={()=>setShowAward(false)} title={t("hr.badges.awardBadgeModalTitle")} wide>
       <div className="flex flex-col gap-3.5">
-        <Field label="Give this badge to" required><Sel value={selEmp} onChange={e=>setSelEmp(e.target.value)}>
-          <option value="">— Select an employee —</option>
+        <Field label={t("hr.badges.giveThisBadgeTo")} required><Sel value={selEmp} onChange={e=>setSelEmp(e.target.value)}>
+          <option value="">{t("hr.badges.selectEmployee")}</option>
           {all.map(e=><option key={e.id} value={e.id}>{e.name} — {e.title}</option>)}
         </Sel></Field>
-        <Field label="Badge name" required hint="Short and specific — think 'Top Performer' or '5 Years'">
-          <Input value={badgeName} onChange={e=>setBadgeName(e.target.value)} placeholder="e.g. Perfect Attendance"/>
+        <Field label={t("hr.badges.badgeNameLabel")} required hint={t("hr.badges.badgeNameHint")}>
+          <Input value={badgeName} onChange={e=>setBadgeName(e.target.value)} placeholder={t("hr.badges.badgeNamePlaceholder")}/>
         </Field>
         <div>
-          <div className="text-xs font-bold text-text-3 tracking-wide uppercase mb-2">Quick pick</div>
+          <div className="text-xs font-bold text-text-3 tracking-wide uppercase mb-2">{t("hr.badges.quickPick")}</div>
           <div className="flex flex-wrap gap-1.5">
             {presets.map(p=><button key={p} onClick={()=>setBadgeName(p)} type="button"
               className={`py-1.5 px-3 rounded-full cursor-pointer text-xs font-semibold border ${badgeName===p?"text-white border-warn":"bg-white text-text-2 border-line"}`}
@@ -1743,18 +1743,18 @@ export function HrBadges(){
           </div>
         </div>
         <Banner tone="brand" icon="info">
-          {A.hrCompanySettings[company.id]?.privacy?.syncBadgesToNorthHire?"Badges appear on the employer's public NorthHire profile.":"Badges are internal-only. Enable public sync in HR Settings if you want them on NorthHire."}
+          {A.hrCompanySettings[company.id]?.privacy?.syncBadgesToNorthHire?t("hr.badges.publicSyncEnabled"):t("hr.badges.publicSyncDisabled")}
         </Banner>
         <div className="flex gap-2.5 justify-end">
-          <Btn kind="ghost" onClick={()=>setShowAward(false)}>Cancel</Btn>
-          <Btn kind="primary" icon="award" onClick={doAward} disabled={!selEmp||!badgeName.trim()} style={{background:C.warn,borderColor:C.warn}}>Award badge</Btn>
+          <Btn kind="ghost" onClick={()=>setShowAward(false)}>{t("hr.badges.cancelBtn")}</Btn>
+          <Btn kind="primary" icon="award" onClick={doAward} disabled={!selEmp||!badgeName.trim()} style={{background:C.warn,borderColor:C.warn}}>{t("hr.badges.awardBadgeSubmitBtn")}</Btn>
         </div>
       </div>
     </Modal>}
 
-    <ConfirmDialog open={!!removing} onClose={()=>setRemoving(null)} confirmLabel="Remove badge"
-      title="Remove this badge?" onConfirm={()=>A.removeBadge(removing.emp.id,removing.badge)}>
-      {removing&&<>Remove "{removing.badge}" from {removing.emp.name}? This can't be undone.</>}
+    <ConfirmDialog open={!!removing} onClose={()=>setRemoving(null)} confirmLabel={t("hr.badges.removeBadgeConfirmLabel")}
+      title={t("hr.badges.removeBadgeDialogTitle")} onConfirm={()=>A.removeBadge(removing.emp.id,removing.badge)}>
+      {removing&&<>{t("hr.badges.removeBadgeMessage",{badge:removing.badge,emp:removing.emp.name})}</>}
     </ConfirmDialog>
   </div>;
 }
