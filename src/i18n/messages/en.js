@@ -78,6 +78,15 @@ export const en = {
     adminBody: "That area is not part of the administrator console.",
     goToDashboard: "Go to my dashboard", signIn: "Sign in",
   },
+  cards: {
+    saved: "Saved", saveJob: "Save job",
+    recruiterSearch: "Recruiter search", recruiterSearchTip: "NorthHire Staffing is representing this hire for the client. You'd be on the client's payroll; the client pays our fee. Never a cost to you.",
+    verifiedEmployer: "Verified employer",
+    openingOne: "opening", openingOther: "openings",
+    onSite: "On-site", urgent: "Urgent", applied: "Applied",
+    minRead: "{mins} min read",
+    free: "Free", enrolled: "Enrolled", enrolledCount: "{count} enrolled",
+  },
   legal: {
     lastUpdated: "Last updated", readFull: "Read the full document",
   },

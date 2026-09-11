@@ -79,6 +79,15 @@ export const fr = {
     adminBody: "Ce secteur ne fait pas partie de la console administrateur.",
     goToDashboard: "Aller à mon tableau de bord", signIn: "Se connecter",
   },
+  cards: {
+    saved: "Sauvegardé", saveJob: "Sauvegarder l'emploi",
+    recruiterSearch: "Recherche de recruteur·euse", recruiterSearchTip: "NorthHire Placement représente cette embauche pour le client. Vous seriez sur la paie du client; le client paie nos frais. Jamais un coût pour vous.",
+    verifiedEmployer: "Employeur vérifié",
+    openingOne: "poste", openingOther: "postes",
+    onSite: "Sur place", urgent: "Urgent", applied: "Candidature envoyée",
+    minRead: "{mins} min de lecture",
+    free: "Gratuit", enrolled: "Inscrit·e", enrolledCount: "{count} inscrit·e·s",
+  },
   legal: {
     lastUpdated: "Dernière mise à jour", readFull: "Lire le document complet",
   },
