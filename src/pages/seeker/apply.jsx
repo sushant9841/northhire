@@ -5,9 +5,9 @@ import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
 import { Btn, Tag, Card, Input, Area, Sel, Field, Banner, H2, Lbl, Modal, Page, SmartPortrait, HERO_QUIET } from "../../design/primitives.jsx";
 import { pay, payUnit, payShort } from "../../helpers/utils.js";
-import { CV_TEMPLATES } from "../../store/seed/constants.js";
 import { JobCard, EmpMark } from "../shared/cards.jsx";
 import { useTranslation } from "../../i18n/i18n.jsx";
+import { cvTemplateName } from "./cv.jsx";
 
 /* Availability / experience filter values below are stored and matched as canonical English
    strings elsewhere in the app (see the STANDING RULE) - these maps translate only the label. */
@@ -65,7 +65,7 @@ function _CvPicker(){
       <div className="w-9 h-9 rounded-lg bg-wash text-brand flex items-center justify-center"><I n="file" s={18}/></div>
       <div className="flex-1 min-w-0">
         <div className="text-sm font-semibold text-text">{active?.name||t("seeker.apply.noCvSelected")}</div>
-        <div className="text-xs text-text-3 mt-0.5">{active?t("seeker.apply.cvUpdated",{template:CV_TEMPLATES.find(ct=>ct.id===active.template)?.name||t("seeker.apply.standardTemplate"),date:active.updated||"—"}):""}</div>
+        <div className="text-xs text-text-3 mt-0.5">{active?t("seeker.apply.cvUpdated",{template:active.template?cvTemplateName(t,active.template):t("seeker.apply.standardTemplate"),date:active.updated||"—"}):""}</div>
       </div>
       <Btn kind="ghost" size="sm" onClick={()=>setOpen(true)}>{t("seeker.apply.changeBtn")}</Btn>
     </div>
@@ -78,7 +78,7 @@ function _CvPicker(){
             <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${isActive?"bg-brand text-white":"bg-wash text-brand"}`}><I n="file" s={18}/></div>
             <div className="flex-1 min-w-0">
               <div className="text-sm font-bold text-text">{cv.name}</div>
-              <div className="text-xs text-text-3 mt-0.5">{t("seeker.apply.cvUpdatedNow",{template:CV_TEMPLATES.find(ct=>ct.id===cv.template)?.name||t("seeker.apply.standardTemplate"),date:cv.updated||t("seeker.apply.justNow")})}</div>
+              <div className="text-xs text-text-3 mt-0.5">{t("seeker.apply.cvUpdatedNow",{template:cv.template?cvTemplateName(t,cv.template):t("seeker.apply.standardTemplate"),date:cv.updated||t("seeker.apply.justNow")})}</div>
             </div>
             {isActive&&<Tag tone="brand" sm icon="check">{t("seeker.apply.selectedTag")}</Tag>}
           </button>;})}
