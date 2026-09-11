@@ -1172,9 +1172,7 @@ export function HrInvoices(){
         </div>
         <Field label={t("hr.invoices.clientProvinceLabel")} hint={t("hr.invoices.clientProvinceHint")}>
           <Sel value={nInv.prov} onChange={e=>setNInv({...nInv,prov:e.target.value})}>
-            {[["ON","Ontario"],["QC","Québec"],["BC","British Columbia"],["AB","Alberta"],["MB","Manitoba"],["SK","Saskatchewan"],
-              ["NS","Nova Scotia"],["NB","New Brunswick"],["NL","Newfoundland and Labrador"],["PE","Prince Edward Island"],
-              ["NT","Northwest Territories"],["NU","Nunavut"],["YT","Yukon"]].map(([code,name])=><option key={code} value={code}>{name}</option>)}
+            {["ON","QC","BC","AB","MB","SK","NS","NB","NL","PE","NT","NU","YT"].map(code=><option key={code} value={code}>{t("hr.invoices.provinces."+code)}</option>)}
           </Sel></Field>
 
         <div>
@@ -1184,7 +1182,7 @@ export function HrInvoices(){
               <div>{t("hr.invoices.descriptionHeader")}</div><div>{t("hr.invoices.qtyHeader")}</div><div>{t("hr.invoices.unitPriceHeader")}</div><div className="text-right">{t("hr.invoices.lineTotalHeader")}</div><div/>
             </div>
             {nInv.items.map((it,i)=><div key={i} className="grid gap-2 py-2 px-3 border-t border-line-soft items-center" style={{gridTemplateColumns:"3fr 60px 100px 90px 32px"}}>
-              <Input value={it.desc} onChange={e=>updateItem(i,{desc:e.target.value})} placeholder="Consulting services · June 2026"/>
+              <Input value={it.desc} onChange={e=>updateItem(i,{desc:e.target.value})} placeholder={t("hr.invoices.descriptionPlaceholder")}/>
               <Input type="number" min="0" value={it.qty} onChange={e=>updateItem(i,{qty:Math.max(0,Number(e.target.value)||0)})}/>
               <Input type="number" min="0" step="0.01" value={it.unitPrice} onChange={e=>updateItem(i,{unitPrice:Math.max(0,Number(e.target.value)||0)})}/>
               <div className="text-sm font-semibold text-text text-right">${(it.qty*it.unitPrice||0).toLocaleString()}</div>
@@ -1214,45 +1212,45 @@ export function HrInvoices(){
     </Modal>}
 
     {detail&&<InvoiceDetailModal invoice={detail} company={company} onClose={()=>setDetail(null)} canManage={canManage} onMarkPaid={()=>{A.markInvoicePaid(detail.id); setDetail({...detail,status:"paid"});}} onSend={()=>{A.sendInvoice(detail.id); setDetail({...detail,status:"pending"});}}
-      onReverse={async reason=>{try{await A.reverseInvoice(detail.id,reason);setDetail({...detail,status:"reversed"});A.toast("Invoice reversed","ok");}catch(e){A.toast(e.message,"danger");}}}/>}
+      onReverse={async reason=>{try{await A.reverseInvoice(detail.id,reason);setDetail({...detail,status:"reversed"});A.toast(t("hr.invoices.invoiceReversedToast"),"ok");}catch(e){A.toast(e.message,"danger");}}}/>}
   </div>;
 }
 
 function InvoiceDetailModal({invoice:inv,company,onClose,canManage,onMarkPaid,onSend,onReverse}){
   const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const [reversing,setReversing]=useState(false); const [reverseReason,setReverseReason]=useState("");
-  const items=inv.items||[{desc:"Services",qty:1,unitPrice:inv.amount}];
+  const items=inv.items||[{desc:t("hr.invoices.servicesFallback"),qty:1,unitPrice:inv.amount}];
   const subtotal=inv.subtotal||inv.amount;
   const hst=inv.hst||0;
-  return <Modal onClose={onClose} title={`Invoice ${inv.number}`} wide>
+  return <Modal onClose={onClose} title={t("hr.invoices.invoiceDetailTitle",{number:inv.number})} wide>
     <div className="flex flex-col gap-4">
       {/* Header: From / To */}
       <div className={`grid gap-3.5 bg-bg rounded-xl ${mob?"grid-cols-1 p-4":"grid-cols-2 p-5"}`}>
         <div>
-          <div className="text-xs text-text-3 font-bold tracking-wide uppercase mb-1.5">From</div>
-          <div className="text-base font-semibold text-text">{company?.name||"Your company"}</div>
+          <div className="text-xs text-text-3 font-bold tracking-wide uppercase mb-1.5">{t("hr.invoices.from")}</div>
+          <div className="text-base font-semibold text-text">{company?.name||t("hr.invoices.yourCompanyFallback")}</div>
           <div className="text-xs text-text-3 mt-1 leading-snug">{company?.city||""}{company?.prov?", "+company.prov:""}<br/>{company?.email||""}</div>
         </div>
         <div>
-          <div className="text-xs text-text-3 font-bold tracking-wide uppercase mb-1.5">Bill to</div>
+          <div className="text-xs text-text-3 font-bold tracking-wide uppercase mb-1.5">{t("hr.invoices.billTo")}</div>
           <div className="text-base font-semibold text-text">{inv.client}</div>
-          {inv.po&&<div className="text-xs text-text-3 mt-1">PO: {inv.po}</div>}
+          {inv.po&&<div className="text-xs text-text-3 mt-1">{t("hr.invoices.poLabel",{po:inv.po})}</div>}
         </div>
       </div>
 
       {/* Meta */}
       <div className="grid grid-cols-4 gap-2 text-xs">
-        {[["Invoice #",inv.number],["Issued",inv.issued],["Due",inv.due],["Status",inv.status.toUpperCase()]].map(([l,v])=>
+        {[[t("hr.invoices.invoiceNum"),inv.number,true],[t("hr.invoices.issuedLabel"),inv.issued,true],[t("hr.invoices.dueLabel"),inv.due,true],[t("hr.invoices.status"),inv.status.toUpperCase(),false]].map(([l,v,mono])=>
           <div key={l} className="p-2.5 bg-bg rounded-lg text-center">
             <div className="text-text-3 font-semibold uppercase tracking-wide mb-1" style={{fontSize:10.5}}>{l}</div>
-            <div className="text-text font-semibold" style={{fontFamily:l==="Invoice #"||l==="Issued"||l==="Due"?"ui-monospace,monospace":"inherit"}}>{v}</div>
+            <div className="text-text font-semibold" style={{fontFamily:mono?"ui-monospace,monospace":"inherit"}}>{v}</div>
           </div>)}
       </div>
 
       {/* Line items */}
       <div className="border border-line rounded-lg overflow-hidden">
         <div className="py-2.5 px-3.5 bg-bg text-xs font-bold text-text-3 tracking-wide uppercase grid gap-2" style={{gridTemplateColumns:"3fr 60px 100px 100px"}}>
-          <div>Description</div><div className="text-center">Qty</div><div className="text-right">Unit price</div><div className="text-right">Line total</div>
+          <div>{t("hr.invoices.descriptionHeader")}</div><div className="text-center">{t("hr.invoices.qtyHeader")}</div><div className="text-right">{t("hr.invoices.unitPriceHeader")}</div><div className="text-right">{t("hr.invoices.lineTotalHeader")}</div>
         </div>
         {items.map((it,i)=><div key={i} className="py-3 px-3.5 border-t border-line-soft grid gap-2 text-sm items-center" style={{gridTemplateColumns:"3fr 60px 100px 100px"}}>
           <div className="text-text">{it.desc||"—"}</div>
@@ -1266,30 +1264,30 @@ function InvoiceDetailModal({invoice:inv,company,onClose,canManage,onMarkPaid,on
       <div className="p-4 bg-bg rounded-xl ml-auto" style={{maxWidth:mob?"none":320,width:mob?"auto":320}}>
         {hst>0&&<>
           <div className="flex justify-between text-sm text-text-2 mb-1.5">
-            <span>Subtotal</span><span>${subtotal.toLocaleString()}</span>
+            <span>{t("hr.invoices.subtotal")}</span><span>${subtotal.toLocaleString()}</span>
           </div>
           <div className="flex justify-between text-sm text-text-2 mb-2">
-            <span>{inv.taxLabel||"HST (13%)"}</span><span>${hst.toLocaleString()}</span>
+            <span>{inv.taxLabel||t("hr.invoices.defaultTaxLabel")}</span><span>${hst.toLocaleString()}</span>
           </div>
         </>}
         <div className={`flex justify-between text-base text-text font-bold ${hst>0?"pt-2.5 border-t border-line":""}`}>
-          <span>Total</span><span className="text-brand">${inv.amount.toLocaleString()} CAD</span>
+          <span>{t("hr.invoices.total")}</span><span className="text-brand">${inv.amount.toLocaleString()} CAD</span>
         </div>
       </div>
 
       {reversing?<div className="flex flex-col gap-2.5 p-3 bg-red-bg rounded-lg border border-red-ln">
-        <Field label="Reason for reversal" required hint="Recorded in the audit log.">
-          <Area rows={2} value={reverseReason} onChange={e=>setReverseReason(e.target.value)} placeholder="e.g. Billed the wrong client"/></Field>
+        <Field label={t("hr.invoices.reversalReasonLabel")} required hint={t("hr.invoices.reversalReasonHint")}>
+          <Area rows={2} value={reverseReason} onChange={e=>setReverseReason(e.target.value)} placeholder={t("hr.invoices.reversalPlaceholder")}/></Field>
         <div className="flex gap-2.5 justify-end">
-          <Btn kind="ghost" size="sm" onClick={()=>{setReversing(false);setReverseReason("");}}>Cancel</Btn>
-          <Btn kind="danger" size="sm" disabled={!reverseReason.trim()} onClick={()=>{onReverse(reverseReason.trim());setReversing(false);setReverseReason("");}}>Confirm reversal</Btn>
+          <Btn kind="ghost" size="sm" onClick={()=>{setReversing(false);setReverseReason("");}}>{t("hr.invoices.cancelBtn")}</Btn>
+          <Btn kind="danger" size="sm" disabled={!reverseReason.trim()} onClick={()=>{onReverse(reverseReason.trim());setReversing(false);setReverseReason("");}}>{t("hr.invoices.confirmReversalBtn")}</Btn>
         </div>
       </div>:<div className="flex gap-2.5 justify-end pt-2 border-t border-line">
-        <Btn kind="ghost" onClick={onClose}>Close</Btn>
-        <Btn kind="ghost" icon="download" onClick={()=>A.printHrInvoice(inv,company)}>Download PDF</Btn>
-        {canManage&&inv.status==="draft"&&<Btn kind="primary" onClick={onSend}>Send to client</Btn>}
-        {canManage&&inv.status==="pending"&&<Btn kind="primary" icon="check" onClick={onMarkPaid}>Mark as paid</Btn>}
-        {canManage&&inv.status==="paid"&&<Btn kind="dangerSoft" onClick={()=>setReversing(true)}>Reverse</Btn>}
+        <Btn kind="ghost" onClick={onClose}>{t("common.close")}</Btn>
+        <Btn kind="ghost" icon="download" onClick={()=>A.printHrInvoice(inv,company)}>{t("hr.invoices.downloadPdfBtn")}</Btn>
+        {canManage&&inv.status==="draft"&&<Btn kind="primary" onClick={onSend}>{t("hr.invoices.sendToClientBtn")}</Btn>}
+        {canManage&&inv.status==="pending"&&<Btn kind="primary" icon="check" onClick={onMarkPaid}>{t("hr.invoices.markPaidBtn")}</Btn>}
+        {canManage&&inv.status==="paid"&&<Btn kind="dangerSoft" onClick={()=>setReversing(true)}>{t("hr.invoices.reverseBtn")}</Btn>}
       </div>}
     </div>
   </Modal>;
@@ -1302,6 +1300,7 @@ function InvoiceDetailModal({invoice:inv,company,onClose,canManage,onMarkPaid,on
    Service Canada - generating the slip and filing it are different things, and an employer
    assuming otherwise would be a genuinely costly misunderstanding. */
 function _YearEndSlips({A,mob,isEmployee,isPayrollMgr}){
+  const {t}=useTranslation();
   const [years,setYears]=useState([]);
   const [year,setYear]=useState(null);
   const [data,setData]=useState(null);
@@ -1328,13 +1327,12 @@ function _YearEndSlips({A,mob,isEmployee,isPayrollMgr}){
 
   return <Card pad={mob?16:20} style={{borderRadius:14,marginBottom:16}}>
     <div className="flex justify-between items-center flex-wrap gap-3 mb-1">
-      <Lbl style={{margin:0}}>Year-end slips</Lbl>
+      <Lbl style={{margin:0}}>{t("hr.payroll.yearEndSlipsTitle")}</Lbl>
       <Sel value={year||""} onChange={e=>setYear(Number(e.target.value))} style={{width:130}}>
         {years.map(y=><option key={y} value={y}>{y}</option>)}</Sel>
     </div>
     <div className="text-xs text-text-2 mb-3.5 leading-relaxed">
-      Amounts come from payroll runs actually paid in {year}. Generating a slip is not filing it —
-      the T4 Summary still has to go to CRA, and an ROE through ROE Web.
+      {t("hr.payroll.yearEndSlipsDesc",{year})}
     </div>
     {err&&<Banner tone="warn" icon="alert">{err}</Banner>}
 
@@ -1342,25 +1340,24 @@ function _YearEndSlips({A,mob,isEmployee,isPayrollMgr}){
       ? (mine&&<div className="border border-line rounded-xl p-4">
           <div className="flex justify-between items-center flex-wrap gap-3">
             <div>
-              <div className="text-sm font-semibold text-text">T4 — {mine.slip.year}</div>
+              <div className="text-sm font-semibold text-text">{t("hr.payroll.t4Label",{year:mine.slip.year})}</div>
               <div className="text-xs text-text-2 mt-1">
-                Employment income {money(mine.slip.boxes[14])} · Tax deducted {money(mine.slip.boxes[22])} ·
-                {" "}{mine.slip.periodsPaid} pay period{mine.slip.periodsPaid===1?"":"s"}</div>
+                {t("hr.payroll.employmentIncomeTaxSummary",{income:money(mine.slip.boxes[14]),tax:money(mine.slip.boxes[22]),count:mine.slip.periodsPaid,plural:mine.slip.periodsPaid===1?"":"s"})}</div>
             </div>
-            <Btn kind="outline" size="sm" icon="download" onClick={()=>A.printT4(mine.slip,mine.employer)}>Print / Save as PDF</Btn>
+            <Btn kind="outline" size="sm" icon="download" onClick={()=>A.printT4(mine.slip,mine.employer)}>{t("hr.invoices.printSaveAsBtn")}</Btn>
           </div>
         </div>)
       : (data&&<>
         <div className={`grid gap-2.5 mb-3.5 ${mob?"grid-cols-2":"grid-cols-4"}`}>
-          {[["Employees",data.slips.length],["Employment income",money(data.totals.gross)],
-            ["CPP + EI",money(data.totals.cpp+data.totals.ei)],["Tax deducted",money(data.totals.tax)]].map(([l,v])=>
+          {[[t("hr.payroll.employees"),data.slips.length],[t("hr.payroll.employmentIncome"),money(data.totals.gross)],
+            [t("hr.payroll.cppPlusEi"),money(data.totals.cpp+data.totals.ei)],[t("hr.payroll.taxDeducted"),money(data.totals.tax)]].map(([l,v])=>
             <div key={l} className="bg-bg border border-line rounded-xl p-3">
               <div className="text-xs text-text-3">{l}</div>
               <div className="text-base font-bold text-text mt-0.5">{v}</div></div>)}
         </div>
         <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:620}}>
           <thead><tr className="border-b-2 border-line text-left">
-            {["Employee","Box 14 income","Box 16 CPP","Box 18 EI","Box 22 tax",""].map(h=><th key={h} className={TH_CLS}>{h}</th>)}
+            {[t("hr.payroll.employee"),t("hr.payroll.box14IncomeHeader"),t("hr.payroll.box16CppHeader"),t("hr.payroll.box18EiHeader"),t("hr.payroll.box22TaxHeader"),""].map(h=><th key={h} className={TH_CLS}>{h}</th>)}
           </tr></thead>
           <tbody>
             {data.slips.map(s=><tr key={s.employeeId} className="border-b border-line-soft">
@@ -1371,34 +1368,33 @@ function _YearEndSlips({A,mob,isEmployee,isPayrollMgr}){
               <td className={`${TD_CLS} text-sm text-text-2`}>{money(s.boxes[22])}</td>
               <td className={TD_CLS}>
                 <div className="flex gap-1 justify-end">
-                  <Btn kind="ghost" size="xs" onClick={()=>A.printT4(s,data.employer)}>T4</Btn>
-                  {isPayrollMgr&&<Btn kind="ghost" size="xs" onClick={()=>{setRoeFor(s);setRoeReason("A");}}>ROE</Btn>}
+                  <Btn kind="ghost" size="xs" onClick={()=>A.printT4(s,data.employer)}>{t("hr.payroll.t4Btn")}</Btn>
+                  {isPayrollMgr&&<Btn kind="ghost" size="xs" onClick={()=>{setRoeFor(s);setRoeReason("A");}}>{t("hr.payroll.roeBtn")}</Btn>}
                 </div></td>
             </tr>)}
             {data.slips.length===0&&<tr><td colSpan={6} className="p-5">
-              <Empty icon="wallet" title={`No paid payroll in ${year}`} body="A T4 is only generated once a payroll run has actually been paid."/></td></tr>}
+              <Empty icon="wallet" title={t("hr.payroll.noPaidPayroll",{year})} body={t("hr.payroll.t4OnlyAfterPaidBody")}/></td></tr>}
           </tbody>
         </table></div>
       </>)}
 
-    {roeFor&&<Modal onClose={()=>setRoeFor(null)} title={`Record of Employment — ${roeFor.name}`}>
+    {roeFor&&<Modal onClose={()=>setRoeFor(null)} title={t("hr.payroll.roeModalTitle",{name:roeFor.name})}>
       <div className="text-sm text-text-2 mb-4 leading-relaxed">
-        Insurable earnings and hours are read from this employee's paid payroll runs. Pick the reason
-        Service Canada should see, then print the working copy to check the figures before issuing.
+        {t("hr.payroll.roeModalBody")}
       </div>
-      <Field label="Reason for issuing">
+      <Field label={t("hr.payroll.roeReasonLabel")}>
         <Sel value={roeReason} onChange={e=>setRoeReason(e.target.value)}>
-          {Object.entries(ROE_REASONS).map(([c,l])=><option key={c} value={c}>{c} — {l}</option>)}</Sel>
+          {Object.keys(ROE_REASONS).map(c=><option key={c} value={c}>{c} — {t("hr.payroll.roeReasons."+c)}</option>)}</Sel>
       </Field>
       <div className="flex gap-2.5 justify-end mt-5">
-        <Btn kind="ghost" onClick={()=>setRoeFor(null)}>Cancel</Btn>
+        <Btn kind="ghost" onClick={()=>setRoeFor(null)}>{t("hr.invoices.cancelBtn")}</Btn>
         <Btn kind="primary" icon="download" onClick={async()=>{
           try{
             const r=await A.hrRoe(roeFor.employeeId,roeReason);
             A.printRoe(r.roe,r.employer);
             setRoeFor(null);
           }catch(e){setErr(e.message);setRoeFor(null);}
-        }}>Print working copy</Btn>
+        }}>{t("hr.payroll.printWorkingCopyBtn")}</Btn>
       </div>
     </Modal>}
   </Card>;
@@ -1463,7 +1459,7 @@ export function HrPayroll(){
             <td className={`${TD_CLS} text-sm text-brand font-semibold`}>${p.totalNet.toLocaleString()}</td>
             <td className={`${TD_CLS} text-xs text-text-2`}>${(p.totalReimb||0).toLocaleString()}</td>
             <td className={`${TD_CLS} text-xs text-text-2`}>{p.employees}</td>
-            <td className={TD_CLS}><Tag tone={p.status==="paid"?"ok":p.status==="approved"?"brand":"warn"} sm>{p.status}</Tag></td>
+            <td className={TD_CLS}><Tag tone={p.status==="paid"?"ok":p.status==="approved"?"brand":"warn"} sm>{t("hr.payroll.runStatus."+p.status)}</Tag></td>
             <td className={TD_CLS} onClick={e=>e.stopPropagation()}>
               <div className="flex gap-1">
                 <Btn kind="ghost" size="xs" onClick={()=>setDetail(p)}>{t("hr.payroll.viewBtn")}</Btn>
@@ -1491,14 +1487,14 @@ export function HrPayroll(){
       </div>
       <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:500}}>
         <thead><tr className="border-b-2 border-line text-left">
-          {(isEmployee?["Item","Amount"]:["Employee","Role","Annual","Monthly","Biweekly"]).map(h=>
+          {(isEmployee?[t("hr.payroll.item"),t("hr.payroll.amount")]:[t("hr.payroll.employee"),t("hr.payroll.role"),t("hr.payroll.annual"),t("hr.payroll.monthly"),t("hr.payroll.biweekly")]).map(h=>
             <th key={h} className={TH_CLS}>{h}</th>)}
         </tr></thead>
         <tbody>
           {isEmployee?<>
-            <tr><td className="py-3 px-3 text-sm text-text">Annual salary</td><td className="py-3 px-3 text-sm text-brand font-semibold">${emp.salary?.toLocaleString()}</td></tr>
-            <tr><td className="py-3 px-3 text-sm text-text">Monthly gross</td><td className="py-3 px-3 text-sm text-text">${Math.round((emp.salary||0)/12).toLocaleString()}</td></tr>
-            <tr><td className="py-3 px-3 text-sm text-text">Bi-weekly gross</td><td className="py-3 px-3 text-sm text-text">${Math.round((emp.salary||0)/26).toLocaleString()}</td></tr>
+            <tr><td className="py-3 px-3 text-sm text-text">{t("hr.payroll.annualSalary")}</td><td className="py-3 px-3 text-sm text-brand font-semibold">${emp.salary?.toLocaleString()}</td></tr>
+            <tr><td className="py-3 px-3 text-sm text-text">{t("hr.payroll.monthlyGross")}</td><td className="py-3 px-3 text-sm text-text">${Math.round((emp.salary||0)/12).toLocaleString()}</td></tr>
+            <tr><td className="py-3 px-3 text-sm text-text">{t("hr.payroll.biweeklyGross")}</td><td className="py-3 px-3 text-sm text-text">${Math.round((emp.salary||0)/26).toLocaleString()}</td></tr>
           </>:null}
           {!isEmployee&&salaryRows.map(e=><tr key={e.id} className="border-b border-line-soft">
             <td className="py-3 px-3"><div className="flex gap-2.5 items-center">
@@ -1509,57 +1505,57 @@ export function HrPayroll(){
             <td className="py-3 px-3 text-sm text-text-2">${Math.round((e.salary||0)/12).toLocaleString()}</td>
             <td className="py-3 px-3 text-sm text-text-2">${Math.round((e.salary||0)/26).toLocaleString()}</td>
           </tr>)}
-          {!isEmployee&&salaryRows.length===0&&<tr><td colSpan={5} className="p-5"><Empty icon="search" title="No matches" body="Try a different search term."/></td></tr>}
+          {!isEmployee&&salaryRows.length===0&&<tr><td colSpan={5} className="p-5"><Empty icon="search" title={t("hr.payroll.noMatches")} body={t("hr.payroll.noMatchesBody")}/></td></tr>}
         </tbody>
       </table></div>
     </Card>
 
     {isEmployee&&<Card pad={mob?16:20} style={{borderRadius:14,marginTop:16}}>
-      <Lbl>My payslips</Lbl>
+      <Lbl>{t("hr.payroll.myPayslips")}</Lbl>
       {(()=>{const slips=A.myPayslips();
-        if(slips.length===0)return <Empty icon="wallet" title="No payslips yet" body="A payslip appears here after your first executed payroll run."/>;
+        if(slips.length===0)return <Empty icon="wallet" title={t("hr.payroll.noPayslips")} body={t("hr.payroll.noPayslipsBody")}/>;
         return <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:460}}>
           <thead><tr className="border-b-2 border-line text-left">
-            {["Period","Pay date","Gross","Net","Action"].map(h=><th key={h} className={TH_CLS}>{h}</th>)}
+            {[t("hr.payroll.periodColumnHeader"),t("hr.payroll.payDateColumnHeader"),t("hr.payroll.grossColumnHeader"),t("hr.payroll.netColumnHeader"),t("hr.payroll.actions")].map(h=><th key={h} className={TH_CLS}>{h}</th>)}
           </tr></thead>
           <tbody>{slips.map(({run,line})=><tr key={run.id} className="border-b border-line-soft">
             <td className="py-3 px-3 text-sm text-text font-semibold">{run.period}</td>
             <td className="py-3 px-3 text-xs text-text-3">{run.runDate}</td>
             <td className="py-3 px-3 text-sm text-text">${line.gross.toLocaleString()}</td>
             <td className="py-3 px-3 text-sm text-brand font-semibold">${line.net.toLocaleString()}</td>
-            <td className="py-3 px-3"><Btn kind="outline" size="xs" icon="download" onClick={()=>A.printPayslip(run,line,emp,company)}>Payslip</Btn></td>
+            <td className="py-3 px-3"><Btn kind="outline" size="xs" icon="download" onClick={()=>A.printPayslip(run,line,emp,company)}>{t("hr.payroll.payslipBtn")}</Btn></td>
           </tr>)}</tbody>
         </table></div>;
       })()}
     </Card>}
 
-    {showNew&&<Modal onClose={()=>setShowNew(false)} title="Create payroll run">
+    {showNew&&<Modal onClose={()=>setShowNew(false)} title={t("hr.payroll.createPayrollRunBtn")}>
       <div className="flex flex-col gap-3.5">
-        <Banner tone="brand" icon="info">Runs pay for {all.length} active employees using real federal and provincial brackets, TD1 credits, and CPP/EI annual maximums. Remitting the withheld amounts to CRA is still a separate step. Approved expenses awaiting reimbursement will be included.</Banner>
+        <Banner tone="brand" icon="info">{t("hr.payroll.runBannerText",{count:all.length})}</Banner>
         <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
-          <Field label="Period start" required><Input type="date" value={np.periodStart} onChange={e=>setNp({...np,periodStart:e.target.value})}/></Field>
-          <Field label="Period end" required><Input type="date" value={np.periodEnd} onChange={e=>setNp({...np,periodEnd:e.target.value})}/></Field>
+          <Field label={t("hr.payroll.periodStartLabel")} required><Input type="date" value={np.periodStart} onChange={e=>setNp({...np,periodStart:e.target.value})}/></Field>
+          <Field label={t("hr.payroll.periodEndLabel")} required><Input type="date" value={np.periodEnd} onChange={e=>setNp({...np,periodEnd:e.target.value})}/></Field>
         </div>
         <div className="p-3.5 bg-bg rounded-lg text-sm text-text-2 leading-relaxed">
-          <div className="font-semibold mb-1.5 text-text">Estimated totals</div>
-          Gross: <strong className="text-text">${all.reduce((s,e)=>s+Math.round((e.salary||0)/26),0).toLocaleString()}</strong><br/>
-          Employees: <strong className="text-text">{all.length}</strong><br/>
-          Pending reimbursable expenses: <strong className="text-text">${A.companyExpenses(company.id).filter(x=>x.status==="approved"&&x.reimburseVia==="next-payroll").reduce((s,x)=>s+x.amount,0).toLocaleString()}</strong>
+          <div className="font-semibold mb-1.5 text-text">{t("hr.payroll.estimatedTotals")}</div>
+          {t("hr.payroll.estimatedGrossLine",{amount:""})}<strong className="text-text">${all.reduce((s,e)=>s+Math.round((e.salary||0)/26),0).toLocaleString()}</strong><br/>
+          {t("hr.payroll.estimatedEmployeesLine",{count:""})}<strong className="text-text">{all.length}</strong><br/>
+          {t("hr.payroll.estimatedReimbLine",{amount:""})}<strong className="text-text">${A.companyExpenses(company.id).filter(x=>x.status==="approved"&&x.reimburseVia==="next-payroll").reduce((s,x)=>s+x.amount,0).toLocaleString()}</strong>
         </div>
         <div className="flex gap-2.5 justify-end">
-          <Btn kind="ghost" onClick={()=>setShowNew(false)}>Cancel</Btn>
-          <Btn kind="primary" icon="check" onClick={createRun}>Create run (draft)</Btn>
+          <Btn kind="ghost" onClick={()=>setShowNew(false)}>{t("hr.invoices.cancelBtn")}</Btn>
+          <Btn kind="primary" icon="check" onClick={createRun}>{t("hr.payroll.createRunDraftBtn")}</Btn>
         </div>
       </div>
     </Modal>}
 
     {detail&&<PayrollDetailModal run={detail} onClose={()=>setDetail(null)} canApprove={isPayrollMgr} onApprove={()=>{A.approvePayroll(detail.id); setDetail({...detail,status:"approved"});}} onExecute={()=>setExecuting(detail)}
       onReverse={async reason=>{const r=await A.reversePayroll(detail.id,reason).then(()=>({ok:true})).catch(e=>({ok:false,msg:e.message}));
-        if(r.ok){setDetail({...detail,status:"reversed"});A.toast("Payroll run reversed","ok");}else A.toast(r.msg,"danger");}}/>}
+        if(r.ok){setDetail({...detail,status:"reversed"});A.toast(t("hr.payroll.payrollRunReversedToast"),"ok");}else A.toast(r.msg,"danger");}}/>}
 
-    <ConfirmDialog open={!!executing} onClose={()=>setExecuting(null)} confirmLabel="Execute payroll"
-      title="Execute this payroll run?" onConfirm={()=>{A.executePayroll(executing.id); if(detail?.id===executing.id)setDetail(null);}}>
-      {executing&&<>Pays {executing.employees} employees, total net <strong>${executing.totalNet?.toLocaleString()}</strong>. This triggers direct deposit and marks all approved expenses as paid — it can't be undone from here.</>}
+    <ConfirmDialog open={!!executing} onClose={()=>setExecuting(null)} confirmLabel={t("hr.payroll.executePayrollBtn")}
+      title={t("hr.payroll.executeConfirmTitle")} onConfirm={()=>{A.executePayroll(executing.id); if(detail?.id===executing.id)setDetail(null);}}>
+      {executing&&t("hr.payroll.executeConfirmBody",{count:executing.employees,amount:`$${executing.totalNet?.toLocaleString()}`})}
     </ConfirmDialog>
   </div>;
 }
@@ -1568,7 +1564,7 @@ function PayrollDetailModal({run,onClose,canApprove,onApprove,onExecute,onRevers
   const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const [reversing,setReversing]=useState(false); const [reverseReason,setReverseReason]=useState("");
   const exportRegister=()=>{
-    const rows=[["Employee","Pay type","Gross","Unpaid leave","Reg. hrs","OT hrs","Stat hrs","Night diff hrs","CPP","EI","Federal tax","Provincial tax","Reimbursement","Net"],
+    const rows=[[t("hr.payroll.csvHeaderEmployee"),t("hr.payroll.csvHeaderPayType"),t("hr.payroll.csvHeaderGross"),t("hr.payroll.csvHeaderUnpaidLeave"),t("hr.payroll.csvHeaderRegHrs"),t("hr.payroll.csvHeaderOtHrs"),t("hr.payroll.csvHeaderStatHrs"),t("hr.payroll.csvHeaderNightDiffHrs"),t("hr.payroll.csvHeaderCpp"),t("hr.payroll.csvHeaderEi"),t("hr.payroll.csvHeaderFederalTax"),t("hr.payroll.csvHeaderProvincialTax"),t("hr.payroll.csvHeaderReimbursement"),t("hr.payroll.csvHeaderNet")],
       ...run.lines.map(l=>[l.name,l.payType||"salary",l.gross,l.unpaidDeduction||0,
         l.hourlyBreakdown?.regularHours||"",l.hourlyBreakdown?.otHours||"",l.hourlyBreakdown?.statHours||"",l.hourlyBreakdown?.nightHours||"",
         l.cpp,l.ei,l.fedTax,l.provTax,l.reimb||0,l.net])];
@@ -1576,10 +1572,10 @@ function PayrollDetailModal({run,onClose,canApprove,onApprove,onExecute,onRevers
     const blob=new Blob([csv],{type:"text/csv"}); const url=URL.createObjectURL(blob);
     const a=document.createElement("a"); a.href=url; a.download=`payroll-register-${run.period.replace(/[^\w-]/g,"_")}.csv`; a.click(); URL.revokeObjectURL(url);
   };
-  return <Modal onClose={onClose} title={`Payroll · ${run.period}`} wide>
+  return <Modal onClose={onClose} title={t("hr.payroll.detailTitle",{period:run.period})} wide>
     <div className="flex flex-col gap-3.5">
       <div className={`grid gap-2.5 ${mob?"grid-cols-2":"grid-cols-4"}`}>
-        {[["Gross",`$${run.totalGross.toLocaleString()}`],["Net",`$${run.totalNet.toLocaleString()}`],["Reimbursements",`$${(run.totalReimb||0).toLocaleString()}`],["Employees",run.employees]].map(([l,v])=>
+        {[[t("hr.payroll.gross"),`$${run.totalGross.toLocaleString()}`],[t("hr.payroll.net"),`$${run.totalNet.toLocaleString()}`],[t("hr.payroll.reimbursementsLabel"),`$${(run.totalReimb||0).toLocaleString()}`],[t("hr.payroll.employees"),run.employees]].map(([l,v])=>
           <div key={l} className="p-3 bg-bg rounded-lg text-center">
             <div className={`font-bold text-text ${mob?"text-base":"text-lg"}`}>{v}</div>
             <div className="text-xs text-text-3 mt-1 uppercase tracking-wide font-semibold" style={{fontSize:10.5}}>{l}</div>
@@ -1589,15 +1585,15 @@ function PayrollDetailModal({run,onClose,canApprove,onApprove,onExecute,onRevers
       <div className="overflow-y-auto border border-line rounded-lg" style={{maxHeight:400}}>
         <table className="w-full border-collapse text-xs">
           <thead style={{position:"sticky",top:0,background:C.bg,zIndex:1}}><tr>
-            {["Employee","Gross","Unpaid","CPP","EI","Fed","Prov","Reimb.","Net"].map(h=>
+            {[t("hr.payroll.employee"),t("hr.payroll.gross"),t("hr.payroll.unpaidHeader"),t("hr.payroll.cppHeader"),t("hr.payroll.eiHeader"),t("hr.payroll.fedHeader"),t("hr.payroll.provHeader"),t("hr.payroll.reimb"),t("hr.payroll.net")].map(h=>
               <th key={h} className="py-2.5 px-2.5 text-left font-bold text-text-3 tracking-wide uppercase border-b border-line" style={{fontSize:10.5}}>{h}</th>)}
           </tr></thead>
           <tbody>{run.lines.map(l=>{const hb=l.hourlyBreakdown;
             return <tr key={l.employee} className="border-b border-line-soft">
-            <td className="py-2.5 px-2.5 font-semibold text-text">{l.name}{l.payType==="hourly"&&<Tag sm tone="violet" style={{marginLeft:6}}>Hourly</Tag>}</td>
+            <td className="py-2.5 px-2.5 font-semibold text-text">{l.name}{l.payType==="hourly"&&<Tag sm tone="violet" style={{marginLeft:6}}>{t("hr.payroll.hourlyTag")}</Tag>}</td>
             <td className="py-2.5 px-2.5 text-text">${l.gross.toLocaleString()}
-              {hb&&<div className="text-text-3 font-normal mt-0.5" style={{fontSize:10}} title="Regular / overtime / stat-holiday / night-differential hours this period">
-                {hb.regularHours.toFixed(1)}h reg{hb.otHours>0&&` · ${hb.otHours.toFixed(1)}h OT`}{hb.statHours>0&&` · ${hb.statHours.toFixed(1)}h stat`}{hb.nightHours>0&&` · ${hb.nightHours.toFixed(1)}h night`}
+              {hb&&<div className="text-text-3 font-normal mt-0.5" style={{fontSize:10}} title={t("hr.payroll.hourlyBreakdownTooltip")}>
+                {t("hr.payroll.hoursRegAbbrev",{hours:hb.regularHours.toFixed(1)})}{hb.otHours>0&&t("hr.payroll.hoursOtAbbrev",{hours:hb.otHours.toFixed(1)})}{hb.statHours>0&&t("hr.payroll.hoursStatAbbrev",{hours:hb.statHours.toFixed(1)})}{hb.nightHours>0&&t("hr.payroll.hoursNightAbbrev",{hours:hb.nightHours.toFixed(1)})}
               </div>}
             </td>
             <td className="py-2.5 px-2.5" style={{color:l.unpaidDeduction>0?C.red:C.text3}}>{l.unpaidDeduction>0?`-$${l.unpaidDeduction.toLocaleString()}`:"—"}</td>
@@ -1612,22 +1608,22 @@ function PayrollDetailModal({run,onClose,canApprove,onApprove,onExecute,onRevers
       </div>
 
       <div className="text-xs text-text-3 p-3 bg-bg rounded-lg leading-relaxed">
-        <strong className="text-text-2">Status: {run.status}</strong> · Runs are draft when first created. Once approved, they can be executed (direct deposit initiated + expenses reconciled).
+        {t("hr.payroll.statusRunSummary",{status:t("hr.payroll.runStatus."+run.status)})}
       </div>
 
       {reversing?<div className="flex flex-col gap-2.5 p-3 bg-red-bg rounded-lg border border-red-ln">
-        <Field label="Reason for reversal" required hint="Recorded in the audit log. Reimbursed expenses go back to 'approved' status.">
-          <Area rows={2} value={reverseReason} onChange={e=>setReverseReason(e.target.value)} placeholder="e.g. Executed against the wrong pay period"/></Field>
+        <Field label={t("hr.payroll.reversalReasonLabel")} required hint={t("hr.payroll.reversalReasonHintPayroll")}>
+          <Area rows={2} value={reverseReason} onChange={e=>setReverseReason(e.target.value)} placeholder={t("hr.payroll.reversalPlaceholderPayroll")}/></Field>
         <div className="flex gap-2.5 justify-end">
-          <Btn kind="ghost" size="sm" onClick={()=>{setReversing(false);setReverseReason("");}}>Cancel</Btn>
-          <Btn kind="danger" size="sm" disabled={!reverseReason.trim()} onClick={()=>{onReverse(reverseReason.trim());setReversing(false);setReverseReason("");}}>Confirm reversal</Btn>
+          <Btn kind="ghost" size="sm" onClick={()=>{setReversing(false);setReverseReason("");}}>{t("hr.invoices.cancelBtn")}</Btn>
+          <Btn kind="danger" size="sm" disabled={!reverseReason.trim()} onClick={()=>{onReverse(reverseReason.trim());setReversing(false);setReverseReason("");}}>{t("hr.payroll.confirmReversalBtn")}</Btn>
         </div>
       </div>:<div className="flex gap-2.5 justify-end pt-2 border-t border-line">
-        <Btn kind="outline" icon="download" onClick={exportRegister}>Export register</Btn>
-        <Btn kind="ghost" onClick={onClose}>Close</Btn>
-        {canApprove&&run.status==="draft"&&<Btn kind="primary" onClick={onApprove}>Approve run</Btn>}
-        {canApprove&&run.status==="approved"&&<Btn kind="primary" icon="check" onClick={onExecute}>Execute payroll</Btn>}
-        {canApprove&&run.status==="paid"&&<Btn kind="dangerSoft" onClick={()=>setReversing(true)}>Reverse run</Btn>}
+        <Btn kind="outline" icon="download" onClick={exportRegister}>{t("hr.payroll.exportRegisterBtn")}</Btn>
+        <Btn kind="ghost" onClick={onClose}>{t("common.close")}</Btn>
+        {canApprove&&run.status==="draft"&&<Btn kind="primary" onClick={onApprove}>{t("hr.payroll.approveRunBtn")}</Btn>}
+        {canApprove&&run.status==="approved"&&<Btn kind="primary" icon="check" onClick={onExecute}>{t("hr.payroll.executePayrollBtn")}</Btn>}
+        {canApprove&&run.status==="paid"&&<Btn kind="dangerSoft" onClick={()=>setReversing(true)}>{t("hr.payroll.reverseRunBtn")}</Btn>}
       </div>}
     </div>
   </Modal>;
@@ -1899,6 +1895,7 @@ export function HrReports(){
    open later can't hand someone a working terminal credential. Revoking a lost tablet is
    deleting its row, which takes effect on its very next punch. */
 function _TimeClocks({A,mob}){
+  const {t}=useTranslation();
   const [devices,setDevices]=useState([]);
   const [name,setName]=useState(""); const [site,setSite]=useState("");
   const [issued,setIssued]=useState(null);   // {name, token} — shown once
@@ -1918,48 +1915,47 @@ function _TimeClocks({A,mob}){
   };
 
   return <Card pad={mob?20:26} style={{borderRadius:16,marginBottom:16}}>
-    <Lbl>Time clocks</Lbl>
+    <Lbl>{t("hr.timeclock.title")}</Lbl>
     <div className="text-sm text-text-2 mb-4 leading-relaxed">
-      A shared tablet at the entrance that staff punch in and out on with a short PIN. Each terminal
-      is paired once with its own code. This is what "allow remote punch-in = off" points people at.
+      {t("hr.timeclock.description")}
     </div>
 
-    {issued&&<Banner tone="ok" icon="check" style={{marginBottom:14}} title={`"${issued.name}" is ready — copy this code now`}>
+    {issued&&<Banner tone="ok" icon="check" style={{marginBottom:14}} title={t("hr.timeclock.issuedTitle",{name:issued.name})}>
       <div className="text-xs text-text-2 mb-2">
-        Open <strong className="text-text">/hr/kiosk</strong> on that tablet and paste this code. It is shown once and can't be retrieved later.
+        {t("hr.timeclock.issuedInstructions")}
       </div>
       <div className="flex gap-2 items-center flex-wrap">
         <code className="text-xs bg-white border border-line rounded-lg px-2.5 py-1.5 break-all flex-1 min-w-0">{issued.token}</code>
-        <Btn kind="outline" size="sm" onClick={()=>{navigator.clipboard?.writeText(issued.token);}}>Copy</Btn>
-        <Btn kind="ghost" size="sm" onClick={()=>setIssued(null)}>Done</Btn>
+        <Btn kind="outline" size="sm" onClick={()=>{navigator.clipboard?.writeText(issued.token);}}>{t("hr.timeclock.copyBtn")}</Btn>
+        <Btn kind="ghost" size="sm" onClick={()=>setIssued(null)}>{t("hr.timeclock.doneBtn")}</Btn>
       </div>
     </Banner>}
     {err&&<Banner tone="danger" icon="alert" style={{marginBottom:14}}>{err}</Banner>}
 
     <div className={`grid gap-2.5 mb-3 ${mob?"grid-cols-1":"grid-cols-[1fr_1fr_auto]"}`}>
-      <Field label="Terminal name"><Input value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Front gate tablet"/></Field>
-      <Field label="Site (optional)"><Input value={site} onChange={e=>setSite(e.target.value)} placeholder="e.g. Yard 2"/></Field>
-      <div className="flex items-end"><Btn kind="primary" icon="plus" onClick={create} disabled={busy||!name.trim()}>{busy?"Creating…":"Add terminal"}</Btn></div>
+      <Field label={t("hr.timeclock.terminalNameLabel")}><Input value={name} onChange={e=>setName(e.target.value)} placeholder={t("hr.timeclock.terminalNamePlaceholder")}/></Field>
+      <Field label={t("hr.timeclock.siteLabel")}><Input value={site} onChange={e=>setSite(e.target.value)} placeholder={t("hr.timeclock.sitePlaceholder")}/></Field>
+      <div className="flex items-end"><Btn kind="primary" icon="plus" onClick={create} disabled={busy||!name.trim()}>{busy?t("hr.timeclock.creatingBtn"):t("hr.timeclock.addTerminalBtn")}</Btn></div>
     </div>
 
     {devices.length===0
-      ? <div className="text-sm text-text-3 py-2">No terminals paired yet.</div>
+      ? <div className="text-sm text-text-3 py-2">{t("hr.timeclock.noTerminalsPaired")}</div>
       : <div className="flex flex-col gap-2">
           {devices.map(dv=>
             <div key={dv.id} className="flex justify-between items-center gap-3 border border-line rounded-xl py-2.5 px-3.5 flex-wrap">
               <div className="min-w-0">
                 <div className="text-sm font-semibold text-text">{dv.name}</div>
                 <div className="text-xs text-text-3 mt-0.5">
-                  {dv.site?`${dv.site} · `:""}{dv.lastSeen?`Last punch ${dv.lastSeen}`:"Never used"}</div>
+                  {dv.site?`${dv.site} · `:""}{dv.lastSeen?t("hr.timeclock.lastPunch",{time:dv.lastSeen}):t("hr.timeclock.neverUsed")}</div>
               </div>
-              <Btn kind="ghost" size="xs" onClick={()=>setRevoking(dv)}>Revoke</Btn>
+              <Btn kind="ghost" size="xs" onClick={()=>setRevoking(dv)}>{t("hr.timeclock.revokeBtn")}</Btn>
             </div>)}
         </div>}
 
-    <ConfirmDialog open={!!revoking} onClose={()=>setRevoking(null)} confirmLabel="Revoke terminal" danger
-      title={`Revoke "${revoking?.name}"?`}
+    <ConfirmDialog open={!!revoking} onClose={()=>setRevoking(null)} confirmLabel={t("hr.timeclock.revokeConfirmBtn")} danger
+      title={t("hr.timeclock.revokeConfirmTitle",{name:revoking?.name})}
       onConfirm={async()=>{await A.hrRevokeKioskDevice(revoking.id);setRevoking(null);load();}}>
-      That tablet stops accepting punches immediately. Attendance already recorded from it is kept.
+      {t("hr.timeclock.revokeConfirmBody")}
     </ConfirmDialog>
   </Card>;
 }
@@ -2041,40 +2037,39 @@ export function HrSettings(){
       <Field label={t("hr.settings.advanceNotice")}><Input type="number" value={d.leave.advanceNoticeDays} onChange={e=>setSection("leave","advanceNoticeDays",Number(e.target.value)||14)}/></Field>
 
       <div className="mt-4 pt-4 border-t border-line-soft">
-        <div className="text-sm font-semibold text-text mb-1">Year-end carryover</div>
+        <div className="text-sm font-semibold text-text mb-1">{t("hr.settings.yearEndCarryover")}</div>
         <div className="text-xs text-text-2 mb-3.5 leading-relaxed">
-          What happens to unused vacation on 1 January. Several provinces don't permit simply
-          discarding it, so choose deliberately rather than leaving it to chance.
+          {t("hr.settings.yearEndCarryoverDesc")}
         </div>
         <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-3"}`}>
-          <Field label="Carryover policy">
+          <Field label={t("hr.settings.carryoverPolicy")}>
             <Sel value={d.leave.carryoverMode||"capped"} onChange={e=>setSection("leave","carryoverMode",e.target.value)}>
-              <option value="none">Use it or lose it</option>
-              <option value="capped">Carry over up to a cap</option>
-              <option value="unlimited">Carry over everything</option>
+              <option value="none">{t("hr.settings.carryoverUseItOrLoseIt")}</option>
+              <option value="capped">{t("hr.settings.carryoverCapped")}</option>
+              <option value="unlimited">{t("hr.settings.carryoverUnlimited")}</option>
             </Sel></Field>
           {(d.leave.carryoverMode||"capped")==="capped"&&
-            <Field label="Maximum days carried">
+            <Field label={t("hr.settings.maximumDaysCarried")}>
               <Input type="number" min="0" value={d.leave.carryoverMaxDays??5}
                 onChange={e=>setSection("leave","carryoverMaxDays",Math.max(0,Number(e.target.value)||0))}/></Field>}
           {(d.leave.carryoverMode||"capped")!=="none"&&
-            <Field label="Carried days expire after" hint="0 = they don't expire">
+            <Field label={t("hr.settings.carryoverExpiry")} hint={t("hr.settings.carryoverExpiryHint")}>
               <Sel value={d.leave.carryoverExpiryMonths??3} onChange={e=>setSection("leave","carryoverExpiryMonths",Number(e.target.value))}>
-                <option value={0}>No expiry</option>
-                <option value={3}>3 months (31 March)</option>
-                <option value={6}>6 months (30 June)</option>
-                <option value={12}>12 months</option>
+                <option value={0}>{t("hr.settings.noExpiry")}</option>
+                <option value={3}>{t("hr.settings.expiry3mo")}</option>
+                <option value={6}>{t("hr.settings.expiry6mo")}</option>
+                <option value={12}>{t("hr.settings.expiry12mo")}</option>
               </Sel></Field>}
         </div>
       </div>
     </Card>
 
     <Card pad={mob?20:26} style={{borderRadius:16,marginBottom:16}}>
-      <Lbl>Chat settings</Lbl>
-      {[["allowDirectMessages","Allow direct messages","Employees can start 1:1 conversations."],
-        ["allowGroupCreation","Allow group creation","Employees can create new group chats."],
-        ["allowFileShare","Allow file sharing","Attach files in messages."],
-        ["allowCalls","Allow voice & video calls","Show call buttons in chat."]].map(([k,l,s])=>
+      <Lbl>{t("hr.settings.chatSettingsLabel")}</Lbl>
+      {[["allowDirectMessages",t("hr.settings.allowDirectMessages"),t("hr.settings.allowDirectMessagesDesc")],
+        ["allowGroupCreation",t("hr.settings.allowGroupCreation"),t("hr.settings.allowGroupCreationDesc")],
+        ["allowFileShare",t("hr.settings.allowFileShare"),t("hr.settings.allowFileShareDesc")],
+        ["allowCalls",t("hr.settings.allowCalls"),t("hr.settings.allowCallsDesc")]].map(([k,l,s])=>
         <div key={k} className="flex justify-between items-center py-3 border-b border-line-soft">
           <div><div className="text-sm text-text font-semibold">{l}</div>
             <div className="text-xs text-text-3 mt-0.5">{s}</div></div>
@@ -2083,28 +2078,28 @@ export function HrSettings(){
     </Card>
 
     <Card pad={mob?20:26} style={{borderRadius:16,marginBottom:16,borderLeft:`4px solid ${C.brand}`}}>
-      <Lbl>Data link between HR Suite & NorthHire</Lbl>
+      <Lbl>{t("hr.settings.hrNorthHireLinkLabel")}</Lbl>
       <div className="text-sm text-text-2 mb-3.5 leading-relaxed">
-        HR Suite runs your internal team. NorthHire is your public hiring surface. These toggles control what data flows between them. When linked, hiring on NorthHire auto-creates HR records; when unlinked, they're two separate systems.
+        {t("hr.settings.hrNorthHireLinkDesc")}
       </div>
       {/* Master switch */}
       <div className="p-3.5 rounded-xl mb-3 transition-all duration-200" style={{background:d.privacy?.linkHrToNorthHire?C.okBg:C.bg,border:`1px solid ${d.privacy?.linkHrToNorthHire?C.okLn:C.line}`}}>
         <div className="flex justify-between items-center gap-2.5">
           <div className="flex-1">
-            <div className="text-sm font-semibold text-text">Link HR Suite ↔ NorthHire</div>
-            <div className="text-xs text-text-2 mt-1 leading-snug">Master switch. When off, HR Suite runs as a completely separate system with no connection to your NorthHire hiring pipeline.</div>
+            <div className="text-sm font-semibold text-text">{t("hr.settings.linkHrToNorthHireLabel")}</div>
+            <div className="text-xs text-text-2 mt-1 leading-snug">{t("hr.settings.linkHrToNorthHireDesc")}</div>
           </div>
           <Switch on={d.privacy?.linkHrToNorthHire??true} onChange={v=>setSection("privacy","linkHrToNorthHire",v)}/>
         </div>
       </div>
       {d.privacy?.linkHrToNorthHire!==false&&<>
-        <div className="text-xs font-bold text-text-3 tracking-wide uppercase mt-3.5 mb-2">Public NorthHire profile shows</div>
+        <div className="text-xs font-bold text-text-3 tracking-wide uppercase mt-3.5 mb-2">{t("hr.settings.publicProfileShowsLabel")}</div>
         {[
-          ["shareTitleToNorthHire","Current job title","Their HR-tracked title appears on their public NorthHire profile"],
-          ["shareTenureToNorthHire","Years at company","'4 years at PCL' visible publicly"],
-          ["shareDepartmentToNorthHire","Department","Department name shown publicly (usually private)"],
-          ["syncSkillsToNorthHire","Skills","Skills tracked in HR sync to their public profile"],
-          ["syncBadgesToNorthHire","Internal badges","Badges you award internally show on the employer's public NorthHire profile"],
+          ["shareTitleToNorthHire",t("hr.settings.shareTitleLabel"),t("hr.settings.shareTitleDesc")],
+          ["shareTenureToNorthHire",t("hr.settings.shareTenureLabel"),t("hr.settings.shareTenureDesc")],
+          ["shareDepartmentToNorthHire",t("hr.settings.shareDepartmentLabel"),t("hr.settings.shareDepartmentDesc")],
+          ["syncSkillsToNorthHire",t("hr.settings.syncSkillsLabel"),t("hr.settings.syncSkillsDesc")],
+          ["syncBadgesToNorthHire",t("hr.settings.syncBadgesLabel"),t("hr.settings.syncBadgesDesc")],
         ].map(([k,label,desc])=><div key={k} className="flex justify-between items-center py-3 px-3 rounded-lg transition-colors duration-150 hover:bg-bg">
           <div className="flex-1 min-w-0">
             <div className="text-sm text-text font-medium">{label}</div>
@@ -2112,18 +2107,18 @@ export function HrSettings(){
           </div>
           <Switch on={d.privacy?.[k]??false} onChange={v=>setSection("privacy",k,v)}/>
         </div>)}
-        <div className="text-xs font-bold text-text-3 tracking-wide uppercase mt-3.5 mb-2">Hiring flow</div>
+        <div className="text-xs font-bold text-text-3 tracking-wide uppercase mt-3.5 mb-2">{t("hr.settings.hiringFlowLabel")}</div>
         <div className="flex justify-between items-center py-3 px-3 rounded-lg transition-colors duration-150 hover:bg-bg">
           <div className="flex-1 min-w-0">
-            <div className="text-sm text-text font-medium">Auto-prompt HR record on hire</div>
-            <div className="text-xs text-text-3 mt-0.5 leading-snug">When someone is hired through your NorthHire job listings, prompt to create their HR Suite record (department, manager, salary)</div>
+            <div className="text-sm text-text font-medium">{t("hr.settings.autoPromptHrRecordLabel")}</div>
+            <div className="text-xs text-text-3 mt-0.5 leading-snug">{t("hr.settings.autoPromptHrRecordDesc")}</div>
           </div>
           <Switch on={d.privacy?.allowNorthHireProfileImport??true} onChange={v=>setSection("privacy","allowNorthHireProfileImport",v)}/>
         </div>
         <div className="flex justify-between items-center py-3 px-3 rounded-lg transition-colors duration-150 hover:bg-bg">
           <div className="flex-1 min-w-0">
-            <div className="text-sm text-text font-medium">Let employees opt out</div>
-            <div className="text-xs text-text-3 mt-0.5 leading-snug">Employees can override company defaults for their own public profile</div>
+            <div className="text-sm text-text font-medium">{t("hr.settings.letEmployeesOptOutLabel")}</div>
+            <div className="text-xs text-text-3 mt-0.5 leading-snug">{t("hr.settings.letEmployeesOptOutDesc")}</div>
           </div>
           <Switch on={d.privacy?.allowEmployeesToOptOut??true} onChange={v=>setSection("privacy","allowEmployeesToOptOut",v)}/>
         </div>
