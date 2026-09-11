@@ -280,7 +280,7 @@ export function HomePage(){
 
 /* ═══════════════ BLOGS · TRAININGS · STATIC PAGES ═══════════════ */
 export function BlogsPage(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t}=useTranslation();
   const [cat,setCat]=useState("all"); const [q,setQ]=useState("");
   const [author,setAuthor]=useState(null);
   useEffect(()=>{if(A.blogAuthorFilter){setAuthor(A.blogAuthorFilter);A.setBlogAuthorFilter(null);}},[A.blogAuthorFilter]);
@@ -296,27 +296,27 @@ export function BlogsPage(){
 
     <section className={`bg-white ${pad}`}>
       <div className="max-w-240 mx-auto text-center">
-        <Tag tone="brand" icon="book">Career resources</Tag>
+        <Tag tone="brand" icon="book">{t("blogs.careerResourcesTag")}</Tag>
         <h1 className={`${HERO_WIDE} my-6 ${mob?"text-4xl":"text-7xl"}`}>
-          Career resources for Canadian workers</h1>
+          {t("blogs.title")}</h1>
         <p className={`text-text-2 leading-snug mx-auto max-w-155 ${mob?"text-lg":"text-xl"}`}>
-          Practical guides on Red Seal certification, provincial trades registration, résumé standards Canadian employers look for, wage data from Statistics Canada, and how to interview well. Every article is written by people with direct experience in Canadian workplaces.</p>
+          {t("blogs.description")}</p>
       </div>
     </section>
 
     <section className={`bg-white ${mob?"px-4 pb-14":"px-8 pb-24"}`}>
       <div className="max-w-280 mx-auto">
         <div className="flex gap-3.5 mb-3.5 flex-wrap items-center">
-          <div className="grow shrink basis-65 max-w-100"><Input icon="search" placeholder="Search articles" value={q} onChange={e=>setQ(e.target.value)}/></div>
-          <Tabs items={cats.map(c=>({k:c,label:c==="all"?"All topics":c}))} value={cat} onChange={setCat}/>
+          <div className="grow shrink basis-65 max-w-100"><Input icon="search" placeholder={t("blogs.searchPlaceholder")} value={q} onChange={e=>setQ(e.target.value)}/></div>
+          <Tabs items={cats.map(c=>({k:c,label:c==="all"?t("blogs.allTopics"):c}))} value={cat} onChange={setCat}/>
           <a href="/api/content/blogs/rss.xml" target="_blank" rel="noreferrer"
             className="inline-flex items-center gap-1.5 text-sm font-semibold text-text-2 hover:text-brand ml-auto">
-            <I n="pulse" s={15}/>RSS feed</a></div>
+            <I n="pulse" s={15}/>{t("blogs.rssLink")}</a></div>
         {author&&<div className="flex items-center gap-2 mb-9">
-          <Tag tone="brand" icon="user">By {author}</Tag>
-          <button onClick={()=>setAuthor(null)} className="bg-transparent border-0 p-0 cursor-pointer text-sm text-text-2 hover:text-text underline">Clear</button></div>}
-        {list.length===0?<Empty icon="book" title="No articles found" body="Try a different topic or search term."
-          action={<Btn kind="primary" onClick={()=>{setQ("");setCat("all");setAuthor(null);}}>Reset</Btn>}/>:<>
+          <Tag tone="brand" icon="user">{t("blogs.byAuthor",{author})}</Tag>
+          <button onClick={()=>setAuthor(null)} className="bg-transparent border-0 p-0 cursor-pointer text-sm text-text-2 hover:text-text underline">{t("blogs.clearFilter")}</button></div>}
+        {list.length===0?<Empty icon="book" title={t("blogs.noArticlesFound")} body={t("blogs.noArticlesBody")}
+          action={<Btn kind="primary" onClick={()=>{setQ("");setCat("all");setAuthor(null);}}>{t("blogs.resetBtn")}</Btn>}/>:<>
           {lead&&!q&&cat==="all"&&<div className="bg-white rounded-3xl overflow-hidden border border-line mb-8 shadow-md">
             <div onClick={()=>A.openBlog(lead.id)} className={`grid cursor-pointer transition-transform duration-200 hover:-translate-y-1 ${mob?"grid-cols-1":""}`} style={{gridTemplateColumns:mob?undefined:"1.1fr 1fr"}}>
               <div className={mob?"bg-bg":"bg-bg"} style={{aspectRatio:mob?"16/10":"auto",minHeight:mob?undefined:320}}>
@@ -411,7 +411,7 @@ export function BlogPage(){
 }
 
 export function TrainingsPage(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t}=useTranslation();
   const [cat,setCat]=useState("all"); const [price,setPrice]=useState("all"); const [q,setQ]=useState("");
   const pub=A.trainings.filter(t=>t.status==="published");
   const cats=["all",...Array.from(new Set(pub.map(t=>t.cat)))];
@@ -424,14 +424,14 @@ export function TrainingsPage(){
 
     <section className={`bg-white ${pad}`}>
       <div className="max-w-240 mx-auto text-center">
-        <Tag tone="brand" icon="cap">Trainings and certifications</Tag>
+        <Tag tone="brand" icon="cap">{t("trainings.certificationsTag")}</Tag>
         <h1 className={`${HERO_WIDE} my-6 ${mob?"text-4xl":"text-7xl"}`}>
-          Get the ticket the job asks for.</h1>
+          {t("trainings.title")}</h1>
         <p className={`text-text-2 leading-snug mx-auto mb-11 max-w-155 ${mob?"text-lg":"text-xl"}`}>
-          WHMIS, food handling, forklift, working at heights and exam prep. Certificates attach straight to your NorthHire profile.</p>
+          {t("trainings.description")}</p>
         <div className={`grid grid-cols-3 mx-auto max-w-160 ${mob?"gap-5":"gap-11"}`}>
-          {[[pub.filter(t=>t.price===0).length,"Free courses"],[pub.length,"Total courses"],
-            [pub.reduce((s,t)=>s+t.enrolled,0).toLocaleString(),"Learners enrolled"]].map(([v,l])=>
+          {[[pub.filter(t=>t.price===0).length,t("trainings.freeCourses")],[pub.length,t("trainings.totalCourses")],
+            [pub.reduce((s,t)=>s+t.enrolled,0).toLocaleString(),t("trainings.learnersEnrolled")]].map(([v,l])=>
             <div key={l}><div className={`font-extrabold text-brand tracking-tight leading-none ${mob?"text-3xl":"text-4xl"}`}>{v}</div>
               <div className={`text-text-2 font-semibold ${mob?"text-xs mt-2":"text-sm mt-3"}`}>{l}</div></div>)}</div>
       </div>
@@ -440,11 +440,11 @@ export function TrainingsPage(){
     <section className={`bg-white ${mob?"px-4 pb-14":"px-8 pb-24"}`}>
       <div className="max-w-280 mx-auto">
         <div className="flex gap-3.5 mb-5 flex-wrap items-center">
-          <div className="grow shrink basis-60 max-w-90"><Input icon="search" placeholder="Search trainings" value={q} onChange={e=>setQ(e.target.value)}/></div>
-          <Tabs items={[{k:"all",label:"All prices"},{k:"free",label:"Free"},{k:"paid",label:"Paid"}]} value={price} onChange={setPrice}/></div>
-        <Tabs items={cats.map(c=>({k:c,label:c==="all"?"All categories":c}))} value={cat} onChange={setCat} style={{marginBottom:36}}/>
-        {list.length===0?<Empty icon="cap" title="No trainings found" body="Try another category or clear the filters."
-          action={<Btn kind="primary" onClick={()=>{setQ("");setCat("all");setPrice("all");}}>Reset</Btn>}/>
+          <div className="grow shrink basis-60 max-w-90"><Input icon="search" placeholder={t("trainings.searchPlaceholder")} value={q} onChange={e=>setQ(e.target.value)}/></div>
+          <Tabs items={[{k:"all",label:t("trainings.allPrices")},{k:"free",label:t("trainings.freePriceLabel")},{k:"paid",label:t("trainings.paidPriceLabel")}]} value={price} onChange={setPrice}/></div>
+        <Tabs items={cats.map(c=>({k:c,label:c==="all"?t("trainings.allCategories"):c}))} value={cat} onChange={setCat} style={{marginBottom:36}}/>
+        {list.length===0?<Empty icon="cap" title={t("trainings.noTrainingsFound")} body={t("trainings.noTrainingsBody")}
+          action={<Btn kind="primary" onClick={()=>{setQ("");setCat("all");setPrice("all");}}>{t("trainings.resetBtn")}</Btn>}/>
           :<><div className="grid gap-4" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:280}px,1fr))`}}>
             {pg.pageItems.map(t=><TrainingCard key={t.id} t={t}/>)}</div>
             <Pagination {...pg}/></>}
