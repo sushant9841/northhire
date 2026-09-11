@@ -17,7 +17,7 @@ import { useTranslation } from "../../i18n/i18n.jsx";
 import { JobCard, TrainingCard, BlogCard, EmpMark } from "../shared/cards.jsx";
 
 export function HomePage(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t}=useTranslation();
   const [q,setQ]=useState(""); const [where,setWhere]=useState("");
   const live=A.jobs.filter(j=>j.status==="live");
   const featured=live.filter(j=>j.featured).slice(0,6);
@@ -58,27 +58,27 @@ export function HomePage(){
       <section className={mob?"pt-8 px-4 pb-6":"pt-12 px-8 pb-6"}>
         <div className={wrapCls}>
           <div className={`font-bold tracking-tight text-text leading-tight mb-2.5 ${mob?"text-3xl":"text-4xl"}`}>
-            Welcome back, {first}.</div>
+            {t("home.welcomeBack",{name:first})}</div>
           <div className={`text-text-2 leading-snug mb-6 max-w-160 ${mob?"text-base":"text-lg"}`}>
             {mySkills.length
-              ? `We've lined up ${matchedForMe.length} new opportunities matched to your skills. Here's what's happening on NorthHire today.`
-              : "Add a few skills to your profile and we'll start matching you to jobs across Canada."}</div>
+              ? t("home.matchedOpportunitiesMsg",{count:matchedForMe.length})
+              : t("home.addSkillsMsg")}</div>
           <div className={`bg-white rounded-2xl p-1.5 flex gap-1.5 shadow-md border border-line max-w-160 ${mob?"flex-wrap":"flex-nowrap"}`}>
             <div className="grow shrink basis-50 min-w-0">
-              <Input icon="search" placeholder="Job title, trade or skill" value={q} onChange={e=>setQ(e.target.value)}
+              <Input icon="search" placeholder={t("home.jobSearchPlaceholder")} value={q} onChange={e=>setQ(e.target.value)}
                 onKeyDown={e=>e.key==="Enter"&&go()} style={{border:"none",boxShadow:"none",fontSize:14.5}}/></div>
             {!mob&&<div className="w-px bg-line my-1.5"/>}
             <div className="grow shrink basis-35 min-w-0">
-              <Input icon="pin" placeholder="City or province" value={where} onChange={e=>setWhere(e.target.value)}
+              <Input icon="pin" placeholder={t("home.locationSearchPlaceholder")} value={where} onChange={e=>setWhere(e.target.value)}
                 onKeyDown={e=>e.key==="Enter"&&go()} style={{border:"none",boxShadow:"none",fontSize:14.5}}/></div>
-            <Btn kind="primary" size="md" full={mob} icon="search" onClick={go}>Search</Btn></div>
+            <Btn kind="primary" size="md" full={mob} icon="search" onClick={go}>{t("home.searchBtn")}</Btn></div>
         </div>
       </section>
 
       <section className={`bg-white ${mob?"py-6 px-4":"py-8 px-8"}`}>
         <div className={wrapCls}>
-          {H("Matched for you",`Based on ${mySkills.length||"your"} skills and your saved preferences.`,null,
-            <Btn kind="outline" size="sm" iconR="arrowR" onClick={()=>A.go("matched")}>See all matches</Btn>)}
+          {H(t("home.matchedForYouTitle"),t("home.matchedForYouSub",{count:mySkills.length||"your"}),null,
+            <Btn kind="outline" size="sm" iconR="arrowR" onClick={()=>A.go("matched")}>{t("home.seeAllMatchesBtn")}</Btn>)}
           <div className="grid gap-3.5" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:300}px,1fr))`}}>
             {matchedForMe.map(j=><JobCard key={j.id} job={j}/>)}</div>
         </div>
@@ -86,8 +86,8 @@ export function HomePage(){
 
       <section className={`bg-bg ${mob?"py-6 px-4":"py-8 px-8"}`}>
         <div className={wrapCls}>
-          {H("Top industries hiring right now","Where Canadian employers are actively posting.",null,
-            <Btn kind="outline" size="sm" onClick={()=>A.go("search")}>Browse all</Btn>)}
+          {H(t("home.topIndustriesTitle"),t("home.topIndustriesSub"),null,
+            <Btn kind="outline" size="sm" onClick={()=>A.go("search")}>{t("home.browseAllBtn")}</Btn>)}
           <div className={`grid gap-3 ${mob?"grid-cols-2":"grid-cols-3"}`}>
             {topIndustries.map(c=><button key={c.id} onClick={()=>{A.setSearch({q:"",where:"",cats:[c.id]});A.go("search");}}
               data-card className={`flex gap-3.5 rounded-2xl cursor-pointer border border-line bg-white text-left items-center ${mob?"p-4":"p-5"}`}>
@@ -101,16 +101,16 @@ export function HomePage(){
 
       <section className={`bg-white ${mob?"py-6 px-4":"py-8 px-8"}`}>
         <div className={wrapCls}>
-          {H("Closing soon","Application deadlines within the next two weeks.",null,
-            <Btn kind="ghost" size="sm" onClick={()=>A.go("search")}>All jobs</Btn>)}
+          {H(t("home.closingSoonTitle"),t("home.closingSoonSub"),null,
+            <Btn kind="ghost" size="sm" onClick={()=>A.go("search")}>{t("home.allJobsBtn")}</Btn>)}
           <div className="grid gap-3.5" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:300}px,1fr))`}}>
-            {closingSoon.length?closingSoon.map(j=><JobCard key={j.id} job={j}/>):<div className="text-text-3 text-sm">No deadlines coming up in the next two weeks.</div>}</div>
+            {closingSoon.length?closingSoon.map(j=><JobCard key={j.id} job={j}/>):<div className="text-text-3 text-sm">{t("home.noClosingSoonMsg")}</div>}</div>
         </div>
       </section>
 
       <section className={`bg-bg ${mob?"py-6 px-4":"py-8 px-8"}`}>
         <div className={wrapCls}>
-          {H("Trending across Canada","The most-viewed listings on NorthHire this week.",null,null)}
+          {H(t("home.trendingTitle"),t("home.trendingSub"),null,null)}
           <div className="grid gap-3.5" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:300}px,1fr))`}}>
             {trending.map(j=><JobCard key={j.id} job={j}/>)}</div>
         </div>
@@ -118,8 +118,8 @@ export function HomePage(){
 
       <section className={`bg-white ${mob?"py-6 px-4":"py-8 px-8"}`}>
         <div className={wrapCls}>
-          {H("Grow your credentials","Certifications Canadian employers ask for.",null,
-            <Btn kind="outline" size="sm" iconR="arrowR" onClick={()=>A.go("trainings")}>All trainings</Btn>)}
+          {H(t("home.growCredentialsTitle"),t("home.growCredentialsSub"),null,
+            <Btn kind="outline" size="sm" iconR="arrowR" onClick={()=>A.go("trainings")}>{t("home.allTrainingsBtn")}</Btn>)}
           <div className="grid gap-3.5" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:280}px,1fr))`}}>
             {trainings.map(t=><TrainingCard key={t.id} t={t}/>)}</div>
         </div>
@@ -127,8 +127,8 @@ export function HomePage(){
 
       <section className={`bg-white ${mob?"pt-6 px-4 pb-10":"pt-8 px-8 pb-15"}`}>
         <div className={wrapCls}>
-          {H("From the resource centre","Career guides written by people with Canadian workplace experience.",null,
-            <Btn kind="outline" size="sm" iconR="arrowR" onClick={()=>A.go("blogs")}>All articles</Btn>)}
+          {H(t("home.resourceCentreTitle"),t("home.resourceCentreSub"),null,
+            <Btn kind="outline" size="sm" iconR="arrowR" onClick={()=>A.go("blogs")}>{t("home.allArticlesBtn")}</Btn>)}
           <div className={`grid gap-4 ${mob?"grid-cols-1":"grid-cols-3"}`}>
             {blogs.map(b=><BlogCard key={b.id} b={b}/>)}</div>
         </div>
@@ -142,37 +142,37 @@ export function HomePage(){
     <section className={`bg-white ${pad}`}>
       <div className={`${wrapCls} grid items-center ${mob?"grid-cols-1 gap-8":"gap-14"}`} style={{gridTemplateColumns:mob?undefined:"1.05fr .95fr"}}>
         <div>
-          <Tag tone="brand" icon="pin">Hiring across every province and territory</Tag>
+          <Tag tone="brand" icon="pin">{t("home.hiringEverywhereTag")}</Tag>
           <h1 className={`${HERO_WIDE} my-6 ${mob?"text-4xl":"text-6xl"}`}>
-            Real Canadian jobs.<br/><span className="text-brand">Wages published upfront.</span></h1>
+            {t("home.heroTitle")}<br/><span className="text-brand">{t("home.heroTitleBrand")}</span></h1>
           <p className={`text-text-2 leading-snug mb-8 max-w-140 ${mob?"text-lg":"text-lg"}`}>
-            NorthHire is built for the trades, healthcare, transport, kitchens, warehouses and offices that keep Canada running. Every listing shows the wage, the shift schedule and the certification you need to apply.</p>
+            {t("home.heroBody")}</p>
           <div className={`bg-white rounded-2xl p-2 flex gap-2 shadow-lg border border-line max-w-160 ${mob?"flex-wrap":"flex-nowrap"}`}>
             <div className="grow shrink basis-50 min-w-0">
-              <Input icon="search" placeholder="Job title, trade or skill" value={q} onChange={e=>setQ(e.target.value)}
+              <Input icon="search" placeholder={t("home.jobSearchPlaceholder")} value={q} onChange={e=>setQ(e.target.value)}
                 onKeyDown={e=>e.key==="Enter"&&go()} style={{border:"none",boxShadow:"none",fontSize:15}}/></div>
             {!mob&&<div className="w-px bg-line my-2"/>}
             <div className="grow shrink basis-40 min-w-0">
-              <Input icon="pin" placeholder="City or province" value={where} onChange={e=>setWhere(e.target.value)}
+              <Input icon="pin" placeholder={t("home.locationSearchPlaceholder")} value={where} onChange={e=>setWhere(e.target.value)}
                 onKeyDown={e=>e.key==="Enter"&&go()} style={{border:"none",boxShadow:"none",fontSize:15}}/></div>
-            <Btn kind="primary" size="lg" full={mob} icon="search" onClick={go}>Search</Btn></div>
+            <Btn kind="primary" size="lg" full={mob} icon="search" onClick={go}>{t("home.searchBtn")}</Btn></div>
           <div className="flex gap-2 flex-wrap mt-5 items-center">
-            <span className="text-sm text-text-3">Popular searches:</span>
-            {["Red Seal Electrician","Registered Nurse","AZ Truck Driver","Line Cook","Warehouse Associate"].map(t=>
-              <button key={t} onClick={()=>{A.setSearch({q:t,where:"",cats:[]});A.go("search");}}
-                className="bg-white border border-line text-text-2 text-sm py-1.5 px-3.5 rounded-full cursor-pointer font-medium hover:border-brand hover:text-brand transition-colors duration-150">{t}</button>)}</div>
+            <span className="text-sm text-text-3">{t("home.popularSearchesLabel")}</span>
+            {[t("home.searchJob1"),t("home.searchJob2"),t("home.searchJob3"),t("home.searchJob4"),t("home.searchJob5")].map(jobTitle=>
+              <button key={jobTitle} onClick={()=>{A.setSearch({q:jobTitle,where:"",cats:[]});A.go("search");}}
+                className="bg-white border border-line text-text-2 text-sm py-1.5 px-3.5 rounded-full cursor-pointer font-medium hover:border-brand hover:text-brand transition-colors duration-150">{jobTitle}</button>)}</div>
         </div>
         {!mob&&<div className="relative rounded-3xl overflow-hidden shadow-xl border border-line" style={{aspectRatio:"4/5"}}>
           <div className="absolute inset-0 bg-bg">
             <SmartScene kind="trades" tone={C.brand} w="100%" h="100%" seed={1}/></div>
           <div className="absolute left-6 bottom-8 bg-white rounded-2xl py-3.5 px-5 shadow-lg flex items-center gap-3">
             <div className="w-11 h-11 rounded-xl bg-ok-bg text-ok flex items-center justify-center"><I n="wallet" s={20}/></div>
-            <div><div className="text-sm font-bold text-text">Wage on every job</div>
-              <div className="text-xs text-text-2 mt-0.5">No "competitive salary"</div></div></div>
+            <div><div className="text-sm font-bold text-text">{t("home.wageOnEveryJobTitle")}</div>
+              <div className="text-xs text-text-2 mt-0.5">{t("home.noCompetitiveSalary")}</div></div></div>
           <div className="absolute right-6 top-7 bg-white rounded-2xl py-3.5 px-5 shadow-lg flex items-center gap-3">
             <div className="flex">{[1,3,5].map((s,i)=><div key={s} className={`${i?"-ml-3":""} border-2 border-white rounded-full flex`}><SmartPortrait seed={s} size={32}/></div>)}</div>
-            <div><div className="text-sm font-bold text-text">2,400+ hired</div>
-              <div className="text-xs text-text-2 mt-0.5">in the last 30 days</div></div></div>
+            <div><div className="text-sm font-bold text-text">{t("home.hiredCountTitle")}</div>
+              <div className="text-xs text-text-2 mt-0.5">{t("home.hiredCountSub")}</div></div></div>
         </div>}
       </div>
     </section>
@@ -180,7 +180,7 @@ export function HomePage(){
     <section className={`bg-white border-y border-line-soft ${mob?"py-10 px-4":"py-14 px-8"}`}>
       <div className={wrapCls}>
         <div className={`grid text-center ${mob?"grid-cols-2 gap-6":"grid-cols-4 gap-8"}`}>
-          {[[live.length.toLocaleString(),"Live openings across Canada"],[hiringEmployerCount.toLocaleString(),"Employers actively hiring"],["100%","Wages published on every listing"],["11 days","Average time to hire"]].map(([v,l])=>
+          {[[live.length.toLocaleString(),t("home.liveOpeningsLabel")],[hiringEmployerCount.toLocaleString(),t("home.employersHiringLabel")],["100%",t("home.wagesPublishedLabel")],["11 days",t("home.avgTimeToHireLabel")]].map(([v,l])=>
             <div key={l}><div className={`font-extrabold text-brand tracking-tight leading-none ${mob?"text-3xl":"text-5xl"}`}>{v}</div>
               <div className={`text-text-2 font-medium tracking-tight ${mob?"text-xs mt-2.5":"text-sm mt-3.5"}`}>{l}</div></div>)}</div>
       </div>
@@ -188,8 +188,8 @@ export function HomePage(){
 
     <section className={`bg-white ${pad}`}>
       <div className={wrapCls}>
-        {H("Browse by sector","Twelve industries, every trade and role across Canada.","Sectors",
-          <Btn kind="outline" iconR="arrowR" onClick={()=>A.go("search")}>All jobs</Btn>)}
+        {H(t("home.browseBySectorTitle"),t("home.browseBySectorSub"),t("home.sectorsTag"),
+          <Btn kind="outline" iconR="arrowR" onClick={()=>A.go("search")}>{t("home.allJobsBtn")}</Btn>)}
         <div className="grid gap-2.5" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?140:170}px,1fr))`}}>
           {CATS.map(c=><button key={c.id} onClick={()=>{A.setSearch({q:"",where:"",cats:[c.id]});A.go("search");}}
             data-card className={`flex flex-col gap-2.5 rounded-xl cursor-pointer border border-line bg-white text-left hover:border-brand hover:bg-tint transition-colors duration-150 ${mob?"p-3.5":"p-4"}`}>
