@@ -10,6 +10,7 @@ import {
 import { _fmtDate, _weekStart } from "../../helpers/utils.js";
 import { InlineList } from "../shared/formControls.jsx";
 import { SEED_AGENCY_LICENSE } from "../../store/seed/agency.js";
+import { useTranslation } from "../../i18n/i18n.jsx";
 import { invoiceTone, timesheetTone } from "../../helpers/statusTone.js";
 import { parseCsvLine } from "../../helpers/csv.js";
 
@@ -23,7 +24,7 @@ const TONE_CLS={
 };
 
 export function AgencyLoginPage(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const [id,setId]=useState(""); const [pw,setPw]=useState("");
   const [err,setErr]=useState(""); const [busy,setBusy]=useState(false);
   const [mode,setMode]=useState("login"); // login | resetRequest | resetVerify
@@ -105,7 +106,7 @@ export function AgencyLoginPage(){
 }
 
 function AgencyResetFlow({onDone}){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const [stage,setStage]=useState("request"); // request | verify | done
   const [email,setEmail]=useState(""); const [code,setCode]=useState(""); const [newPw,setNewPw]=useState("");
   const [err,setErr]=useState(""); const [busy,setBusy]=useState(false); const [sentCode,setSentCode]=useState("");
@@ -157,7 +158,7 @@ function AgencyResetFlow({onDone}){
 
 /* ─── Dashboard: role-shaped KPIs ─── */
 export function AgencyDashboard(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const staff=A.agencyCurrentStaff();
   const kpi=A.agencyKPIs();
   const submittedTs=A.timesheets.filter(t=>t.status==="submitted");
@@ -291,7 +292,7 @@ function _PillTabs({items,value,onChange}){
 
 /* ─── Job Orders: client requests for workers ─── */
 export function AgencyJobOrders(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const [tab,setTab]=useState("open");
   const [q,setQ]=useState("");
   const [showAdd,setShowAdd]=useState(false);
@@ -360,7 +361,7 @@ export function AgencyJobOrders(){
 const SUBMITTAL_STAGE_LABEL={submitted:"Submitted",client_review:"Client review",interview:"Interview",offer:"Offer",placed:"Placed",rejected:"Rejected"};
 const SUBMITTAL_STAGE_ORDER=["submitted","client_review","interview","offer"];
 function _JobOrderDetail({id,onClose}){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const jo=A.jobOrder(id); if(!jo)return null;
   const client=A.staffingClient(jo.client);
   const filled=A.assignments.filter(a=>a.jobOrder===jo.id);
@@ -487,7 +488,7 @@ function _JobOrderDetail({id,onClose}){
 }
 
 function _PlaceWorkerModal({jobOrder,onClose,onPlace,preselectWorkerId,onSubmittalPlaced}){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const [workerId,setWorkerId]=useState(preselectWorkerId||"");
   const [payRate,setPayRate]=useState(jobOrder.payRate);
   const [billRate,setBillRate]=useState(jobOrder.billRate);
@@ -631,7 +632,7 @@ function _PlaceFromBenchModal({worker:w,onClose,onPlace}){
 }
 
 function _NewJobOrderModal({onClose}){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const [d,setD]=useState({client:"",title:"",positions:1,location:"",province:"ON",
     startDate:_fmtDate(new Date()),endDate:"",ongoing:false,
     shiftPattern:"Mon-Fri 8am-4pm",overtimeAvailable:false,
@@ -695,7 +696,7 @@ function _NewJobOrderModal({onClose}){
 
 /* ─── Bench: available workers ─── */
 export function AgencyBench(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const [q,setQ]=useState(""); const [prov,setProv]=useState("all"); const [avail,setAvail]=useState("all");
   const [ticketFilter,setTicketFilter]=useState("all"); const [rateMin,setRateMin]=useState(""); const [rateMax,setRateMax]=useState("");
   const [placing,setPlacing]=useState(null);
@@ -799,7 +800,7 @@ export function AgencyBench(){
 
 /* ─── Assignments ─── */
 export function AgencyAssignments(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const [tab,setTab]=useState("active");
   const list=A.assignments.filter(a=>tab==="all"?true:a.status===tab).sort((a,b)=>b.startDate.localeCompare(a.startDate));
   const pg=usePagination(list,20);
@@ -909,7 +910,7 @@ function _TimesheetImportModal({onClose}){
   </Modal>;
 }
 export function AgencyTimesheets(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const [tab,setTab]=useState("submitted");
   const [returning,setReturning]=useState(null); const [reason,setReason]=useState("");
   const [importing,setImporting]=useState(false);
@@ -977,7 +978,7 @@ export function AgencyTimesheets(){
 
 /* ─── Payroll ─── */
 export function AgencyPayroll(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const [showRun,setShowRun]=useState(false);
   const [finalizing,setFinalizing]=useState(null);
   const [reversing,setReversing]=useState(null); const [reverseReason,setReverseReason]=useState("");
@@ -1080,7 +1081,7 @@ export function AgencyPayroll(){
 
 /* ─── Invoicing ─── */
 export function AgencyInvoicing(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const [tab,setTab]=useState("pending");
   const [showGen,setShowGen]=useState(false);
   const [genWeek,setGenWeek]=useState(_weekStart(1));
@@ -1160,7 +1161,7 @@ export function AgencyInvoicing(){
 
 /* ─── Placements ─── */
 export function AgencyPlacements(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const [tab,setTab]=useState("in-progress");
   const [clawingBack,setClawingBack]=useState(null); const [clawReason,setClawReason]=useState("");
   /* In the guarantee-window views, sort by soonest-expiring guarantee first (proactive triage)
@@ -1261,7 +1262,7 @@ export function AgencyPlacements(){
 
 /* ─── Clients (staffing) ─── */
 export function AgencyClients(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const [q,setQ]=useState(""); const [showAdd,setShowAdd]=useState(false); const [sort,setSort]=useState("name");
   const [branchFilter,setBranchFilter]=useState("");
   const [nc,setNc]=useState({employerId:"",industry:"",province:"ON",city:""});
@@ -1364,7 +1365,7 @@ export function AgencyClients(){
 
 /* ─── Workers management ─── */
 export function AgencyWorkers(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const [selected,setSelected]=useState(null);
   const [filingClaim,setFilingClaim]=useState(false);
   const [claimDraft,setClaimDraft]=useState({claimNumber:"",incidentDate:"",description:""});
@@ -1584,7 +1585,7 @@ export function AgencyWorkers(){
 
 /* ─── Margins ─── */
 export function AgencyMargins(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const active=A.activeAssignments();
   /* Was a flat 40hr/week assumption for every assignment - use the average of that assignment's
      actual recent timesheets when any exist (a real signal of scheduled + OT hours), falling
@@ -1655,7 +1656,7 @@ export function AgencyMargins(){
 /* ─── Branches: multi-office / per-desk model - previously the whole book was one shared,
    undifferentiated desk with no way to say "this client/this recruiter belongs to Calgary." ─── */
 export function AgencyBranches(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const [showAdd,setShowAdd]=useState(false);
   const [nb,setNb]=useState({name:"",city:"",province:"ON"});
   const submit=async()=>{if(!nb.name.trim())return;
@@ -1725,7 +1726,7 @@ export function AgencyBranches(){
 }
 
 export function AgencyCompliance(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const [drill,setDrill]=useState(null);
   const workersMissingDocs=A.workers.filter(w=>w.status==="active"&&(!w.tdOnFile||!w.directDepositOnFile||!w.workEligibility));
   const workersExpiringWE=A.workers.filter(w=>w.weExpiry&&new Date(w.weExpiry)<Date.now()+90*864e5);
