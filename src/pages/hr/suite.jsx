@@ -269,10 +269,10 @@ export function HrDashboard(){
 /* Read-only view for an employee's own Documents card - uploading is an HR/admin/owner action
    from the People page's edit modal, not a self-service one. */
 function _MyDocuments({empId}){
-  const A=use();
+  const A=use(); const {t}=useTranslation();
   const [docs,setDocs]=useState(null);
   useEffect(()=>{A.loadEmployeeDocuments(empId).then(setDocs);},[empId]);
-  if(!docs?.length)return <div className="text-sm text-text-3">No documents on file.</div>;
+  if(!docs?.length)return <div className="text-sm text-text-3">{t("hr.profile.noDocs")}</div>;
   return <div className="flex flex-col gap-2">
     {docs.map(d=><button key={d.id} onClick={()=>A.downloadEmployeeDocument(d.id)}
       className="flex gap-3 items-center py-2.5 px-3 bg-bg rounded-lg border-0 cursor-pointer text-left w-full">
@@ -299,16 +299,16 @@ export function HrProfile(){
   if(!publicView)return null;
 
   const visItems=[
-    {k:"title",l:"Job title",v:emp.title},
-    {k:"department",l:"Department",v:dept?.name},
-    {k:"tenure",l:"Tenure at company",v:publicView.tenureYears?`${publicView.tenureYears} years`:"—"},
-    {k:"manager",l:"Manager",v:emp.manager?A.hrEmp(emp.manager)?.name:"—"},
-    {k:"badges",l:"Badges & recognition",v:`${emp.badges.length} badges`},
-    {k:"trainings",l:"Trainings completed",v:`${publicView.trainingsCompleted||0} courses`},
-    {k:"salary",l:"Salary",v:`$${emp.salary?.toLocaleString()}`},
-    {k:"phone",l:"Phone number",v:emp.phone},
-    {k:"email",l:"Email address",v:emp.email},
-    {k:"birthDate",l:"Date of birth",v:emp.birthDate},
+    {k:"title",l:t("hr.profile.visibilityJobTitle"),v:emp.title},
+    {k:"department",l:t("hr.profile.visibilityDepartment"),v:dept?.name},
+    {k:"tenure",l:t("hr.profile.visibilityTenure"),v:publicView.tenureYears?t("hr.profile.tenureYears",{years:publicView.tenureYears}):"—"},
+    {k:"manager",l:t("hr.profile.visibilityManager"),v:emp.manager?A.hrEmp(emp.manager)?.name:"—"},
+    {k:"badges",l:t("hr.profile.visibilityBadges"),v:t("hr.profile.badgesCount",{count:emp.badges.length})},
+    {k:"trainings",l:t("hr.profile.visibilityTrainings"),v:t("hr.profile.coursesCount",{count:publicView.trainingsCompleted||0})},
+    {k:"salary",l:t("hr.profile.visibilitySalary"),v:emp.salary?t("hr.profile.salaryFormat",{salary:emp.salary.toLocaleString()}):"—"},
+    {k:"phone",l:t("hr.profile.visibilityPhone"),v:emp.phone},
+    {k:"email",l:t("hr.profile.visibilityEmail"),v:emp.email},
+    {k:"birthDate",l:t("hr.profile.visibilityBirthDate"),v:emp.birthDate},
   ];
 
   return <div>
@@ -323,37 +323,37 @@ export function HrProfile(){
             </div>
           </div>
 
-          <Lbl>Personal details</Lbl>
+          <Lbl>{t("hr.profile.personalDetailsLabel")}</Lbl>
           <div className={`grid gap-3 mb-5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
-            <Field label="Full name"><Input value={d.name} onChange={e=>set("name",e.target.value)}/></Field>
-            <Field label="Job title"><Input value={d.title} onChange={e=>set("title",e.target.value)}/></Field>
-            <Field label="Email"><Input icon="mail" value={d.email} onChange={e=>set("email",e.target.value)}/></Field>
-            <Field label="Phone"><Input icon="phone" value={d.phone} onChange={e=>set("phone",e.target.value)}/></Field>
-            <Field label="City"><Input icon="pin" value={d.city} onChange={e=>set("city",e.target.value)}/></Field>
-            <Field label="Province"><Input value={d.prov} onChange={e=>set("prov",e.target.value)}/></Field>
+            <Field label={t("hr.profile.fullNameLabel")}><Input value={d.name} onChange={e=>set("name",e.target.value)}/></Field>
+            <Field label={t("hr.profile.jobTitleLabel")}><Input value={d.title} onChange={e=>set("title",e.target.value)}/></Field>
+            <Field label={t("hr.profile.emailLabel")}><Input icon="mail" value={d.email} onChange={e=>set("email",e.target.value)}/></Field>
+            <Field label={t("hr.profile.phoneLabel")}><Input icon="phone" value={d.phone} onChange={e=>set("phone",e.target.value)}/></Field>
+            <Field label={t("hr.profile.cityLabel")}><Input icon="pin" value={d.city} onChange={e=>set("city",e.target.value)}/></Field>
+            <Field label={t("hr.profile.provinceLabel")}><Input value={d.prov} onChange={e=>set("prov",e.target.value)}/></Field>
           </div>
 
-          <Lbl>Skills</Lbl>
+          <Lbl>{t("hr.profile.skillsLabel")}</Lbl>
           <div className="mb-5">
-            <InlineList value={d.skills||[]} onChange={v=>set("skills",v)} icon="sparkle" placeholder="Add a skill and press Enter"/>
+            <InlineList value={d.skills||[]} onChange={v=>set("skills",v)} icon="sparkle" placeholder={t("hr.profile.skillsPlaceholder")}/>
           </div>
 
           <div className="flex gap-2.5 justify-end pt-5 border-t border-line-soft">
-            {dirty&&<Btn kind="ghost" onClick={()=>setD({...emp})}>Discard</Btn>}
-            <Btn kind="primary" icon="check" disabled={!dirty} onClick={save}>{dirty?"Save changes":"Saved"}</Btn>
+            {dirty&&<Btn kind="ghost" onClick={()=>setD({...emp})}>{t("hr.profile.discardBtn")}</Btn>}
+            <Btn kind="primary" icon="check" disabled={!dirty} onClick={save}>{dirty?t("hr.profile.saveChangesBtn"):t("hr.profile.savedBtn")}</Btn>
           </div>
         </Card>
 
         <Card pad={mob?20:26} style={{borderRadius:16,marginBottom:16}}>
-          <Lbl>Public NorthHire profile visibility</Lbl>
-          <Banner tone="brand" icon="info" title="How this works" style={{marginBottom:16}}>
-            Everything you show here appears on your public profile page across NorthHire. Employers searching for talent, and anyone viewing your company's page, will see what you allow.</Banner>
+          <Lbl>{t("hr.profile.publicNorthHireTitle")}</Lbl>
+          <Banner tone="brand" icon="info" title={t("hr.profile.publicProfileHowWorks")} style={{marginBottom:16}}>
+            {t("hr.profile.publicProfileDescription")}</Banner>
           <div className="flex flex-col gap-0.5">
             {visItems.map(item=>{const on=d.visibility?.[item.k]!==false;
               return <div key={item.k} className="flex gap-3 items-center py-3 px-3 rounded-lg transition-colors duration-150 hover:bg-bg">
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-semibold text-text">{item.l}</div>
-                  <div className="text-xs text-text-3 mt-0.5">{on?"Visible publicly":"Hidden from public profile"}{item.v?` — currently: ${item.v}`:""}</div>
+                  <div className="text-xs text-text-3 mt-0.5">{on?t("hr.profile.visiblePublicly"):t("hr.profile.hiddenFromPublic")}{item.v?t("hr.profile.visibilitySuffix")+item.v:""}</div>
                 </div>
                 <Switch on={on} onChange={v=>setVis(item.k,v)}/>
               </div>;})}
@@ -363,7 +363,7 @@ export function HrProfile(){
 
       <div className="flex flex-col gap-3.5">
         <Card pad={20} style={{borderRadius:16,background:`linear-gradient(135deg,${C.tint} 0%,#F0F7FF 100%)`,border:`1px solid ${C.line2}`}}>
-          <div className="text-xs font-bold text-brand tracking-wide uppercase mb-2.5">Public profile preview</div>
+          <div className="text-xs font-bold text-brand tracking-wide uppercase mb-2.5">{t("hr.profile.publicProfilePreview")}</div>
           <div className="flex gap-3 items-center mb-3.5">
             <SmartPortrait seed={emp.seed} size={50} radius={12}/>
             <div>
@@ -372,35 +372,35 @@ export function HrProfile(){
             </div>
           </div>
           <div className="text-sm text-text-2 leading-loose">
-            {publicView.department&&<div>• {publicView.department} at {publicView.company}</div>}
-            {publicView.tenureYears&&<div>• {publicView.tenureYears} years at company</div>}
-            {publicView.manager&&<div>• Reports to {publicView.manager}</div>}
-            {publicView.trainingsCompleted>0&&<div>• {publicView.trainingsCompleted} trainings completed</div>}
+            {publicView.department&&<div>• {publicView.department} {t("hr.profile.publicProfileAtCompany",{company:publicView.company})}</div>}
+            {publicView.tenureYears&&<div>• {publicView.tenureYears} {t("hr.profile.publicProfileYearsAtCompany")}</div>}
+            {publicView.manager&&<div>• {t("hr.profile.publicProfileReportsTo")} {publicView.manager}</div>}
+            {publicView.trainingsCompleted>0&&<div>• {publicView.trainingsCompleted} {t("hr.profile.publicProfileTrainingsCompleted")}</div>}
             {publicView.badges?.length>0&&<div className="mt-2">
-              <div className="text-xs text-text-3 mb-1.5">Recognitions:</div>
+              <div className="text-xs text-text-3 mb-1.5">{t("hr.profile.publicProfileRecognitions")}</div>
               <div className="flex flex-wrap gap-1">
                 {publicView.badges.map(b=><Tag key={b.name} tone="warn" sm icon="award">{b.name}</Tag>)}</div>
             </div>}
-            {publicView.phone&&<div className="mt-2">• Phone: {publicView.phone}</div>}
-            {publicView.email&&<div>• Email: {publicView.email}</div>}
+            {publicView.phone&&<div className="mt-2">• {t("hr.profile.publicProfilePhone")}{publicView.phone}</div>}
+            {publicView.email&&<div>• {t("hr.profile.publicProfileEmail")}{publicView.email}</div>}
           </div>
         </Card>
 
         <Card pad={20} style={{borderRadius:16}}>
-          <Lbl>Your documents</Lbl>
+          <Lbl>{t("hr.profile.yourDocumentsLabel")}</Lbl>
           <_MyDocuments empId={emp.id}/>
         </Card>
 
         <Card pad={20} style={{borderRadius:16}}>
-          <Lbl>Your badges</Lbl>
+          <Lbl>{t("hr.profile.yourBadgesLabel")}</Lbl>
           {emp.badges.length===0
-            ? <div className="text-sm text-text-3">No badges yet.</div>
+            ? <div className="text-sm text-text-3">{t("hr.profile.noBadges")}</div>
             : <div className="flex flex-col gap-2">
                 {[...emp.badges].sort((a,b)=>new Date(b.awardedAt)-new Date(a.awardedAt)).map(b=><div key={b.name} className="flex gap-3 items-center py-2.5 px-3 bg-bg rounded-lg">
                   <div className="w-8 h-8 rounded-lg bg-warn-bg text-warn flex items-center justify-center"><I n="award" s={16}/></div>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-semibold text-text">{b.name}</div>
-                    <div className="text-xs text-text-3 mt-0.5">{new Date(b.awardedAt).toLocaleDateString("en-CA",{year:"numeric",month:"long",day:"numeric"})}</div>
+                    <div className="text-xs text-text-3 mt-0.5">{new Date(b.awardedAt).toLocaleDateString(locale==="fr"?"fr-CA":"en-CA",{year:"numeric",month:"long",day:"numeric"})}</div>
                   </div>
                 </div>)}
               </div>}
@@ -416,6 +416,7 @@ export function HrProfile(){
    the log with their manager; a manager viewing People and opening a direct report sees the
    log with that report. Notes are private to the two on the pair (plus HR/owner). */
 function _OneOnOneLog({A,managerId,reportId,me}){
+  const {t,locale}=useTranslation();
   const [entries,setEntries]=useState(null);
   const [showNew,setShowNew]=useState(false);
   const [draft,setDraft]=useState({meetingDate:new Date().toISOString().slice(0,10),agenda:"",notes:"",actionItems:""});
@@ -435,29 +436,29 @@ function _OneOnOneLog({A,managerId,reportId,me}){
   return <Card pad={22} style={{borderRadius:14,marginTop:16}}>
     <div className="flex justify-between items-center gap-2 mb-2 flex-wrap">
       <div>
-        <Lbl style={{marginBottom:2}}>1:1 log with {managerName}</Lbl>
-        <div className="text-xs text-text-3">Private notes and action items between the two of you. Not visible to colleagues.</div>
+        <Lbl style={{marginBottom:2}}>{t("hr.oneOnOne.logTitle",{manager:managerName})}</Lbl>
+        <div className="text-xs text-text-3">{t("hr.oneOnOne.description")}</div>
       </div>
-      <Btn kind="outline" size="sm" icon="plus" onClick={()=>setShowNew(v=>!v)}>{showNew?"Cancel":"Log a 1:1"}</Btn>
+      <Btn kind="outline" size="sm" icon="plus" onClick={()=>setShowNew(v=>!v)}>{showNew?t("hr.oneOnOne.cancelBtn"):t("hr.oneOnOne.logBtn")}</Btn>
     </div>
     {showNew&&<div className="flex flex-col gap-2 mt-3 p-3 bg-bg rounded-lg">
-      <Field label="Meeting date"><Input type="date" value={draft.meetingDate} onChange={e=>setDraft(d=>({...d,meetingDate:e.target.value}))}/></Field>
-      <Field label="Agenda (optional)"><Input value={draft.agenda} onChange={e=>setDraft(d=>({...d,agenda:e.target.value}))} placeholder="What you planned to talk about"/></Field>
-      <Field label="Notes"><Area rows={4} value={draft.notes} onChange={e=>setDraft(d=>({...d,notes:e.target.value}))} placeholder="What was actually discussed."/></Field>
-      <Field label="Action items"><Area rows={2} value={draft.actionItems} onChange={e=>setDraft(d=>({...d,actionItems:e.target.value}))} placeholder="One item per line."/></Field>
-      <div className="flex justify-end"><Btn kind="primary" size="sm" onClick={save}>Save 1:1</Btn></div>
+      <Field label={t("hr.oneOnOne.meetingDateLabel")}><Input type="date" value={draft.meetingDate} onChange={e=>setDraft(d=>({...d,meetingDate:e.target.value}))}/></Field>
+      <Field label={t("hr.oneOnOne.agendaLabel")}><Input value={draft.agenda} onChange={e=>setDraft(d=>({...d,agenda:e.target.value}))} placeholder={t("hr.oneOnOne.agendaPlaceholder")}/></Field>
+      <Field label={t("hr.oneOnOne.notesLabel")}><Area rows={4} value={draft.notes} onChange={e=>setDraft(d=>({...d,notes:e.target.value}))} placeholder={t("hr.oneOnOne.notesPlaceholder")}/></Field>
+      <Field label={t("hr.oneOnOne.actionItemsLabel")}><Area rows={2} value={draft.actionItems} onChange={e=>setDraft(d=>({...d,actionItems:e.target.value}))} placeholder={t("hr.oneOnOne.actionItemsPlaceholder")}/></Field>
+      <div className="flex justify-end"><Btn kind="primary" size="sm" onClick={save}>{t("hr.oneOnOne.savOneOnOneBtn")}</Btn></div>
     </div>}
-    {entries===null?<div className="text-sm text-text-3 py-2">Loading…</div>
-      :entries.length===0?<div className="text-sm text-text-3 py-2">No 1:1s logged yet. When you meet next, hit "Log a 1:1" to capture what was discussed.</div>
+    {entries===null?<div className="text-sm text-text-3 py-2">{t("hr.oneOnOne.loading")}</div>
+      :entries.length===0?<div className="text-sm text-text-3 py-2">{t("hr.oneOnOne.noEntriesYet")}</div>
       :<div className="flex flex-col gap-2 mt-3">{entries.map(e=>
         <div key={e.id} className="py-2.5 px-3 bg-bg rounded-lg">
           <div className="flex justify-between items-center gap-2 mb-1">
-            <div className="text-sm font-semibold text-text">{new Date(e.meetingDate).toLocaleDateString("en-CA",{year:"numeric",month:"long",day:"numeric"})}</div>
-            {e.createdBy===me.id&&<Btn kind="ghost" size="xs" icon="trash" title="Delete this note" onClick={async()=>{await A.hrApiDel(`/hr/one-on-ones/${e.id}`); reload();}}/>}
+            <div className="text-sm font-semibold text-text">{new Date(e.meetingDate).toLocaleDateString(locale==="fr"?"fr-CA":"en-CA",{year:"numeric",month:"long",day:"numeric"})}</div>
+            {e.createdBy===me.id&&<Btn kind="ghost" size="xs" icon="trash" title={t("hr.oneOnOne.deleteTitle")} onClick={async()=>{await A.hrApiDel(`/hr/one-on-ones/${e.id}`); reload();}}/>}
           </div>
-          {e.agenda&&<div className="text-xs text-text-3 mb-1"><strong>Agenda:</strong> {e.agenda}</div>}
+          {e.agenda&&<div className="text-xs text-text-3 mb-1"><strong>{t("hr.oneOnOne.agendaPrefix")}</strong> {e.agenda}</div>}
           {e.notes&&<div className="text-sm text-text-2 whitespace-pre-wrap mb-1">{e.notes}</div>}
-          {e.actionItems&&<div className="text-xs text-text-3 whitespace-pre-wrap"><strong>Actions:</strong> {e.actionItems}</div>}
+          {e.actionItems&&<div className="text-xs text-text-3 whitespace-pre-wrap"><strong>{t("hr.oneOnOne.actionsPrefix")}</strong> {e.actionItems}</div>}
         </div>)}
       </div>}
   </Card>;
@@ -466,33 +467,34 @@ function _OneOnOneLog({A,managerId,reportId,me}){
 /* Your own punch PIN for the shared time clock. Deliberately separate from your password: you key
    this in on a tablet in front of colleagues, so it opens nothing but the time clock. */
 function _PunchPinCard({A,empId}){
+  const {t}=useTranslation();
   const [pin,setPin]=useState(""); const [confirm,setConfirm]=useState("");
   const [msg,setMsg]=useState(null); const [busy,setBusy]=useState(false);
   const save=async()=>{
     setMsg(null);
-    if(pin!==confirm){setMsg({tone:"danger",text:"The two PINs don't match."});return;}
+    if(pin!==confirm){setMsg({tone:"danger",text:t("hr.punchPin.pinsNotMatch")});return;}
     setBusy(true);
     const r=await A.hrSetPunchPin(empId,pin);
     setBusy(false);
-    if(r.ok){setMsg({tone:"ok",text:"Punch PIN updated."});setPin("");setConfirm("");}
+    if(r.ok){setMsg({tone:"ok",text:t("hr.punchPin.pinUpdated")});setPin("");setConfirm("");}
     else setMsg({tone:"danger",text:r.msg});
   };
   return <Card pad={20} style={{borderRadius:16,marginTop:16}}>
-    <Lbl>Time clock PIN</Lbl>
+    <Lbl>{t("hr.punchPin.label")}</Lbl>
     <div className="text-sm text-text-2 mb-3.5 leading-relaxed">
-      4–6 digits, used only to punch in and out on a shared terminal. It can't sign you in anywhere.
+      {t("hr.punchPin.description")}
     </div>
     {msg&&<Banner tone={msg.tone} icon={msg.tone==="ok"?"check":"alert"} style={{marginBottom:12}}>{msg.text}</Banner>}
     <div className="grid gap-2.5 grid-cols-2">
-      <Field label="New PIN">
+      <Field label={t("hr.punchPin.newPINLabel")}>
         <Input type="password" inputMode="numeric" maxLength={6} value={pin}
-          onChange={e=>setPin(e.target.value.replace(/\D/g,""))} placeholder="••••"/></Field>
-      <Field label="Confirm PIN">
+          onChange={e=>setPin(e.target.value.replace(/\D/g,""))} placeholder={t("hr.punchPin.placeholder")}/></Field>
+      <Field label={t("hr.punchPin.confirmPINLabel")}>
         <Input type="password" inputMode="numeric" maxLength={6} value={confirm}
-          onChange={e=>setConfirm(e.target.value.replace(/\D/g,""))} placeholder="••••"/></Field>
+          onChange={e=>setConfirm(e.target.value.replace(/\D/g,""))} placeholder={t("hr.punchPin.placeholder")}/></Field>
     </div>
     <Btn kind="primary" size="sm" style={{marginTop:12}} disabled={busy||pin.length<4} onClick={save}>
-      {busy?"Saving…":"Set PIN"}</Btn>
+      {busy?t("hr.punchPin.savingBtn"):t("hr.punchPin.setPINBtn")}</Btn>
   </Card>;
 }
 
