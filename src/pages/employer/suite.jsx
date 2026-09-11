@@ -838,33 +838,33 @@ export function EmpCandidate(){
           {job.skills.map(k=>{const has=u.skills.some(x=>x.toLowerCase()===k.toLowerCase());
             return <Tag key={k} tone={has?"ok":"neutral"} icon={has?"check":"x"} sm>{k}</Tag>;})}</div>
         <div className="text-sm text-text-2 mt-3 leading-snug">
-          Matches {job.skills.filter(k=>u.skills.some(x=>x.toLowerCase()===k.toLowerCase())).length} of {job.skills.length} required skills.</div></Card>
-      <Card><Lbl>Application answers</Lbl>
-        {[["Available from",a.avail||"Not stated"],["Expected pay",a.expect?a.expect+payShort(job):"Open to posted range"],
-          ["Applied",a.at],["Education",u.edu]].map(([k,v])=>
+          {t("employer.candidate.matchesSkills",{n:job.skills.filter(k=>u.skills.some(x=>x.toLowerCase()===k.toLowerCase())).length,total:job.skills.length})}</div></Card>
+      <Card><Lbl>{t("employer.candidate.applicationAnswers")}</Lbl>
+        {[[t("employer.candidate.availableFrom"),a.avail||t("employer.candidate.notStated")],[t("employer.candidate.expectedPay"),a.expect?a.expect+payShort(job):t("employer.candidate.openToRange")],
+          [t("employer.candidate.applied"),a.at],[t("employer.candidate.education"),u.edu]].map(([k,v])=>
           <div key={k} className="flex justify-between gap-3 py-2.5 border-b border-line-soft text-sm">
             <span className="text-text-2">{k}</span><span className="font-semibold text-text text-right">{v}</span></div>)}</Card></div>
-    {a.letter&&<Card style={{marginBottom:16}}><Lbl>Their note</Lbl>
+    {a.letter&&<Card style={{marginBottom:16}}><Lbl>{t("employer.candidate.theirNote")}</Lbl>
       <p className="text-sm text-text-2 leading-relaxed m-0 whitespace-pre-wrap">{a.letter}</p></Card>}
-    {a.screeningAnswers?.length>0&&<Card style={{marginBottom:16}}><Lbl>Screening question answers</Lbl>
+    {a.screeningAnswers?.length>0&&<Card style={{marginBottom:16}}><Lbl>{t("employer.candidate.screeningAnswers")}</Lbl>
       <div className="flex flex-col gap-3.5">
         {a.screeningAnswers.map(sa=><div key={sa.id}>
           <div className="text-sm font-semibold text-text mb-1">{sa.prompt}</div>
           <div className="text-sm text-text-2">{Array.isArray(sa.answer)?(sa.answer.join(", ")||"—"):(sa.answer||"—")}</div></div>)}</div></Card>}
-    <Card style={{marginBottom:16}}><Lbl>Move this candidate</Lbl>
+    <Card style={{marginBottom:16}}><Lbl>{t("employer.candidate.moveThisCandidate")}</Lbl>
       <div className="flex gap-2.5 flex-wrap">
-        {idx>0&&<Btn kind="outline" icon="arrowL" onClick={()=>A.moveApp(a.id,candStages[idx-1])}>Back to {candStages[idx-1]}</Btn>}
-        {idx<candStages.length-1&&<Btn kind="primary" iconR="arrowR" onClick={()=>A.moveApp(a.id,candStages[idx+1])}>Advance to {candStages[idx+1]}</Btn>}
-        {A.can("messages")?<Btn kind="outline" icon="mail" onClick={()=>setShowMsg(true)}>Message</Btn>:<Btn kind="ghost" icon="lock" onClick={()=>A.go("pricing")}>Message (Growth+)</Btn>}
-        {A.can("interviews")?<Btn kind="outline" icon="calendar" onClick={()=>setShowSched(true)}>Schedule interview</Btn>:<Btn kind="ghost" icon="lock" onClick={()=>A.go("pricing")}>Schedule (Growth+)</Btn>}
-        {a.stage==="Offer"&&<Btn kind="ok" icon="file" onClick={()=>setShowOfferLetter(true)}>Generate offer letter</Btn>}
-        <Btn kind="dangerSoft" onClick={()=>{setConfirmReject(true);setRejectReason("");}}>Not a fit</Btn>
-        <Btn kind="ghost" onClick={()=>A.go("empPipeline")}>Back to pipeline</Btn></div></Card>
-    <ConfirmDialog open={confirmReject} onClose={()=>setConfirmReject(false)} confirmLabel="Reject"
-      title={`Reject ${u.name}?`} onConfirm={()=>{A.rejectApp(a.id,rejectReason.trim());A.go("empPipeline");}}>
+        {idx>0&&<Btn kind="outline" icon="arrowL" onClick={()=>A.moveApp(a.id,candStages[idx-1])}>{t("employer.candidate.backToStage",{stage:candStages[idx-1]})}</Btn>}
+        {idx<candStages.length-1&&<Btn kind="primary" iconR="arrowR" onClick={()=>A.moveApp(a.id,candStages[idx+1])}>{t("employer.candidate.advanceToStage",{stage:candStages[idx+1]})}</Btn>}
+        {A.can("messages")?<Btn kind="outline" icon="mail" onClick={()=>setShowMsg(true)}>{t("employer.candidate.message")}</Btn>:<Btn kind="ghost" icon="lock" onClick={()=>A.go("pricing")}>{t("employer.candidate.message")} (Growth+)</Btn>}
+        {A.can("interviews")?<Btn kind="outline" icon="calendar" onClick={()=>setShowSched(true)}>{t("employer.candidate.scheduleInterview")}</Btn>:<Btn kind="ghost" icon="lock" onClick={()=>A.go("pricing")}>{t("employer.candidate.scheduleInterview")} (Growth+)</Btn>}
+        {a.stage==="Offer"&&<Btn kind="ok" icon="file" onClick={()=>setShowOfferLetter(true)}>{t("employer.candidate.generateOfferLetter")}</Btn>}
+        <Btn kind="dangerSoft" onClick={()=>{setConfirmReject(true);setRejectReason("");}}>{ t("employer.candidate.notAFit")}</Btn>
+        <Btn kind="ghost" onClick={()=>A.go("empPipeline")}>{t("employer.candidate.backToPipeline")}</Btn></div></Card>
+    <ConfirmDialog open={confirmReject} onClose={()=>setConfirmReject(false)} confirmLabel={t("common.delete")}
+      title={t("employer.candidate.rejectConfirmTitle",{name:u.name})} onConfirm={()=>{A.rejectApp(a.id,rejectReason.trim());A.go("empPipeline");}}>
       <div className="flex flex-col gap-3">
-        <div>This withdraws their application. This can't be undone from here.</div>
-        <Field label="Reason (optional)" hint="Shared with the candidate so they know why.">
+        <div>{t("employer.candidate.rejectBody")}</div>
+        <Field label={t("employer.candidate.rejectReasonLabel")} hint={t("employer.candidate.rejectReasonHint")}>
           <Area rows={2} value={rejectReason} onChange={e=>setRejectReason(e.target.value)} placeholder="e.g. Went with a candidate with more site experience"/></Field>
       </div>
     </ConfirmDialog>
@@ -882,17 +882,17 @@ export function EmpCandidate(){
             placeholder={`Dear ${u.name},\n\nWe're pleased to offer you the position of ${job.t} at ${A.company.name}.`}/></Field>
         {offerErr&&<Banner tone="danger" icon="alert">{offerErr}</Banner>}
         {offerLink
-          ? <Banner tone="ok" icon="check" title="Offer sent — the candidate can sign it online">
-              <div className="text-xs text-text-2 mb-2">We emailed them this link. You can also send it yourself:</div>
+          ? <Banner tone="ok" icon="check" title={t("employer.candidate.offerSent")}>
+              <div className="text-xs text-text-2 mb-2">{t("employer.candidate.offerSentEmailBody")}</div>
               <div className="flex gap-2 items-center flex-wrap">
                 <code className="text-xs bg-white border border-line rounded-lg px-2.5 py-1.5 break-all flex-1 min-w-0">{offerLink}</code>
-                <Btn kind="outline" size="sm" onClick={()=>navigator.clipboard?.writeText(offerLink)}>Copy</Btn>
+                <Btn kind="outline" size="sm" onClick={()=>navigator.clipboard?.writeText(offerLink)}>{t("employer.candidate.copyButton")}</Btn>
               </div>
             </Banner>
-          : <Banner tone="brand" icon="info">Send it for signature and the candidate accepts online — typed legal name, explicit acknowledgement, timestamp and hashed IP recorded. Accepting moves them to Hired automatically. Or just print a copy to sign by hand.</Banner>}
+          : <Banner tone="brand" icon="info">{t("employer.candidate.offerSignatureInfo")}</Banner>}
         <div className="flex gap-2.5 justify-end flex-wrap">
-          <Btn kind="ghost" onClick={()=>setShowOfferLetter(false)}>Close</Btn>
-          <Btn kind="outline" icon="file" onClick={()=>A.printOfferLetter(u,job,A.company,offerDraft)}>Print a copy</Btn>
+          <Btn kind="ghost" onClick={()=>setShowOfferLetter(false)}>{t("employer.candidate.close")}</Btn>
+          <Btn kind="outline" icon="file" onClick={()=>A.printOfferLetter(u,job,A.company,offerDraft)}>{t("employer.candidate.printCopy")}</Btn>
           <Btn kind="primary" icon="send" disabled={sendingOffer} onClick={async()=>{
             setOfferErr("");setSendingOffer(true);
             const body=(offerDraft.body||"").trim()||
@@ -906,31 +906,31 @@ export function EmpCandidate(){
               startDate:offerDraft.startDate,reportingTo:offerDraft.manager,expiresAt:offerDraft.deadline});
             setSendingOffer(false);
             if(r.ok)setOfferLink(r.link); else setOfferErr(r.msg);
-          }}>{sendingOffer?"Sending…":"Send for signature"}</Btn>
+          }}>{sendingOffer?t("employer.candidate.sending"):t("employer.candidate.sendForSignature")}</Btn>
         </div>
       </div>
     </Modal>}
 
     {showScorecard&&<Modal onClose={()=>setShowScorecard(false)} title={`Scorecard for ${u.name}`}>
       <div className="flex flex-col gap-3.5">
-        <Field label="Rating" required>
+        <Field label={t("employer.candidate.ratingLabel")} required>
           <div className="flex gap-1.5">
             {[1,2,3,4,5].map(n=><button key={n} type="button" onClick={()=>setScRating(n)}
               className="bg-transparent border-0 p-0 cursor-pointer text-2xl" style={{color:n<=scRating?C.warn:C.line}}>★</button>)}
           </div>
         </Field>
-        <Field label="Notes (optional)"><Area rows={4} value={scNotes} onChange={e=>setScNotes(e.target.value)} placeholder="Strengths, concerns, how they compared to the role's requirements…"/></Field>
+        <Field label={t("common.optional")}><Area rows={4} value={scNotes} onChange={e=>setScNotes(e.target.value)} placeholder="Strengths, concerns, how they compared to the role's requirements…"/></Field>
         <div className="flex gap-2.5 justify-end">
-          <Btn kind="ghost" onClick={()=>setShowScorecard(false)}>Cancel</Btn>
+          <Btn kind="ghost" onClick={()=>setShowScorecard(false)}>{t("common.cancel")}</Btn>
           <Btn kind="primary" disabled={!scRating} onClick={async()=>{
             const r=await A.submitScorecard(a.id,scRating,scNotes.trim());
             if(r.ok){refreshScorecards();setShowScorecard(false);} else A.toast(r.msg,"danger");
-          }}>Submit scorecard</Btn>
+          }}>{t("employer.candidate.submitScorecard")}</Btn>
         </div>
       </div>
     </Modal>}
 
-    {threadMessages.length>0&&<Card style={{marginBottom:16}}><Lbl>Message history</Lbl>
+    {threadMessages.length>0&&<Card style={{marginBottom:16}}><Lbl>{t("employer.candidate.messageHistory")}</Lbl>
       <div className="flex flex-col gap-2.5 overflow-y-auto" style={{maxHeight:280}}>
         {threadMessages.map(m=>{const mine=m.from===A.user?.id;
           return <div key={m.id} className={`flex ${mine?"justify-end":"justify-start"}`}>
@@ -939,50 +939,50 @@ export function EmpCandidate(){
               {m.text}
               <div className="text-xs opacity-70 mt-1.5">{new Date(m.at).toLocaleString("en-CA")}</div></div></div>;})}</div></Card>}
 
-    {upcomingInterviews.length>0&&<Card style={{marginBottom:16}}><Lbl>Scheduled interviews</Lbl>
+    {upcomingInterviews.length>0&&<Card style={{marginBottom:16}}><Lbl>{t("employer.candidate.scheduleInterviewsCard")}</Lbl>
       <div className="flex flex-col gap-2.5">
         {upcomingInterviews.map(iv=><div key={iv.id} className="flex gap-3 items-center py-3 px-3.5 bg-bg rounded-xl border border-line">
           <div className="w-10 h-10 rounded-xl bg-wash text-brand flex items-center justify-center"><I n="calendar" s={18}/></div>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-semibold text-text">{iv.mode==="video"?"Video call":"On-site interview"} on {iv.when}</div>
+            <div className="text-sm font-semibold text-text">{iv.mode==="video"?t("employer.candidate.videoCall"):t("employer.candidate.onsiteInterview")} on {iv.when}</div>
             {iv.notes&&<div className="text-xs text-text-2 mt-1">{iv.notes}</div>}</div>
           <Btn kind="ghost" size="xs" icon="x" onClick={()=>A.cancelInterview(iv.id)}/></div>)}</div></Card>}
 
     {showMsg&&<Modal onClose={()=>{setShowMsg(false);setSavingTemplate(false);}} title={`Message ${u.name}`}>
-      {A.messageTemplates.length>0&&<Field label="Start from a template">
-        <Sel value="" onChange={e=>{const t=A.messageTemplates.find(x=>x.id===e.target.value); if(t)setMsgText(t.body
+      {A.messageTemplates.length>0&&<Field label={t("employer.candidate.startFromTemplate")}>
+        <Sel value="" onChange={e=>{const tm=A.messageTemplates.find(x=>x.id===e.target.value); if(tm)setMsgText(tm.body
           .replace(/\{\{name\}\}/gi,u.name.split(" ")[0]).replace(/\{\{job\}\}/gi,job.t).replace(/\{\{company\}\}/gi,A.company.name));}}>
-          <option value="">Choose a saved template…</option>
-          {A.messageTemplates.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
+          <option value="">{t("employer.candidate.chooseTemplate")}</option>
+          {A.messageTemplates.map(tm=><option key={tm.id} value={tm.id}>{tm.name}</option>)}
         </Sel></Field>}
-      <Field label="Your message" hint={`Sent through NorthHire — ${u.name} sees it on their status page. Merge fields: {{name}}, {{job}}, {{company}}.`}>
-        <Area rows={5} value={msgText} onChange={e=>setMsgText(e.target.value)} placeholder="Hi Jean, thanks for applying…"/></Field>
+      <Field label={t("employer.candidate.yourMessage")} hint={t("employer.candidate.mergeFieldsHint",{name:u.name})}>
+        <Area rows={5} value={msgText} onChange={e=>setMsgText(e.target.value)} placeholder={t("employer.candidate.messagePlaceholder")}/></Field>
       {savingTemplate?<div className="flex gap-2 items-center mt-2.5">
-        <Input value={templateName} onChange={e=>setTemplateName(e.target.value)} placeholder="Template name, e.g. Interview invite" style={{flex:1}}/>
+        <Input value={templateName} onChange={e=>setTemplateName(e.target.value)} placeholder={t("employer.candidate.templateName")} style={{flex:1}}/>
         <Btn kind="outline" size="sm" disabled={!templateName.trim()||!msgText.trim()} onClick={async()=>{
           const r=await A.saveMessageTemplate(templateName.trim(),msgText.trim());
-          if(r.ok){setSavingTemplate(false);setTemplateName("");A.toast("Template saved","ok");}}}>Save</Btn>
-        <Btn kind="ghost" size="sm" onClick={()=>setSavingTemplate(false)}>Cancel</Btn>
+          if(r.ok){setSavingTemplate(false);setTemplateName("");A.toast("Template saved","ok");}}}>{ t("common.save")}</Btn>
+        <Btn kind="ghost" size="sm" onClick={()=>setSavingTemplate(false)}>{t("common.cancel")}</Btn>
       </div>:<button type="button" onClick={()=>setSavingTemplate(true)} disabled={!msgText.trim()}
-        className="bg-transparent border-0 p-0 mt-2.5 text-xs font-semibold text-brand cursor-pointer disabled:text-text-3 disabled:cursor-default">+ Save this message as a template</button>}
+        className="bg-transparent border-0 p-0 mt-2.5 text-xs font-semibold text-brand cursor-pointer disabled:text-text-3 disabled:cursor-default">{t("employer.candidate.saveTemplate")}</button>}
       <div className="flex gap-2.5 justify-end mt-3.5">
-        <Btn kind="ghost" onClick={()=>{setShowMsg(false);setSavingTemplate(false);}}>Cancel</Btn>
-        <Btn kind="primary" icon="send" disabled={!msgText.trim()} onClick={()=>{A.sendMessage(u.id,job.id,msgText.trim());setMsgText("");setShowMsg(false);setSavingTemplate(false);}}>Send message</Btn></div></Modal>}
+        <Btn kind="ghost" onClick={()=>{setShowMsg(false);setSavingTemplate(false);}}>{t("common.cancel")}</Btn>
+        <Btn kind="primary" icon="send" disabled={!msgText.trim()} onClick={()=>{A.sendMessage(u.id,job.id,msgText.trim());setMsgText("");setShowMsg(false);setSavingTemplate(false);}}>{ t("employer.candidate.message")}</Btn></div></Modal>}
 
-    {showSched&&<Modal onClose={()=>setShowSched(false)} title={`Schedule interview with ${u.name}`}>
+    {showSched&&<Modal onClose={()=>setShowSched(false)} title={t("employer.candidate.scheduleInterviewTitle",{name:u.name})}>
       <div className="flex flex-col gap-3.5">
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Date"><Input type="date" value={ivDate} onChange={e=>setIvDate(e.target.value)}/></Field>
-          <Field label="Time"><Input type="time" value={ivTime} onChange={e=>setIvTime(e.target.value)}/></Field></div>
-        <Field label="Format">
+          <Field label={t("employer.candidate.dateLabel")}><Input type="date" value={ivDate} onChange={e=>setIvDate(e.target.value)}/></Field>
+          <Field label={t("employer.candidate.timeLabel")}><Input type="time" value={ivTime} onChange={e=>setIvTime(e.target.value)}/></Field></div>
+        <Field label={t("employer.candidate.formatLabel")}>
           <div className="grid grid-cols-2 gap-2.5">
-            {[["video","Video call"],["onsite","On-site interview"]].map(([v,l])=>{const on=ivMode===v;
+            {[["video",t("employer.candidate.videoCall")],["onsite",t("employer.candidate.onsiteInterview")]].map(([v,l])=>{const on=ivMode===v;
               return <button key={v} onClick={()=>setIvMode(v)} className="py-3 px-3.5 rounded-xl cursor-pointer text-sm border-2"
                 style={{fontWeight:on?640:520,borderColor:on?C.brand:C.line,background:on?C.tint:"#fff",color:on?C.brand:C.text}}>{l}</button>;})}</div></Field>
-        <Field label="Notes (optional)" hint="Address, video link, what to bring, who they'll meet.">
-          <Area rows={3} value={ivNotes} onChange={e=>setIvNotes(e.target.value)} placeholder="Meet at reception, ask for the site foreman."/></Field>
+        <Field label={t("employer.candidate.interviewNotes")} hint={t("employer.candidate.interviewNotesHint")}>
+          <Area rows={3} value={ivNotes} onChange={e=>setIvNotes(e.target.value)} placeholder={t("employer.candidate.notesPlaceholder")}/></Field>
         <div className="flex gap-2.5 justify-end">
-          <Btn kind="ghost" onClick={()=>setShowSched(false)}>Cancel</Btn>
+          <Btn kind="ghost" onClick={()=>setShowSched(false)}>{t("common.cancel")}</Btn>
           <Btn kind="primary" icon="calendar" disabled={!ivDate||!ivTime} onClick={()=>{
             const when=`${ivDate} at ${ivTime}`;
             A.scheduleInterview(a.id,when,ivMode,ivNotes);
