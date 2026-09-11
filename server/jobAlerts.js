@@ -11,6 +11,7 @@ import { serializeJob, serializeSavedSearch, serializeEmployer } from "./seriali
 import { sendCommercialMail } from "./mail.js";
 import { matchJobsToFilters } from "../src/helpers/jobSearch.js";
 import { expandQuery } from "../src/helpers/synonyms.js";
+import { localeForUserId, emailStrings } from "./emailLocale.js";
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
@@ -31,10 +32,10 @@ function filtersFor(saved) {
     modes: s.modes || [], exps: s.exps || [], prov: s.prov || "", minPay: s.minPay || "" };
 }
 
-function jobLine(j) {
+function jobLine(j, S) {
   const pay = j.lo && j.hi
     ? (j.lo === j.hi ? `$${j.lo}` : `$${j.lo}–$${j.hi}`) + (j.unit === "yr" ? "/yr" : j.unit === "hr" ? "/hr" : "")
-    : "Pay not stated";
+    : S.payNotStated;
   return `• ${j.t} — ${j.city}, ${j.prov} — ${pay}\n  ${FRONTEND_URL}/jobs/${j.id}`;
 }
 
@@ -50,11 +51,12 @@ export async function notifyInstantMatches(jobId) {
   for (const s of searches) {
     const hit = matchJobsToFilters([job], filtersFor(s), { expandQuery, emp });
     if (!hit.length) continue;
+    const S = emailStrings(localeForUserId(s.user_id));
     const res = await sendCommercialMail({
       userId: s.user_id,
-      subject: `New match: ${job.t} in ${job.city}`,
-      body: [`A new job matches your saved search "${s.name || "Untitled search"}":`, "", jobLine(job), "",
-        `See all matches: ${FRONTEND_URL}/saved-searches`].join("\n"),
+      subject: S.instantMatchSubject(job.t, job.city),
+      body: [S.instantMatchIntro(s.name || S.untitledSearch), "", jobLine(job, S), "",
+        S.seeAllMatches(`${FRONTEND_URL}/saved-searches`)].join("\n"),
     });
     if (res.sent) sent++;
     db.prepare("UPDATE saved_searches SET last_run = datetime('now') WHERE id = ?").run(s.id);
@@ -80,13 +82,14 @@ export async function runDigests(now = Date.now()) {
     // that gets a sender marked as spam, and CASL compliance does not make it welcome.
     const fresh = matches.filter(j => (now - (j.createdAt || 0)) < intervalMs);
     if (fresh.length) {
+      const S = emailStrings(localeForUserId(s.user_id));
       const res = await sendCommercialMail({
         userId: s.user_id,
-        subject: `${fresh.length} new ${fresh.length === 1 ? "match" : "matches"} for "${s.name || "your saved search"}"`,
-        body: [`Your ${s.frequency} job alert for "${s.name || "Untitled search"}":`, "",
-          ...fresh.slice(0, 10).map(jobLine), "",
-          fresh.length > 10 ? `…and ${fresh.length - 10} more.` : "",
-          `See all matches: ${FRONTEND_URL}/saved-searches`].filter(Boolean).join("\n"),
+        subject: S.digestSubject(fresh.length, s.name || S.yourSavedSearch),
+        body: [S.digestIntro(s.frequency, s.name || S.untitledSearch), "",
+          ...fresh.slice(0, 10).map(j => jobLine(j, S)), "",
+          fresh.length > 10 ? S.andMore(fresh.length - 10) : "",
+          S.seeAllMatches(`${FRONTEND_URL}/saved-searches`)].filter(Boolean).join("\n"),
       });
       if (res.sent) sent++;
     }

@@ -9,6 +9,7 @@ import { calcStaffingEconomics } from "../../src/helpers/staffingEconomics.js";
 import { getConfig } from "../platformConfig.js";
 import { buildAllT4s, buildRoe, payrollYears } from "../../src/helpers/taxSlips.js";
 import { sendAndLogMail } from "../mail.js";
+import { localeForAgencyStaffEmail, emailStrings } from "../emailLocale.js";
 import {
   serializeWorker, serializeWorkerForClient, serializeStaffingClient, serializeStaffingBranch, serializeJobOrder, serializeAssignment, serializeSubmittal,
   serializeStaffingTimesheet, serializeStaffingPayrun, serializeStaffingInvoice, serializePlacement,
@@ -115,7 +116,8 @@ staffingRouter.post("/reset/request", async (req, res) => {
   }
   const code = crypto.randomInt(100000, 1000000).toString();
   db.prepare("INSERT INTO agency_reset_codes (email, code, attempts) VALUES (?, ?, 0) ON CONFLICT(email) DO UPDATE SET code = excluded.code, attempts = 0, created_at = datetime('now')").run(email, code);
-  await sendAndLogMail(email, "Reset your NorthHire Staffing password", `Your reset code is ${code}. It expires in 15 minutes.`);
+  const es = emailStrings(localeForAgencyStaffEmail(email));
+  await sendAndLogMail(email, es.staffingResetSubject, es.resetBody(code));
   // Same fix as the main site's reset flow (auth.js) - never hand the code back to whoever merely
   // knows the target email, only outside production where there's no real email to demo with.
   res.json({ ok: true, code: process.env.NODE_ENV === "production" ? undefined : code });

@@ -894,6 +894,10 @@ for (const stmt of [
   "ALTER TABLE blogs ADD COLUMN body_json_fr TEXT",
   "ALTER TABLE trainings ADD COLUMN title_fr TEXT",
   "ALTER TABLE trainings ADD COLUMN about_fr TEXT",
+  // Bill 96 P2: agency staff (the staffing console) are a separate account table from `users` and
+  // need their own locale so password-reset and other transactional mail to them can be localized
+  // the same way it is for regular users.
+  "ALTER TABLE agency_staff ADD COLUMN locale TEXT DEFAULT 'en-CA'",
 ]) {
   try { db.exec(stmt); } catch (e) { if (!/duplicate column/i.test(e.message)) console.error("migration:", stmt, e.message); }
 }
