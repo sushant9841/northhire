@@ -70,6 +70,14 @@ export const en = {
     moreCount: "+{count} more", expandCollapse: "click to {action} {count} more like this", expand: "expand", collapse: "collapse",
     showMore: "Show more", moreGroups: "({count} more groups, {items} items)",
   },
+  denied: {
+    title: "Not available on this account",
+    noRoleBody: "You need to sign in to open this page.",
+    seekerBody: "That area belongs to employer and administrator accounts. Your job seeker account has its own dashboard, applications and CV tools.",
+    employerBody: "That area is for job seeker or administrator accounts. Your employer account covers listings, candidates and content.",
+    adminBody: "That area is not part of the administrator console.",
+    goToDashboard: "Go to my dashboard", signIn: "Sign in",
+  },
   legal: {
     lastUpdated: "Last updated", readFull: "Read the full document",
   },

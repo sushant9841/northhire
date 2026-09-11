@@ -71,6 +71,14 @@ export const fr = {
     moreCount: "+{count} autres", expandCollapse: "cliquez pour {action} {count} autres comme celui-ci", expand: "développer", collapse: "réduire",
     showMore: "Afficher plus", moreGroups: "({count} autres groupes, {items} éléments)",
   },
+  denied: {
+    title: "Non disponible sur ce compte",
+    noRoleBody: "Vous devez vous connecter pour ouvrir cette page.",
+    seekerBody: "Ce secteur appartient aux comptes employeur et administrateur. Votre compte de chercheur·euse d'emploi a son propre tableau de bord, ses candidatures et ses outils de CV.",
+    employerBody: "Ce secteur est destiné aux comptes de chercheur·euse d'emploi ou administrateur. Votre compte employeur couvre les emplois, les candidat·e·s et le contenu.",
+    adminBody: "Ce secteur ne fait pas partie de la console administrateur.",
+    goToDashboard: "Aller à mon tableau de bord", signIn: "Se connecter",
+  },
   legal: {
     lastUpdated: "Dernière mise à jour", readFull: "Lire le document complet",
   },
