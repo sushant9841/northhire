@@ -2337,53 +2337,53 @@ export function HrIntegrations(){
         <div className="flex gap-3 items-start mb-4">
           <div className="w-11 h-11 rounded-xl bg-wash text-brand flex items-center justify-center shrink-0"><I n="clock" s={22}/></div>
           <div className="flex-1 min-w-0">
-            <div className="text-base font-semibold text-text">Punch machine</div>
-            <div className="text-xs text-text-3 mt-1">Sync with on-site clocks or biometric readers.</div>
+            <div className="text-base font-semibold text-text">{t("hr.integrations.punchMachine")}</div>
+            <div className="text-xs text-text-3 mt-1">{t("hr.integrations.punchMachineDesc")}</div>
           </div>
-          <Tag tone={settings.integrations.punchMachine.connected?"ok":"neutral"} sm>{settings.integrations.punchMachine.connected?"Connected":"Not connected"}</Tag>
+          <Tag tone={settings.integrations.punchMachine.connected?"ok":"neutral"} sm>{settings.integrations.punchMachine.connected?t("hr.integrations.punchConnected"):t("hr.integrations.punchNotConnected")}</Tag>
         </div>
         {settings.integrations.punchMachine.connected
           ? <div>
               <div className="p-3 bg-ok-bg rounded-lg border border-ok-ln mb-3">
                 <div className="text-sm font-semibold text-text">{settings.integrations.punchMachine.vendor}</div>
-                <div className="text-xs text-text-2 mt-1">Last sync: {new Date(settings.integrations.punchMachine.lastSync).toLocaleString("en-CA")}</div>
+                <div className="text-xs text-text-2 mt-1">{t("hr.integrations.punchLastSync",{time:formatDateTime(settings.integrations.punchMachine.lastSync,locale)})}</div>
               </div>
-              <Btn kind="outline" size="sm" full onClick={()=>setShowPunch(true)}>Reconfigure</Btn>
+              <Btn kind="outline" size="sm" full onClick={()=>setShowPunch(true)}>{t("hr.integrations.punchReconfigureBtn")}</Btn>
             </div>
-          : <Btn kind="primary" size="sm" full icon="plus" onClick={()=>setShowPunch(true)}>Connect a device</Btn>}
+          : <Btn kind="primary" size="sm" full icon="plus" onClick={()=>setShowPunch(true)}>{t("hr.integrations.punchConnectBtn")}</Btn>}
       </Card>
 
       <Card pad={mob?20:26} style={{borderRadius:16}}>
         <div className="flex gap-3 items-start mb-4">
           <div className="w-11 h-11 rounded-xl bg-violet-bg text-violet flex items-center justify-center shrink-0"><I n="refresh" s={22}/></div>
           <div className="flex-1 min-w-0">
-            <div className="text-base font-semibold text-text">Import from existing HR system</div>
-            <div className="text-xs text-text-3 mt-1">Bring in employees, history and payroll from your current HRIS.</div>
+            <div className="text-base font-semibold text-text">{t("hr.integrations.importSystem")}</div>
+            <div className="text-xs text-text-3 mt-1">{t("hr.integrations.importSystemDesc")}</div>
           </div>
-          <Tag tone={settings.integrations.priorHRSystem.connected?"ok":"neutral"} sm>{settings.integrations.priorHRSystem.connected?"Imported":"Not connected"}</Tag>
+          <Tag tone={settings.integrations.priorHRSystem.connected?"ok":"neutral"} sm>{settings.integrations.priorHRSystem.connected?t("hr.integrations.importConnected"):t("hr.integrations.importNotConnected")}</Tag>
         </div>
         {settings.integrations.priorHRSystem.connected
           ? <div>
               <div className="p-3 bg-ok-bg rounded-lg border border-ok-ln mb-3">
                 <div className="text-sm font-semibold text-text">{settings.integrations.priorHRSystem.vendor}</div>
-                <div className="text-xs text-text-2 mt-1">Last import: {new Date(settings.integrations.priorHRSystem.lastImport).toLocaleString("en-CA")}</div>
+                <div className="text-xs text-text-2 mt-1">{t("hr.integrations.importLastImport",{time:formatDateTime(settings.integrations.priorHRSystem.lastImport,locale)})}</div>
               </div>
-              <Btn kind="outline" size="sm" full onClick={()=>setShowImport(true)}>Import again</Btn>
+              <Btn kind="outline" size="sm" full onClick={()=>setShowImport(true)}>{t("hr.integrations.importAgainBtn")}</Btn>
             </div>
-          : <Btn kind="primary" size="sm" full icon="upload" onClick={()=>setShowImport(true)}>Start import</Btn>}
+          : <Btn kind="primary" size="sm" full icon="upload" onClick={()=>setShowImport(true)}>{t("hr.integrations.importStartBtn")}</Btn>}
       </Card>
     </div>
 
-    {showPunch&&<Modal onClose={()=>setShowPunch(false)} title="Connect a punch machine">
+    {showPunch&&<Modal onClose={()=>setShowPunch(false)} title={t("hr.integrations.punchModalTitle")}>
       <div className="flex flex-col gap-3.5">
-        <Banner tone="warn" icon="info" title="Demo simulation">This preview build doesn't talk to real hardware — selecting a vendor below just marks the integration as connected in your settings, with no live device sync.</Banner>
+        <Banner tone="warn" icon="info" title={t("hr.integrations.punchDemoTitle")}>{t("hr.integrations.punchDemoText")}</Banner>
         <div className="flex flex-col gap-2">
           {A.PUNCH_VENDORS.map(v=><button key={v.id} onClick={()=>{A.connectPunchMachine(company.id,v.name); setShowPunch(false);}}
             className="flex gap-3 items-center py-3.5 px-4 bg-white border border-line rounded-xl cursor-pointer text-left transition-all duration-150 hover:border-brand hover:bg-tint">
             <div className="w-9 h-9 rounded-lg bg-wash text-brand flex items-center justify-center shrink-0"><I n={v.kind==="cloud"?"globe":"clock"} s={18}/></div>
             <div className="flex-1 min-w-0">
               <div className="text-sm font-semibold text-text">{v.name}</div>
-              <div className="text-xs text-text-3 mt-0.5">{v.kind==="cloud"?"Cloud sync via API":"On-site device"}</div>
+              <div className="text-xs text-text-3 mt-0.5">{v.kind==="cloud"?t("hr.integrations.punchCloudSync"):t("hr.integrations.punchOnSite")}</div>
             </div>
             <I n="chevR" s={16} c={C.text3}/>
           </button>)}
@@ -2391,11 +2391,11 @@ export function HrIntegrations(){
       </div>
     </Modal>}
 
-    {showImport&&<Modal onClose={()=>setShowImport(false)} title="Import from your HR system">
+    {showImport&&<Modal onClose={()=>setShowImport(false)} title={t("hr.integrations.importModalTitle")}>
       <div className="flex flex-col gap-3.5">
-        <Banner tone="warn" icon="upload" title="Demo simulation">This preview build doesn't run a real migration — selecting a system below just marks the integration as connected in your settings. No employees, salaries, or history are actually imported.</Banner>
+        <Banner tone="warn" icon="upload" title={t("hr.integrations.importDemoTitle")}>{t("hr.integrations.importDemoText")}</Banner>
         <div className="flex flex-col gap-2">
-          {A.PRIOR_HR_VENDORS.map(v=><button key={v.id} onClick={()=>{A.connectPriorSystem(company.id,v.name); setShowImport(false); A.toast(`Marked as connected to ${v.name} (simulated — no data was actually imported)`,"ok");}}
+          {A.PRIOR_HR_VENDORS.map(v=><button key={v.id} onClick={()=>{A.connectPriorSystem(company.id,v.name); setShowImport(false); A.toast(t("hr.integrations.importToast",{name:v.name}),"ok");}}
             className="flex gap-3 items-center py-3.5 px-4 bg-white border border-line rounded-xl cursor-pointer text-left transition-all duration-150 hover:border-brand hover:bg-tint">
             <div className="w-9 h-9 rounded-lg bg-violet-bg text-violet flex items-center justify-center shrink-0"><I n="refresh" s={18}/></div>
             <div className="text-sm font-semibold text-text flex-1">{v.name}</div>
