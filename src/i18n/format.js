@@ -20,6 +20,12 @@ export function formatDateNumeric(date, locale) {
   return new Intl.DateTimeFormat(intlLocale(locale)).format(d);
 }
 
+export function formatDateTime(date, locale, opts) {
+  const d = date instanceof Date ? date : new Date(date);
+  if (isNaN(d.getTime())) return "";
+  return new Intl.DateTimeFormat(intlLocale(locale), opts || { year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(d);
+}
+
 export function formatCurrency(amount, locale, currency = "CAD") {
   const n = Number(amount) || 0;
   return new Intl.NumberFormat(intlLocale(locale), { style: "currency", currency }).format(n);
