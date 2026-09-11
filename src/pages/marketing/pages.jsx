@@ -984,24 +984,15 @@ export function LegalPage({kind}){
 }
 
 export function PricingPage(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
-  const plans=[
-    {n:"Free",p:A.PLANS.Free.price,best:false,tag:"Try it out",summary:"For solo hiring or trying NorthHire before committing.",
-     f:["1 active job posting","Applicant pipeline with match scoring","Basic analytics","Verified employer badge","Email support"]},
-    {n:"Growth",p:A.PLANS.Growth.price,best:true,tag:"Recommended for most",summary:"Everything a growing team needs to run a real hiring pipeline.",
-     f:["10 active job postings","Unlimited applications","Direct candidate messaging","Interview scheduling","Talent pool (reverse match)","CSV bulk job import","Full analytics dashboard","2 featured job upgrades per month","Employer branded page","5 recruiter seats","Priority support"]},
-    {n:"Enterprise",p:A.PLANS.Enterprise.price,best:false,tag:"For large teams",summary:"Unlimited hiring + the full NorthHire HR Suite for running your whole workforce.",
-     f:["Unlimited job postings & applications","Unlimited featured upgrades","Unlimited recruiter seats","Full analytics with trend history","Custom employer branding (colors, hero)","API access","Single Sign-On (OIDC)","Dedicated account manager","","NorthHire HR Suite included:","• Employee directory & profiles","• Attendance & punch-in/out","• Leave management & approvals","• Tasks, calendar, events & trainings","• Internal chat (1:1 & groups)","• Invoices, salary, notifications","• Role management (Admin/HR/Finance/Employee)","• Feature toggles per module","• Sync with public NorthHire profiles"]}
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t}=useTranslation();
+  const plansData=[
+    {name:"Free",tag:"planFreeTag",summary:"planFreeSummary",features:["1 active job posting","Applicant pipeline with match scoring","Basic analytics","Verified employer badge","Email support"]},
+    {name:"Growth",tag:"planGrowthTag",summary:"planGrowthSummary",features:["10 active job postings","Unlimited applications","Direct candidate messaging","Interview scheduling","Talent pool (reverse match)","CSV bulk job import","Full analytics dashboard","2 featured job upgrades per month","Employer branded page","5 recruiter seats","Priority support"]},
+    {name:"Enterprise",tag:"planEnterpriseTag",summary:"planEnterpriseSummary",features:["Unlimited job postings & applications","Unlimited featured upgrades","Unlimited recruiter seats","Full analytics with trend history","Custom employer branding (colors, hero)","API access","Single Sign-On (OIDC)","Dedicated account manager","","NorthHire HR Suite included:","• Employee directory & profiles","• Attendance & punch-in/out","• Leave management & approvals","• Tasks, calendar, events & trainings","• Internal chat (1:1 & groups)","• Invoices, salary, notifications","• Role management (Admin/HR/Finance/Employee)","• Feature toggles per module","• Sync with public NorthHire profiles"]}
   ];
-  const faq=[
-    ["What's included in every plan?","Applicant pipeline with AI match scoring, verified employer badge, English & French posting, no per-applicant fees, no long-term contracts."],
-    ["Do you charge per applicant or per hire?","Neither. Flat monthly, whatever your volume."],
-    ["What is the HR Suite?","A complete workforce platform included with Enterprise. Employees log in through a separate portal with their company ID. Every employee record syncs with their public NorthHire profile — but each employee controls exactly which fields are visible."],
-    ["Can I switch plans?","Any time. Upgrades take effect immediately, downgrades at the next billing cycle."],
-    ["Is there a free trial?","The Free plan is permanently free with 1 job posting. Growth and Enterprise both offer 14-day trials — no card required."],
-    ["What payment methods work?","Visa, Mastercard, Amex, Interac direct debit. Invoices with net-30 terms available on Enterprise."],
-    ["Do you offer annual billing?","Yes — 15% off the monthly price when paid up front for a full year. Toggle the pricing above to see the annual figures. Contact billing@northhire.ca to switch an existing subscription to annual."],
-  ];
+  const plans=plansData.map(pd=>({n:pd.name,p:A.PLANS[pd.name].price,best:pd.name==="Growth",tag:t(`pricing.${pd.tag}`),summary:t(`pricing.${pd.summary}`),f:pd.features}));
+  const faqKeys=["faq1","faq2","faq3","faq4","faq5","faq6","faq7"];
+  const faq=faqKeys.map(k=>[t(`pricing.${k}Q`),t(`pricing.${k}A`)]);
   const [open,setOpen]=useState(-1);
   // Annual billing gets 15% off (a common SaaS discount). This is display-only until Stripe
   // actually offers an annual price - checkout still creates the monthly subscription, and the
@@ -1016,11 +1007,11 @@ export function PricingPage(){
 
     <section className={`bg-white ${pad}`}>
       <div className="max-w-240 mx-auto text-center">
-        <Tag tone="brand">Employer pricing</Tag>
+        <Tag tone="brand">{t("pricing.tag")}</Tag>
         <h1 className={`${HERO_WIDE} my-6 mx-auto max-w-narrow ${mob?"text-4xl":"text-7xl"}`}>
-          Simple pricing. No per-applicant fees.</h1>
+          {t("pricing.title")}</h1>
         <p className={`text-text-2 leading-snug mx-auto max-w-150 ${mob?"text-lg":"text-xl"}`}>
-          From your first hire to running an entire workforce. All prices in CAD. Cancel any time.</p>
+          {t("pricing.subtitle")}</p>
       </div>
     </section>
 
@@ -1028,7 +1019,7 @@ export function PricingPage(){
       <div className="max-w-300 mx-auto">
         <div className="flex justify-center mb-6">
           <div className="inline-flex bg-bg border border-line rounded-full p-1">
-            {[["monthly","Monthly"],["annual",<>Annual <span className="text-xs font-normal opacity-80">· save 15%</span></>]].map(([v,l])=>
+            {[["monthly",t("pricing.billingMonthly")],["annual",t("pricing.billingAnnual")]].map(([v,l])=>
               <button key={v} onClick={()=>setBilling(v)}
                 className={`text-sm font-semibold py-2 px-5 rounded-full transition-colors duration-150 ${billing===v?"bg-white text-brand shadow-sm":"text-text-2 bg-transparent"}`}>{l}</button>)}
           </div>
@@ -1043,8 +1034,8 @@ export function PricingPage(){
               <div className={`text-sm text-text-2 leading-snug mb-5 ${mob?"":"min-h-11"}`}>{p.summary}</div>
               <div className="flex items-baseline gap-1.5 mb-6 pb-6 border-b border-line-soft flex-wrap">
                 <span className={`font-extrabold text-text tracking-tight leading-none ${mob?"text-5xl":"text-6xl"}`}>${billing==="annual"&&p.p>0?Math.round(p.p*(1-annualPct)):p.p}</span>
-                <span className="text-base text-text-3">{p.p===0?"forever":"/month"}</span>
-                {billing==="annual"&&p.p>0&&<span className="text-xs text-text-3 basis-full mt-1">billed ${Math.round(p.p*(1-annualPct)*12).toLocaleString()}/year · save ${Math.round(p.p*annualPct*12).toLocaleString()} vs. monthly</span>}
+                <span className="text-base text-text-3">{p.p===0?t("pricing.forever"):t("pricing.perMonth")}</span>
+                {billing==="annual"&&p.p>0&&<span className="text-xs text-text-3 basis-full mt-1">{t("pricing.billedAnnually",{price:Math.round(p.p*(1-annualPct)*12).toLocaleString(),savings:Math.round(p.p*annualPct*12).toLocaleString()})}</span>}
               </div>
               <div className="flex flex-col gap-3 mb-7 flex-1">
                 {p.f.map((x,i)=>{if(!x)return <div key={i} className="h-2"/>;
@@ -1055,7 +1046,7 @@ export function PricingPage(){
                     {!isSubItem&&<span className="text-ok shrink-0 flex mt-0.5"><I n="check" s={16} w={2.6}/></span>}
                     <span>{isSubItem?x.slice(2):x}</span></div>;})}</div>
               <Btn kind={isCurrent?"outline":p.best?"primary":"outline"} size="lg" full disabled={isCurrent} onClick={()=>A.choosePlan(p.n)}>
-                {isCurrent?"Current plan":p.p===0?"Start free":"Choose "+p.n}</Btn></div></div>;})}</div>
+                {isCurrent?t("pricing.currentPlan"):p.p===0?t("pricing.startFreeBtn"):t("pricing.chooseBtn",{plan:p.n})}</Btn></div></div>;})}</div>
       </div>
     </section>
 
@@ -1063,13 +1054,13 @@ export function PricingPage(){
       <div className="max-w-280 mx-auto">
         <div className={`text-center ${mob?"mb-7":"mb-11"}`}>
           <h2 className={`${SECTION_CLS} mb-3.5 leading-snug ${mob?"text-2xl":"text-4xl"}`}>
-            Compare features in detail</h2>
-          <p className={`text-text-2 leading-snug m-0 ${mob?"text-base":"text-lg"}`}>Everything in one table so you can pick the right fit.</p></div>
+            {t("pricing.compareFeaturesTitle")}</h2>
+          <p className={`text-text-2 leading-snug m-0 ${mob?"text-base":"text-lg"}`}>{t("pricing.compareFeaturesDesc")}</p></div>
         <div className="bg-white rounded-2xl border border-line overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse" style={{minWidth:mob?540:720}}>
               <thead><tr className="bg-bg border-b border-line">
-                <th className={`text-left text-xs font-bold text-text-3 tracking-wide uppercase ${mob?"py-3.5 px-4":"py-5 px-6"}`}>Feature</th>
+                <th className={`text-left text-xs font-bold text-text-3 tracking-wide uppercase ${mob?"py-3.5 px-4":"py-5 px-6"}`}>{t("pricing.featureColumn")}</th>
                 {plans.map(p=><th key={p.n} className={`text-center text-sm font-bold ${mob?"py-3.5 px-3":"py-5 px-5"} ${p.best?"text-brand":"text-text"}`}>{p.n}</th>)}
               </tr></thead>
               <tbody>
@@ -1099,12 +1090,12 @@ export function PricingPage(){
 
     <section className={`bg-white ${pad}`}>
       <div className={`max-w-narrow mx-auto bg-ink text-white rounded-3xl text-center ${mob?"py-9 px-6":"py-14 px-15"}`}>
-        <Tag tone="onDark">HR Suite</Tag>
+        <Tag tone="onDark">{t("pricing.hrSuiteTag")}</Tag>
         <h2 className={`font-bold tracking-tight my-3.5 leading-snug ${mob?"text-2xl":"text-3xl"}`}>
-          One platform. From posting a role to running your entire workforce.</h2>
+          {t("pricing.hrSuiteTitle")}</h2>
         <p className={`text-white/70 leading-relaxed mx-auto mb-7 max-w-130 ${mob?"text-base":"text-lg"}`}>
-          Enterprise unlocks the full NorthHire HR Suite. Employees log in through a separate portal. Every employee's public NorthHire profile syncs with their internal record — with per-field privacy controls.</p>
-        <Btn kind="onDark" size="lg" onClick={()=>A.choosePlan("Enterprise")}>Get Enterprise</Btn>
+          {t("pricing.hrSuiteDesc")}</p>
+        <Btn kind="onDark" size="lg" onClick={()=>A.choosePlan("Enterprise")}>{t("pricing.hrSuiteBtn")}</Btn>
       </div>
     </section>
 
@@ -1113,19 +1104,19 @@ export function PricingPage(){
         <div className="w-16 h-16 rounded-full bg-ok-bg text-ok flex items-center justify-center mx-auto mb-6">
           <I n="heart" s={30}/></div>
         <h2 className={`${SECTION_CLS} mb-3.5 leading-snug ${mob?"text-2xl":"text-4xl"}`}>
-          Job seekers pay nothing. Ever.</h2>
+          {t("pricing.seekersTitle")}</h2>
         <p className={`text-text-2 leading-relaxed mx-auto mb-8 max-w-120 ${mob?"text-base":"text-lg"}`}>
-          Full profile, unlimited applications, CV builder, free trainings and direct employer messaging. No premium tier.</p>
-        <Btn kind="primary" size="lg" onClick={()=>A.go(A.user?.role==="seeker"?"profile":"signup")}>Create a free profile</Btn>
+          {t("pricing.seekersDesc")}</p>
+        <Btn kind="primary" size="lg" onClick={()=>A.go(A.user?.role==="seeker"?"profile":"signup")}>{t("pricing.seekersBtn")}</Btn>
       </div>
     </section>
 
     <section className={`bg-white ${pad}`}>
       <div className="max-w-narrow mx-auto">
         <div className="text-center mb-9">
-          <Tag tone="brand">Questions</Tag>
+          <Tag tone="brand">{t("pricing.faqTag")}</Tag>
           <h2 className={`${SECTION_CLS} mt-3.5 leading-snug ${mob?"text-2xl":"text-4xl"}`}>
-            Common questions.</h2></div>
+            {t("pricing.faqTitle")}</h2></div>
         <div className="bg-white rounded-2xl border border-line overflow-hidden">
           {faq.map(([q,a],i)=><div key={q} className={i<faq.length-1?"border-b border-line-soft":""}>
             <button onClick={()=>setOpen(open===i?-1:i)} className={`w-full flex justify-between items-center gap-3.5 bg-transparent border-0 cursor-pointer text-left ${mob?"py-5 px-6":"py-6 px-7"}`}>
