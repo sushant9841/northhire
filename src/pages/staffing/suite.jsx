@@ -571,7 +571,7 @@ function _PlaceWorkerModal({jobOrder,onClose,onPlace,preselectWorkerId,onSubmitt
    worker for a fixed order). This is the inverse: pick an open order for a fixed worker, so a
    recruiter scanning the bench can place someone directly from that row. */
 function _PlaceFromBenchModal({worker:w,onClose,onPlace}){
-  const A=use();
+  const A=use(); const {t,locale}=useTranslation();
   const person=(A.people||[]).find(p=>p.id===w.personId);
   const openOrders=A.jobOrders.filter(j=>j.status==="open");
   const [orderId,setOrderId]=useState("");
@@ -593,38 +593,38 @@ function _PlaceFromBenchModal({worker:w,onClose,onPlace}){
     onPlace();
   };
 
-  return <Modal onClose={onClose} title={`Place ${person?.name||"worker"}`}>
+  return <Modal onClose={onClose} title={t("staffing.jobOrders.placeFromBench",{name:person?.name||t("staffing.jobOrders.worker")})}>
     <div className="flex flex-col gap-3.5">
-      <Field label="Job order" required>
+      <Field label={t("staffing.jobOrders.jobOrderLabel")} required>
         <Sel value={orderId} onChange={e=>{setOrderId(e.target.value); const j=openOrders.find(x=>x.id===e.target.value); if(j)setBillRate(j.billRate);}}>
-          <option value="">Select an open job order…</option>
+          <option value="">{t("staffing.jobOrders.selectJobOrder")}</option>
           {openOrders.map(j=>{const c=A.staffingClient(j.client); const emp=A.employers.find(e=>e.id===c?.employerId);
             return <option key={j.id} value={j.id}>{j.title} — {emp?.name||c?.id}</option>;})}
         </Sel>
       </Field>
       {jobOrder&&<div className="grid grid-cols-2 gap-2.5">
-        <Field label="Pay rate ($/hr)" required><Input type="number" min="0" step="0.5" value={payRate} onChange={e=>setPayRate(e.target.value)}/></Field>
-        <Field label="Bill rate ($/hr)" required><Input type="number" min="0" step="0.5" value={billRate} onChange={e=>setBillRate(e.target.value)}/></Field>
+        <Field label={t("staffing.jobOrders.payRateLabel")} required><Input type="number" min="0" step="0.5" value={payRate} onChange={e=>setPayRate(e.target.value)}/></Field>
+        <Field label={t("staffing.jobOrders.billRateLabel")} required><Input type="number" min="0" step="0.5" value={billRate} onChange={e=>setBillRate(e.target.value)}/></Field>
       </div>}
-      {jobOrder&&<Field label="Benefits/hr" hint="Defaults to this worker's profile default."><Input type="number" min="0" step="0.05" value={benefitsPerHr} onChange={e=>setBenefitsPerHr(e.target.value)}/></Field>}
-      {rateInvalid&&<Banner tone="danger" icon="alert">Bill rate can't be below pay rate.</Banner>}
+      {jobOrder&&<Field label={t("staffing.jobOrders.benefitsLabel")} hint={t("staffing.jobOrders.benefitsHint")}><Input type="number" min="0" step="0.05" value={benefitsPerHr} onChange={e=>setBenefitsPerHr(e.target.value)}/></Field>}
+      {rateInvalid&&<Banner tone="danger" icon="alert">{t("staffing.jobOrders.billBelowPay")}</Banner>}
       {jobOrder&&<Card pad={14} style={{borderRadius:11,background:marginOk?C.okBg:C.warnBg,border:`1px solid ${marginOk?C.okLn:C.warnLn}`}}>
         <div className="flex justify-between text-xs mb-1.5">
-          <span className="text-text-3 font-semibold">MARKUP</span>
+          <span className="text-text-3 font-semibold">{t("staffing.jobOrders.markup")}</span>
           <span className="font-bold" style={{color:marginOk?C.ok:C.warn}}>{econ.markupPct}%</span>
         </div>
         <div className="flex justify-between text-xs mb-1.5">
-          <span className="text-text-3 font-semibold">BURDEN/HR ({w.province})</span>
+          <span className="text-text-3 font-semibold">{t("staffing.jobOrders.burden_prov",{prov:w.province})}</span>
           <span className="font-bold text-text">${econ.burden}</span>
         </div>
         <div className="flex justify-between text-xs">
-          <span className="text-text-3 font-semibold">MARGIN/HR</span>
+          <span className="text-text-3 font-semibold">{t("staffing.jobOrders.marginHr")}</span>
           <span className="font-bold" style={{color:econ.margin>0?C.ok:C.danger}}>${econ.margin}</span>
         </div>
       </Card>}
       <div className="flex gap-2.5 justify-end">
-        <Btn kind="ghost" onClick={onClose}>Cancel</Btn>
-        <Btn kind="primary" onClick={place} disabled={!jobOrder||!payRate||!billRate||rateInvalid}>Confirm placement</Btn>
+        <Btn kind="ghost" onClick={onClose}>{t("staffing.jobOrders.cancel")}</Btn>
+        <Btn kind="primary" onClick={place} disabled={!jobOrder||!payRate||!billRate||rateInvalid}>{t("staffing.jobOrders.confirm")}</Btn>
       </div>
     </div>
   </Modal>;

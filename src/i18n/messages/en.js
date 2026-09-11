@@ -593,6 +593,7 @@ export const en = {
       cancel: "Cancel", confirm: "Confirm placement",
       stage_submitted: "Submitted", stage_client_review: "Client review", stage_interview: "Interview", stage_offer: "Offer",
       stage_placed: "Placed", stage_rejected: "Rejected",
+      placeFromBench: "Place {name}", jobOrderLabel: "Job order", selectJobOrder: "Select an open job order…",
     },
     bench: { title: "Bench", unassigned: "Unassigned", assigned: "Assigned", onLeave: "On leave" },
     assignments: { title: "Assignments", worker: "Worker", client: "Client", startDate: "Start date", endDate: "End date" },

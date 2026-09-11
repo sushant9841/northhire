@@ -595,6 +595,7 @@ export const fr = {
       cancel: "Annuler", confirm: "Confirmer l'assignation",
       stage_submitted: "Présentée", stage_client_review: "Révision du client·e", stage_interview: "Entrevue", stage_offer: "Offre",
       stage_placed: "Placée", stage_rejected: "Rejetée",
+      placeFromBench: "Placer {name}", jobOrderLabel: "Commande de travail", selectJobOrder: "Sélectionner une commande de travail ouverte…",
     },
     bench: {
       title: "Banc", unassigned: "Non assigné·e", assigned: "Assigné·e", onLeave: "En congé",
