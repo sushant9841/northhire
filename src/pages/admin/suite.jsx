@@ -480,7 +480,9 @@ export function AdmLog(){
   });
   const pg=usePagination(list,30);
   return <Page narrow>
-    <H1 sub={`${A.activity.length} recorded event${A.activity.length===1?"":"s"} in this session`}
+    <H1 sub={A.activity.length===0
+      ? "No activity yet. Every publish, approval, moderation action and setting change is recorded here."
+      : `${A.activity.length.toLocaleString()} recorded event${A.activity.length===1?"":"s"}`}
       action={<Btn kind="outline" size="sm" icon="download" onClick={()=>A.exportLog(list)}>Export {list.length<A.activity.length?`filtered (${list.length})`:"CSV"}</Btn>}>Activity log</H1>
     <Card pad={mob?16:20} style={{marginBottom:14,borderRadius:16}}>
       <div className={`grid gap-3 ${mob?"grid-cols-1":""}`} style={{gridTemplateColumns:mob?undefined:"2fr 1fr 1fr"}}>
@@ -707,10 +709,20 @@ function StaffingAgencyEditor({value,onSave}){
 function JsonConfigEditor({title,desc,configKey,value,onSave}){
   const A=use();
   const [editing,setEditing]=useState(false);
+  const [expanded,setExpanded]=useState(false);
   const [text,setText]=useState(()=>JSON.stringify(value,null,2));
   const [error,setError]=useState("");
   const [saving,setSaving]=useState(false);
   const dirty=text!==JSON.stringify(value,null,2);
+  /* Rough summary of the config for the collapsed rest state, so a reader can tell what's in the
+     card without opening a 7000px JSON dump. Number-of-top-level-keys + first three key names is
+     specific enough to give the shape at a glance while staying compact. */
+  const summary=(()=>{
+    if(!value||typeof value!=="object") return "";
+    const keys=Object.keys(value);
+    if(!keys.length) return "empty";
+    return `${keys.length} top-level ${keys.length===1?"key":"keys"}: ${keys.slice(0,3).join(", ")}${keys.length>3?`, +${keys.length-3} more`:""}`;
+  })();
   const save=async()=>{
     let parsed;
     try{parsed=JSON.parse(text);}catch{setError("Not valid JSON.");return;}
@@ -728,11 +740,16 @@ function JsonConfigEditor({title,desc,configKey,value,onSave}){
           <Btn kind="ghost" size="sm" onClick={()=>{setText(JSON.stringify(value,null,2));setEditing(false);setError("");}}>Cancel</Btn>
           <Btn kind="primary" size="sm" disabled={!dirty||saving} onClick={save}>{saving?"Saving…":"Save"}</Btn>
         </div>
-        :<Btn kind="outline" size="sm" icon="edit" onClick={()=>setEditing(true)}>Edit as JSON</Btn>}
+        :<div className="flex gap-2">
+          <Btn kind="ghost" size="sm" onClick={()=>setExpanded(v=>!v)}>{expanded?"Hide details":"Show details"}</Btn>
+          <Btn kind="outline" size="sm" icon="edit" onClick={()=>{setEditing(true); setExpanded(true);}}>Edit as JSON</Btn>
+        </div>}
     </div>
     {editing
       ?<Area rows={16} value={text} onChange={e=>setText(e.target.value)} style={{fontFamily:"monospace",fontSize:12.5,whiteSpace:"pre"}}/>
-      :<ReadOnlyJson value={value}/>}
+      :expanded
+        ?<ReadOnlyJson value={value}/>
+        :<div className="text-xs text-text-3 py-1 font-mono">{summary}</div>}
     {error&&<Banner tone="danger" icon="alert" style={{marginTop:10}}>{error}</Banner>}
   </Card>;
 }

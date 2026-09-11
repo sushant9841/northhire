@@ -850,6 +850,9 @@ CREATE TABLE IF NOT EXISTS staffing_placements (
    the CREATE TABLE above already carries it) is not fatal. */
 for (const stmt of [
   "ALTER TABLE sessions ADD COLUMN last_seen TEXT",
+  "ALTER TABLE employer_api_keys ADD COLUMN calls_this_hour INTEGER DEFAULT 0",
+  "ALTER TABLE employer_api_keys ADD COLUMN calls_hour_start TEXT",
+  "ALTER TABLE employer_api_keys ADD COLUMN calls_total INTEGER DEFAULT 0",
 ]) {
   try { db.exec(stmt); } catch (e) { if (!/duplicate column/i.test(e.message)) console.error("migration:", stmt, e.message); }
 }

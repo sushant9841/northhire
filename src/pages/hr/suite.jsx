@@ -129,7 +129,7 @@ export function HrDashboard(){
       {label:"Employees",value:teamSize,icon:"users"},
       {label:"Pending leave",value:pendingLeave.length,icon:"calendar",tone:pendingLeave.length?C.warn:C.text},
       {label:"Open invoices",value:openInvoices.length,icon:"wallet",tone:overdueInvoices.length?C.danger:C.text},
-      {label:"Open tasks (co.)",value:A.hrTasks.filter(t=>t.status!=="done").length,icon:"check"}];
+      {label:"Open tasks · company",value:A.hrTasks.filter(t=>t.status!=="done").length,icon:"check"}];
     if(emp.role==="hr")return [
       {label:"Employees",value:teamSize,icon:"users"},
       {label:"Pending leave",value:pendingLeave.length,icon:"calendar",tone:pendingLeave.length?C.warn:C.text},
@@ -152,7 +152,20 @@ export function HrDashboard(){
       <div className={`font-bold text-text tracking-tight ${mob?"text-2xl":"text-3xl"}`}>Welcome back, {emp.name.split(" ")[0]}.</div>
       <div className="text-sm text-text-2 mt-1.5">
         {new Date().toLocaleDateString("en-CA",{weekday:"long",month:"long",day:"numeric",year:"numeric"})}
-        {dept&&<> • {dept.name}</>}</div>
+        {/* Live daily-signal after the date instead of the department name, which was filler
+            (the reader already knows their own department). Pending leave for a manager, open
+            invoices for finance, own open tasks otherwise - each is a real number that gives
+            the dashboard an at-a-glance state. */}
+        {(()=>{const p=A.hrLeave.filter(l=>l.status==="pending").length;
+          const inv=A.hrInvoices.filter(i=>i.status==="unpaid").length;
+          const myOpen=A.hrTasks.filter(t=>t.status!=="done"&&t.assignee===emp.id).length;
+          if(emp.role==="owner"||emp.role==="hr"||emp.role==="admin"){
+            const bits=[]; if(p)bits.push(`${p} pending leave decision${p===1?"":"s"}`);
+            if(inv)bits.push(`${inv} open invoice${inv===1?"":"s"}`);
+            return bits.length?<> • {bits.join(" · ")}</>:null;
+          }
+          if(emp.role==="finance") return inv?<> • {inv} open invoice{inv===1?"":"s"}</>:null;
+          return myOpen?<> • {myOpen} task{myOpen===1?"":"s"} on your list</>:null;})()}</div>
     </div>
 
     <div className={`grid gap-3 mb-6 ${mob?"grid-cols-2":"grid-cols-4"}`}>

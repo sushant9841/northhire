@@ -49,7 +49,10 @@ export function AgencyShell({children}){
         <SmartPortrait seed={staff.seed} size={34} radius={9}/>
         <div className="flex-1 min-w-0">
           <div className="text-sm font-bold text-white overflow-hidden text-ellipsis whitespace-nowrap">{staff.name}</div>
-          <div className="text-xs text-white/55 mt-px capitalize">{staff.role} · {staff.title.split(" ").slice(0,2).join(" ")}</div>
+          {/* Full title with real ellipsis-on-overflow, not a hand-rolled two-word slice that
+              broke on any title where the second token was punctuation - "Founder & Managing
+              Director" was truncating to "Founder &" with the "&" hanging unfinished. */}
+          <div className="text-xs text-white/55 mt-px capitalize overflow-hidden text-ellipsis whitespace-nowrap" title={`${staff.role} · ${staff.title}`}>{staff.role} · {staff.title}</div>
         </div>
       </div>
     </div>

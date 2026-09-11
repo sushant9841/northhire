@@ -170,9 +170,17 @@ export function EmpApiPage(){
         : <div className="flex flex-col gap-2">
             {data.keys.map(k=>
               <div key={k.id} className="flex justify-between items-center gap-3 border border-line rounded-xl py-2.5 px-3.5 flex-wrap">
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <div className="text-sm font-semibold text-text">{k.name}</div>
                   <div className="text-xs text-text-3 mt-0.5 font-mono">{k.prefix}… · {k.lastUsed?`last used ${k.lastUsed}`:"never used"}</div>
+                  {/* Real per-key rate-limit usage. Bar fills toward the 5000/hr cap, so an
+                      integration author can see if they're getting close before the 429 hits. */}
+                  <div className="flex items-center gap-2 mt-1.5 max-w-80">
+                    <div className="flex-1 h-1 rounded-full bg-bg overflow-hidden">
+                      <div className="h-full" style={{width:`${Math.min(100,(k.callsThisHour/k.rateLimit)*100)}%`,background:k.callsThisHour>=k.rateLimit*0.9?"#AE2119":k.callsThisHour>=k.rateLimit*0.5?"#8F5B05":"#005CCC"}}/>
+                    </div>
+                    <span className="text-xs text-text-3 tabular-nums whitespace-nowrap">{k.callsThisHour.toLocaleString()} / {k.rateLimit.toLocaleString()} this hour · {(k.callsTotal||0).toLocaleString()} total</span>
+                  </div>
                 </div>
                 {isOwner&&<Btn kind="ghost" size="xs" onClick={()=>setRevokeKey(k)}>Revoke</Btn>}
               </div>)}

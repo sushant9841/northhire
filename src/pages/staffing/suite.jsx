@@ -697,18 +697,25 @@ function _NewJobOrderModal({onClose}){
 export function AgencyBench(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [q,setQ]=useState(""); const [prov,setProv]=useState("all"); const [avail,setAvail]=useState("all");
+  const [ticketFilter,setTicketFilter]=useState("all"); const [rateMin,setRateMin]=useState(""); const [rateMax,setRateMax]=useState("");
   const [placing,setPlacing]=useState(null);
+  // Union of every ticket across the bench, so the filter offers what's actually there rather
+  // than a hardcoded list that goes stale as new tickets appear.
+  const allTickets=[...new Set(A.workers.flatMap(w=>w.tickets||[]))].sort();
   const list=A.workers.filter(w=>{
     if(w.status!=="active")return false;
     if(avail!=="all"&&w.availability!==avail)return false;
     if(prov!=="all"&&w.province!==prov)return false;
+    if(ticketFilter!=="all"&&!w.tickets.includes(ticketFilter))return false;
+    if(rateMin&&Number(w.rateTarget||0)<Number(rateMin))return false;
+    if(rateMax&&Number(w.rateTarget||0)>Number(rateMax))return false;
     if(q){const person=(A.people||[]).find(p=>p.id===w.personId);
       const s=q.toLowerCase(); const searchable=`${person?.name||""} ${w.city} ${w.tickets.join(" ")}`.toLowerCase();
       if(!searchable.includes(s))return false;}
     return true;
   });
   const pg=usePagination(list,20);
-  useEffect(()=>{pg.setPage(1);},[q,prov,avail]);
+  useEffect(()=>{pg.setPage(1);},[q,prov,avail,ticketFilter,rateMin,rateMax]);
   return <div>
     <div className="mb-3.5">
       <div className="text-lg font-bold text-text">{list.length} workers on bench</div>
@@ -727,6 +734,17 @@ export function AgencyBench(){
           <option value="available">Available now</option>
           <option value="on-assignment">On assignment</option>
           <option value="unavailable">Unavailable</option></Sel>
+        {/* Ticket filter is the recruiter's most common query ("who has WHMIS", "any Red Seal
+            electricians") - the earlier filter row only offered province and availability. */}
+        <Sel value={ticketFilter} onChange={e=>setTicketFilter(e.target.value)} style={{maxWidth:200}}>
+          <option value="all">Any ticket</option>
+          {allTickets.map(t=><option key={t} value={t}>{t}</option>)}</Sel>
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-text-3">Rate</span>
+          <Input type="number" min="0" placeholder="min" value={rateMin} onChange={e=>setRateMin(e.target.value)} style={{width:80}}/>
+          <span className="text-xs text-text-3">–</span>
+          <Input type="number" min="0" placeholder="max" value={rateMax} onChange={e=>setRateMax(e.target.value)} style={{width:80}}/>
+        </div>
       </div>
     </Card>
 
@@ -753,12 +771,21 @@ export function AgencyBench(){
             <td className={TD_CLS}>
               <div className="flex flex-wrap gap-1" style={{maxWidth:280}}>
                 {w.tickets.slice(0,3).map(t=><Tag key={t} tone="neutral" sm>{t}</Tag>)}
-                {w.tickets.length>3&&<Tag tone="neutral" sm>+{w.tickets.length-3}</Tag>}
+                {/* The +N badge now names the extra tickets in its title so a reader can hover
+                    to see the rest without opening the worker file. */}
+                {w.tickets.length>3&&<span title={w.tickets.slice(3).join(", ")}><Tag tone="neutral" sm>+{w.tickets.length-3}</Tag></span>}
               </div>
             </td>
             <td className={`${TD_CLS} text-xs text-brand font-semibold`}>${w.vacBalance.toFixed(2)}</td>
             <td className={TD_CLS}>
-              {w.availability==="available"&&<Btn kind="outline" size="xs" onClick={e=>{e.stopPropagation();setPlacing(w);}}>Place</Btn>}
+              {/* On-assignment workers previously had a blank Actions cell - a recruiter
+                  clicking through couldn't jump to their current assignment without navigating
+                  away and hunting. Now every row has a real action. */}
+              {w.availability==="available"
+                ? <Btn kind="outline" size="xs" onClick={e=>{e.stopPropagation();setPlacing(w);}}>Place</Btn>
+                : w.availability==="on-assignment"
+                ? <Btn kind="ghost" size="xs" onClick={e=>{e.stopPropagation();A.go("agencyAssignments");}}>View assignment</Btn>
+                : <span className="text-xs text-text-3">—</span>}
             </td>
           </tr>;})}
           {list.length===0&&<tr><td colSpan={7} className="p-5"><Empty icon="users" title="No matching workers" body="Try a different filter or ticket search."/></td></tr>}
@@ -1171,10 +1198,16 @@ export function AgencyPlacements(){
         const emp=client?A.employers.find(e=>e.id===client.employerId):null;
         const guaranteeDaysLeft=p.guaranteeEnds?Math.floor((new Date(p.guaranteeEnds)-Date.now())/864e5):null;
         return <div key={p.id} data-card className={`bg-white rounded-2xl border border-line ${mob?"p-4":"p-5"}`}>
-          <div className="flex gap-2 mb-2.5 flex-wrap">
+          <div className="flex gap-2 mb-2.5 flex-wrap items-center">
             <Tag tone={p.status==="guaranteed"?"ok":p.status==="clawed-back"?"danger":p.status==="accepted"?"warn":"brand"} sm>{p.status}</Tag>
+            {/* Urgency chip escalates as the guarantee window closes: green ok while >30 days
+                out, warn 30-8, danger inside a week. Reads at a glance which placement to check
+                on today - the previous flat "guarantee left" tag looked the same 25 days out as
+                2 days out. */}
             {guaranteeDaysLeft!==null&&guaranteeDaysLeft>0&&guaranteeDaysLeft<=30&&
-              <Tag tone="warn" sm>{guaranteeDaysLeft}d guarantee left</Tag>}
+              <Tag tone={guaranteeDaysLeft<=7?"danger":"warn"} sm icon={guaranteeDaysLeft<=7?"alert":"clock"}>{guaranteeDaysLeft}d guarantee left</Tag>}
+            {guaranteeDaysLeft!==null&&guaranteeDaysLeft<=0&&p.status==="accepted"&&
+              <Tag tone="ok" sm icon="check">Guarantee cleared</Tag>}
           </div>
           <div className="text-base font-semibold text-text tracking-tight">{p.role}</div>
           <div className="text-sm text-text-2 mt-1">{emp?.name||"—"}</div>
@@ -1335,8 +1368,33 @@ export function AgencyWorkers(){
   const [selected,setSelected]=useState(null);
   const [filingClaim,setFilingClaim]=useState(false);
   const [claimDraft,setClaimDraft]=useState({claimNumber:"",incidentDate:"",description:""});
-  const list=A.workers;
+  /* Sort control lifted onto the column headers - click a header to sort ascending, click
+     again to flip. Previously the recruiter had to scan the roster manually to find the
+     highest-rate available worker or the biggest vac liability. */
+  const [sort,setSort]=useState({col:"name",dir:"asc"});
+  const clickSort=col=>setSort(s=>({col,dir:s.col===col&&s.dir==="asc"?"desc":"asc"}));
+  const list=(()=>{
+    const rows=[...A.workers];
+    const key=r=>{const p=(A.people||[]).find(x=>x.id===r.personId);
+      switch(sort.col){
+        case "name": return (p?.name||"").toLowerCase();
+        case "loc": return `${r.province} ${r.city}`.toLowerCase();
+        case "avail": return r.availability;
+        case "vac": return r.vacBalance||0;
+        case "bg": return r.backgroundCheck?.status||"zz";
+        default: return "";
+      }
+    };
+    rows.sort((a,b)=>{const ka=key(a),kb=key(b);
+      if(ka<kb)return sort.dir==="asc"?-1:1;
+      if(ka>kb)return sort.dir==="asc"?1:-1;
+      return 0;});
+    return rows;
+  })();
   const pg=usePagination(list,20);
+  const H=({label,col})=><th className={`${TH_CLS} cursor-pointer select-none`} onClick={()=>col&&clickSort(col)}>
+    {label}{col&&sort.col===col?<span className="ml-1 text-brand">{sort.dir==="asc"?"▲":"▼"}</span>:null}
+  </th>;
   return <div>
     <div className="mb-3.5">
       <div className="text-lg font-bold text-text">{list.length} workers on record</div>
@@ -1346,8 +1404,14 @@ export function AgencyWorkers(){
     <Card pad={0} style={{borderRadius:14,overflow:"hidden"}}>
       <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:800}}>
         <thead><tr className="border-b-2 border-line text-left">
-          {["Worker","Location","Availability","Work eligibility","Docs complete","Background check","Vac accrued","Actions"].map(h=>
-            <th key={h} className={TH_CLS}>{h}</th>)}
+          <H label="Worker" col="name"/>
+          <H label="Location" col="loc"/>
+          <H label="Availability" col="avail"/>
+          <H label="Work eligibility"/>
+          <H label="Docs complete"/>
+          <H label="Background check" col="bg"/>
+          <H label="Vac accrued" col="vac"/>
+          <H label="Actions"/>
         </tr></thead>
         <tbody>{pg.pageItems.map(w=>{const person=(A.people||[]).find(p=>p.id===w.personId);
           const docsComplete=w.tdOnFile&&w.directDepositOnFile&&w.workEligibility;
@@ -1365,20 +1429,24 @@ export function AgencyWorkers(){
             <td className={TD_CLS}><Tag tone={docsComplete?"ok":"warn"} sm icon={docsComplete?"check":"alert"}>{docsComplete?"Complete":"Missing"}</Tag></td>
             <td className={TD_CLS}><Tag tone={{passed:"ok",failed:"danger","in-progress":"brand"}[w.backgroundCheck?.status]||"neutral"} sm>{(w.backgroundCheck?.status||"not-started").replace("-"," ")}</Tag></td>
             <td className={`${TD_CLS} text-sm text-brand font-semibold`}>${w.vacBalance.toFixed(2)}</td>
-            <td className={TD_CLS}>
-              <Sel value={w.status} onChange={e=>{e.stopPropagation();
-                const next=e.target.value;
-                if(next==="inactive"&&w.availability==="on-assignment"){
-                  A.toast("This worker is on an active assignment — end the assignment before marking them inactive.","danger");
-                  return;
-                }
-                /* Status and availability were two independent fields that could silently drift
-                   apart - going inactive always means "not available for new work" too. */
-                A.updateWorker(w.id,{status:next,availability:next==="inactive"?"unavailable":(w.availability==="unavailable"?"available":w.availability)});
-              }} style={{fontSize:12,padding:"5px 8px"}} onClick={e=>e.stopPropagation()}>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </Sel>
+            <td className={TD_CLS} onClick={e=>e.stopPropagation()}>
+              {/* Actions column now offers real actions - the earlier plain status dropdown
+                  gave no affordance for "open file" or "message worker" and hid its Active/
+                  Inactive choice as if it were a display value. */}
+              <div className="flex gap-1.5 items-center">
+                <Btn kind="ghost" size="xs" onClick={()=>setSelected(w.id)}>Open file</Btn>
+                <Sel value={w.status} onChange={e=>{
+                  const next=e.target.value;
+                  if(next==="inactive"&&w.availability==="on-assignment"){
+                    A.toast("This worker is on an active assignment — end the assignment before marking them inactive.","danger");
+                    return;
+                  }
+                  A.updateWorker(w.id,{status:next,availability:next==="inactive"?"unavailable":(w.availability==="unavailable"?"available":w.availability)});
+                }} style={{fontSize:12,padding:"5px 8px"}} title="Change worker status">
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </Sel>
+              </div>
             </td>
           </tr>;})}
         </tbody>
@@ -1667,6 +1735,14 @@ export function AgencyCompliance(){
   const expiringDocs=A.workers.flatMap(w=>(w.documents||[]).filter(d=>d.expires&&new Date(d.expires)<Date.now()+90*864e5).map(d=>({w,d})));
   const clientsMissingMsa=A.staffingClients.filter(c=>c.status==="active"&&!c.signedMsa);
   const overdueInvoices=A.staffingInvoices.filter(i=>i.status==="overdue");
+  /* A staffing agency's #1 negligent-hire exposure is placing a worker whose background check
+     was never completed. The Workers roster shows per-worker status but nothing rolled it up
+     company-wide - a compliance officer had to open every file. This card catches active-and-
+     on-assignment workers whose check is still "not started" or hasn't completed, since those
+     are the ones the agency has actual liability for right now (a bench worker never sent
+     anywhere is a lower-priority follow-up). */
+  const activeOnAssignment=A.workers.filter(w=>w.status==="active"&&w.availability==="on-assignment");
+  const bgcMissing=activeOnAssignment.filter(w=>!w.backgroundCheck||["not-started","in-progress","failed"].includes(w.backgroundCheck?.status));
 
   const items=[
     {ok:workersMissingDocs.length===0, title:"Worker files complete", body:workersMissingDocs.length===0?"All active workers have TD1s, direct deposit, and work eligibility on file.":`${workersMissingDocs.length} workers missing documents.`, count:workersMissingDocs.length,
@@ -1683,6 +1759,9 @@ export function AgencyCompliance(){
     {ok:clientsMissingMsa.length===0, title:"MSAs signed for all active clients", body:clientsMissingMsa.length===0?"Every active client has a signed Master Services Agreement.":`${clientsMissingMsa.length} clients billing without signed MSA.`, count:clientsMissingMsa.length,
       drillRows:clientsMissingMsa.map(c=>{const emp=A.employers.find(e=>e.id===c.employerId);
         return {name:emp?.name||c.id,detail:`${A.jobOrders.filter(j=>j.client===c.id&&j.status==="open").length} open order(s)`};})},
+    {ok:bgcMissing.length===0, title:"Background checks (workers on assignment)", body:bgcMissing.length===0?"Every worker currently on assignment has a completed background check.":`${bgcMissing.length} worker${bgcMissing.length===1?"":"s"} on assignment without a completed check.`, count:bgcMissing.length,
+      drillRows:bgcMissing.map(w=>{const p=(A.people||[]).find(pp=>pp.id===w.personId);
+        return {name:p?.name||w.id,detail:`Status: ${(w.backgroundCheck?.status||"not started").replace("-"," ")}`};})},
     {ok:overdueInvoices.length===0, title:"Aging under control", body:overdueInvoices.length===0?"No overdue invoices past terms.":`${overdueInvoices.length} invoices overdue. Chase or refer to collections.`, count:overdueInvoices.length,
       drillRows:overdueInvoices.map(i=>{const c=A.staffingClients.find(x=>x.id===i.client); const emp=c?A.employers.find(e=>e.id===c.employerId):null;
         return {name:emp?.name||i.client,detail:`$${i.total?.toLocaleString?.()||i.total} · due ${i.dueDate}`};})},

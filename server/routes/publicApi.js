@@ -45,7 +45,30 @@ function requireApiKey(req, res, next) {
   if (!employerPlanAllowsApi(key.employer_id)) {
     return res.status(403).json({ error: "API access is an Enterprise feature. This account's plan no longer includes it." });
   }
-  db.prepare("UPDATE employer_api_keys SET last_used = datetime('now') WHERE id = ?").run(key.id);
+  /* Per-key rate limit: 5000 calls/hour is a soft cap that gives an integration room to
+     bulk-import without opening the door to a leaked key hammering the API. Enforced per-key
+     rather than per-employer so revoking one leaked key doesn't lock out the customer's other
+     integrations. calls_hour_start is the rolling window boundary; a request outside the
+     current hour resets the counter before checking. */
+  const RATE_LIMIT_PER_HOUR = 5000;
+  const now = Date.now();
+  const hourStart = key.calls_hour_start ? new Date(key.calls_hour_start + "Z").getTime() : 0;
+  const withinWindow = now - hourStart < 60 * 60 * 1000;
+  const calls = withinWindow ? (key.calls_this_hour || 0) : 0;
+  if (calls >= RATE_LIMIT_PER_HOUR) {
+    res.setHeader("X-RateLimit-Limit", RATE_LIMIT_PER_HOUR);
+    res.setHeader("X-RateLimit-Remaining", 0);
+    res.setHeader("Retry-After", Math.ceil((hourStart + 60 * 60 * 1000 - now) / 1000));
+    return res.status(429).json({ error: "Rate limit exceeded. This key is limited to 5000 requests per hour." });
+  }
+  const nextCount = calls + 1;
+  db.prepare(
+    withinWindow
+      ? "UPDATE employer_api_keys SET last_used = datetime('now'), calls_this_hour = ?, calls_total = COALESCE(calls_total,0) + 1 WHERE id = ?"
+      : "UPDATE employer_api_keys SET last_used = datetime('now'), calls_this_hour = ?, calls_hour_start = datetime('now'), calls_total = COALESCE(calls_total,0) + 1 WHERE id = ?"
+  ).run(nextCount, key.id);
+  res.setHeader("X-RateLimit-Limit", RATE_LIMIT_PER_HOUR);
+  res.setHeader("X-RateLimit-Remaining", Math.max(0, RATE_LIMIT_PER_HOUR - nextCount));
   req.apiEmployerId = key.employer_id;
   next();
 }
@@ -88,9 +111,16 @@ apiAdminRouter.get("/", (req, res) => {
   if (!employerPlanAllowsApi(req.user.employer_id)) {
     return res.json({ keys: [], webhooks: [], enabled: false, events: WEBHOOK_EVENTS });
   }
-  const keys = db.prepare("SELECT id, name, key_prefix, last_used, created_at FROM employer_api_keys WHERE employer_id = ? AND revoked = 0 ORDER BY created_at DESC")
+  const keys = db.prepare("SELECT id, name, key_prefix, last_used, created_at, calls_this_hour, calls_hour_start, calls_total FROM employer_api_keys WHERE employer_id = ? AND revoked = 0 ORDER BY created_at DESC")
     .all(req.user.employer_id)
-    .map(k => ({ id: k.id, name: k.name, prefix: k.key_prefix, lastUsed: k.last_used, createdAt: k.created_at }));
+    .map(k => {
+      // Only report this-hour usage when we're still in the same rolling-hour window; otherwise
+      // a "3 calls" left over from an hour ago would misread as current activity.
+      const hourStart = k.calls_hour_start ? new Date(k.calls_hour_start + "Z").getTime() : 0;
+      const withinWindow = Date.now() - hourStart < 60 * 60 * 1000;
+      return { id: k.id, name: k.name, prefix: k.key_prefix, lastUsed: k.last_used, createdAt: k.created_at,
+        callsThisHour: withinWindow ? (k.calls_this_hour || 0) : 0, callsTotal: k.calls_total || 0, rateLimit: 5000 };
+    });
   const webhooks = db.prepare("SELECT id, url, events_json, active, last_status, last_error, last_at FROM employer_webhooks WHERE employer_id = ? ORDER BY created_at DESC")
     .all(req.user.employer_id)
     .map(w => ({ id: w.id, url: w.url, events: JSON.parse(w.events_json || "[]"), active: !!w.active,

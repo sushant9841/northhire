@@ -1026,16 +1026,19 @@ export function ContentManager({scope,only}){
         ?<Tag tone="brand" sm icon="clock">Scheduled {new Date(item.scheduledAt).toLocaleString("en-CA",{dateStyle:"short",timeStyle:"short"})}</Tag>
         :<Tag tone={item.status==="published"?"ok":item.status==="draft"?"warn":"neutral"} sm>
           {item.status==="published"?"Published":item.status==="draft"?"Draft":"Hidden"}</Tag>}
+      {/* Every icon-only button carries an aria-label matching its title, so a keyboard user
+          tabbing through six actions per row hears each one announced instead of a bare
+          "button". Title-attribute alone doesn't announce - screen readers use aria-label. */}
       <div className="flex gap-2 flex-wrap">
-        <Btn kind="ghost" size="xs" icon="eye" title="Preview"
+        <Btn kind="ghost" size="xs" icon="eye" title="Preview" aria-label={`Preview ${item.title}`}
           onClick={()=>type==="blog"?A.openBlog(item.id):A.openTraining(item.id)}/>
         {editable&&<>
           <Btn kind="outline" size="xs" icon="edit" onClick={()=>type==="blog"?A.editBlog(item.id):A.editTraining(item.id)}>Edit</Btn>
-          <Btn kind="ghost" size="xs" icon="clock" title="Revision history" onClick={()=>openHistory(item,type)}/>
-          {type==="blog"&&<Btn kind="ghost" size="xs" icon="trend" title="Analytics" onClick={()=>openAnalytics(item)}/>}
+          <Btn kind="ghost" size="xs" icon="clock" title="Revision history" aria-label={`Revision history for ${item.title}`} onClick={()=>openHistory(item,type)}/>
+          {type==="blog"&&<Btn kind="ghost" size="xs" icon="trend" title="Analytics" aria-label={`Analytics for ${item.title}`} onClick={()=>openAnalytics(item)}/>}
           <Btn kind="ghost" size="xs" onClick={()=>type==="blog"?A.toggleBlogStatus(item.id):A.toggleTrainingStatus(item.id)}>
             {item.status==="published"?"Unpublish":"Publish"}</Btn>
-          <Btn kind="ghost" size="xs" icon="trash" title="Delete"
+          <Btn kind="ghost" size="xs" icon="trash" title="Delete" aria-label={`Delete ${item.title}`}
             onClick={()=>type==="blog"?A.deleteBlog(item.id):A.deleteTraining(item.id)}/></>}</div></div>;
   };
   const rawList=tab==="blogs"?blogs:trainings;
@@ -1082,7 +1085,7 @@ export function ContentManager({scope,only}){
         : <div className="flex flex-col gap-4">
             <div className="grid gap-3" style={{gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))"}}>
               <Stat icon="eye" label="Total views" value={analytics.total.toLocaleString()} tone={C.brand}/>
-              <Stat icon="users" label="Signed-in unique" value={analytics.uniqueSignedIn.toLocaleString()} tone={C.violet}/>
+              <Stat icon="users" label="Unique signed-in readers" value={analytics.uniqueSignedIn.toLocaleString()} tone={C.violet}/>
             </div>
             <div>
               <Lbl>Views by audience</Lbl>
@@ -1775,17 +1778,38 @@ export function EmpAnalyticsPage(){
           <Stat label="View → apply" value={`${stats.conversion}%`} icon="target" tone={C.brand}/>
         </div>
         <Card pad={mob?24:32} style={{borderRadius:20,marginBottom:16}}>
-          <Lbl>Applications, last 30 days</Lbl>
+          <div className="flex justify-between items-baseline mb-2 flex-wrap gap-2">
+            <Lbl style={{marginBottom:0}}>Applications, last 30 days</Lbl>
+            {stats.applicationTrend?.length>0&&(()=>{const t=stats.applicationTrend;
+              const total=t.reduce((s,x)=>s+x.count,0);
+              const max=Math.max(...t.map(x=>x.count),0);
+              const peak=t.find(x=>x.count===max);
+              return <span className="text-xs text-text-3 tabular-nums">Total {total} · peak {max}{peak?.date?` on ${peak.date}`:""}</span>;})()}
+          </div>
           {(()=>{const trend=stats.applicationTrend||[]; const max=Math.max(...trend.map(t=>t.count),1);
             const total=trend.reduce((s,t)=>s+t.count,0);
             if(total===0)return <div className="text-sm text-text-3 py-4">No applications in the last 30 days yet.</div>;
-            return <div className="flex items-end gap-0.5" style={{height:100}}>
-              {trend.map(t=>{const h=Math.max(2,Math.round((t.count/max)*90));
-                return <div key={t.date} className="flex-1 min-w-0 group relative" style={{height:"100%"}} title={`${t.date}: ${t.count} application${t.count===1?"":"s"}`}>
-                  <div className="absolute bottom-0 left-0 right-0 rounded-t transition-[height] duration-300" style={{height:h,background:t.count>0?C.brand:C.line}}/>
-                </div>;})}
+            /* Explicit y-axis so a reader can read absolute values off the bars, not only their
+               relative shape. Three tick marks (0, mid, max) is enough context without
+               competing with the bar row for space. */
+            const midY=Math.max(1,Math.round(max/2));
+            return <div className="flex gap-2" style={{height:110}}>
+              <div className="flex flex-col justify-between items-end text-xs text-text-3 tabular-nums py-1" style={{width:20}}>
+                <span>{max}</span><span>{midY}</span><span>0</span>
+              </div>
+              <div className="flex-1 relative border-l border-line">
+                <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
+                  <div className="border-b border-line-soft h-0"/><div className="border-b border-line-soft h-0"/><div className="border-b border-line h-0"/>
+                </div>
+                <div className="flex items-end gap-0.5 relative h-full">
+                  {trend.map(t=>{const h=Math.max(2,Math.round((t.count/max)*100));
+                    return <div key={t.date} className="flex-1 min-w-0 group relative" style={{height:"100%"}} title={`${t.date}: ${t.count} application${t.count===1?"":"s"}`}>
+                      <div className="absolute bottom-0 left-0 right-0 rounded-t transition-[height] duration-300" style={{height:`${h}%`,background:t.count>0?C.brand:C.line}}/>
+                    </div>;})}
+                </div>
+              </div>
             </div>;})()}
-          <div className="flex justify-between text-xs text-text-3 mt-2">
+          <div className="flex justify-between text-xs text-text-3 mt-2 ml-6">
             <span>{stats.applicationTrend?.[0]?.date}</span><span>{stats.applicationTrend?.[stats.applicationTrend.length-1]?.date}</span>
           </div>
         </Card>
@@ -1829,14 +1853,20 @@ export function EmpAnalyticsPage(){
               {["Job","Status","Views","Applications","View → apply","Offers"].map(h=>
                 <th key={h} className="py-2.5 px-4 text-xs font-bold text-text-3 tracking-wide uppercase">{h}</th>)}
             </tr></thead>
-            <tbody>{stats.byJob.map(j=><tr key={j.id} className="border-b border-line-soft hover:bg-bg cursor-pointer" onClick={()=>A.openJob(j.id)}>
-              <td className="py-2.5 px-4 text-sm font-semibold text-text">{j.title}</td>
-              <td className="py-2.5 px-4"><Tag tone={jobTone(j.status)} sm>{jobStatusLabel(j.status)}</Tag></td>
-              <td className="py-2.5 px-4 text-sm text-text-2">{j.views.toLocaleString()}</td>
-              <td className="py-2.5 px-4 text-sm text-text-2">{j.applications}</td>
-              <td className="py-2.5 px-4 text-sm text-text-2">{j.conversion}%</td>
-              <td className="py-2.5 px-4 text-sm text-text-2">{j.offers}</td>
-            </tr>)}</tbody>
+            <tbody>{stats.byJob.map(j=>
+              // Row opens the pipeline for that job - the useful drill-down from analytics is
+              // "which applicants produced these numbers", not the public listing. Chevron on
+              // the end makes the click affordance visible instead of relying on hover-only feedback.
+              <tr key={j.id} className="border-b border-line-soft hover:bg-bg cursor-pointer" onClick={()=>{A.setPipelineJob(j.id); A.go("empPipeline");}}
+                title="Open pipeline for this job">
+                <td className="py-2.5 px-4 text-sm font-semibold text-text">{j.title}</td>
+                <td className="py-2.5 px-4"><Tag tone={jobTone(j.status)} sm>{jobStatusLabel(j.status)}</Tag></td>
+                <td className="py-2.5 px-4 text-sm text-text-2 tabular-nums">{j.views.toLocaleString()}</td>
+                <td className="py-2.5 px-4 text-sm text-text-2 tabular-nums">{j.applications}</td>
+                <td className="py-2.5 px-4 text-sm text-text-2 tabular-nums">{j.conversion}%</td>
+                <td className="py-2.5 px-4 text-sm text-text-2 tabular-nums">{j.offers}</td>
+                <td className="py-2.5 px-2 text-right text-text-3"><I n="chevR" s={14}/></td>
+              </tr>)}</tbody>
           </table></div>
         </Card>}
         {stats.eligibilityMix?.length>0&&<Card pad={mob?24:32} style={{borderRadius:20,marginTop:16}}>

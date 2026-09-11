@@ -217,7 +217,9 @@ export default function NorthHire(){
             {/* Cookie banner hides on dashboard-shell pages: a signed-in user is on a page whose
                 left rail carries the "Sign out" and bottom-of-nav controls, and the fixed
                 bottom-left banner was overlapping and hiding them. Signed-in users have
-                obviously consented to session cookies to be signed in at all. */}
+                obviously consented to session cookies to be signed in at all.
+                Button sizing: min-height 48 to clear WCAG comfortable-tap-target guidance,
+                since the banner is the first thing a mobile visitor sees. */}
             {!cookieAck&&!_isBare&&<div style={{position:"fixed",bottom:mob?76:20,left:mob?12:20,right:mob?12:20,maxWidth:560,margin:mob?"0":"0",
               background:C.ink,color:"#fff",borderRadius:14,padding:mob?"14px 16px":"16px 20px",boxShadow:SH.xl,
               display:"flex",gap:14,alignItems:"center",flexWrap:"wrap",zIndex:600}} data-cookie-accepted="false">
@@ -225,7 +227,7 @@ export default function NorthHire(){
               <div style={{flex:"1 1 240px",minWidth:0,fontSize:13.5,lineHeight:1.55}}>
                 We use cookies for sign-in, saved jobs and analytics. See our <button onClick={()=>{acceptCookies();go("privacy");}}
                   style={{background:"none",border:"none",padding:0,color:"#6AACFF",cursor:"pointer",fontFamily:"inherit",fontSize:13.5,fontWeight:600,textDecoration:"underline"}}>privacy policy</button>.</div>
-              <button onClick={acceptCookies} style={{background:"#fff",color:C.ink,border:"none",padding:"9px 18px",borderRadius:10,cursor:"pointer",fontWeight:700,fontSize:14,fontFamily:"inherit",flexShrink:0}}>Got it</button>
+              <button onClick={acceptCookies} style={{background:"#fff",color:C.ink,border:"none",minHeight:48,padding:"12px 20px",borderRadius:10,cursor:"pointer",fontWeight:700,fontSize:14,fontFamily:"inherit",flexShrink:0}}>Got it</button>
             </div>}
           </>}
     </div></Ctx.Provider>;
