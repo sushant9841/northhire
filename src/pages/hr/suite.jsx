@@ -1431,29 +1431,29 @@ export function HrPayroll(){
     {!isEmployee&&<>
       <div className="flex justify-between items-center mb-4 flex-wrap gap-2.5">
         <div>
-          <div className="text-xl font-bold text-text tracking-tight">Payroll</div>
-          <div className="text-sm text-text-3 mt-0.5">Biweekly runs using real federal and provincial tax brackets, TD1 credits, and CPP/EI annual maximums. Approved expenses flow through automatically.</div>
+          <div className="text-xl font-bold text-text tracking-tight">{t("hr.payroll.payrollTitle")}</div>
+          <div className="text-sm text-text-3 mt-0.5">{t("hr.payroll.payrollDesc")}</div>
         </div>
-        {isPayrollMgr&&<Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowNew(true)}>Create payroll run</Btn>}
+        {isPayrollMgr&&<Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowNew(true)}>{t("hr.payroll.createPayrollRunBtn")}</Btn>}
       </div>
 
       <div className={`grid gap-3 mb-4 ${mob?"grid-cols-2":"grid-cols-4"}`}>
         {[
-          ["YTD gross",`$${(runs.reduce((s,p)=>s+p.totalGross,0)/1000).toFixed(0)}k`,C.brand],
-          ["YTD net",`$${(runs.reduce((s,p)=>s+p.totalNet,0)/1000).toFixed(0)}k`,C.ok],
-          ["Employees on payroll",all.length,C.warn],
-          ["Runs this year",runs.length,C.text2],
-        ].map(([l,v,t])=><Card key={l} pad={mob?16:20} style={{borderRadius:14}}>
-          <div className={`font-bold tracking-tight ${mob?"text-xl":"text-2xl"}`} style={{color:t}}>{v}</div>
+          [t("hr.payroll.ytdGross"),`$${(runs.reduce((s,p)=>s+p.totalGross,0)/1000).toFixed(0)}k`,C.brand],
+          [t("hr.payroll.ytdNet"),`$${(runs.reduce((s,p)=>s+p.totalNet,0)/1000).toFixed(0)}k`,C.ok],
+          [t("hr.payroll.employeesOnPayroll"),all.length,C.warn],
+          [t("hr.payroll.runsThisYear"),runs.length,C.text2],
+        ].map(([l,v,c])=><Card key={l} pad={mob?16:20} style={{borderRadius:14}}>
+          <div className={`font-bold tracking-tight ${mob?"text-xl":"text-2xl"}`} style={{color:c}}>{v}</div>
           <div className="text-xs text-text-3 mt-1.5">{l}</div>
         </Card>)}
       </div>
 
       <Card pad={0} style={{borderRadius:14,marginBottom:16,overflow:"hidden"}}>
-        <div className={`border-b border-line ${mob?"py-3.5 px-4":"py-4 px-5"}`}><Lbl style={{margin:0}}>Payroll runs</Lbl></div>
+        <div className={`border-b border-line ${mob?"py-3.5 px-4":"py-4 px-5"}`}><Lbl style={{margin:0}}>{t("hr.payroll.payrollRuns")}</Lbl></div>
         <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:700}}>
           <thead><tr className="border-b border-line text-left bg-bg">
-            {["Period","Run date","Gross","Net","Reimb.","Employees","Status","Actions"].map(h=>
+            {[t("hr.payroll.period"),t("hr.payroll.runDate"),t("hr.payroll.gross"),t("hr.payroll.net"),t("hr.payroll.reimb"),t("hr.payroll.employees"),t("hr.payroll.status"),t("hr.payroll.actions")].map(h=>
               <th key={h} className={TH_CLS}>{h}</th>)}
           </tr></thead>
           <tbody>{runs.map(p=><tr key={p.id} className="border-b border-line-soft cursor-pointer" onClick={()=>setDetail(p)}>
@@ -1466,13 +1466,13 @@ export function HrPayroll(){
             <td className={TD_CLS}><Tag tone={p.status==="paid"?"ok":p.status==="approved"?"brand":"warn"} sm>{p.status}</Tag></td>
             <td className={TD_CLS} onClick={e=>e.stopPropagation()}>
               <div className="flex gap-1">
-                <Btn kind="ghost" size="xs" onClick={()=>setDetail(p)}>View</Btn>
-                {isPayrollMgr&&p.status==="draft"&&<Btn kind="primary" size="xs" onClick={()=>A.approvePayroll(p.id)}>Approve</Btn>}
-                {isPayrollMgr&&p.status==="approved"&&<Btn kind="primary" size="xs" onClick={()=>setExecuting(p)}>Execute</Btn>}
+                <Btn kind="ghost" size="xs" onClick={()=>setDetail(p)}>{t("hr.payroll.viewBtn")}</Btn>
+                {isPayrollMgr&&p.status==="draft"&&<Btn kind="primary" size="xs" onClick={()=>A.approvePayroll(p.id)}>{t("hr.payroll.approveBtn")}</Btn>}
+                {isPayrollMgr&&p.status==="approved"&&<Btn kind="primary" size="xs" onClick={()=>setExecuting(p)}>{t("hr.payroll.executeBtn")}</Btn>}
               </div>
             </td>
           </tr>)}
-          {runs.length===0&&<tr><td colSpan={8} className="p-5"><Empty icon="wallet" title="No payroll runs yet" body='Click "Create payroll run" above to start.'/></td></tr>}
+          {runs.length===0&&<tr><td colSpan={8} className="p-5"><Empty icon="wallet" title={t("hr.payroll.noPayrollRuns")} body={t("hr.payroll.noPayrollRunsBody")}/></td></tr>}
           </tbody>
         </table></div>
       </Card>
@@ -1482,11 +1482,11 @@ export function HrPayroll(){
 
     <Card pad={mob?16:20} style={{borderRadius:14}}>
       <div className="flex justify-between items-center flex-wrap gap-3 mb-3">
-        <Lbl style={{margin:0}}>{isEmployee?"My salary":"All employee salaries"}</Lbl>
+        <Lbl style={{margin:0}}>{isEmployee?t("hr.payroll.mySalary"):t("hr.payroll.allSalaries")}</Lbl>
         {!isEmployee&&<div className="flex gap-2.5 flex-wrap">
-          <Input icon="search" placeholder="Search name or role" value={salQ} onChange={e=>setSalQ(e.target.value)} style={{width:200}}/>
+          <Input icon="search" placeholder={t("hr.payroll.searchPlaceholder")} value={salQ} onChange={e=>setSalQ(e.target.value)} style={{width:200}}/>
           <Sel value={salSort} onChange={e=>setSalSort(e.target.value)} style={{width:150}}>
-            <option value="name">Sort: Name</option><option value="salary">Sort: Salary (high-low)</option><option value="role">Sort: Role</option></Sel>
+            <option value="name">{t("hr.payroll.sortName")}</option><option value="salary">{t("hr.payroll.sortSalary")}</option><option value="role">{t("hr.payroll.sortRole")}</option></Sel>
         </div>}
       </div>
       <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:500}}>
