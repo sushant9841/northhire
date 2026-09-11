@@ -2267,7 +2267,7 @@ export function HrRoster(){
   const submit=async()=>{
     if(!ns.date||!ns.startTime||!ns.endTime)return;
     const r=await A.addShift(ns);
-    if(r.ok){A.toast("Shift added","ok");setShowAdd(false);setNs({employeeId:emp.id,date:from,startTime:"09:00",endTime:"17:00",role:"",site:"",notes:""});}
+    if(r.ok){A.toast(t("hr.roster.shiftAddedToast"),"ok");setShowAdd(false);setNs({employeeId:emp.id,date:from,startTime:"09:00",endTime:"17:00",role:"",site:"",notes:""});}
     else A.toast(r.msg,"danger");
   };
   return <div>
@@ -2276,15 +2276,15 @@ export function HrRoster(){
         <Btn kind="ghost" size="sm" icon="chevL" onClick={()=>setAnchor(a=>{const d=new Date(a);d.setDate(d.getDate()-7);return d;})}/>
         <div className="text-sm font-semibold text-text">{from} → {to}</div>
         <Btn kind="ghost" size="sm" icon="chevR" onClick={()=>setAnchor(a=>{const d=new Date(a);d.setDate(d.getDate()+7);return d;})}/>
-        <Btn kind="ghost" size="xs" onClick={()=>setAnchor(new Date())}>This week</Btn>
+        <Btn kind="ghost" size="xs" onClick={()=>setAnchor(new Date())}>{t("hr.roster.thisWeekBtn")}</Btn>
       </div>
-      {isPriv&&<Btn kind="primary" size="sm" icon="plus" onClick={()=>{setNs({employeeId:emp.id,date:from,startTime:"09:00",endTime:"17:00",role:"",site:"",notes:""});setShowAdd(true);}}>Add shift</Btn>}
+      {isPriv&&<Btn kind="primary" size="sm" icon="plus" onClick={()=>{setNs({employeeId:emp.id,date:from,startTime:"09:00",endTime:"17:00",role:"",site:"",notes:""});setShowAdd(true);}}>{t("hr.roster.addShiftBtn")}</Btn>}
     </div>
     <div className="flex flex-col gap-3">
       {days.map(d=>{const shifts=byDate(d);
         return <Card key={d} pad={mob?14:18} style={{borderRadius:14}}>
-          <div className="text-sm font-bold text-text mb-2.5">{new Date(d+"T00:00").toLocaleDateString("en-CA",{weekday:"long",month:"short",day:"numeric"})}</div>
-          {shifts.length===0?<div className="text-xs text-text-3">No shifts scheduled.</div>
+          <div className="text-sm font-bold text-text mb-2.5">{new Intl.DateTimeFormat(locale==="fr-CA"?"fr-CA":"en-CA",{weekday:"long",month:"short",day:"numeric"}).format(new Date(d+"T00:00"))}</div>
+          {shifts.length===0?<div className="text-xs text-text-3">{t("hr.roster.noShiftsScheduled")}</div>
             :<div className="flex flex-col gap-1.5">
               {shifts.map(s=>{const se=A.hrEmp(s.employee);
                 return <div key={s.id} className="flex justify-between items-center gap-2 py-2 px-3 bg-bg rounded-lg flex-wrap">
@@ -2300,23 +2300,23 @@ export function HrRoster(){
             </div>}
         </Card>;})}
     </div>
-    {showAdd&&<Modal onClose={()=>setShowAdd(false)} title="Add a shift">
+    {showAdd&&<Modal onClose={()=>setShowAdd(false)} title={t("hr.roster.addShiftModal")}>
       <div className="flex flex-col gap-3.5">
-        <Field label="Employee" required><Sel value={ns.employeeId} onChange={e=>setNs({...ns,employeeId:e.target.value})}>
+        <Field label={t("hr.roster.employeeLabel")} required><Sel value={ns.employeeId} onChange={e=>setNs({...ns,employeeId:e.target.value})}>
           {A.hrEmpsAtCompany(company.id).filter(e=>e.status==="active").map(e=><option key={e.id} value={e.id}>{e.name}</option>)}</Sel></Field>
         <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-3"}`}>
-          <Field label="Date" required><Input type="date" value={ns.date} onChange={e=>setNs({...ns,date:e.target.value})}/></Field>
-          <Field label="Start" required><Input type="time" value={ns.startTime} onChange={e=>setNs({...ns,startTime:e.target.value})}/></Field>
-          <Field label="End" required><Input type="time" value={ns.endTime} onChange={e=>setNs({...ns,endTime:e.target.value})}/></Field>
+          <Field label={t("hr.roster.dateLabel")} required><Input type="date" value={ns.date} onChange={e=>setNs({...ns,date:e.target.value})}/></Field>
+          <Field label={t("hr.roster.startLabel")} required><Input type="time" value={ns.startTime} onChange={e=>setNs({...ns,startTime:e.target.value})}/></Field>
+          <Field label={t("hr.roster.endLabel")} required><Input type="time" value={ns.endTime} onChange={e=>setNs({...ns,endTime:e.target.value})}/></Field>
         </div>
         <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
-          <Field label="Role/position"><Input value={ns.role} onChange={e=>setNs({...ns,role:e.target.value})} placeholder="e.g. Front desk"/></Field>
-          <Field label="Site/location"><Input value={ns.site} onChange={e=>setNs({...ns,site:e.target.value})} placeholder="e.g. Main office"/></Field>
+          <Field label={t("hr.roster.rolePositionLabel")}><Input value={ns.role} onChange={e=>setNs({...ns,role:e.target.value})} placeholder={t("hr.roster.rolePositionPlaceholder")}/></Field>
+          <Field label={t("hr.roster.siteLocationLabel")}><Input value={ns.site} onChange={e=>setNs({...ns,site:e.target.value})} placeholder={t("hr.roster.siteLocationPlaceholder")}/></Field>
         </div>
-        <Field label="Notes"><Area rows={2} value={ns.notes} onChange={e=>setNs({...ns,notes:e.target.value})}/></Field>
+        <Field label={t("hr.roster.notesLabel")}><Area rows={2} value={ns.notes} onChange={e=>setNs({...ns,notes:e.target.value})}/></Field>
         <div className="flex gap-2.5 justify-end">
-          <Btn kind="ghost" onClick={()=>setShowAdd(false)}>Cancel</Btn>
-          <Btn kind="primary" onClick={submit}>Add shift</Btn>
+          <Btn kind="ghost" onClick={()=>setShowAdd(false)}>{t("hr.roster.cancelBtn")}</Btn>
+          <Btn kind="primary" onClick={submit}>{t("hr.roster.addShiftFormBtn")}</Btn>
         </div>
       </div>
     </Modal>}
