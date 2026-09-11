@@ -71,21 +71,21 @@ export function SignupPage(){
     ||["Communication","Time Management","Problem Solving","Teamwork","Attention to Detail","Customer Service"];
 
   const validate=()=>{const e={};
-    if(step.k==="role"&&!d.role)e.role="Choose one to continue";
+    if(step.k==="role"&&!d.role)e.role=t("auth.chooseOneToContinue");
     if(step.k==="account"){
-      if(!d.email.includes("@"))e.email="Enter a valid email address";
-      else if(A.hasAccount(d.email))e.email="An account with that email already exists";
-      if(d.password.length<8)e.password="At least 8 characters";
-      if(d.role==="seeker"&&d.phone.replace(/\D/g,"").length<10)e.phone="Enter a 10-digit phone number";}
-    if(step.k==="about"){if(!d.first.trim())e.first="Required"; if(!d.last.trim())e.last="Required";
-      if(!d.city.trim())e.city="Required"; if(!d.eligible)e.eligible="Please choose one";}
-    if(step.k==="work"){if(!d.cat)e.cat="Choose the sector you work in";
-      if(!d.title.trim())e.title="Required"; if(!d.years)e.years="Required";}
-    if(step.k==="skills"&&d.skills.length<3)e.skills="Add at least three so we can match you properly";
-    if(step.k==="prefs"&&!d.payMin)e.payMin="Tell us the minimum you would accept";
-    if(step.k==="company"){if(!d.company.trim())e.company="Company name required";
-      if(!d.name.trim())e.name="Your name required";
-      if(d.businessNumber.trim()&&!/^\d{9}$/.test(d.businessNumber.replace(/\s/g,"")))e.businessNumber="Enter the 9-digit CRA business number, or leave blank";}
+      if(!d.email.includes("@"))e.email=t("auth.enterValidEmail");
+      else if(A.hasAccount(d.email))e.email=t("auth.accountExists");
+      if(d.password.length<8)e.password=t("auth.atLeast8Chars");
+      if(d.role==="seeker"&&d.phone.replace(/\D/g,"").length<10)e.phone=t("auth.enter10DigitPhone");}
+    if(step.k==="about"){if(!d.first.trim())e.first=t("auth.requiredField"); if(!d.last.trim())e.last=t("auth.requiredField");
+      if(!d.city.trim())e.city=t("auth.requiredField"); if(!d.eligible)e.eligible=t("auth.pleaseChooseOne");}
+    if(step.k==="work"){if(!d.cat)e.cat=t("auth.chooseSector");
+      if(!d.title.trim())e.title=t("auth.requiredField"); if(!d.years)e.years=t("auth.requiredField");}
+    if(step.k==="skills"&&d.skills.length<3)e.skills=t("auth.addAtLeastThree");
+    if(step.k==="prefs"&&!d.payMin)e.payMin=t("auth.tellUsMinimum");
+    if(step.k==="company"){if(!d.company.trim())e.company=t("auth.companyNameRequired");
+      if(!d.name.trim())e.name=t("auth.yourNameRequired");
+      if(d.businessNumber.trim()&&!/^\d{9}$/.test(d.businessNumber.replace(/\s/g,"")))e.businessNumber=t("auth.enterBusinessNumber");}
     setErr(e); return !Object.keys(e).length;};
 
   const [submitting,setSubmitting]=useState(false);
@@ -165,18 +165,18 @@ export function SignupPage(){
               {t("auth.detailsStayYoursBody")}</Banner></div>}
 
           {step.k==="company"&&<div className="flex flex-col gap-4">
-            <Field label={t("auth.yourName")} required error={err.name}><Input icon="user" value={d.name} onChange={e=>set("name",e.target.value)} placeholder="Jean Tremblay" invalid={!!err.name}/></Field>
-            <Field label={t("auth.companyName")} required error={err.company}><Input icon="building" value={d.company} onChange={e=>set("company",e.target.value)} placeholder="Northern Trades Ltd." invalid={!!err.company}/></Field>
+            <Field label={t("auth.yourName")} required error={err.name}><Input icon="user" value={d.name} onChange={e=>set("name",e.target.value)} placeholder={t("auth.exampleName")} invalid={!!err.name}/></Field>
+            <Field label={t("auth.companyName")} required error={err.company}><Input icon="building" value={d.company} onChange={e=>set("company",e.target.value)} placeholder={t("auth.exampleCompany")} invalid={!!err.company}/></Field>
             <div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
               <Field label={t("auth.industry")}><Sel value={d.industry} onChange={e=>set("industry",e.target.value)}>
                 <option value="">{t("auth.selectOption")}</option>{["Construction","Healthcare","Transport","Retail","Hospitality","Manufacturing","Professional Services","Education","Finance","Technology","Agriculture","Security"].map(o=><option key={o}>{o}</option>)}</Sel></Field>
-              <Field label="Company size"><Sel value={d.size} onChange={e=>set("size",e.target.value)}>
+              <Field label={t("auth.companySizeLabel")}><Sel value={d.size} onChange={e=>set("size",e.target.value)}>
                 {["1-50","50-200","200-1000","1000+"].map(o=><option key={o}>{o}{t("auth.companySizeSuffix")}</option>)}</Sel></Field></div>
             <div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
-              <Field label={t("auth.city")}><Input icon="pin" value={d.city} onChange={e=>set("city",e.target.value)} placeholder="Toronto"/></Field>
+              <Field label={t("auth.city")}><Input icon="pin" value={d.city} onChange={e=>set("city",e.target.value)} placeholder={t("auth.exampleCity")}/></Field>
               <Field label={t("auth.province")}><Sel value={d.prov} onChange={e=>set("prov",e.target.value)}>{PROVS.map(p=><option key={p}>{p}</option>)}</Sel></Field></div>
             <Field label={t("auth.about")} hint={t("auth.aboutHint")}>
-              <Area rows={3} value={d.about} onChange={e=>set("about",e.target.value)} placeholder="What you do, and why someone would want to work with you."/></Field>
+              <Area rows={3} value={d.about} onChange={e=>set("about",e.target.value)} placeholder={t("auth.aboutPlaceholder")}/></Field>
             <Field label={t("auth.businessNumber")} error={err.businessNumber} hint={t("auth.businessNumberHint")}>
               <Input icon="file" value={d.businessNumber} onChange={e=>set("businessNumber",e.target.value)} placeholder="123456789" invalid={!!err.businessNumber}/></Field>
             <Field label={t("auth.referralCode")} hint={t("auth.referralCodeHint")}>
@@ -188,7 +188,7 @@ export function SignupPage(){
             <div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
               <Field label={t("auth.firstName")} required error={err.first}><Input value={d.first} onChange={e=>set("first",e.target.value)} placeholder="Jean" invalid={!!err.first}/></Field>
               <Field label={t("auth.lastName")} required error={err.last}><Input value={d.last} onChange={e=>set("last",e.target.value)} placeholder="Tremblay" invalid={!!err.last}/></Field>
-              <Field label={t("auth.city")} required error={err.city}><Input icon="pin" value={d.city} onChange={e=>set("city",e.target.value)} placeholder="Calgary" invalid={!!err.city}/></Field>
+              <Field label={t("auth.city")} required error={err.city}><Input icon="pin" value={d.city} onChange={e=>set("city",e.target.value)} placeholder={t("auth.exampleCityAlt")} invalid={!!err.city}/></Field>
               <Field label={t("auth.province")} required><Sel value={d.prov} onChange={e=>set("prov",e.target.value)}>{PROVS.map(p=><option key={p}>{p}</option>)}</Sel></Field></div>
             <Field label={t("auth.workPermit")} required error={err.eligible}>
               <div className="flex flex-col gap-2.5">
@@ -205,7 +205,7 @@ export function SignupPage(){
                     <span className={`flex shrink-0 ${on?"text-brand":"text-text-3"}`}><I n={c.icon} s={19}/></span>
                     <span className={`text-sm leading-tight ${on?"font-semibold text-brand":"font-medium text-text"}`}>{c.label}</span></button>;})}</div></Field>
             <Field label={t("auth.jobTitle")} required error={err.title} hint={t("auth.jobTitleHint")}>
-              <Input icon="briefcase" value={d.title} onChange={e=>set("title",e.target.value)} placeholder="Journeyperson Electrician" invalid={!!err.title}/></Field>
+              <Input icon="briefcase" value={d.title} onChange={e=>set("title",e.target.value)} placeholder={t("auth.exampleJobTitle")} invalid={!!err.title}/></Field>
             <div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
               <Field label={t("auth.yearsExperience")} required error={err.years}>
                 <Sel value={d.years} onChange={e=>set("years",e.target.value)} invalid={!!err.years}>
@@ -277,6 +277,7 @@ export function SignupPage(){
 
 export function InviteAcceptPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
+  const {t}=useTranslation();
   const [invite,setInvite]=useState(undefined); // undefined = loading, null = invalid
   const [name,setName]=useState(""); const [pw,setPw]=useState("");
   const [err,setErr]=useState(""); const [busy,setBusy]=useState(false); const [done,setDone]=useState(false);
@@ -285,8 +286,8 @@ export function InviteAcceptPage(){
     if(!cancelled)setInvite(r.ok?r:null);
   })();return()=>{cancelled=true;};},[A.inviteToken]);
   const submit=async()=>{setErr("");
-    if(!name.trim()){setErr("Enter your name");return;}
-    if(pw.length<8){setErr("Password must be at least 8 characters");return;}
+    if(!name.trim()){setErr(t("auth.inviteEnterName"));return;}
+    if(pw.length<8){setErr(t("auth.invitePasswordTooShort"));return;}
     setBusy(true); const r=await A.acceptInvite(A.inviteToken,name.trim(),pw); setBusy(false);
     if(!r.ok){setErr(r.msg);return;} setDone(true);
     setTimeout(()=>A.go("empHome"),1200);
@@ -311,7 +312,7 @@ export function InviteAcceptPage(){
           <h1 className={`${HERO_QUIET} text-3xl mt-4 mb-2`}>{t("auth.joinCompany",{company:invite.companyName})}</h1>
           <p className="text-base text-text-2 mb-6">{t("auth.setPasswordFor",{email:invite.email})}</p>
           <div className="flex flex-col gap-3.5">
-            <Field label={t("auth.yourName")}><Input icon="user" value={name} onChange={e=>{setName(e.target.value);setErr("");}} placeholder="Jean Tremblay"/></Field>
+            <Field label={t("auth.yourName")}><Input icon="user" value={name} onChange={e=>{setName(e.target.value);setErr("");}} placeholder={t("auth.exampleName")}/></Field>
             <Field label={t("auth.createPassword")} hint={t("auth.passwordHint")}>
               <Input icon="lock" type="password" value={pw} onChange={e=>{setPw(e.target.value);setErr("");}} placeholder={t("auth.passwordHint")}/></Field>
             {err&&<Banner tone="danger" icon="alert">{err}</Banner>}
@@ -324,6 +325,7 @@ export function InviteAcceptPage(){
 
 export function LoginPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
+  const {t}=useTranslation();
   const [email,setEmail]=useState(""); const [pw,setPw]=useState("");
   const [err,setErr]=useState(""); const [busy,setBusy]=useState(false);
   const [mfa,setMfa]=useState(null); const [code,setCode]=useState("");
@@ -434,15 +436,15 @@ export function LoginPage(){
           : <Btn kind="primary" size="lg" full iconR="arrowR" onClick={submit} disabled={busy}>{busy?t("auth.signingIn"):t("common.signIn")}</Btn>}
       </div>
       {(A.oauthProviders.google||A.oauthProviders.github)&&<>
-        <div className="flex items-center gap-3 my-4"><div className="flex-1 h-px bg-line"/><span className="text-xs text-text-3">or</span><div className="flex-1 h-px bg-line"/></div>
+        <div className="flex items-center gap-3 my-4"><div className="flex-1 h-px bg-line"/><span className="text-xs text-text-3">{t("auth.orDivider")}</span><div className="flex-1 h-px bg-line"/></div>
         <div className="flex flex-col gap-2.5">
-          {A.oauthProviders.google&&<Btn kind="outline" size="lg" full icon="globe" onClick={()=>A.oauthStart("google")}>Continue with Google</Btn>}
-          {A.oauthProviders.github&&<Btn kind="outline" size="lg" full icon="hex" onClick={()=>A.oauthStart("github")}>Continue with GitHub</Btn>}
+          {A.oauthProviders.google&&<Btn kind="outline" size="lg" full icon="globe" onClick={()=>A.oauthStart("google")}>{t("auth.continueWithGoogle")}</Btn>}
+          {A.oauthProviders.github&&<Btn kind="outline" size="lg" full icon="hex" onClick={()=>A.oauthStart("github")}>{t("auth.continueWithGithub")}</Btn>}
         </div>
       </>}
       <div className="flex justify-between mt-4 text-sm">
-        <button onClick={()=>A.go("signup")} className="bg-transparent border-0 p-0 cursor-pointer font-semibold text-brand">Create account</button>
-        <button onClick={()=>A.go("forgot")} className="bg-transparent border-0 p-0 cursor-pointer font-semibold text-brand">Forgot password?</button>
+        <button onClick={()=>A.go("signup")} className="bg-transparent border-0 p-0 cursor-pointer font-semibold text-brand">{t("common.createAccount")}</button>
+        <button onClick={()=>A.go("forgot")} className="bg-transparent border-0 p-0 cursor-pointer font-semibold text-brand">{t("auth.forgotPassword")}</button>
       </div>
       {/* Working credentials for four real accounts - including a full administrator - used to be
           printed on the public sign-in page for anyone who loaded it. They stay for local
@@ -452,18 +454,18 @@ export function LoginPage(){
       {import.meta.env.DEV&&
       <Card pad={mob?18:20} style={{marginTop:22,borderRadius:16,background:C.tint,border:`1px solid ${C.line2}`}}>
         <div className="flex items-center gap-2 mb-2.5">
-          <div className="text-xs font-bold text-brand tracking-wide uppercase">Demo accounts</div>
-          <span className="text-xs font-semibold text-warn bg-warn-bg border border-warn-ln rounded px-1.5 py-px">dev only</span></div>
+          <div className="text-xs font-bold text-brand tracking-wide uppercase">{t("auth.demoAccountsTitle")}</div>
+          <span className="text-xs font-semibold text-warn bg-warn-bg border border-warn-ln rounded px-1.5 py-px">{t("auth.devOnly")}</span></div>
         <div className="flex flex-col gap-1.5">
-          {[["sarah.chen@example.ca","Password123","Job seeker — Sarah Chen"],
-            ["marcus.b@example.ca","Password123","Job seeker — Marcus (trades)"],
-            ["hr@pcl.com","Employer123","Employer — PCL Construction"],
-            ["admin@northhire.ca","Admin1234","Administrator"]].map(([e,p,r])=>
+          {[["sarah.chen@example.ca","Password123",t("auth.demoSeeker1")],
+            ["marcus.b@example.ca","Password123",t("auth.demoSeeker2")],
+            ["hr@pcl.com","Employer123",t("auth.demoEmployer")],
+            ["admin@northhire.ca","Admin1234",t("auth.demoAdmin")]].map(([e,p,r])=>
             <button key={e} onClick={()=>demoAs(e,p)} className="flex justify-between items-center bg-white border border-line rounded-xl py-2.5 px-3 cursor-pointer">
               <span className="flex flex-col items-start min-w-0">
                 <span className="text-sm font-semibold text-text">{r}</span>
                 <span className="text-xs text-text-3 mt-0.5 overflow-hidden text-ellipsis whitespace-nowrap">{e}</span></span>
-              <span className="text-xs text-brand font-semibold">Sign in →</span></button>)}</div>
+              <span className="text-xs text-brand font-semibold">{t("auth.signInArrow")}</span></button>)}</div>
       </Card>}
     </>)}
   </div>;
@@ -471,59 +473,60 @@ export function LoginPage(){
 
 export function ForgotPasswordPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
+  const {t}=useTranslation();
   const [stage,setStage]=useState("request"); // request | verify | done
   const [email,setEmail]=useState(""); const [code,setCode]=useState(""); const [newPw,setNewPw]=useState("");
   const [err,setErr]=useState(""); const [sentCode,setSentCode]=useState("");
   const [cooldown,setCooldown]=useState(0);
-  useEffect(()=>{if(cooldown<=0)return; const t=setTimeout(()=>setCooldown(c=>c-1),1000); return()=>clearTimeout(t);},[cooldown]);
+  useEffect(()=>{if(cooldown<=0)return; const tm=setTimeout(()=>setCooldown(c=>c-1),1000); return()=>clearTimeout(tm);},[cooldown]);
   const request=async()=>{setErr("");const r=await A.resetPasswordRequest(email); if(!r.ok){setErr(r.msg);return;}
     setSentCode(r.code); setStage("verify"); setCooldown(60);};
   const resend=async()=>{if(cooldown>0)return; setErr("");const r=await A.resetPasswordRequest(email);
     if(!r.ok){setErr(r.msg);return;} setSentCode(r.code); setCooldown(60);};
-  const confirm=async()=>{setErr(""); if(newPw.length<8){setErr("Password must be at least 8 characters");return;}
+  const confirm=async()=>{setErr(""); if(newPw.length<8){setErr(t("auth.passwordTooShort"));return;}
     const r=await A.resetPasswordConfirm(email,code,newPw); if(!r.ok){setErr(r.msg);return;} setStage("done");};
 
   return <div className={`bg-bg min-h-full flex justify-center ${mob?"pt-6 px-4 pb-10":"pt-12 px-6 pb-20"}`}>
     <div className="w-full max-w-md">
       <div className="flex items-center justify-between mb-5">
         <button onClick={()=>A.go("home")} className="flex items-center gap-2 bg-transparent border-0 cursor-pointer p-0 text-text-2 text-sm font-semibold hover:text-text">
-          <I n="chevL" s={16} w={2}/> Back to NorthHire</button>
-        <button onClick={()=>A.go("signup")} className="bg-transparent border-0 cursor-pointer p-0 text-brand text-sm font-semibold">Create account</button>
+          <I n="chevL" s={16} w={2}/> {t("auth.backToNorthHire")}</button>
+        <button onClick={()=>A.go("signup")} className="bg-transparent border-0 cursor-pointer p-0 text-brand text-sm font-semibold">{t("common.createAccount")}</button>
       </div>
       <Card pad={mob?24:34} style={{borderRadius:20}}>
         {stage==="request"&&<>
-          <h1 className={`${HERO_QUIET} text-2xl mb-2`}>Reset your password</h1>
-          <p className="text-sm text-text-2 mb-6 leading-normal">Enter your email and we'll send a 6-digit code.</p>
-          <Field label="Email address"><Input icon="mail" type="email" value={email} onChange={e=>{setEmail(e.target.value);setErr("");}}
+          <h1 className={`${HERO_QUIET} text-2xl mb-2`}>{t("auth.resetPassword")}</h1>
+          <p className="text-sm text-text-2 mb-6 leading-normal">{t("auth.resetPasswordBody")}</p>
+          <Field label={t("auth.emailAddress")}><Input icon="mail" type="email" value={email} onChange={e=>{setEmail(e.target.value);setErr("");}}
             placeholder="you@example.ca" onKeyDown={e=>e.key==="Enter"&&request()}/></Field>
-          {err&&<Banner tone="danger" icon="alert" title="Cannot send code" style={{marginTop:14}}>{err}</Banner>}
-          <Btn kind="primary" size="lg" full icon="send" onClick={request} style={{marginTop:18}}>Send reset code</Btn>
+          {err&&<Banner tone="danger" icon="alert" title={t("auth.cannotSendCode")} style={{marginTop:14}}>{err}</Banner>}
+          <Btn kind="primary" size="lg" full icon="send" onClick={request} style={{marginTop:18}}>{t("auth.sendResetCode")}</Btn>
         </>}
         {stage==="verify"&&<>
-          <h1 className={`${HERO_QUIET} text-2xl mb-2`}>Enter your code</h1>
+          <h1 className={`${HERO_QUIET} text-2xl mb-2`}>{t("auth.enterCode")}</h1>
           <p className="text-sm text-text-2 mb-5 leading-normal">
-            We sent a 6-digit code to <strong className="text-text">{email}</strong>. Check your inbox.</p>
-          {sentCode&&<Banner tone="brand" icon="sparkle" title="Demo mode" style={{marginBottom:18}}>
-            No email is really sent — your code is <strong className="text-brand tracking-widest">{sentCode}</strong>. In production this is emailed. See Settings → Outbox to inspect all "sent" messages.</Banner>}
+            {t("auth.sentCodeTo",{email})}</p>
+          {sentCode&&<Banner tone="brand" icon="sparkle" title={t("auth.demoModeSentCode")} style={{marginBottom:18}}>
+            {t("auth.demoModeSentCodeBody",{code:sentCode})}</Banner>}
           <div className="flex flex-col gap-3.5">
-            <Field label="6-digit code"><Input value={code} onChange={e=>{setCode(e.target.value.replace(/\D/g,"").slice(0,6));setErr("");}}
+            <Field label={t("auth.verificationCode")}><Input value={code} onChange={e=>{setCode(e.target.value.replace(/\D/g,"").slice(0,6));setErr("");}}
               placeholder="000000" style={{letterSpacing:".15em",fontWeight:640}}/></Field>
-            <Field label="New password" hint="At least 8 characters."><Input icon="lock" type="password" value={newPw}
-              onChange={e=>{setNewPw(e.target.value);setErr("");}} placeholder="At least 8 characters"/></Field>
-            {err&&<Banner tone="danger" icon="alert" title="Cannot reset">{err}</Banner>}
-            <Btn kind="primary" size="lg" full icon="check" onClick={confirm}>Set new password</Btn>
+            <Field label={t("auth.newPassword")} hint={t("auth.newPasswordHint")}><Input icon="lock" type="password" value={newPw}
+              onChange={e=>{setNewPw(e.target.value);setErr("");}} placeholder={t("auth.newPasswordHint")}/></Field>
+            {err&&<Banner tone="danger" icon="alert" title={t("auth.cannotReset")}>{err}</Banner>}
+            <Btn kind="primary" size="lg" full icon="check" onClick={confirm}>{t("auth.setNewPassword")}</Btn>
             <div className="flex justify-between items-center mt-1.5">
-              <button onClick={()=>setStage("request")} className="bg-transparent border-0 p-0 cursor-pointer text-sm text-text-2">← Different email</button>
+              <button onClick={()=>setStage("request")} className="bg-transparent border-0 p-0 cursor-pointer text-sm text-text-2">{t("auth.differentEmail")}</button>
               <button onClick={resend} disabled={cooldown>0} className={`bg-transparent border-0 p-0 text-sm font-semibold ${cooldown>0?"text-text-3 cursor-not-allowed":"text-brand cursor-pointer"}`}>
-                {cooldown>0?`Resend in ${cooldown}s`:"Resend code"}</button>
+                {cooldown>0?t("auth.resendCodeIn",{sec:cooldown}):t("auth.resendCode")}</button>
             </div>
           </div>
         </>}
         {stage==="done"&&<div className="text-center">
           <div className="w-18 h-18 rounded-full bg-ok-bg border-2 border-ok-ln flex items-center justify-center mx-auto mb-5"><I n="check" s={36} c={C.ok} w={2.6}/></div>
-          <h1 className={`${HERO_QUIET} text-2xl mb-2.5`}>Password reset</h1>
-          <p className="text-sm text-text-2 mx-auto mb-6 leading-relaxed max-w-xs">Your new password is active. Sign in to continue.</p>
-          <Btn kind="primary" size="lg" full onClick={()=>A.go("login")}>Sign in</Btn>
+          <h1 className={`${HERO_QUIET} text-2xl mb-2.5`}>{t("auth.passwordReset")}</h1>
+          <p className="text-sm text-text-2 mx-auto mb-6 leading-relaxed max-w-xs">{t("auth.passwordActive")}</p>
+          <Btn kind="primary" size="lg" full onClick={()=>A.go("login")}>{t("common.signIn")}</Btn>
         </div>}
       </Card>
     </div></div>;
@@ -532,71 +535,72 @@ export function ForgotPasswordPage(){
 
 export function WelcomeTourPage({kind}){
   const A=use(); const mob=useMedia("(max-width: 900px)");
+  const {t}=useTranslation();
   const [step,setStep]=useState(0);
   const u=A.user;
   useEffect(()=>{if(!u)A.go("home");},[u]);
   if(!u)return null;
-  const first=u.name?.split(" ")[0]||"there";
+  const first=u.name?.split(" ")[0]||t("common.there");
 
   const seekerSteps=[
-    {t:`Welcome to NorthHire, ${first}!`,
-     s:"You've joined the job platform built for real Canadian work — from Red Seal trades to healthcare, transport, kitchens and warehouses. Let's show you around.",
+    {t:t("auth.welcomeTourTitle",{name:first}),
+     s:t("auth.tourSeekerHeroBody"),
      ic:"sparkle",
      visual:"hero"},
-    {t:"Your profile is your CV",
-     s:"You already have your first CV — built from your signup. Refine it or make up to 5 different versions for different job types. Employers see your skills, tickets, and match score first, not your name.",
+    {t:t("auth.tourSeekerCvTitle"),
+     s:t("auth.tourSeekerCvBody"),
      ic:"file",
      visual:"cv",
-     cta:{label:"Refine my CV",go:"cvs"}},
-    {t:"Every job shows the wage",
-     s:"No 'competitive salary'. Every listing shows the pay range or fixed rate upfront so you can decide whether to apply in seconds.",
+     cta:{label:t("auth.tourCvCta"),go:"cvs"}},
+    {t:t("auth.tourSeekerJobsTitle"),
+     s:t("auth.tourSeekerJobsBody"),
      ic:"wallet",
      visual:"jobs",
-     cta:{label:"Browse jobs",go:"search"}},
-    {t:"AI-matched, human-decided",
-     s:"When you apply, employers see a match score based on your skills against theirs. You'll always know which must-have skills you have and which you're missing before you hit send.",
+     cta:{label:t("auth.tourJobsCta"),go:"search"}},
+    {t:t("auth.tourSeekerMatchTitle"),
+     s:t("auth.tourSeekerMatchBody"),
      ic:"target",
      visual:"match"},
-    {t:"Grow your credentials",
-     s:"Free courses (WHMIS, First Aid, forklift) and paid certifications from providers Canadian employers recognize. Certificates attach automatically to your profile.",
+    {t:t("auth.tourSeekerTrainTitle"),
+     s:t("auth.tourSeekerTrainBody"),
      ic:"cap",
      visual:"trainings",
-     cta:{label:"See trainings",go:"trainings"}},
-    {t:"You're all set!",
-     s:"Everything's in place. Turn on 'Actively seeking work' from your account menu to appear in employer searches. Any question, we're one message away.",
+     cta:{label:t("auth.tourTrainCta"),go:"trainings"}},
+    {t:t("auth.tourSeekerDoneTitle"),
+     s:t("auth.tourSeekerDoneBody"),
      ic:"check",
      visual:"done",
-     cta:{label:"Go to home",go:"home"}}
+     cta:{label:t("auth.tourHomeCta"),go:"home"}}
   ];
 
   const empSteps=[
-    {t:`Welcome to NorthHire, ${first}!`,
-     s:"You've joined the employer console used by Canadian companies to find real, verified talent. Wages published, applicants scored, one workspace.",
+    {t:t("auth.welcomeTourTitle",{name:first}),
+     s:t("auth.tourEmpHeroBody"),
      ic:"sparkle",
      visual:"hero"},
-    {t:"Post your first job",
-     s:"Our AI can draft the description, duties and requirements from just your job title. Add must-have skills, publish the wage, and choose when applications close.",
+    {t:t("auth.tourEmpPostTitle"),
+     s:t("auth.tourEmpPostBody"),
      ic:"plus",
      visual:"post",
-     cta:{label:"Post a job",go:"empPost"}},
-    {t:"Applicants ranked, not spammed",
-     s:"Every application is scored out of 100 against your requirements. Your pipeline shows the best-fit first. Bulk-action anyone through Screen → Interview → Offer.",
+     cta:{label:t("auth.tourPostCta"),go:"empPost"}},
+    {t:t("auth.tourEmpPipelineTitle"),
+     s:t("auth.tourEmpPipelineBody"),
      ic:"users",
      visual:"pipeline"},
-    {t:"Talent pool: the ones who never applied",
-     s:"Search across every seeker on NorthHire whose skills match your open roles. Send a message directly — perfect for hard-to-fill trades.",
+    {t:t("auth.tourEmpPoolTitle"),
+     s:t("auth.tourEmpPoolBody"),
      ic:"search",
      visual:"pool"},
-    {t:"Your plan and add-ons",
-     s:"You're on the Free plan (1 job). Upgrade to Growth ($149/mo, 10 jobs, all features) or Enterprise ($599/mo, unlimited + HR Suite) when you're ready.",
+    {t:t("auth.tourEmpPlanTitle"),
+     s:t("auth.tourEmpPlanBody",{growthPrice:A.PLANS.Growth.price,enterprisePrice:A.PLANS.Enterprise.price}),
      ic:"wallet",
      visual:"plan",
-     cta:{label:"See plans",go:"pricing"}},
-    {t:"You're all set!",
-     s:"Everything's in place. Verification usually takes 1 business day — you'll get an email when it's complete.",
+     cta:{label:t("auth.tourPlansCta"),go:"pricing"}},
+    {t:t("auth.tourEmpDoneTitle"),
+     s:t("auth.tourEmpDoneBody"),
      ic:"check",
      visual:"done",
-     cta:{label:"Go to dashboard",go:"empHome"}}
+     cta:{label:t("auth.tourDashboardCta"),go:"empHome"}}
   ];
 
   const steps=kind==="employer"?empSteps:seekerSteps;
@@ -610,11 +614,11 @@ export function WelcomeTourPage({kind}){
 
       <div className="flex justify-between items-center mb-6">
         <div className="flex gap-1.5">
-          {steps.map((_,i)=><button key={i} type="button" aria-label={`Go to step ${i+1}`} disabled={i>step}
+          {steps.map((_,i)=><button key={i} type="button" aria-label={t("auth.tourGoToStep",{n:i+1})} disabled={i>step}
             onClick={()=>i<=step&&setStep(i)}
             className={`h-2 rounded-full border-0 p-0 transition-all duration-300 ${i===step?"w-6":"w-2"} ${i<=step?"bg-brand cursor-pointer":"bg-line cursor-not-allowed"}`}/>)}
         </div>
-        <Btn kind="ghost" size="sm" onClick={skip}>Skip tour</Btn>
+        <Btn kind="ghost" size="sm" onClick={skip}>{t("auth.skipTour")}</Btn>
       </div>
 
       <Card pad={mob?26:38} style={{flex:1,display:"flex",flexDirection:"column",borderRadius:24,animation:"rise .4s cubic-bezier(.22,.9,.32,1)",justifyContent:"center"}}>
@@ -629,26 +633,26 @@ export function WelcomeTourPage({kind}){
 
           {cur.visual==="cv"&&<div className="p-4 bg-bg border border-line rounded-xl mb-5 flex gap-3 items-center">
             <div className="w-11 h-11 rounded-xl bg-wash text-brand flex items-center justify-center"><I n="file" s={22}/></div>
-            <div><div className="text-sm font-semibold text-text">Primary CV</div>
-              <div className="text-xs text-text-3 mt-0.5">Auto-created from your signup details</div></div>
+            <div><div className="text-sm font-semibold text-text">{t("auth.tourCvCardTitle")}</div>
+              <div className="text-xs text-text-3 mt-0.5">{t("auth.tourCvCardSub")}</div></div>
           </div>}
           {cur.visual==="match"&&<div className="p-4 bg-tint border border-line-2 rounded-xl mb-5 flex gap-3 items-center">
             <Ring v={87} size={54}/>
-            <div><div className="text-sm font-semibold text-text">Your match score</div>
-              <div className="text-xs text-text-2 mt-0.5">Shown on every job listing you view</div></div>
+            <div><div className="text-sm font-semibold text-text">{t("auth.tourMatchCardTitle")}</div>
+              <div className="text-xs text-text-2 mt-0.5">{t("auth.tourMatchCardSub")}</div></div>
           </div>}
           {cur.visual==="jobs"&&<div className="p-3 bg-ok-bg border border-ok-ln rounded-xl mb-5 flex items-center gap-3">
             <I n="wallet" s={20} c={C.ok}/>
-            <div className="text-sm font-semibold text-text">$32 – $48 per hour</div>
-            <Tag tone="ok" sm>Every listing</Tag>
+            <div className="text-sm font-semibold text-text">{t("auth.tourJobsCardWage")}</div>
+            <Tag tone="ok" sm>{t("auth.tourJobsCardTag")}</Tag>
           </div>}
         </div>
 
         <div className="mt-auto pt-5 flex justify-between items-center gap-3">
-          <Btn kind="ghost" size="md" icon="chevL" disabled={step===0} onClick={()=>setStep(step-1)}>Back</Btn>
-          <div className="text-xs text-text-3">{step+1} of {steps.length}</div>
+          <Btn kind="ghost" size="md" icon="chevL" disabled={step===0} onClick={()=>setStep(step-1)}>{t("auth.backBtn")}</Btn>
+          <div className="text-xs text-text-3">{t("auth.tourStepCounter",{n:step+1,total:steps.length})}</div>
           <Btn kind="primary" size="md" iconR={isLast?"check":"chevR"} onClick={nextStep}>
-            {isLast?(cur.cta?.label||"Finish"):"Next"}
+            {isLast?(cur.cta?.label||t("auth.finishBtn")):t("auth.nextBtn")}
           </Btn>
         </div>
       </Card>
