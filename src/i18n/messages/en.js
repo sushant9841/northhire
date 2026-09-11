@@ -82,7 +82,7 @@ export const en = {
     tagline: "Canada's job platform for every kind of work. Trades, care, transport, kitchens, warehouses and offices, with real pay published on every listing.",
     copyright: "© 2026 NorthHire Technologies Inc. Built in Canada.",
     accessibility: "Accessibility (AODA)", pipeda: "PIPEDA compliant", credits: "Open-source credits",
-    fixTracker: "Fix Tracker", complianceRegister: "Compliance Register",
+    fixTracker: "Fix Tracker", complianceRegister: "Compliance Register", comingSoon: "Coming soon",
   },
   cookie: {
     text: "We use cookies for sign-in, saved jobs and analytics. See our {link}",

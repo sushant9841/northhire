@@ -32,7 +32,7 @@ export function Footer(){
           <p className="text-sm text-white/55 leading-relaxed mt-4 mb-5 max-w-xs">{t("footer.tagline")}</p>
           <div className="flex gap-2.5">
             {["linkedin","facebook","twitter"].map(s=>
-              <span key={s} title="Coming soon" className="w-10 h-10 rounded-xl bg-white/9 border border-white/14 text-white/75 flex items-center justify-center"><I n={s} s={17}/></span>)}</div>
+              <span key={s} title={t("footer.comingSoon")} className="w-10 h-10 rounded-xl bg-white/9 border border-white/14 text-white/75 flex items-center justify-center"><I n={s} s={17}/></span>)}</div>
         </div>
         {cols.map(col=><div key={col.h}>
           <div className="text-xs font-bold tracking-wider uppercase text-white/45 mb-3.5">{col.h}</div>

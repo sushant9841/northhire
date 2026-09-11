@@ -83,7 +83,7 @@ export const fr = {
     tagline: "La plateforme d'emploi du Canada pour tous les types de travail. Métiers, soins, transport, cuisines, entrepôts et bureaux, avec un salaire réel publié sur chaque annonce.",
     copyright: "© 2026 NorthHire Technologies Inc. Conçu au Canada.",
     accessibility: "Accessibilité (LAPHO)", pipeda: "Conforme à la LPRPDE", credits: "Crédits des logiciels libres",
-    fixTracker: "Suivi des correctifs", complianceRegister: "Registre de conformité",
+    fixTracker: "Suivi des correctifs", complianceRegister: "Registre de conformité", comingSoon: "Bientôt disponible",
   },
   cookie: {
     text: "Nous utilisons des témoins (cookies) pour la connexion, les emplois sauvegardés et l'analyse. Consultez notre {link}",
