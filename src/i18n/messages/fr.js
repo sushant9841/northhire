@@ -706,7 +706,17 @@ export const fr = {
       provinceLabel: "Province", cityLabel: "Ville", cityPlaceholder: "p. ex. Winnipeg",
       cancel: "Annuler", addProspect: "Ajouter comme prospect"
     },
-    workers: { title: "Travailleur·euse·s", name: "Nom du travailleur", status: "Statut", rate: "Taux", available: "Disponible" },
+    workers: {
+      title: "Travailleur·euse·s", name: "Nom du travailleur·euse", status: "Statut", rate: "Taux", available: "Disponible",
+      count: "{n} travailleur·euse·s au dossier", desc: "Tous les chercheur·euse·s d'emploi qui ont opté pour la représentation d'agence. Inclut documents et conformité.",
+      columnWorker: "Travailleur·euse", columnLocation: "Emplacement", columnAvailability: "Disponibilité", columnEligibility: "Admissibilité au travail",
+      columnDocs: "Documents complets", columnBg: "Vérification antécédents", columnVac: "Congés accumulés", columnActions: "Actions",
+      docsComplete: "Complète", docsMissing: "Incomplète",
+      fileTitle: "Dossier du travailleur·euse", openFile: "Ouvrir le dossier",
+      active: "Actif·ve", inactive: "Inactif·ve", status_active: "Actif·ve", status_inactive: "Inactif·ve",
+      statusChangeError: "Ce travailleur·euse est en assignation active — terminez l'assignation avant de le marquer inactif·ve.",
+      inProgress: "en cours", failed: "échoué", passed: "réussi", notStarted: "non commencée",
+    },
     margins: {
       title: "Marges", profit: "Marge bénéficiaire", revenue: "Revenu", cost: "Coût",
       subtitle: "Marges et taux de dépense", desc: "Marge en temps réel par assignation active (les chiffres hebdomadaires utilisent la moyenne d'heures réelle récente de chaque assignation, avec un dé faut à 40 quand il n'y a pas d'historique de feuille de temps).",

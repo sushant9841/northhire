@@ -1397,21 +1397,21 @@ export function AgencyWorkers(){
   </th>;
   return <div>
     <div className="mb-3.5">
-      <div className="text-lg font-bold text-text">{list.length} workers on record</div>
-      <div className="text-sm text-text-3 mt-0.5">All seekers who opted into agency representation. Includes documents and compliance.</div>
+      <div className="text-lg font-bold text-text">{t("staffing.workers.count",{n:list.length})}</div>
+      <div className="text-sm text-text-3 mt-0.5">{t("staffing.workers.desc")}</div>
     </div>
 
     <Card pad={0} style={{borderRadius:14,overflow:"hidden"}}>
       <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:800}}>
         <thead><tr className="border-b-2 border-line text-left">
-          <H label="Worker" col="name"/>
-          <H label="Location" col="loc"/>
-          <H label="Availability" col="avail"/>
-          <H label="Work eligibility"/>
-          <H label="Docs complete"/>
-          <H label="Background check" col="bg"/>
-          <H label="Vac accrued" col="vac"/>
-          <H label="Actions"/>
+          <H label={t("staffing.workers.columnWorker")} col="name"/>
+          <H label={t("staffing.workers.columnLocation")} col="loc"/>
+          <H label={t("staffing.workers.columnAvailability")} col="avail"/>
+          <H label={t("staffing.workers.columnEligibility")}/>
+          <H label={t("staffing.workers.columnDocs")}/>
+          <H label={t("staffing.workers.columnBg")} col="bg"/>
+          <H label={t("staffing.workers.columnVac")} col="vac"/>
+          <H label={t("staffing.workers.columnActions")}/>
         </tr></thead>
         <tbody>{pg.pageItems.map(w=>{const person=(A.people||[]).find(p=>p.id===w.personId);
           const docsComplete=w.tdOnFile&&w.directDepositOnFile&&w.workEligibility;
@@ -1426,25 +1426,25 @@ export function AgencyWorkers(){
             <td className={`${TD_CLS} text-sm text-text-2`}>{w.city}, {w.province}</td>
             <td className={TD_CLS}><Tag tone={w.availability==="available"?"ok":w.availability==="on-assignment"?"brand":"neutral"} sm>{w.availability}</Tag></td>
             <td className={`${TD_CLS} text-xs text-text-2`}>{w.workEligibility}{w.weExpiry?<div className="text-xs" style={{color:new Date(w.weExpiry)<Date.now()+90*864e5?C.warn:C.text3}}>Exp {w.weExpiry}</div>:null}</td>
-            <td className={TD_CLS}><Tag tone={docsComplete?"ok":"warn"} sm icon={docsComplete?"check":"alert"}>{docsComplete?"Complete":"Missing"}</Tag></td>
-            <td className={TD_CLS}><Tag tone={{passed:"ok",failed:"danger","in-progress":"brand"}[w.backgroundCheck?.status]||"neutral"} sm>{(w.backgroundCheck?.status||"not-started").replace("-"," ")}</Tag></td>
+            <td className={TD_CLS}><Tag tone={docsComplete?"ok":"warn"} sm icon={docsComplete?"check":"alert"}>{docsComplete?t("staffing.workers.docsComplete"):t("staffing.workers.docsMissing")}</Tag></td>
+            <td className={TD_CLS}><Tag tone={{passed:"ok",failed:"danger","in-progress":"brand"}[w.backgroundCheck?.status]||"neutral"} sm>{(() => {const s = w.backgroundCheck?.status||"not-started"; if(s==="in-progress") return t("staffing.workers.inProgress"); if(s==="failed") return t("staffing.workers.failed"); if(s==="passed") return t("staffing.workers.passed"); return t("staffing.workers.notStarted");})()}</Tag></td>
             <td className={`${TD_CLS} text-sm text-brand font-semibold`}>${w.vacBalance.toFixed(2)}</td>
             <td className={TD_CLS} onClick={e=>e.stopPropagation()}>
               {/* Actions column now offers real actions - the earlier plain status dropdown
                   gave no affordance for "open file" or "message worker" and hid its Active/
                   Inactive choice as if it were a display value. */}
               <div className="flex gap-1.5 items-center">
-                <Btn kind="ghost" size="xs" onClick={()=>setSelected(w.id)}>Open file</Btn>
+                <Btn kind="ghost" size="xs" onClick={()=>setSelected(w.id)}>{t("staffing.workers.openFile")}</Btn>
                 <Sel value={w.status} onChange={e=>{
                   const next=e.target.value;
                   if(next==="inactive"&&w.availability==="on-assignment"){
-                    A.toast("This worker is on an active assignment — end the assignment before marking them inactive.","danger");
+                    A.toast(t("staffing.workers.statusChangeError"),"danger");
                     return;
                   }
                   A.updateWorker(w.id,{status:next,availability:next==="inactive"?"unavailable":(w.availability==="unavailable"?"available":w.availability)});
-                }} style={{fontSize:12,padding:"5px 8px"}} title="Change worker status">
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
+                }} style={{fontSize:12,padding:"5px 8px"}} title={t("staffing.workers.status")}>
+                  <option value="active">{t("staffing.workers.status_active")}</option>
+                  <option value="inactive">{t("staffing.workers.status_inactive")}</option>
                 </Sel>
               </div>
             </td>
@@ -1456,7 +1456,7 @@ export function AgencyWorkers(){
 
     {selected&&(()=>{const w=A.worker(selected); const person=(A.people||[]).find(p=>p.id===w.personId);
       return <>
-      <Modal onClose={()=>setSelected(null)} title="Worker file" wide>
+      <Modal onClose={()=>setSelected(null)} title={t("staffing.workers.fileTitle")} wide>
         <div className="flex gap-3.5 items-center mb-4">
           <SmartPortrait seed={person?.seed||0} size={54} radius={13}/>
           <div>
