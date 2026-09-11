@@ -903,31 +903,31 @@ export function HrCalendar(){
 
   return <div>
     <div className="flex justify-between items-center mb-4 flex-wrap gap-2.5">
-      <_PillTabs items={[["upcoming","Upcoming ("+upcoming.length+")"],["past","Past"]]} value={tab} onChange={setTab}/>
-      {canAdd&&<Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowAdd(true)}>New event</Btn>}
+      <_PillTabs items={[["upcoming",t("hr.calendar.upcomingTab")+" ("+upcoming.length+")"],["past",t("hr.calendar.pastTab")]]} value={tab} onChange={setTab}/>
+      {canAdd&&<Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowAdd(true)}>{t("hr.calendar.newEventBtn")}</Btn>}
     </div>
 
     {list.length===0
       ? <Card pad={40} style={{borderRadius:14,textAlign:"center"}}>
           <div className="w-14 h-14 rounded-2xl bg-wash text-brand flex items-center justify-center mx-auto mb-4"><I n="calendar" s={26}/></div>
-          <div className="text-base font-semibold text-text mb-1.5">{tab==="upcoming"?"Nothing coming up":"No past events"}</div>
-          <div className="text-sm text-text-3">{tab==="upcoming"?"Add your first event to get the team on the same page.":"Past events will appear here as they happen."}</div>
+          <div className="text-base font-semibold text-text mb-1.5">{tab==="upcoming"?t("hr.calendar.nothingUpcoming"):t("hr.calendar.noPastEvents")}</div>
+          <div className="text-sm text-text-3">{tab==="upcoming"?t("hr.calendar.addFirstEvent"):t("hr.calendar.pastEventsMessage")}</div>
         </Card>
       : <div className="flex flex-col gap-2.5">
           {list.map(ev=><Card key={ev.id} pad={mob?16:20} style={{borderRadius:14}}>
             <div className="flex gap-3.5 items-start flex-wrap">
               <div className="text-center bg-tint rounded-lg py-2.5 px-1.5 shrink-0" style={{width:60}}>
-                <div className="text-xs font-bold text-brand tracking-wide uppercase" style={{fontSize:10.5}}>{new Date(ev.when).toLocaleDateString("en-CA",{month:"short"})}</div>
+                <div className="text-xs font-bold text-brand tracking-wide uppercase" style={{fontSize:10.5}}>{new Intl.DateTimeFormat(locale==="fr-CA"?"fr-CA":"en-CA",{month:"short"}).format(new Date(ev.when))}</div>
                 <div className="text-2xl font-bold text-brand tracking-tight leading-none">{new Date(ev.when).getDate()}</div>
-                <div className="text-xs text-brand mt-1" style={{fontSize:10.5}}>{new Date(ev.when).toLocaleDateString("en-CA",{weekday:"short"})}</div>
+                <div className="text-xs text-brand mt-1" style={{fontSize:10.5}}>{new Intl.DateTimeFormat(locale==="fr-CA"?"fr-CA":"en-CA",{weekday:"short"}).format(new Date(ev.when))}</div>
               </div>
               <div className="grow shrink basis-55 min-w-0">
                 <div className="flex gap-2 items-center flex-wrap mb-1.5">
                   <div className="text-base font-semibold text-text tracking-tight">{ev.title}</div>
-                  <Tag tone={typeTone[ev.type]||"neutral"} sm icon={typeIcon[ev.type]||"calendar"}>{ev.type}</Tag>
+                  <Tag tone={typeTone[ev.type]||"neutral"} sm icon={typeIcon[ev.type]||"calendar"}>{t(`hr.calendar.${ev.type}`)}</Tag>
                 </div>
                 <div className="text-sm text-text-3 mb-1.5 flex gap-3 flex-wrap">
-                  <span>{ev.time} • {ev.duration} min</span>
+                  <span>{ev.time} • {ev.duration} {t("hr.calendar.minutesSuffix")}</span>
                   {ev.location&&<span>• {ev.location}</span>}
                 </div>
                 {ev.description&&<div className="text-sm text-text-2 leading-relaxed">{ev.description}</div>}
@@ -937,26 +937,26 @@ export function HrCalendar(){
           </Card>)}
         </div>}
 
-    {showAdd&&<Modal onClose={()=>setShowAdd(false)} title="Add event" wide>
+    {showAdd&&<Modal onClose={()=>setShowAdd(false)} title={t("hr.calendar.addEventModal")} wide>
       <div className="flex flex-col gap-3.5">
-        <Field label="Event title" required><Input value={ne.title} onChange={e=>setNe({...ne,title:e.target.value})} placeholder="e.g. Q4 Kickoff Meeting"/></Field>
+        <Field label={t("hr.calendar.eventTitle")} required><Input value={ne.title} onChange={e=>setNe({...ne,title:e.target.value})} placeholder={t("hr.calendar.eventTitlePlaceholder")}/></Field>
         <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
-          <Field label="Type"><Sel value={ne.type} onChange={e=>setNe({...ne,type:e.target.value})}>
-            {["meeting","training","social","other"].map(t=><option key={t}>{t}</option>)}</Sel></Field>
-          <Field label="Location"><Input value={ne.location} onChange={e=>setNe({...ne,location:e.target.value})} placeholder="Boardroom, Zoom, etc."/></Field>
+          <Field label={t("hr.calendar.typeLabel")}><Sel value={ne.type} onChange={e=>setNe({...ne,type:e.target.value})}>
+            {["meeting","training","social","other"].map(type=><option key={type}>{t(`hr.calendar.${type}`)}</option>)}</Sel></Field>
+          <Field label={t("hr.calendar.locationLabel")}><Input value={ne.location} onChange={e=>setNe({...ne,location:e.target.value})} placeholder={t("hr.calendar.locationPlaceholder")}/></Field>
         </div>
         <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-3"}`}>
-          <Field label="Date" required><DatePicker value={ne.when} onChange={v=>setNe({...ne,when:v})} min={_fmtDate(new Date())}/></Field>
-          <Field label="Time"><Input type="time" value={ne.time} onChange={e=>setNe({...ne,time:e.target.value})}/></Field>
-          <Field label="Duration (min)"><Input type="number" min="15" step="15" value={ne.duration} onChange={e=>setNe({...ne,duration:Number(e.target.value)||60})}/></Field>
+          <Field label={t("hr.calendar.dateLabel")} required><DatePicker value={ne.when} onChange={v=>setNe({...ne,when:v})} min={_fmtDate(new Date())}/></Field>
+          <Field label={t("hr.calendar.timeLabel")}><Input type="time" value={ne.time} onChange={e=>setNe({...ne,time:e.target.value})}/></Field>
+          <Field label={t("hr.calendar.durationLabel")}><Input type="number" min="15" step="15" value={ne.duration} onChange={e=>setNe({...ne,duration:Number(e.target.value)||60})}/></Field>
         </div>
-        <Field label="Who's invited?"><Sel value={ne.invitees} onChange={e=>setNe({...ne,invitees:e.target.value})}>
-          <option value="all">Everyone</option>
+        <Field label={t("hr.calendar.whoInvitedLabel")}><Sel value={ne.invitees} onChange={e=>setNe({...ne,invitees:e.target.value})}>
+          <option value="all">{t("hr.calendar.everyone")}</option>
           {A.HR_DEPARTMENTS.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}</Sel></Field>
-        <Field label="Description"><Area rows={3} value={ne.description} onChange={e=>setNe({...ne,description:e.target.value})}/></Field>
+        <Field label={t("hr.calendar.descriptionLabel")}><Area rows={3} value={ne.description} onChange={e=>setNe({...ne,description:e.target.value})}/></Field>
         <div className="flex gap-2.5 justify-end">
-          <Btn kind="ghost" onClick={()=>setShowAdd(false)}>Cancel</Btn>
-          <Btn kind="primary" icon="check" onClick={submit}>Create event</Btn>
+          <Btn kind="ghost" onClick={()=>setShowAdd(false)}>{t("hr.calendar.cancelBtn")}</Btn>
+          <Btn kind="primary" icon="check" onClick={submit}>{t("hr.calendar.createEventBtn")}</Btn>
         </div>
       </div>
     </Modal>}
