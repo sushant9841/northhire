@@ -799,18 +799,18 @@ export function EmpCandidate(){
         <SmartPortrait seed={u.seed} size={mob?62:74} radius={18}/>
         <div className="grow shrink basis-50 min-w-0">
           <div className={`font-bold text-text tracking-tight ${mob?"text-xl":"text-2xl"}`}>{u.name}</div>
-          <div className="text-sm text-text-2 mt-1">{u.title} • {u.years} {u.years===1?"year":"years"} • {u.city}, {u.prov}</div>
+          <div className="text-sm text-text-2 mt-1">{u.title} • {u.years} {u.years===1?"an":"ans"} • {u.city}, {u.prov}</div>
           <div className="text-sm text-text-3 mt-0.5">
-            {contact===undefined?"Loading contact info…":
-              [contact?.email,contact?.phone].filter(Boolean).join(" • ")||"Contact details hidden by this candidate"}</div>
+            {contact===undefined?t("employer.candidate.applicationNotes"):
+              [contact?.email,contact?.phone].filter(Boolean).join(" • ")||t("employer.candidate.applicationNotes")}</div>
           <div className="mt-2.5"><Tag tone={a.stage==="Offer"?"ok":a.stage==="Interview"?"warn":"brand"} sm>{a.stage}</Tag></div></div>
-        <Ring v={s} size={62} label="Fit"/></div></Card>
+        <Ring v={s} size={62} label={t("employer.pipeline.selectedCount",{n:1})}/></div></Card>
     <Card style={{marginBottom:16}}>
       <div className="flex justify-between items-center mb-3">
-        <Lbl style={{margin:0}}>Hiring team scorecards {scorecards.length>0&&`(avg ${(scorecards.reduce((s,c)=>s+c.rating,0)/scorecards.length).toFixed(1)}/5)`}</Lbl>
-        <Btn kind="outline" size="xs" icon="plus" onClick={()=>{setScRating(0);setScNotes("");setShowScorecard(true);}}>Add scorecard</Btn>
+        <Lbl style={{margin:0}}>{t("employer.candidate.decisionScorecard")} {scorecards.length>0&&`(moy ${(scorecards.reduce((s,c)=>s+c.rating,0)/scorecards.length).toFixed(1)}/5)`}</Lbl>
+        <Btn kind="outline" size="xs" icon="plus" onClick={()=>{setScRating(0);setScNotes("");setShowScorecard(true);}}>+{t("employer.candidate.addScorecard")}</Btn>
       </div>
-      {scorecards.length===0?<div className="text-sm text-text-3">No scorecards yet — the first interviewer to weigh in starts the record.</div>
+      {scorecards.length===0?<div className="text-sm text-text-3">{t("employer.candidate.applicationNotes")}</div>
         :<div className="flex flex-col gap-2.5">
           {scorecards.map(c=><div key={c.id} className="py-2.5 px-3 bg-bg rounded-lg">
             <div className="flex justify-between items-center mb-1">
@@ -822,7 +822,7 @@ export function EmpCandidate(){
           </div>)}
         </div>}
     </Card>
-    <Card style={{marginBottom:16}}><Lbl>Why this score</Lbl>
+    <Card style={{marginBottom:16}}><Lbl>{t("employer.pipeline.howJobIsScored")}</Lbl>
       <div className="flex flex-col gap-2.5">
         {A.scoreBreakdown(u,job).map(b=><div key={b.label}>
           <div className="flex justify-between text-sm mb-1">
@@ -833,7 +833,7 @@ export function EmpCandidate(){
       </div>
     </Card>
     <div className={`grid gap-4 mb-4 ${mob?"grid-cols-1":"grid-cols-2"}`}>
-      <Card><Lbl>Skills against this role</Lbl>
+      <Card><Lbl>{t("employer.candidate.rating")}</Lbl>
         <div className="flex flex-wrap gap-1.5">
           {job.skills.map(k=>{const has=u.skills.some(x=>x.toLowerCase()===k.toLowerCase());
             return <Tag key={k} tone={has?"ok":"neutral"} icon={has?"check":"x"} sm>{k}</Tag>;})}</div>
