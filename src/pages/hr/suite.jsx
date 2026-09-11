@@ -730,34 +730,36 @@ export function HrLeave(){
 
 /* ─── Tasks: kanban board, real drag-and-drop via @dnd-kit on top of the existing ←/→ buttons
    (kept as the accessible, no-pointer-required path). ─── */
-function _TaskCard({t,col,cols,emp,A,onComments}){
-  const {attributes,listeners,setNodeRef,transform,isDragging}=useDraggable({id:t.id});
+function _TaskCard({t: task,col,cols,emp,A,onComments}){
+  const {t}=useTranslation();
+  const {attributes,listeners,setNodeRef,transform,isDragging}=useDraggable({id:task.id});
   const style=transform?{transform:`translate3d(${transform.x}px,${transform.y}px,0)`,zIndex:50,opacity:0.9}:undefined;
-  const assn=A.hrEmp(t.assignee);
-  const overdue=col.k!=="done"&&t.due<_fmtDate(new Date());
+  const assn=A.hrEmp(task.assignee);
+  const overdue=col.k!=="done"&&task.due<_fmtDate(new Date());
   return <div ref={setNodeRef} style={{...style,...(overdue?{borderColor:C.red}:{})}} {...attributes} {...listeners}
     data-card className={`bg-white border border-line rounded-xl p-3 cursor-grab transition-shadow duration-150 ${isDragging?"shadow-md":""}`}>
-    <div className="text-sm font-semibold text-text mb-2 leading-snug">{t.title}</div>
+    <div className="text-sm font-semibold text-text mb-2 leading-snug">{task.title}</div>
     <div className="flex gap-1.5 flex-wrap mb-2.5">
-      <Tag tone={t.priority==="high"?"danger":t.priority==="medium"?"warn":"neutral"} sm>{t.priority}</Tag>
-      {overdue&&<Tag tone="danger" sm icon="alert">Overdue</Tag>}
-      {t.tags?.map(tag=><Tag key={tag} tone="neutral" sm>{tag}</Tag>)}
+      <Tag tone={task.priority==="high"?"danger":task.priority==="medium"?"warn":"neutral"} sm>{task.priority}</Tag>
+      {overdue&&<Tag tone="danger" sm icon="alert">{t("hr.tasks.overdueTag")}</Tag>}
+      {task.tags?.map(tag=><Tag key={tag} tone="neutral" sm>{tag}</Tag>)}
     </div>
     <div className={`text-xs mb-2.5 flex gap-2 flex-wrap ${overdue?"text-red font-semibold":"text-text-3"}`}>
-      <span>Due {t.due}</span>
+      <span>{t("hr.tasks.duePrefix")} {task.due}</span>
       {assn&&<span>• {assn.name.split(" ")[0]}</span>}
     </div>
     <div className="flex gap-1" onPointerDown={e=>e.stopPropagation()}>
-      {col.k!=="todo"&&<Btn kind="ghost" size="xs" aria-label={`Move "${t.title}" back to ${cols[cols.findIndex(c=>c.k===col.k)-1].label}`} onClick={()=>A.updateTaskStatus(t.id,cols[cols.findIndex(c=>c.k===col.k)-1].k)}>←</Btn>}
-      {col.k!=="done"&&<Btn kind="ghost" size="xs" aria-label={`Move "${t.title}" forward to ${cols[cols.findIndex(c=>c.k===col.k)+1].label}`} onClick={()=>A.updateTaskStatus(t.id,cols[cols.findIndex(c=>c.k===col.k)+1].k)}>→</Btn>}
-      <Btn kind="ghost" size="xs" aria-label={`Comments on "${t.title}"`} onClick={()=>onComments&&onComments(t)}>💬</Btn>
-      {(t.assignedBy===emp.id||emp.role==="owner"||emp.role==="admin")&&<Btn kind="ghost" size="xs" icon="trash" aria-label={`Delete task "${t.title}"`} onClick={()=>A.deleteTask(t.id)}/>}
+      {col.k!=="todo"&&<Btn kind="ghost" size="xs" aria-label={t("hr.tasks.moveBackAriaLabel",{title:task.title,column:cols[cols.findIndex(c=>c.k===col.k)-1].label})} onClick={()=>A.updateTaskStatus(task.id,cols[cols.findIndex(c=>c.k===col.k)-1].k)}>←</Btn>}
+      {col.k!=="done"&&<Btn kind="ghost" size="xs" aria-label={t("hr.tasks.moveForwardAriaLabel",{title:task.title,column:cols[cols.findIndex(c=>c.k===col.k)+1].label})} onClick={()=>A.updateTaskStatus(task.id,cols[cols.findIndex(c=>c.k===col.k)+1].k)}>→</Btn>}
+      <Btn kind="ghost" size="xs" aria-label={t("hr.tasks.commentsAriaLabel",{title:task.title})} onClick={()=>onComments&&onComments(task)}>💬</Btn>
+      {(task.assignedBy===emp.id||emp.role==="owner"||emp.role==="admin")&&<Btn kind="ghost" size="xs" icon="trash" aria-label={t("hr.tasks.deleteTaskAriaLabel",{title:task.title})} onClick={()=>A.deleteTask(task.id)}/>}
     </div>
   </div>;
 }
 
 /* Discussion on a task, kept with the work rather than in a chat thread nobody can find later. */
 function _TaskCommentsModal({task,emp,A,onClose}){
+  const {t,locale}=useTranslation();
   const [comments,setComments]=useState([]);
   const [body,setBody]=useState(""); const [busy,setBusy]=useState(false); const [err,setErr]=useState("");
   const load=()=>A.hrTaskComments(task.id).then(setComments);
@@ -769,34 +771,35 @@ function _TaskCommentsModal({task,emp,A,onClose}){
     setBusy(false);
     if(r.ok){setBody("");load();}else setErr(r.msg);
   };
-  return <Modal onClose={onClose} title={`Comments — ${task.title}`}>
+  return <Modal onClose={onClose} title={t("hr.tasks.commentsModalTitle",{title:task.title})}>
     {err&&<Banner tone="danger" icon="alert" style={{marginBottom:12}}>{err}</Banner>}
     <div className="flex flex-col gap-3 mb-4" style={{maxHeight:320,overflowY:"auto"}}>
       {comments.length===0
-        ? <div className="text-sm text-text-3">No comments yet.</div>
+        ? <div className="text-sm text-text-3">{t("hr.tasks.noCommentsYet")}</div>
         : comments.map(c=>
           <div key={c.id} className="bg-bg border border-line rounded-xl py-2.5 px-3">
             <div className="flex justify-between items-center gap-2 mb-1">
               <span className="text-xs font-semibold text-text">{c.author}</span>
               <div className="flex gap-2 items-center">
-                <span className="text-xs text-text-3">{new Date(c.at).toLocaleDateString("en-CA")}</span>
+                <span className="text-xs text-text-3">{new Date(c.at).toLocaleDateString(locale==="fr"?"fr-CA":"en-CA")}</span>
                 {(c.authorId===emp.id||["owner","admin","hr"].includes(emp.role))&&
                   <button onClick={async()=>{await A.hrDeleteTaskComment(c.id);load();}}
-                    className="bg-transparent border-0 p-0 cursor-pointer text-xs text-text-3 hover:text-red">Remove</button>}
+                    className="bg-transparent border-0 p-0 cursor-pointer text-xs text-text-3 hover:text-red">{t("hr.tasks.removeCommentBtn")}</button>}
               </div>
             </div>
             <div className="text-sm text-text-2 whitespace-pre-wrap">{c.body}</div>
           </div>)}
     </div>
-    <Field label="Add a comment">
-      <Area rows={3} value={body} onChange={e=>setBody(e.target.value)} placeholder="Anything the next person needs to know"/></Field>
+    <Field label={t("hr.tasks.addCommentLabel")}>
+      <Area rows={3} value={body} onChange={e=>setBody(e.target.value)} placeholder={t("hr.tasks.addCommentPlaceholder")}/></Field>
     <div className="flex gap-2.5 justify-end mt-3">
-      <Btn kind="ghost" onClick={onClose}>Close</Btn>
-      <Btn kind="primary" onClick={send} disabled={busy||!body.trim()}>{busy?"Posting…":"Comment"}</Btn>
+      <Btn kind="ghost" onClick={onClose}>{t("hr.tasks.closeBtn")}</Btn>
+      <Btn kind="primary" onClick={send} disabled={busy||!body.trim()}>{busy?t("hr.tasks.postingBtn"):t("hr.tasks.commentBtn")}</Btn>
     </div>
   </Modal>;
 }
 function _TaskColumn({col,tasks,cols,emp,A,onComments}){
+  const {t}=useTranslation();
   const {setNodeRef,isOver}=useDroppable({id:col.k});
   return <div ref={setNodeRef} className="bg-bg rounded-2xl p-3 transition-colors duration-150" style={{minHeight:200,outline:isOver?`2px solid ${C.brand}`:"none"}}>
     <div className="flex justify-between items-center py-1 px-1.5 mb-2.5">
@@ -807,8 +810,8 @@ function _TaskColumn({col,tasks,cols,emp,A,onComments}){
       <Tag tone="neutral" sm>{tasks.length}</Tag>
     </div>
     <div className="flex flex-col gap-2">
-      {[...tasks].sort((a,b)=>a.due.localeCompare(b.due)).map(t=><_TaskCard key={t.id} t={t} col={col} cols={cols} emp={emp} A={A} onComments={onComments}/>)}
-      {tasks.length===0&&<div className="p-5 text-center text-xs text-text-3">No tasks here.</div>}
+      {[...tasks].sort((a,b)=>a.due.localeCompare(b.due)).map(task=><_TaskCard key={task.id} t={task} col={col} cols={cols} emp={emp} A={A} onComments={onComments}/>)}
+      {tasks.length===0&&<div className="p-5 text-center text-xs text-text-3">{t("hr.tasks.noTasksHere")}</div>}
     </div>
   </div>;
 }
@@ -834,11 +837,11 @@ export function HrTasks(){
   const [showAdd,setShowAdd]=useState(false);
   const [taskComments,setTaskComments]=useState(null);
   const [nt,setNt]=useState({title:"",assignee:emp.id,due:"",priority:"medium",tags:[]});
-  const scoped=scope==="mine"?A.hrTasks.filter(t=>t.assignee===emp.id)
-    :scope==="assigned"?A.hrTasks.filter(t=>t.assignedBy===emp.id)
+  const scoped=scope==="mine"?A.hrTasks.filter(task=>task.assignee===emp.id)
+    :scope==="assigned"?A.hrTasks.filter(task=>task.assignedBy===emp.id)
     :A.hrTasks;
-  const source=scope==="all"&&assigneeFilter?scoped.filter(t=>t.assignee===assigneeFilter):scoped;
-  const cols=[{k:"todo",label:"To do",tone:C.text3},{k:"in-progress",label:"In progress",tone:C.brand},{k:"done",label:"Done",tone:C.ok}];
+  const source=scope==="all"&&assigneeFilter?scoped.filter(task=>task.assignee===assigneeFilter):scoped;
+  const cols=[{k:"todo",label:t("hr.tasks.todoColumn"),tone:C.text3},{k:"in-progress",label:t("hr.tasks.inProgressColumn"),tone:C.brand},{k:"done",label:t("hr.tasks.doneColumn"),tone:C.ok}];
 
   const submit=()=>{if(!nt.title.trim()||!nt.due)return;
     A.addTask({...nt,title:nt.title.trim()}); setNt({title:"",assignee:emp.id,due:"",priority:"medium",tags:[]}); setShowAdd(false);};
@@ -846,33 +849,33 @@ export function HrTasks(){
   return <div>
     <div className="flex justify-between items-center mb-4 flex-wrap gap-2.5">
       <div className="flex items-center gap-2.5 flex-wrap">
-        <_PillTabs items={[["mine","My tasks"],...(canAssignOthers?[["assigned","Assigned by me"],["all","All company"]]:[])]} value={scope} onChange={v=>{setScope(v);setAssigneeFilter("");}}/>
+        <_PillTabs items={[["mine",t("hr.tasks.myTasksTab")],...(canAssignOthers?[["assigned",t("hr.tasks.assignedByMeTab")],["all",t("hr.tasks.allCompanyTab")]]:[])]} value={scope} onChange={v=>{setScope(v);setAssigneeFilter("");}}/>
         {scope==="all"&&<Sel value={assigneeFilter} onChange={e=>setAssigneeFilter(e.target.value)} style={{width:170}}>
-          <option value="">All assignees</option>
+          <option value="">{t("hr.tasks.allAssigneesOption")}</option>
           {A.hrEmpsAtCompany(company.id).filter(e=>e.status==="active").map(e=><option key={e.id} value={e.id}>{e.name}</option>)}
         </Sel>}
       </div>
-      <Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowAdd(true)}>New task</Btn>
+      <Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowAdd(true)}>{t("hr.tasks.newTaskBtn")}</Btn>
     </div>
 
     <_TaskBoard cols={cols} source={source} emp={emp} A={A} mob={mob} onComments={setTaskComments}/>
     {taskComments&&<_TaskCommentsModal task={taskComments} emp={emp} A={A} onClose={()=>setTaskComments(null)}/>}
 
-    {showAdd&&<Modal onClose={()=>setShowAdd(false)} title="New task">
+    {showAdd&&<Modal onClose={()=>setShowAdd(false)} title={t("hr.tasks.newTaskModalTitle")}>
       <div className="flex flex-col gap-3.5">
-        <Field label="What needs doing?" required><Input value={nt.title} onChange={e=>setNt({...nt,title:e.target.value})} placeholder="e.g. Review Q4 budget"/></Field>
+        <Field label={t("hr.tasks.whatNeedsDoing")} required><Input value={nt.title} onChange={e=>setNt({...nt,title:e.target.value})} placeholder={t("hr.tasks.whatNeedsDoingPlaceholder")}/></Field>
         <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
-          <Field label="Assign to">
+          <Field label={t("hr.tasks.assignToLabel")}>
             <Sel value={nt.assignee} onChange={e=>setNt({...nt,assignee:e.target.value})}>
               {A.hrEmpsAtCompany(company.id).filter(e=>e.status==="active").map(e=><option key={e.id} value={e.id}>{e.name}</option>)}</Sel></Field>
-          <Field label="Priority"><Sel value={nt.priority} onChange={e=>setNt({...nt,priority:e.target.value})}>
-            {["low","medium","high"].map(p=><option key={p}>{p}</option>)}</Sel></Field>
+          <Field label={t("hr.tasks.priorityLabel")}><Sel value={nt.priority} onChange={e=>setNt({...nt,priority:e.target.value})}>
+            {[{k:"low",l:t("hr.tasks.priorityLow")},{k:"medium",l:t("hr.tasks.priorityMedium")},{k:"high",l:t("hr.tasks.priorityHigh")}].map(p=><option key={p.k} value={p.k}>{p.l}</option>)}</Sel></Field>
         </div>
-        <Field label="Due date" required><DatePicker value={nt.due} onChange={v=>setNt({...nt,due:v})} min={_fmtDate(new Date())}/></Field>
-        <Field label="Tags"><InlineList value={nt.tags} onChange={v=>setNt({...nt,tags:v})} icon="sparkle" placeholder="Add tag"/></Field>
+        <Field label={t("hr.tasks.dueDateLabel")} required><DatePicker value={nt.due} onChange={v=>setNt({...nt,due:v})} min={_fmtDate(new Date())}/></Field>
+        <Field label={t("hr.tasks.tagsLabel")}><InlineList value={nt.tags} onChange={v=>setNt({...nt,tags:v})} icon="sparkle" placeholder={t("hr.tasks.tagsPlaceholder")}/></Field>
         <div className="flex gap-2.5 justify-end">
-          <Btn kind="ghost" onClick={()=>setShowAdd(false)}>Cancel</Btn>
-          <Btn kind="primary" icon="check" onClick={submit} disabled={!nt.title.trim()||!nt.due}>Create task</Btn>
+          <Btn kind="ghost" onClick={()=>setShowAdd(false)}>{t("hr.tasks.cancelBtn")}</Btn>
+          <Btn kind="primary" icon="check" onClick={submit} disabled={!nt.title.trim()||!nt.due}>{t("hr.tasks.createTaskBtn")}</Btn>
         </div>
       </div>
     </Modal>}
