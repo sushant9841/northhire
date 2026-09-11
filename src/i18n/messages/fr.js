@@ -203,6 +203,10 @@ export const fr = {
     aboutPlaceholder: "Ce que vous faites, et pourquoi quelqu'un voudrait travailler avec vous.",
     companySizeLabel: "Taille de l'entreprise",
   },
+  tabs: {
+    home: "Accueil", jobs: "Emplois", matched: "Correspondances", status: "Statut", profile: "Profil",
+    candidates: "Candidat·e·s", post: "Publier", content: "Contenu", people: "Personnes", moderation: "Modération",
+  },
   alerts: {
     title: "Notifications", unreadCount: "{unread} non lu·e·s", allCaughtUp: "Vous êtes à jour",
     markAllRead: "Tout marquer comme lu", unreadOnly: "Non lu seulement", allTypes: "Tous les types",

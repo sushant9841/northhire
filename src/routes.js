@@ -147,9 +147,12 @@ export const ROUTES = {
   denied:      {title:"Not available", tab:"home", path:"/denied"},
 };
 
+/* Second element of each tuple is an i18n key (looked up with t() at render time in TabBar.jsx
+   and Header.jsx), not a literal label - this module is static and has no access to the current
+   locale, so translation happens where these are consumed. */
 export const TABS_BY_ROLE = {
-  guest:    [["home","Home","home"],["search","Jobs","search"],["trainings","Trainings","cap"],["blogs","Resources","book"],["login","Sign in","user"]],
-  seeker:   [["home","Home","home"],["matched","Matched","target"],["search","Search","search"],["status","Status","activity"],["account","Profile","user"]],
-  employer: [["empHome","Home","home"],["empJobs","Jobs","briefcase"],["empPost","Post","plus"],["empPipeline","Candidates","users"],["empCompany","Profile","building"]],
-  admin:    [["admHome","Home","home"],["admBlogs","Content","book"],["admUsers","People","users"],["admJobs","Moderation","shield"],["admSettings","Settings","gear"]],
+  guest:    [["home","tabs.home","home"],["search","tabs.jobs","search"],["trainings","nav.trainings","cap"],["blogs","nav.resources","book"],["login","common.signIn","user"]],
+  seeker:   [["home","tabs.home","home"],["matched","tabs.matched","target"],["search","common.search","search"],["status","tabs.status","activity"],["account","tabs.profile","user"]],
+  employer: [["empHome","tabs.home","home"],["empJobs","tabs.jobs","briefcase"],["empPost","tabs.post","plus"],["empPipeline","tabs.candidates","users"],["empCompany","tabs.profile","building"]],
+  admin:    [["admHome","tabs.home","home"],["admBlogs","tabs.content","book"],["admUsers","tabs.people","users"],["admJobs","tabs.moderation","shield"],["admSettings","account.settings","gear"]],
 };

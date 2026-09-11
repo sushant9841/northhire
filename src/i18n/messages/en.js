@@ -202,6 +202,10 @@ export const en = {
     aboutPlaceholder: "What you do, and why someone would want to work with you.",
     companySizeLabel: "Company size",
   },
+  tabs: {
+    home: "Home", jobs: "Jobs", matched: "Matched", status: "Status", profile: "Profile",
+    candidates: "Candidates", post: "Post", content: "Content", people: "People", moderation: "Moderation",
+  },
   alerts: {
     title: "Notifications", unreadCount: "{unread} unread", allCaughtUp: "You are all caught up",
     markAllRead: "Mark all read", unreadOnly: "Unread only", allTypes: "All types",

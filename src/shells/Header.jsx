@@ -60,7 +60,7 @@ export function Header(){
       <Wordmark onClick={()=>A.go(A.homePg)} size={mob?18:20}/>
       {!mob&&<nav className="flex gap-0.5 ml-3 items-center">
         {(role==="employer"||role==="admin"
-          ? TABS_BY_ROLE[role].slice(0,4).map(t=>[t[0],t[1]])
+          ? TABS_BY_ROLE[role].slice(0,4).map(tab=>[tab[0],t(tab[1])])
           : publicLinks).map(item=>{
           const [p,l,kind]=item;
           const on=A.pg===p||(kind==="browse"&&A.pg==="search");
