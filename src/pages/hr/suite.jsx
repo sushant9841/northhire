@@ -1806,33 +1806,33 @@ export function HrReports(){
   const terminatedLast12mo=A.hrEmpsAtCompany(company.id).filter(e=>e.status==="terminated"&&e.terminatedAt&&new Date(e.terminatedAt)>=yearAgo).length;
   const turnoverRate=all.length?(terminatedLast12mo/(all.length+terminatedLast12mo))*100:0;
   const exportReport=()=>{
-    const rows=[["Metric","Value"],
-      ["Headcount",all.length],["Avg tenure (years)",avgTenure.toFixed(1)],
-      ["Total payroll",totalSalary],["Avg salary",Math.round(avgSalary)],
-      ["Turnover, last 12mo (%)",turnoverRate.toFixed(1)],
-      ...A.HR_DEPARTMENTS.map(d=>[`Headcount — ${d.name}`,byDept[d.id]||0])];
+    const rows=[[t("hr.reports.csvMetric"),t("hr.reports.csvValue")],
+      [t("hr.reports.csvHeadcount"),all.length],[t("hr.reports.csvAvgTenure"),avgTenure.toFixed(1)],
+      [t("hr.reports.csvTotalPayroll"),totalSalary],[t("hr.reports.csvAvgSalary"),Math.round(avgSalary)],
+      [t("hr.reports.csvTurnover"),turnoverRate.toFixed(1)],
+      ...A.HR_DEPARTMENTS.map(d=>[t("hr.reports.csvHeadcountDept",{name:d.name}),byDept[d.id]||0])];
     const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
     const blob=new Blob([csv],{type:"text/csv"}); const url=URL.createObjectURL(blob);
     const a=document.createElement("a"); a.href=url; a.download="hr-report.csv"; a.click(); URL.revokeObjectURL(url);
   };
   return <div>
     <div className="flex justify-end mb-3.5">
-      <Btn kind="outline" size="sm" icon="download" onClick={exportReport}>Export CSV</Btn>
+      <Btn kind="outline" size="sm" icon="download" onClick={exportReport}>{t("hr.reports.exportCSVBtn")}</Btn>
     </div>
     <div className={`grid gap-3 mb-4 ${mob?"grid-cols-2":"grid-cols-4"}`}>
-      {[["Headcount",all.length,C.brand],
-        ["Avg tenure",avgTenure.toFixed(1)+"y",C.ok],
-        ["Total payroll",`$${(totalSalary/1000).toFixed(0)}k`,C.violet],
-        ["Avg salary",`$${(avgSalary/1000).toFixed(0)}k`,C.warn],
-        ["Turnover (12mo)",turnoverRate.toFixed(1)+"%",C.danger]].map(([l,v,t])=>
+      {[[t("hr.reports.headcount"),all.length,C.brand],
+        [t("hr.reports.avgTenure"),avgTenure.toFixed(1)+"y",C.ok],
+        [t("hr.reports.totalPayroll"),`$${(totalSalary/1000).toFixed(0)}k`,C.violet],
+        [t("hr.reports.avgSalary"),`$${(avgSalary/1000).toFixed(0)}k`,C.warn],
+        [t("hr.reports.turnover12mo"),turnoverRate.toFixed(1)+"%",C.danger]].map(([l,v,c])=>
         <Card key={l} pad={mob?16:20} style={{borderRadius:14}}>
-          <div className={`font-bold tracking-tight ${mob?"text-xl":"text-2xl"}`} style={{color:t}}>{v}</div>
+          <div className={`font-bold tracking-tight ${mob?"text-xl":"text-2xl"}`} style={{color:c}}>{v}</div>
           <div className="text-xs text-text-3 mt-1.5">{l}</div>
         </Card>)}
     </div>
     <div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
       <Card pad={mob?20:24} style={{borderRadius:14}}>
-        <Lbl>Headcount by department</Lbl>
+        <Lbl>{t("hr.reports.headcountByDept")}</Lbl>
         {A.HR_DEPARTMENTS.map(d=>{const n=byDept[d.id]||0; const pct=all.length?(n/all.length)*100:0;
           return <div key={d.id} className="mb-3.5">
             <div className="flex justify-between text-sm mb-1">
@@ -1845,8 +1845,8 @@ export function HrReports(){
           </div>;})}
       </Card>
       <Card pad={mob?20:24} style={{borderRadius:14}}>
-        <Lbl>Salary bands</Lbl>
-        {[[">$150k",all.filter(e=>e.salary>150000).length],["$100–150k",all.filter(e=>e.salary>=100000&&e.salary<=150000).length],["$75–100k",all.filter(e=>e.salary>=75000&&e.salary<100000).length],["$50–75k",all.filter(e=>e.salary>=50000&&e.salary<75000).length],["<$50k",all.filter(e=>e.salary<50000).length]].map(([l,n])=>{const pct=all.length?(n/all.length)*100:0;
+        <Lbl>{t("hr.reports.salaryBands")}</Lbl>
+        {[[t("hr.reports.salaryBand150k"),all.filter(e=>e.salary>150000).length],[t("hr.reports.salaryBand100150k"),all.filter(e=>e.salary>=100000&&e.salary<=150000).length],[t("hr.reports.salaryBand75100k"),all.filter(e=>e.salary>=75000&&e.salary<100000).length],[t("hr.reports.salaryBand5075k"),all.filter(e=>e.salary>=50000&&e.salary<75000).length],[t("hr.reports.salaryBandUnder50k"),all.filter(e=>e.salary<50000).length]].map(([l,n])=>{const pct=all.length?(n/all.length)*100:0;
           return <div key={l} className="mb-3.5">
             <div className="flex justify-between text-sm mb-1">
               <span className="text-text-2 font-medium">{l}</span>
@@ -1865,7 +1865,7 @@ export function HrReports(){
       const expired=withCert.filter(c=>new Date(c.expires).getTime()<now);
       if(!expiringSoon.length&&!expired.length)return null;
       return <Card pad={mob?20:24} style={{borderRadius:14,marginTop:16}}>
-        <Lbl>Certifications expiring soon</Lbl>
+        <Lbl>{t("hr.reports.certificationsExpiringSoon")}</Lbl>
         <div className="flex flex-col gap-2">
           {[...expired.map(c=>({...c,status:"expired"})),...expiringSoon.map(c=>({...c,status:"soon"}))].map((c,i)=>
             <div key={i} className="flex justify-between items-center py-2.5 px-3 bg-bg rounded-xl">
@@ -1873,18 +1873,18 @@ export function HrReports(){
                 <SmartPortrait seed={c.emp.seed} size={28} radius={7}/>
                 <div><div className="text-sm font-semibold text-text">{c.emp.name}</div>
                   <div className="text-xs text-text-3">{c.name}</div></div></div>
-              <Tag tone={c.status==="expired"?"danger":"warn"} sm>{c.status==="expired"?"Expired":"Expires"} {new Date(c.expires).toLocaleDateString("en-CA")}</Tag>
+              <Tag tone={c.status==="expired"?"danger":"warn"} sm>{c.status==="expired"?t("hr.reports.expired"):t("hr.reports.expires")} {formatDate(c.expires,locale)}</Tag>
             </div>)}
         </div>
       </Card>;
     })()}
     <Card pad={mob?20:24} style={{borderRadius:14,marginTop:16}}>
-      <Lbl>Audit log — salary, role, payroll &amp; badge changes</Lbl>
-      {A.hrAuditLog.length===0?<Empty icon="shield" title="No audited changes yet" body="Salary changes, role changes, payroll runs, and badge grants/removals are recorded here as they happen."/>
+      <Lbl>{t("hr.reports.auditLogTitle")}</Lbl>
+      {A.hrAuditLog.length===0?<Empty icon="shield" title={t("hr.reports.noAuditedChanges")} body={t("hr.reports.noAuditedChangesBody")}/>
       :<div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:480}}>
-        <thead><tr className="border-b-2 border-line text-left">{["When","Actor","Detail"].map(h=><th key={h} className={TH_CLS}>{h}</th>)}</tr></thead>
+        <thead><tr className="border-b-2 border-line text-left">{[t("hr.reports.auditLogWhen"),t("hr.reports.auditLogActor"),t("hr.reports.auditLogDetail")].map(h=><th key={h} className={TH_CLS}>{h}</th>)}</tr></thead>
         <tbody>{A.hrAuditLog.slice(0,50).map(e=><tr key={e.id} className="border-b border-line-soft">
-          <td className="py-2.5 px-2.5 text-xs text-text-3 whitespace-nowrap">{new Date(e.at).toLocaleString("en-CA")}</td>
+          <td className="py-2.5 px-2.5 text-xs text-text-3 whitespace-nowrap">{formatDateTime(e.at,locale)}</td>
           <td className="py-2.5 px-2.5 text-xs text-text font-semibold whitespace-nowrap">{e.actorName}</td>
           <td className="py-2.5 px-2.5 text-sm text-text-2">{e.detail}</td>
         </tr>)}</tbody>
