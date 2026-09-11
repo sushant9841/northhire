@@ -9,17 +9,27 @@ import { CATS, CATM, PCODE, PROVS } from "../../store/seed/constants.js";
 import { JobCard } from "../shared/cards.jsx";
 import { matchJobsToFilters } from "../../helpers/jobSearch.js";
 import { JobsMap } from "./components/JobsMap.jsx";
+import { useTranslation } from "../../i18n/i18n.jsx";
 
 /* ═══════════════ SEARCH · MATCHED · SAVED · EMPLOYERS ═══════════════ */
+/* Employment type / work setting / experience filter values are stored and matched against job
+   data as canonical English strings (see the STANDING RULE not to touch stored enum values) -
+   these maps translate only the label shown to the user. */
+const EMP_TYPE_KEY={"Full Time":"auth.fullTime","Part Time":"auth.partTime","Contract":"auth.contract",
+  "Seasonal":"auth.seasonal","Apprenticeship":"auth.apprenticeship"};
+const MODE_KEY={"On-site":"auth.onSite","Hybrid":"auth.hybrid","Remote":"auth.remote"};
+const EXP_KEY={"No experience required":"seeker.search.expNoneRequired","Entry level welcome":"seeker.search.expEntryLevel",
+  "1+ years":"seeker.search.exp1Plus","2+ years":"seeker.search.exp2Plus","3+ years":"seeker.search.exp3Plus","4+ years":"seeker.search.exp4Plus"};
+
 function Filters({f,set,clear,n,q,where}){
-  const A=use();
+  const A=use(); const {t}=useTranslation();
   const tog=(k,v)=>{const c=f[k]||[];set({...f,[k]:c.includes(v)?c.filter(x=>x!==v):[...c,v]});};
   const G=({t,children})=><div className="pb-6 mb-6 border-b border-line-soft"><Lbl>{t}</Lbl>{children}</div>;
   /* role/aria-checked so a screen reader announces these as checkboxes with real on/off state -
      as plain buttons they read as "Full Time, button" with no indication of whether the filter
      is currently applied, which is the entire information the control carries. */
   const R=({on,onClick,label,num})=><button onClick={onClick} role="checkbox" aria-checked={!!on}
-    aria-label={num!=null?`${label}, ${num} job${num===1?"":"s"}`:label}
+    aria-label={num!=null?t(num===1?"seeker.search.ariaJobCountOne":"seeker.search.ariaJobCountOther",{label,count:num}):label}
     className="flex items-center gap-3 w-full py-2.5 px-1.5 bg-transparent border-0 cursor-pointer text-left rounded-lg focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2">
     <span className={`w-5 h-5 rounded-md shrink-0 border-2 flex items-center justify-center transition duration-150 ${on?"border-brand bg-brand":"border-line bg-white"}`}>{on&&<I n="check" s={12} c="#fff" w={3}/>}</span>
     <span className={`flex-1 text-sm text-text ${on?"font-semibold":"font-medium"}`}>{label}</span>
@@ -31,25 +41,27 @@ function Filters({f,set,clear,n,q,where}){
   const withoutCats=matchJobsToFilters(A.jobs,{q,where,...f,cats:[]},{expandQuery:A.expandQuery,emp:A.emp});
   return <div>
     <div className="flex justify-between items-center mb-6">
-      <div className="text-base font-bold text-text tracking-tight">Filters</div>
-      {n>0&&<button onClick={clear} className="bg-transparent border-0 cursor-pointer text-sm text-brand font-semibold p-0">Clear ({n})</button>}</div>
-    <G t="Sector">{CATS.map(c=><R key={c.id} label={c.label} num={withoutCats.filter(j=>j.cat===c.id).length}
+      <div className="text-base font-bold text-text tracking-tight">{t("seeker.search.filtersTitle")}</div>
+      {n>0&&<button onClick={clear} className="bg-transparent border-0 cursor-pointer text-sm text-brand font-semibold p-0">{t("seeker.search.clearCount",{count:n})}</button>}</div>
+    <G t={t("seeker.search.sectorLabel")}>{CATS.map(c=><R key={c.id} label={c.label} num={withoutCats.filter(j=>j.cat===c.id).length}
       on={(f.cats||[]).includes(c.id)} onClick={()=>tog("cats",c.id)}/>)}</G>
-    <G t="Employment type">{["Full Time","Part Time","Contract","Seasonal","Apprenticeship"].map(t=>
-      <R key={t} label={t} on={(f.types||[]).includes(t)} onClick={()=>tog("types",t)}/>)}</G>
-    <G t="Work setting">{["On-site","Hybrid","Remote"].map(t=><R key={t} label={t} on={(f.modes||[]).includes(t)} onClick={()=>tog("modes",t)}/>)}</G>
-    <G t="Province"><Sel value={f.prov||""} onChange={e=>set({...f,prov:e.target.value})}>
-      <option value="">All provinces and territories</option>{PROVS.map(p=><option key={p}>{p}</option>)}</Sel></G>
-    <G t="Experience">{["No experience required","Entry level welcome","1+ years","2+ years","3+ years","4+ years"].map(t=>
-      <R key={t} label={t} on={(f.exps||[]).includes(t)} onClick={()=>tog("exps",t)}/>)}</G>
-    <div><Lbl>Minimum pay (yearly equivalent)</Lbl>
+    <G t={t("seeker.search.employmentTypeLabel")}>{["Full Time","Part Time","Contract","Seasonal","Apprenticeship"].map(ty=>
+      <R key={ty} label={t(EMP_TYPE_KEY[ty])} on={(f.types||[]).includes(ty)} onClick={()=>tog("types",ty)}/>)}</G>
+    <G t={t("seeker.search.workSettingLabel")}>{["On-site","Hybrid","Remote"].map(ty=><R key={ty} label={t(MODE_KEY[ty])} on={(f.modes||[]).includes(ty)} onClick={()=>tog("modes",ty)}/>)}</G>
+    <G t={t("seeker.search.provinceLabel")}><Sel value={f.prov||""} onChange={e=>set({...f,prov:e.target.value})}>
+      <option value="">{t("seeker.search.allProvinces")}</option>{PROVS.map(p=><option key={p}>{p}</option>)}</Sel></G>
+    <G t={t("seeker.search.experienceLabel")}>{["No experience required","Entry level welcome","1+ years","2+ years","3+ years","4+ years"].map(ty=>
+      <R key={ty} label={t(EXP_KEY[ty])} on={(f.exps||[]).includes(ty)} onClick={()=>tog("exps",ty)}/>)}</G>
+    <div><Lbl>{t("seeker.search.minPayLabel")}</Lbl>
       <Sel value={f.minPay||""} onChange={e=>set({...f,minPay:e.target.value})}>
-        <option value="">Any pay</option>{[40000,50000,60000,75000,90000,110000].map(v=><option key={v} value={v}>${v/1000}k+ per year</option>)}</Sel></div>
+        <option value="">{t("seeker.search.anyPay")}</option>{[40000,50000,60000,75000,90000,110000].map(v=><option key={v} value={v}>{t("seeker.search.payKPlusPerYear",{amount:v/1000})}</option>)}</Sel></div>
   </div>;
 }
 
 export function SearchPage(){
   const A=use(); const mob=useMedia("(max-width: 960px)");
+  const {t}=useTranslation();
+  const filterChipLabel=ty=>t(EMP_TYPE_KEY[ty]||MODE_KEY[ty]||EXP_KEY[ty]||ty);
   const [q,setQ]=useState(A.search.q||""); const [where,setWhere]=useState(A.search.where||"");
   const [f,setF]=useState({cats:A.search.cats||[],types:A.search.types||[],modes:A.search.modes||[],
     exps:A.search.exps||[],prov:A.search.prov||"",minPay:A.search.minPay||""});
@@ -108,38 +120,39 @@ export function SearchPage(){
 
     <section className={`bg-white border-b border-line-soft ${mob?"pt-10 px-4 pb-8":"pt-18 px-8 pb-12"}`}>
       <div className="max-w-6xl mx-auto text-center">
-        <Tag tone="brand" icon="search">Search jobs</Tag>
+        <Tag tone="brand" icon="search">{t("seeker.search.searchJobsTag")}</Tag>
         <h1 className={`${HERO_TIGHT} mt-5 mx-auto mb-5 max-w-3xl ${mob?"text-3xl":"text-6xl"}`}>
-          Find your next role.</h1>
+          {t("seeker.search.heroTitle")}</h1>
         <p className={`text-text-2 leading-normal mx-auto mb-8 max-w-lg ${mob?"text-base":"text-lg"}`}>
-          {A.jobs.filter(j=>j.status==="live").length.toLocaleString()} live openings across Canada. Every one shows the wage.</p>
+          {(()=>{const c=A.jobs.filter(j=>j.status==="live").length;
+            return t(c===1?"seeker.search.heroSubOne":"seeker.search.heroSubOther",{count:c.toLocaleString()});})()}</p>
         <div className={`bg-white rounded-2xl p-2 flex gap-2 shadow-md border border-line max-w-3xl mx-auto ${mob?"flex-wrap":"flex-nowrap"}`}>
           <div className="flex-[2_1_240px] min-w-0 relative">
-            <Input icon="search" placeholder="Job title, skill, trade or employer" value={q}
+            <Input icon="search" placeholder={t("seeker.search.searchPlaceholder")} value={q}
               onChange={e=>{setQ(e.target.value);setShowSuggest(true);}}
               onFocus={()=>setShowSuggest(true)} onBlur={()=>setTimeout(()=>setShowSuggest(false),150)}
               style={{border:"none",boxShadow:"none",fontSize:15}}/>
             {showSuggest&&titleSuggestions.length>0&&<div className="absolute top-full left-0 right-0 mt-1.5 bg-white rounded-xl border border-line shadow-lg z-10 overflow-hidden text-left">
-              {titleSuggestions.map(t=><button key={t} onMouseDown={e=>{e.preventDefault();setQ(t);setShowSuggest(false);}}
+              {titleSuggestions.map(sug=><button key={sug} onMouseDown={e=>{e.preventDefault();setQ(sug);setShowSuggest(false);}}
                 className="block w-full text-left py-2.5 px-4 bg-transparent border-0 cursor-pointer text-sm text-text hover:bg-bg">
-                <I n="search" s={13} c={C.text3}/> <span className="ml-1.5">{t}</span></button>)}</div>}</div>
+                <I n="search" s={13} c={C.text3}/> <span className="ml-1.5">{sug}</span></button>)}</div>}</div>
           {!mob&&<div className="w-px bg-line my-2"/>}
-          <div className="flex-[1_1_180px] min-w-0"><Input icon="pin" placeholder="City or province" value={where} onChange={e=>setWhere(e.target.value)} style={{border:"none",boxShadow:"none",fontSize:15}}/></div>
+          <div className="flex-[1_1_180px] min-w-0"><Input icon="pin" placeholder={t("formControls.locationPlaceholder")} value={where} onChange={e=>setWhere(e.target.value)} style={{border:"none",boxShadow:"none",fontSize:15}}/></div>
           {!mob&&<div className="w-px bg-line my-2"/>}
           <div className="flex-[0_0_150px] min-w-0">
             <Sel value={radiusKm} onChange={e=>setRadiusKm(Number(e.target.value))} style={{border:"none",boxShadow:"none",fontSize:15}}>
-              <option value={0}>Exact match</option>
-              <option value={10}>Within 10 km</option>
-              <option value={25}>Within 25 km</option>
-              <option value={50}>Within 50 km</option>
-              <option value={100}>Within 100 km</option>
+              <option value={0}>{t("seeker.search.exactMatch")}</option>
+              <option value={10}>{t("seeker.search.withinKm",{km:10})}</option>
+              <option value={25}>{t("seeker.search.withinKm",{km:25})}</option>
+              <option value={50}>{t("seeker.search.withinKm",{km:50})}</option>
+              <option value={100}>{t("seeker.search.withinKm",{km:100})}</option>
             </Sel>
           </div>
-          {mob&&<Btn kind="outline" icon="sliders" onClick={()=>setPanel(true)} full>Filters{n?` (${n})`:""}</Btn>}
+          {mob&&<Btn kind="outline" icon="sliders" onClick={()=>setPanel(true)} full>{t("seeker.search.filtersTitle")}{n?` (${n})`:""}</Btn>}
         </div>
         {radiusKm>0&&<div className="text-xs mt-2 max-w-3xl mx-auto text-center" style={{color:geocoding?C.text3:origin?C.ok:C.warn}}>
-          {geocoding?"Locating…":origin?`Searching within ${radiusKm} km of ${origin.displayName?.split(",").slice(0,2).join(", ")||where}`:where.trim()?"Couldn't find that location — showing exact-match results instead.":"Type a city to search by radius."}</div>}
-        <div className="text-xs text-text-3 mt-2 max-w-3xl mx-auto text-center">Tip: add <strong>-word</strong> to exclude results, e.g. "electrician -apprentice"</div>
+          {geocoding?t("seeker.search.locating"):origin?t("seeker.search.searchingWithin",{km:radiusKm,place:origin.displayName?.split(",").slice(0,2).join(", ")||where}):where.trim()?t("seeker.search.couldntFindLocation"):t("seeker.search.typeCityRadius")}</div>}
+        <div className="text-xs text-text-3 mt-2 max-w-3xl mx-auto text-center">{t("seeker.search.excludeTipPrefix")} <strong>{t("seeker.search.excludeTipWord")}</strong> {t("seeker.search.excludeTipSuffix")}</div>
       </div>
     </section>
 
@@ -149,30 +162,30 @@ export function SearchPage(){
           <Filters f={f} set={setF} clear={clear} n={n} q={q} where={where}/></div>}
         <div>
           <div className="flex justify-between items-center mb-5 gap-3 flex-wrap">
-            <div className="text-base text-text-2"><strong className={`text-text font-bold tracking-tight ${mob?"text-lg":"text-2xl"}`}>{res.length}</strong> {res.length===1?"job":"jobs"}
+            <div className="text-base text-text-2"><strong className={`text-text font-bold tracking-tight ${mob?"text-lg":"text-2xl"}`}>{res.length}</strong> {res.length===1?t("seeker.matched.jobOne"):t("seeker.matched.jobOther")}
               {q&&<> for "<strong className="text-text">{q}</strong>"</>}</div>
             {A.user?.role==="seeker"&&(q||where||f.cats?.length)&&(A.editingSavedSearchId
               ?<Btn kind="outline" size="sm" icon="check" onClick={async()=>{
                   await A.updateSavedSearch(A.editingSavedSearchId,{q,where,cats:f.cats,types:f.types,modes:f.modes,exps:f.exps,prov:f.prov,minPay:f.minPay});
-                  A.setEditingSavedSearchId(null); A.toast("Saved search updated","ok"); A.go("savedSearches");}}>Update saved search</Btn>
+                  A.setEditingSavedSearchId(null); A.toast(t("seeker.search.savedSearchUpdatedToast"),"ok"); A.go("savedSearches");}}>{t("seeker.search.updateSavedSearchBtn")}</Btn>
               :<Btn kind="outline" size="sm" icon="bookmark"
-                onClick={()=>{const nm=q||CATM[f.cats?.[0]]?.label||"Search";A.saveSearch(q,where,f.cats,nm,f);}}>Save this search</Btn>)}
+                onClick={()=>{const nm=q||CATM[f.cats?.[0]]?.label||t("seeker.search.defaultSearchName");A.saveSearch(q,where,f.cats,nm,f);}}>{t("seeker.search.saveThisSearchBtn")}</Btn>)}
             <div className="flex gap-2">
-              <Btn kind={mapView?"primary":"outline"} size="sm" icon="pin" onClick={()=>setMapView(v=>!v)}>{mapView?"List view":"Map view"}</Btn>
+              <Btn kind={mapView?"primary":"outline"} size="sm" icon="pin" onClick={()=>setMapView(v=>!v)}>{mapView?t("seeker.search.listViewBtn"):t("seeker.search.mapViewBtn")}</Btn>
               <Sel value={sort} onChange={e=>setSort(e.target.value)} style={{width:mob?150:180,padding:"10px 14px",fontSize:14}}>
-                {A.user?.role==="seeker"&&<option value="match">Best match</option>}
-                <option value="recent">Most recent</option><option value="pay">Highest pay</option><option value="closing">Closing soon</option></Sel>
+                {A.user?.role==="seeker"&&<option value="match">{t("seeker.search.bestMatchOption")}</option>}
+                <option value="recent">{t("seeker.search.mostRecentOption")}</option><option value="pay">{t("seeker.search.highestPayOption")}</option><option value="closing">{t("seeker.search.closingSoonOption")}</option></Sel>
             </div></div>
           {n>0&&<div className="flex gap-2 flex-wrap mb-5 items-center">
             {(f.cats||[]).map(c=><button key={c} onClick={()=>setF({...f,cats:f.cats.filter(x=>x!==c)})}
               className="flex items-center gap-1.5 bg-wash border border-line-2 text-brand text-xs font-semibold py-1.5 px-3 rounded-lg cursor-pointer">{CATM[c].label}<I n="x" s={12} w={2.4}/></button>)}
-            {[...(f.types||[]),...(f.modes||[]),...(f.exps||[])].map(t=><button key={t}
-              onClick={()=>setF({...f,types:(f.types||[]).filter(x=>x!==t),modes:(f.modes||[]).filter(x=>x!==t),exps:(f.exps||[]).filter(x=>x!==t)})}
-              className="flex items-center gap-1.5 bg-wash border border-line-2 text-brand text-xs font-semibold py-1.5 px-3 rounded-lg cursor-pointer">{t}<I n="x" s={12} w={2.4}/></button>)}
-            <button onClick={clear} className="bg-transparent border-0 text-text-2 text-sm cursor-pointer font-semibold">Clear all</button></div>}
-          {res.length===0?<Empty icon="search" title="No jobs match those filters"
-            body="Try removing a filter, searching a nearby city, or broadening the sector."
-            action={<Btn kind="primary" onClick={()=>{clear();setQ("");setWhere("");}}>Reset search</Btn>}/>
+            {[...(f.types||[]),...(f.modes||[]),...(f.exps||[])].map(ty=><button key={ty}
+              onClick={()=>setF({...f,types:(f.types||[]).filter(x=>x!==ty),modes:(f.modes||[]).filter(x=>x!==ty),exps:(f.exps||[]).filter(x=>x!==ty)})}
+              className="flex items-center gap-1.5 bg-wash border border-line-2 text-brand text-xs font-semibold py-1.5 px-3 rounded-lg cursor-pointer">{filterChipLabel(ty)}<I n="x" s={12} w={2.4}/></button>)}
+            <button onClick={clear} className="bg-transparent border-0 text-text-2 text-sm cursor-pointer font-semibold">{t("seeker.search.clearAllBtn")}</button></div>}
+          {res.length===0?<Empty icon="search" title={t("seeker.search.noJobsMatchTitle")}
+            body={t("seeker.search.noJobsMatchBody")}
+            action={<Btn kind="primary" onClick={()=>{clear();setQ("");setWhere("");}}>{t("seeker.search.resetSearchBtn")}</Btn>}/>
             :mapView?<div style={{height:560}}><JobsMap jobs={res} center={origin} onSelect={j=>A.openJob(j.id)}/></div>
             :<><div className="grid gap-4" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:320}px,1fr))`}}>
               {pg.pageItems.map(j=><JobCard key={j.id} job={j}/>)}</div>
@@ -181,8 +194,8 @@ export function SearchPage(){
       </div>
     </section>
 
-    {mob&&panel&&<Modal onClose={()=>setPanel(false)} title="Filters"><Filters f={f} set={setF} clear={clear} n={n} q={q} where={where}/>
-      <Btn kind="primary" size="lg" full onClick={()=>setPanel(false)} style={{marginTop:14}}>Show {res.length} {res.length===1?"job":"jobs"}</Btn></Modal>}
+    {mob&&panel&&<Modal onClose={()=>setPanel(false)} title={t("seeker.search.filtersTitle")}><Filters f={f} set={setF} clear={clear} n={n} q={q} where={where}/>
+      <Btn kind="primary" size="lg" full onClick={()=>setPanel(false)} style={{marginTop:14}}>{t(res.length===1?"seeker.search.showJobsOne":"seeker.search.showJobsOther",{count:res.length})}</Btn></Modal>}
 
   </div>;
 }
