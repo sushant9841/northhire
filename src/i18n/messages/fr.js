@@ -555,6 +555,16 @@ export const fr = {
       invoiceHistory: "Historique des factures", paymentMethod: "Mode de paiement", updatePayment: "Mettre à jour le mode de paiement",
       billingCycle: "Cycle de facturation", nextBillingDate: "Date de prochaine facturation", autoRenewal: "Renouvellement automatique",
       invoice: "Facture", date: "Date", amount: "Montant", status: "Statut", download: "Télécharger", paid: "Payée", failed: "Échec",
+      // EmpBilling tail translations
+      billingSub: "Votre abonnement, utilisation et factures", billing: "Facturation",
+      paymentConfirmed: "Paiement confirmé", paymentNotConfirmed: "Paiement non confirmé", planUpgraded: "Votre forfait a été amélioré.",
+      freeForever: "Gratuit à vie", renews: "Renouvelle {date}", jobSlotsInUse: "emplacements d'emploi utilisés",
+      changePlan: "Modifier le forfait", paymentMethodSub: "Mettez à jour votre carte, consultez les reçus propres à Stripe ou annulez — tout est géré directement par Stripe, non stocké dans cette application.",
+      noPaymentMethod: "Aucun mode de paiement enregistré — vous êtes sur le forfait gratuit.", opening: "Ouverture…",
+      manageBillingStripe: "Gérer la facturation dans Stripe", supportSub: "Le support inclus dans votre forfait.",
+      included: "Inclus", managerDescription: "Votre forfait comprend un gestionnaire de compte canadien nommé et une réponse prioritaire. Rejoignez-les à enterprise@northhire.ca — citez le nom de votre entreprise et nous l'acheminerons à votre gestionnaire plutôt qu'à la file d'attente générale.",
+      standardSupport: "Vous bénéficiez du support standard — envoyez-nous un courriel à support@northhire.ca et nous répondons dans l'ordre reçu. Enterprise ajoute un gestionnaire de compte nommé et une réponse prioritaire.",
+      enterpriseSupport: "Ce que le support Enterprise ajoute", invoices: "Factures", printSaveAsPDF: "Imprimer / Enregistrer en PDF",
     },
     analytics: {
       analyticsTitle: "Analytique", analyticsTag: "Analytique", analyticsHeader: "Comment va votre embauche.", analyticsSubtitle: "Chiffres en direct de vos annonces.",

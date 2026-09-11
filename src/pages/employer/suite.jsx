@@ -1684,61 +1684,58 @@ export function EmpBilling(){
   const [showCard,setShowCard]=useState(false);
   const [portalLoading,setPortalLoading]=useState(false);
   return <Page narrow>
-    <H1 sub="Your subscription, usage and invoices">Billing</H1>
+    <H1 sub={t("employer.billing.billingSub")}>{t("employer.billing.billing")}</H1>
     {checkoutResult&&<Banner tone={checkoutResult.ok?"ok":"danger"} icon={checkoutResult.ok?"check":"alert"} style={{marginBottom:16}}
-      title={checkoutResult.ok?"Payment confirmed":"Payment not confirmed"}>
-      {checkoutResult.ok?"Your plan has been upgraded.":checkoutResult.msg}</Banner>}
+      title={checkoutResult.ok?t("employer.billing.paymentConfirmed"):t("employer.billing.paymentNotConfirmed")}>
+      {checkoutResult.ok?t("employer.billing.planUpgraded"):checkoutResult.msg}</Banner>}
     <Card pad={mob?20:26} style={{marginBottom:16,background:C.ink,borderColor:C.ink}}>
       <div className="flex justify-between gap-4 flex-wrap text-white">
         <div className="grow shrink basis-60">
-          <Tag tone="onDark">Current plan</Tag>
-          <div className="text-2xl font-bold tracking-tight my-3">{plan} — {A.PLANS[plan]?.price===0?"Free forever":`$${A.PLANS[plan]?.price}/month`}</div>
-          <div className="text-sm text-white/55">{price>0?`Renews ${nextRenewal} • `:""}{live} of {limit===Infinity?"unlimited":limit} job slots in use</div>
+          <Tag tone="onDark">{t("employer.billing.currentPlan")}</Tag>
+          <div className="text-2xl font-bold tracking-tight my-3">{plan} — {A.PLANS[plan]?.price===0?t("employer.billing.freeForever"):`$${A.PLANS[plan]?.price}/month`}</div>
+          <div className="text-sm text-white/55">{price>0?t("employer.billing.renews",{date:nextRenewal})+" • ":""}{live} of {limit===Infinity?"unlimited":limit} {t("employer.billing.jobSlotsInUse")}</div>
           <div className="mt-4 max-w-75"><Bar v={limit===Infinity?100:(live/limit)*100} tone="#4ADE80"/></div></div>
         <div className="flex gap-2.5 flex-wrap items-start">
-          <Btn kind="onDark" onClick={()=>A.go("pricing")}>Change plan</Btn></div></div></Card>
+          <Btn kind="onDark" onClick={()=>A.go("pricing")}>{t("employer.billing.changePlan")}</Btn></div></div></Card>
 
     <Card style={{marginBottom:16,borderRadius:20}}>
-      <H2 sub="Update your card, view Stripe's own receipts, or cancel — all handled by Stripe directly, not stored in this app.">Payment method</H2>
+      <H2 sub={t("employer.billing.paymentMethodSub")}>{t("employer.billing.paymentMethod")}</H2>
       {price===0
-        ?<div className="text-sm text-text-3 py-2">No payment method on file — you're on the free plan.</div>
+        ?<div className="text-sm text-text-3 py-2">{t("employer.billing.noPaymentMethod")}</div>
         :<Btn kind="outline" icon="wallet" disabled={portalLoading} onClick={async()=>{setPortalLoading(true);const r=await A.openBillingPortal();if(!r.ok){setPortalLoading(false);A.toast(r.msg,"danger");}}}>
-          {portalLoading?"Opening…":"Manage billing in Stripe"}</Btn>}
+          {portalLoading?t("employer.billing.opening"):t("employer.billing.manageBillingStripe")}</Btn>}
     </Card>
 
     {/* Support level is the only place the "manager" plan feature was ever meant to surface. It had
         upgrade copy written for it and no UI anywhere, so the copy was dead code. This states what
         support the current plan actually comes with, and offers the prompt when it doesn't. */}
     <Card style={{marginBottom:16,borderRadius:20}}>
-      <H2 sub="What support your plan comes with.">Support</H2>
+      <H2 sub={t("employer.billing.supportSub")}>Support</H2>
       {A.can("manager")
         ? <div className="flex gap-2.5 items-start">
-            <Tag tone="ok">Included</Tag>
+            <Tag tone="ok">{t("employer.billing.included")}</Tag>
             <div className="text-sm text-text-2 leading-relaxed">
-              Your plan includes a named Canadian account manager and priority response.
-              Reach them at <a className="text-brand font-semibold" href="mailto:enterprise@northhire.ca">enterprise@northhire.ca</a> —
-              quote your company name and we'll route it to your manager rather than the general queue.
+              {t("employer.billing.managerDescription")}
             </div>
           </div>
         : <div className="flex gap-2.5 items-start justify-between flex-wrap">
             <div className="text-sm text-text-2 leading-relaxed grow shrink basis-70">
-              You're on standard support — email us at <a className="text-brand font-semibold" href="mailto:support@northhire.ca">support@northhire.ca</a> and
-              we answer in the order received. Enterprise adds a named account manager and priority response.
+              {t("employer.billing.standardSupport")}
             </div>
             <Btn kind="outline" icon="lock" onClick={()=>A.requestUpgrade("manager","Dedicated success manager","users")}>
-              What Enterprise support adds</Btn>
+              {t("employer.billing.enterpriseSupport")}</Btn>
           </div>}
     </Card>
 
-    {invoices.length>0&&<Card style={{borderRadius:20}}><H2>Invoices</H2>
+    {invoices.length>0&&<Card style={{borderRadius:20}}><H2>{t("employer.billing.invoices")}</H2>
       {invoices.map(({id,date,amt,tax,taxLabel,total,plan:invPlan})=>
         <div key={id} className="flex items-center gap-3.5 py-3 border-b border-line-soft flex-wrap">
           <div className="grow shrink basis-35 min-w-0">
             <div className="text-sm font-semibold text-text">{id}</div>
             <div className="text-xs text-text-3 mt-0.5">{date}</div></div>
           <div className="text-sm font-semibold text-text">${total.toFixed(2)}</div>
-          <Tag tone="ok" sm icon="check">Paid</Tag>
-          <Btn kind="ghost" size="xs" icon="download" onClick={()=>A.printInvoice(id,date,amt,invPlan,tax,taxLabel)}>Print / Save as PDF</Btn></div>)}</Card>}
+          <Tag tone="ok" sm icon="check">{t("employer.billing.paid")}</Tag>
+          <Btn kind="ghost" size="xs" icon="download" onClick={()=>A.printInvoice(id,date,amt,invPlan,tax,taxLabel)}>{t("employer.billing.printSaveAsPDF")}</Btn></div>)}</Card>}
   </Page>;
 }
 

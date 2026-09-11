@@ -553,6 +553,16 @@ export const en = {
       invoiceHistory: "Invoice history", paymentMethod: "Payment method", updatePayment: "Update payment method",
       billingCycle: "Billing cycle", nextBillingDate: "Next billing date", autoRenewal: "Auto-renewal",
       invoice: "Invoice", date: "Date", amount: "Amount", status: "Status", download: "Download", paid: "Paid", failed: "Failed",
+      // EmpBilling tail translations
+      billingSub: "Your subscription, usage and invoices", billing: "Billing",
+      paymentConfirmed: "Payment confirmed", paymentNotConfirmed: "Payment not confirmed", planUpgraded: "Your plan has been upgraded.",
+      freeForever: "Free forever", renews: "Renews {date}", jobSlotsInUse: "job slots in use",
+      changePlan: "Change plan", paymentMethodSub: "Update your card, view Stripe's own receipts, or cancel — all handled by Stripe directly, not stored in this app.",
+      noPaymentMethod: "No payment method on file — you're on the free plan.", opening: "Opening…",
+      manageBillingStripe: "Manage billing in Stripe", supportSub: "What support your plan comes with.",
+      included: "Included", managerDescription: "Your plan includes a named Canadian account manager and priority response. Reach them at enterprise@northhire.ca — quote your company name and we'll route it to your manager rather than the general queue.",
+      standardSupport: "You're on standard support — email us at support@northhire.ca and we answer in the order received. Enterprise adds a named account manager and priority response.",
+      enterpriseSupport: "What Enterprise support adds", invoices: "Invoices", printSaveAsPDF: "Print / Save as PDF",
     },
     analytics: {
       analyticsTitle: "Analytics", analyticsTag: "Analytics", analyticsHeader: "How your hiring is doing.", analyticsSubtitle: "Live numbers from your postings.",
