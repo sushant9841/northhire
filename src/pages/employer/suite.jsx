@@ -1403,7 +1403,7 @@ export function TrainingEditor(){
 }
 
 export function EmpCompany(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t}=useTranslation();
   const [d,setD]=useState({...A.company});
   const [confirmDiscard,setConfirmDiscard]=useState(false);
   useEffect(()=>setD({...A.company}),[A.company]);
@@ -1547,7 +1547,7 @@ function _StageAutomationsEditor({A,mob}){
 }
 
 export function EmpTeam(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t}=useTranslation();
   const isOwner=A.user?.employerRole==="owner";
   const {members,invites,seatLimit,seatsUsed}=A.team;
   const [inviteEmail,setInviteEmail]=useState(""); const [inviting,setInviting]=useState(false); const [err,setErr]=useState("");
@@ -1663,7 +1663,7 @@ export function EmpTeam(){
 }
 
 export function EmpBilling(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t}=useTranslation();
   const live=A.jobs.filter(j=>j.e===A.company.id&&j.status==="live").length;
   const plan=A.company.plan||"Free";
   const limit=A.PLANS[plan]?.jobs??1;
@@ -1807,7 +1807,7 @@ function _HiringVelocity({A,mob}){
 }
 
 export function EmpAnalyticsPage(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t}=useTranslation();
   // Range picker applies to application counts / conversion / pipeline / trend. View totals
   // stay all-time because the app doesn't have per-day view events to slice.
   const [range,setRange]=useState(null); // null = all-time
