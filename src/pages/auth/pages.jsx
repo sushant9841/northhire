@@ -118,8 +118,8 @@ export function SignupPage(){
         {t("auth.pickedUpWhere")}</Banner>}
       {i>0&&<div className="mb-5">
         <div className="flex justify-between items-center mb-2.5">
-          <span className="text-sm font-semibold text-text">Step {i} of {STEPS.length-1}</span>
-          <span className="text-sm text-text-2">{Math.round((i/(STEPS.length-1))*100)}% complete</span></div>
+          <span className="text-sm font-semibold text-text">{t("auth.stepOfTotal",{step:i,total:STEPS.length-1})}</span>
+          <span className="text-sm text-text-2">{t("auth.completePercent",{pct:Math.round((i/(STEPS.length-1))*100)})}</span></div>
         <Bar v={(i/(STEPS.length-1))*100} h={7}/>
         <div className="flex gap-1.5 mt-2.5">
           {STEPS.map((s,idx)=>idx===0?null:
@@ -146,7 +146,7 @@ export function SignupPage(){
                 <div className="text-sm text-text-2 leading-normal">{r.d}</div></button>;})}
             {err.role&&<div className="col-span-full text-sm mt-1.5" style={{color:C.danger}}>{err.role}</div>}
             {(A.oauthProviders.google||A.oauthProviders.github)&&<div className="col-span-full">
-              <div className="flex items-center gap-3 my-1"><div className="flex-1 h-px bg-line"/><span className="text-xs text-text-3">or, for job seekers</span><div className="flex-1 h-px bg-line"/></div>
+              <div className="flex items-center gap-3 my-1"><div className="flex-1 h-px bg-line"/><span className="text-xs text-text-3">{t("auth.orForJobSeekers")}</span><div className="flex-1 h-px bg-line"/></div>
               <div className={`grid gap-2.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
                 {A.oauthProviders.google&&<Btn kind="outline" full icon="globe" onClick={()=>A.oauthStart("google")}>{t("auth.continueWithGoogle")}</Btn>}
                 {A.oauthProviders.github&&<Btn kind="outline" full icon="hex" onClick={()=>A.oauthStart("github")}>{t("auth.continueWithGithub")}</Btn>}
@@ -154,124 +154,124 @@ export function SignupPage(){
             </div>}</div>}
 
           {step.k==="account"&&<div className="flex flex-col gap-4">
-            <Field label="Email address" required error={err.email}>
+            <Field label={t("auth.emailAddress")} required error={err.email}>
               <Input icon="mail" type="email" value={d.email} onChange={e=>set("email",e.target.value)}
                 placeholder={d.role==="employer"?"you@yourcompany.ca":"you@example.ca"} invalid={!!err.email}/></Field>
-            {d.role==="seeker"&&<Field label="Mobile number" required error={err.phone} hint="Employers use this to reach you about interviews.">
+            {d.role==="seeker"&&<Field label={t("auth.mobileNumber")} required error={err.phone} hint={t("auth.mobileHint")}>
               <Input icon="phone" value={d.phone} onChange={e=>set("phone",e.target.value)} placeholder="416 555 0100" invalid={!!err.phone}/></Field>}
-            <Field label="Create a password" required error={err.password} hint="At least 8 characters. Mix in a number or symbol for a stronger password.">
-              <Input icon="lock" type="password" value={d.password} onChange={e=>set("password",e.target.value)} placeholder="At least 8 characters" invalid={!!err.password}/></Field>
-            <Banner tone="neutral" icon="shield" title="Your details stay yours">
-              We never sell candidate data. An employer only sees your profile when you choose to apply.</Banner></div>}
+            <Field label={t("auth.createPassword")} required error={err.password} hint={t("auth.createPasswordHint")}>
+              <Input icon="lock" type="password" value={d.password} onChange={e=>set("password",e.target.value)} placeholder={t("auth.passwordHint")} invalid={!!err.password}/></Field>
+            <Banner tone="neutral" icon="shield" title={t("auth.detailsStayYours")}>
+              {t("auth.detailsStayYoursBody")}</Banner></div>}
 
           {step.k==="company"&&<div className="flex flex-col gap-4">
-            <Field label="Your name" required error={err.name}><Input icon="user" value={d.name} onChange={e=>set("name",e.target.value)} placeholder="Jean Tremblay" invalid={!!err.name}/></Field>
-            <Field label="Company name" required error={err.company}><Input icon="building" value={d.company} onChange={e=>set("company",e.target.value)} placeholder="Northern Trades Ltd." invalid={!!err.company}/></Field>
+            <Field label={t("auth.yourName")} required error={err.name}><Input icon="user" value={d.name} onChange={e=>set("name",e.target.value)} placeholder="Jean Tremblay" invalid={!!err.name}/></Field>
+            <Field label={t("auth.companyName")} required error={err.company}><Input icon="building" value={d.company} onChange={e=>set("company",e.target.value)} placeholder="Northern Trades Ltd." invalid={!!err.company}/></Field>
             <div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
-              <Field label="Industry"><Sel value={d.industry} onChange={e=>set("industry",e.target.value)}>
-                <option value="">Select…</option>{["Construction","Healthcare","Transport","Retail","Hospitality","Manufacturing","Professional Services","Education","Finance","Technology","Agriculture","Security"].map(o=><option key={o}>{o}</option>)}</Sel></Field>
+              <Field label={t("auth.industry")}><Sel value={d.industry} onChange={e=>set("industry",e.target.value)}>
+                <option value="">{t("auth.selectOption")}</option>{["Construction","Healthcare","Transport","Retail","Hospitality","Manufacturing","Professional Services","Education","Finance","Technology","Agriculture","Security"].map(o=><option key={o}>{o}</option>)}</Sel></Field>
               <Field label="Company size"><Sel value={d.size} onChange={e=>set("size",e.target.value)}>
-                {["1-50","50-200","200-1000","1000+"].map(o=><option key={o}>{o} employees</option>)}</Sel></Field></div>
+                {["1-50","50-200","200-1000","1000+"].map(o=><option key={o}>{o}{t("auth.companySizeSuffix")}</option>)}</Sel></Field></div>
             <div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
-              <Field label="City"><Input icon="pin" value={d.city} onChange={e=>set("city",e.target.value)} placeholder="Toronto"/></Field>
-              <Field label="Province"><Sel value={d.prov} onChange={e=>set("prov",e.target.value)}>{PROVS.map(p=><option key={p}>{p}</option>)}</Sel></Field></div>
-            <Field label="About your company (optional)" hint="A sentence or two candidates see on your profile.">
+              <Field label={t("auth.city")}><Input icon="pin" value={d.city} onChange={e=>set("city",e.target.value)} placeholder="Toronto"/></Field>
+              <Field label={t("auth.province")}><Sel value={d.prov} onChange={e=>set("prov",e.target.value)}>{PROVS.map(p=><option key={p}>{p}</option>)}</Sel></Field></div>
+            <Field label={t("auth.about")} hint={t("auth.aboutHint")}>
               <Area rows={3} value={d.about} onChange={e=>set("about",e.target.value)} placeholder="What you do, and why someone would want to work with you."/></Field>
-            <Field label="CRA business number (optional)" error={err.businessNumber} hint="9 digits, e.g. 123456789. Speeds up verification — you can add this later from Company settings instead.">
+            <Field label={t("auth.businessNumber")} error={err.businessNumber} hint={t("auth.businessNumberHint")}>
               <Input icon="file" value={d.businessNumber} onChange={e=>set("businessNumber",e.target.value)} placeholder="123456789" invalid={!!err.businessNumber}/></Field>
-            <Field label="Referral code (optional)" hint="If another NorthHire company referred you, drop their code here — you both get one month credited after your first paid month.">
+            <Field label={t("auth.referralCode")} hint={t("auth.referralCodeHint")}>
               <Input icon="gift" value={d.referralCode} onChange={e=>set("referralCode",e.target.value.toUpperCase())} placeholder="NH-XXXXXX"/></Field>
-            <Banner tone="brand" icon="shield" title="Verification usually takes 1 business day">
-              Our Toronto team checks your business number and incorporation. Your listings go live immediately, with the verified badge added once approved.</Banner></div>}
+            <Banner tone="brand" icon="shield" title={t("auth.verificationBanner")}>
+              {t("auth.verificationBannerBody")}</Banner></div>}
 
           {step.k==="about"&&<div className="flex flex-col gap-4">
             <div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
-              <Field label="First name" required error={err.first}><Input value={d.first} onChange={e=>set("first",e.target.value)} placeholder="Jean" invalid={!!err.first}/></Field>
-              <Field label="Last name" required error={err.last}><Input value={d.last} onChange={e=>set("last",e.target.value)} placeholder="Tremblay" invalid={!!err.last}/></Field>
-              <Field label="City or town" required error={err.city}><Input icon="pin" value={d.city} onChange={e=>set("city",e.target.value)} placeholder="Calgary" invalid={!!err.city}/></Field>
-              <Field label="Province or territory" required><Sel value={d.prov} onChange={e=>set("prov",e.target.value)}>{PROVS.map(p=><option key={p}>{p}</option>)}</Sel></Field></div>
-            <Field label="Are you legally allowed to work in Canada?" required error={err.eligible}>
+              <Field label={t("auth.firstName")} required error={err.first}><Input value={d.first} onChange={e=>set("first",e.target.value)} placeholder="Jean" invalid={!!err.first}/></Field>
+              <Field label={t("auth.lastName")} required error={err.last}><Input value={d.last} onChange={e=>set("last",e.target.value)} placeholder="Tremblay" invalid={!!err.last}/></Field>
+              <Field label={t("auth.city")} required error={err.city}><Input icon="pin" value={d.city} onChange={e=>set("city",e.target.value)} placeholder="Calgary" invalid={!!err.city}/></Field>
+              <Field label={t("auth.province")} required><Sel value={d.prov} onChange={e=>set("prov",e.target.value)}>{PROVS.map(p=><option key={p}>{p}</option>)}</Sel></Field></div>
+            <Field label={t("auth.workPermit")} required error={err.eligible}>
               <div className="flex flex-col gap-2.5">
-                {[["citizen","Canadian citizen or permanent resident"],["permit","I hold a valid work permit"],
-                  ["student","Student permit with work authorisation"],["need","I would need employer sponsorship"]].map(([v,l])=>
+                {[["citizen",t("auth.citizenOrPR")],["permit",t("auth.validWorkPermit")],
+                  ["student",t("auth.studentPermit")],["need",t("auth.needSponsorship")]].map(([v,l])=>
                   <CheckRow key={v} on={d.eligible===v} onChange={()=>set("eligible",v)} label={l}/>)}</div></Field></div>}
 
           {step.k==="work"&&<div className="flex flex-col gap-5">
-            <Field label="Which sector do you work in?" required error={err.cat}>
+            <Field label={t("auth.whichSector")} required error={err.cat}>
               <div className="grid gap-2.5" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?140:160}px,1fr))`}}>
                 {CATS.map(c=>{const on=d.cat===c.id;
                   return <button key={c.id} onClick={()=>set("cat",c.id)}
                     className={`flex items-center gap-2.5 py-3 px-3.5 rounded-xl cursor-pointer text-left border-2 transition duration-150 ${on?"border-brand bg-tint":"border-line bg-white"}`}>
                     <span className={`flex shrink-0 ${on?"text-brand":"text-text-3"}`}><I n={c.icon} s={19}/></span>
                     <span className={`text-sm leading-tight ${on?"font-semibold text-brand":"font-medium text-text"}`}>{c.label}</span></button>;})}</div></Field>
-            <Field label="Your job title or trade" required error={err.title} hint="For example: Journeyperson Electrician, PSW, Line Cook.">
+            <Field label={t("auth.jobTitle")} required error={err.title} hint={t("auth.jobTitleHint")}>
               <Input icon="briefcase" value={d.title} onChange={e=>set("title",e.target.value)} placeholder="Journeyperson Electrician" invalid={!!err.title}/></Field>
             <div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
-              <Field label="Years of experience" required error={err.years}>
+              <Field label={t("auth.yearsExperience")} required error={err.years}>
                 <Sel value={d.years} onChange={e=>set("years",e.target.value)} invalid={!!err.years}>
-                  <option value="">Select…</option>
-                  {["No experience yet","Less than 1 year","1-2 years","3-5 years","6-10 years","More than 10 years"].map(o=><option key={o}>{o}</option>)}</Sel></Field>
-              <Field label="Highest education"><Sel value={d.edu} onChange={e=>set("edu",e.target.value)}>
-                <option value="">Select…</option>
-                {["No formal education","High school diploma","Apprenticeship / trade certificate","College diploma","Bachelor's degree","Postgraduate degree"].map(o=><option key={o}>{o}</option>)}</Sel></Field></div></div>}
+                  <option value="">{t("auth.selectOption")}</option>
+                  {[t("auth.noExperience"),t("auth.lessThanYear"),"1-2 years","3-5 years","6-10 years","More than 10 years"].map(o=><option key={o}>{o}</option>)}</Sel></Field>
+              <Field label={t("auth.highestEducation")}><Sel value={d.edu} onChange={e=>set("edu",e.target.value)}>
+                <option value="">{t("auth.selectOption")}</option>
+                {[t("auth.formalEducation"),t("auth.highSchool"),t("auth.apprenticeship"),t("auth.collegeDiploma"),t("auth.bachelorsDegree"),t("auth.postgraduateDegree")].map(o=><option key={o}>{o}</option>)}</Sel></Field></div></div>}
 
           {step.k==="skills"&&<div>
-            <Field label="Add your skills, tickets and certificates" required error={err.skills}
-              hint="At least three. These drive every match score you will see.">
+            <Field label={t("auth.skillsLabel")} required error={err.skills}
+              hint={t("auth.skillsHint")}>
               <div className="flex gap-2.5">
-                <Input value={d.draft} onChange={e=>set("draft",e.target.value)} placeholder="Type a skill and press Enter"
+                <Input value={d.draft} onChange={e=>set("draft",e.target.value)} placeholder={t("auth.typeSkill")}
                   onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();add(d.draft);}}} invalid={!!err.skills}/>
-                <Btn kind="primary" icon="plus" disabled={!d.draft.trim()} onClick={()=>add(d.draft)}>Add</Btn></div></Field>
+                <Btn kind="primary" icon="plus" disabled={!d.draft.trim()} onClick={()=>add(d.draft)}>{t("formControls.inlineListAdd")}</Btn></div></Field>
             {d.skills.length>0&&<div className="flex flex-wrap gap-2 mt-4">
               {d.skills.map(s=><span key={s} className="inline-flex items-center gap-2 bg-brand text-white text-sm font-semibold py-1.5 px-3 rounded-lg">{s}
                 <button onClick={()=>set("skills",d.skills.filter(x=>x!==s))} className="bg-transparent border-0 text-white/70 cursor-pointer p-0 flex"><I n="x" s={13} w={2.5}/></button></span>)}</div>}
             {SUG.filter(s=>!d.skills.includes(s)).length>0&&<div className="mt-6">
-              <Lbl>Common in {CATM[d.cat]?.label} — tap to add</Lbl>
+              <Lbl>{t("auth.commonIn",{sector:CATM[d.cat]?.label})}</Lbl>
               <div className="flex flex-wrap gap-2">
                 {SUG.filter(s=>!d.skills.includes(s)).map(s=><button key={s} onClick={()=>add(s)}
                   className="inline-flex items-center gap-1.5 bg-white border-2 border-dashed border-line text-text-2 text-sm font-medium py-1.5 px-3 rounded-lg cursor-pointer">
                   <I n="plus" s={13} c={C.brand} w={2.4}/>{s}</button>)}</div></div>}</div>}
 
           {step.k==="prefs"&&<div className="flex flex-col gap-5">
-            <Field label="Minimum pay you would accept" required error={err.payMin}>
+            <Field label={t("auth.minimumPayLabel")} required error={err.payMin}>
               <div className="flex gap-2.5">
                 <Input icon="wallet" value={d.payMin} onChange={e=>set("payMin",e.target.value.replace(/[^\d.]/g,""))}
                   placeholder={d.payUnit==="hr"?"28.00":"60,000"} invalid={!!err.payMin}/>
                 <Sel value={d.payUnit} onChange={e=>set("payUnit",e.target.value)} style={{width:135,flexShrink:0}}>
-                  <option value="hr">per hour</option><option value="yr">per year</option></Sel></div></Field>
-            <div><Lbl>Employment type — pick any that suit you</Lbl>
+                  <option value="hr">{t("auth.payPerHour")}</option><option value="yr">{t("auth.payPerYear")}</option></Sel></div></Field>
+            <div><Lbl>{t("auth.employmentType")}</Lbl>
               <div className={`grid gap-2.5 ${mob?"grid-cols-2":"grid-cols-3"}`}>
-                {["Full Time","Part Time","Contract","Seasonal","Apprenticeship","Casual"].map(t=>{const on=d.types.includes(t);
-                  return <button key={t} onClick={()=>tog("types",t)}
-                    className={`py-3 px-3 rounded-xl cursor-pointer text-sm border-2 transition duration-150 ${on?"font-semibold border-brand bg-tint text-brand":"font-medium border-line bg-white text-text"}`}>{t}</button>;})}</div></div>
-            <div><Lbl>Where can you work?</Lbl>
+                {["Full Time","Part Time","Contract","Seasonal","Apprenticeship","Casual"].map(typ=>{const on=d.types.includes(typ);
+                  const label=typ==="Full Time"?t("auth.fullTime"):typ==="Part Time"?t("auth.partTime"):typ==="Contract"?t("auth.contract"):typ==="Seasonal"?t("auth.seasonal"):typ==="Apprenticeship"?t("auth.apprenticeship"):typ==="Casual"?t("auth.casual"):typ;
+                  return <button key={typ} onClick={()=>tog("types",typ)}
+                    className={`py-3 px-3 rounded-xl cursor-pointer text-sm border-2 transition duration-150 ${on?"font-semibold border-brand bg-tint text-brand":"font-medium border-line bg-white text-text"}`}>{label}</button>;})}</div></div>
+            <div><Lbl>{t("auth.whereWork")}</Lbl>
               <div className="grid grid-cols-3 gap-2.5">
-                {["On-site","Hybrid","Remote"].map(t=>{const on=d.modes.includes(t);
-                  return <button key={t} onClick={()=>tog("modes",t)}
-                    className={`py-3 px-3 rounded-xl cursor-pointer text-sm border-2 transition duration-150 ${on?"font-semibold border-brand bg-tint text-brand":"font-medium border-line bg-white text-text"}`}>{t}</button>;})}</div></div>
-            <Field label="When can you start?"><Sel value={d.startWhen} onChange={e=>set("startWhen",e.target.value)}>
-              {["Immediately","Within 2 weeks","Within 1 month","More than 1 month"].map(o=><option key={o}>{o}</option>)}</Sel></Field>
+                {["On-site","Hybrid","Remote"].map(mod=>{const on=d.modes.includes(mod);
+                  const label=mod==="On-site"?t("auth.onSite"):mod==="Hybrid"?t("auth.hybrid"):mod==="Remote"?t("auth.remote"):mod;
+                  return <button key={mod} onClick={()=>tog("modes",mod)}
+                    className={`py-3 px-3 rounded-xl cursor-pointer text-sm border-2 transition duration-150 ${on?"font-semibold border-brand bg-tint text-brand":"font-medium border-line bg-white text-text"}`}>{label}</button>;})}</div></div>
+            <Field label={t("auth.whenStart")}><Sel value={d.startWhen} onChange={e=>set("startWhen",e.target.value)}>
+              {[t("auth.immediately"),t("auth.withinWeeks"),t("auth.withinMonth"),t("auth.moreThanMonth")].map(o=><option key={o}>{o}</option>)}</Sel></Field>
             {/* CASL (Loi canadienne anti-pourriel) express-consent text — required in French for
                 a Quebec resident under Bill 96, since a job-alert digest is a commercial
                 electronic message. Consent capture itself (unchecked-by-default, timestamped
                 server-side) is unaffected by which language it's presented in. */}
             <CheckRow on={d.alerts} onChange={v=>set("alerts",v)}
-              label={isFr?"M'envoyer par courriel les nouveaux emplois correspondants":"Email me new matching jobs"}
-              sub={isFr
-                ?"Facultatif. NorthHire Technologies Inc. vous enverra un courriel lorsqu'une recherche sauvegardée correspond à une nouvelle offre. Chaque courriel comporte un lien de désabonnement en un clic, et vous pouvez désactiver cette option en tout temps dans les Paramètres."
-                :"Optional. NorthHire Technologies Inc. will email you when a saved search matches a new listing. Every email has a one-click unsubscribe, and you can turn this off any time in Settings."}/></div>}
+              label={t("auth.emailMatchingJobs")}
+              sub={t("auth.emailOptional")}/></div>}
         </div>
         {i===STEPS.length-1&&A.turnstileSiteKey&&<div style={{marginTop:18}}>
-          <TurnstileWidget siteKey={A.turnstileSiteKey} onToken={t=>set("turnstileToken",t)}/></div>}
-        {submitErr&&<Banner tone="danger" icon="alert" title="Sign-up failed" style={{marginTop:18}}>{submitErr}</Banner>}
+          <TurnstileWidget siteKey={A.turnstileSiteKey} onToken={tok=>set("turnstileToken",tok)}/></div>}
+        {submitErr&&<Banner tone="danger" icon="alert" title={t("auth.signUpFailed")} style={{marginTop:18}}>{submitErr}</Banner>}
         <div className="flex gap-2.5 justify-between mt-7 pt-5 border-t border-line-soft">
-          <Btn kind="ghost" icon="arrowL" onClick={()=>{if(i===0){try{sessionStorage.removeItem(SIGNUP_DRAFT_KEY);}catch{} A.go("home");}else setI(i-1);}}>{i===0?"Cancel":"Back"}</Btn>
+          <Btn kind="ghost" icon="arrowL" onClick={()=>{if(i===0){try{sessionStorage.removeItem(SIGNUP_DRAFT_KEY);}catch{} A.go("home");}else setI(i-1);}}>{i===0?t("common.cancel"):t("common.back")}</Btn>
           <Btn kind="primary" size="lg" iconR={i===STEPS.length-1?"check":"arrowR"} onClick={next}
             disabled={(step.k==="role"&&!d.role)||submitting||(i===STEPS.length-1&&A.turnstileSiteKey&&!d.turnstileToken)}>
-            {submitting?"Creating account…":i===STEPS.length-1?(d.role==="employer"?"Create employer account":"Finish and start matching"):"Continue"}</Btn></div>
+            {submitting?t("auth.creatingAccount"):i===STEPS.length-1?(d.role==="employer"?t("auth.createEmployerAccount"):t("auth.finishMatching")):t("common.next")}</Btn></div>
       </Card>
       <div className="text-center mt-5 text-sm text-text-2">
-        Already have an account? <button onClick={()=>A.go("login")} className="bg-transparent border-0 p-0 cursor-pointer text-sm font-semibold text-brand">Sign in</button></div>
+        {t("auth.alreadyHaveAccount")} <button onClick={()=>A.go("login")} className="bg-transparent border-0 p-0 cursor-pointer text-sm font-semibold text-brand">{t("common.signIn")}</button></div>
     </div></div>;
 }
 
@@ -295,27 +295,27 @@ export function InviteAcceptPage(){
     <div className="w-full max-w-md">
       <div className="flex items-center mb-5">
         <button onClick={()=>A.go("home")} className="flex items-center gap-2 bg-transparent border-0 cursor-pointer p-0 text-text-2 text-sm font-semibold hover:text-text">
-          <I n="chevL" s={16} w={2}/> Back to NorthHire</button>
+          <I n="chevL" s={16} w={2}/> {t("auth.backToNorthHire")}</button>
       </div>
       <Card pad={mob?24:34} style={{borderRadius:20}}>
-        {invite===undefined?<p className="text-base text-text-2 m-0">Checking your invite…</p>
+        {invite===undefined?<p className="text-base text-text-2 m-0">{t("auth.checkingInvite")}</p>
         :invite===null?<>
-          <h1 className={`${HERO_QUIET} text-2xl mb-2`}>Invite not found</h1>
-          <p className="text-base text-text-2 mb-6">This invite link is invalid or has already been used. Ask your account owner to send a new one.</p>
-          <Btn kind="primary" full onClick={()=>A.go("login")}>Go to sign in</Btn>
+          <h1 className={`${HERO_QUIET} text-2xl mb-2`}>{t("auth.inviteNotFound")}</h1>
+          <p className="text-base text-text-2 mb-6">{t("auth.inviteInvalid")}</p>
+          <Btn kind="primary" full onClick={()=>A.go("login")}>{t("auth.goToSignIn")}</Btn>
         </>:done?<>
-          <h1 className={`${HERO_QUIET} text-2xl mb-2`}>You're in</h1>
-          <p className="text-base text-text-2">Taking you to the employer dashboard…</p>
+          <h1 className={`${HERO_QUIET} text-2xl mb-2`}>{t("auth.youreIn")}</h1>
+          <p className="text-base text-text-2">{t("auth.takingYouToDashboard")}</p>
         </>:<>
-          <Tag tone="brand" icon="users">Team invite</Tag>
-          <h1 className={`${HERO_QUIET} text-3xl mt-4 mb-2`}>Join {invite.companyName}</h1>
-          <p className="text-base text-text-2 mb-6">Set your name and a password for {invite.email}.</p>
+          <Tag tone="brand" icon="users">{t("auth.teamInvite")}</Tag>
+          <h1 className={`${HERO_QUIET} text-3xl mt-4 mb-2`}>{t("auth.joinCompany",{company:invite.companyName})}</h1>
+          <p className="text-base text-text-2 mb-6">{t("auth.setPasswordFor",{email:invite.email})}</p>
           <div className="flex flex-col gap-3.5">
-            <Field label="Your name"><Input icon="user" value={name} onChange={e=>{setName(e.target.value);setErr("");}} placeholder="Jean Tremblay"/></Field>
-            <Field label="Create a password" hint="At least 8 characters.">
-              <Input icon="lock" type="password" value={pw} onChange={e=>{setPw(e.target.value);setErr("");}} placeholder="At least 8 characters"/></Field>
+            <Field label={t("auth.yourName")}><Input icon="user" value={name} onChange={e=>{setName(e.target.value);setErr("");}} placeholder="Jean Tremblay"/></Field>
+            <Field label={t("auth.createPassword")} hint={t("auth.passwordHint")}>
+              <Input icon="lock" type="password" value={pw} onChange={e=>{setPw(e.target.value);setErr("");}} placeholder={t("auth.passwordHint")}/></Field>
             {err&&<Banner tone="danger" icon="alert">{err}</Banner>}
-            <Btn kind="primary" size="lg" full iconR="arrowR" onClick={submit} disabled={busy}>{busy?"Joining…":"Join the team"}</Btn>
+            <Btn kind="primary" size="lg" full iconR="arrowR" onClick={submit} disabled={busy}>{busy?t("auth.joining"):t("auth.joinTeam")}</Btn>
           </div>
         </>}
       </Card>
@@ -374,12 +374,12 @@ export function LoginPage(){
     <SmartScene kind="trades" tone={C.brand} w="100%" h="100%" seed={4} style={{position:"absolute",inset:0}}/>
     <div className="absolute inset-0" style={{background:"linear-gradient(180deg,rgba(11,18,32,0) 40%,rgba(11,18,32,.55) 100%)"}}/>
     <div className="absolute left-8 right-8 bottom-9 text-white">
-      <div className="text-2xl font-bold tracking-tight leading-snug mb-2">Real Canadian jobs.<br/>Real people hired.</div>
-      <p className="text-sm text-white/80 leading-relaxed max-w-90">Every listing shows the wage upfront — no guessing, no "competitive salary."</p></div>
+      <div className="text-2xl font-bold tracking-tight leading-snug mb-2">{t("auth.realJobsHeading")}</div>
+      <p className="text-sm text-white/80 leading-relaxed max-w-90">{t("auth.realJobsBody")}</p></div>
     <div className="absolute right-7 top-7 bg-white rounded-2xl py-3 px-4 shadow-lg flex items-center gap-2.5">
       <div className="flex">{[1,3,5].map((s,i)=><div key={s} className={`${i?"-ml-3":""} border-2 border-white rounded-full flex`}><SmartPortrait seed={s} size={28}/></div>)}</div>
-      <div><div className="text-sm font-bold text-text">2,400+ hired</div>
-        <div className="text-xs text-text-2 mt-0.5">in the last 30 days</div></div></div>
+      <div><div className="text-sm font-bold text-text">{t("auth.hiredCount")}</div>
+        <div className="text-xs text-text-2 mt-0.5">{t("auth.hiredTimeframe")}</div></div></div>
   </div>;
 
   if(mfa){
@@ -387,19 +387,19 @@ export function LoginPage(){
       {illusCol}
       {formCol(<>
         <button onClick={()=>setMfa(null)} className="flex items-center gap-2 bg-transparent border-0 cursor-pointer p-0 text-text-2 text-sm font-semibold hover:text-text mb-6">
-          <I n="chevL" s={16} w={2}/> Back to sign in</button>
-        <Tag tone="brand" icon="shield">Two-factor verification</Tag>
-        <h1 className={`${HERO_QUIET} text-3xl mt-4 mb-2`}>Just one more step</h1>
-        <p className="text-base text-text-2 mb-6">Enter the 6-digit code for {mfa.email}.</p>
+          <I n="chevL" s={16} w={2}/> {t("auth.backToSignIn")}</button>
+        <Tag tone="brand" icon="shield">{t("auth.twoFactorVerification")}</Tag>
+        <h1 className={`${HERO_QUIET} text-3xl mt-4 mb-2`}>{t("auth.oneMoreStep")}</h1>
+        <p className="text-base text-text-2 mb-6">{t("auth.enterCodeFor",{email:mfa.email})}</p>
         <div className="flex flex-col gap-3.5">
-          <Field label="Verification code" hint={mfa.code?`Demo mode — your code is ${mfa.code}`:undefined}>
+          <Field label={t("auth.verificationCode")} hint={mfa.code?t("auth.demoModeCode",{code:mfa.code}):undefined}>
             <Input icon="shield" value={code} onChange={e=>{setCode(e.target.value);setErr("");}} placeholder="123456" maxLength={6}
               onKeyDown={e=>e.key==="Enter"&&verify()}/></Field>
-          {err&&<Banner tone="danger" icon="alert" title="Verification failed">{err}</Banner>}
+          {err&&<Banner tone="danger" icon="alert" title={t("auth.verificationFailed")}>{err}</Banner>}
           <CheckRow on={rememberDevice} onChange={setRememberDevice}
-            label="Remember this device for 30 days"
-            sub="Skip the code next time on this browser. Don't use this on a shared or public computer."/>
-          <Btn kind="primary" size="lg" full iconR="arrowR" onClick={verify} disabled={busy||code.length<6}>{busy?"Verifying…":"Verify & sign in"}</Btn>
+            label={t("auth.rememberDevice")}
+            sub={t("auth.rememberDeviceHint")}/>
+          <Btn kind="primary" size="lg" full iconR="arrowR" onClick={verify} disabled={busy||code.length<6}>{busy?t("auth.verifying"):t("auth.verifySignIn")}</Btn>
         </div>
       </>)}
     </div>;
@@ -409,29 +409,29 @@ export function LoginPage(){
     {formCol(<>
       <div className="flex items-center justify-between mb-7">
         <button onClick={()=>A.go("home")} className="flex items-center gap-2 bg-transparent border-0 cursor-pointer p-0 text-text-2 text-sm font-semibold hover:text-text">
-          <I n="chevL" s={16} w={2}/> Back to NorthHire</button>
-        <button onClick={()=>A.go("signup")} className="bg-transparent border-0 cursor-pointer p-0 text-brand text-sm font-semibold">Create account</button>
+          <I n="chevL" s={16} w={2}/> {t("auth.backToNorthHire")}</button>
+        <button onClick={()=>A.go("signup")} className="bg-transparent border-0 cursor-pointer p-0 text-brand text-sm font-semibold">{t("common.createAccount")}</button>
       </div>
-      <Tag tone="brand" icon="user">Good to see you</Tag>
-      <h1 className={`${HERO_QUIET} text-3xl mt-4 mb-2`}>Welcome back</h1>
-      <p className="text-base text-text-2 mb-6">Sign in to pick up right where you left off.</p>
+      <Tag tone="brand" icon="user">{t("auth.goodToSeeYou")}</Tag>
+      <h1 className={`${HERO_QUIET} text-3xl mt-4 mb-2`}>{t("auth.welcomeBack")}</h1>
+      <p className="text-base text-text-2 mb-6">{t("auth.signInToPickUp")}</p>
       <div className="flex flex-col gap-3.5">
-        <Field label="Email address">
+        <Field label={t("auth.emailAddress")}>
           <Input icon="mail" type="email" value={email} onChange={e=>{setEmail(e.target.value);setErr("");}} placeholder="you@example.ca"
             onKeyDown={e=>e.key==="Enter"&&submit()}/></Field>
-        <Field label="Password">
-          <Input icon="lock" type="password" value={pw} onChange={e=>{setPw(e.target.value);setErr("");}} placeholder="Your password"
+        <Field label={t("auth.password")}>
+          <Input icon="lock" type="password" value={pw} onChange={e=>{setPw(e.target.value);setErr("");}} placeholder={t("auth.yourPassword")}
             onKeyDown={e=>e.key==="Enter"&&submit()}/></Field>
-        {err&&<Banner tone="danger" icon="alert" title="Sign-in failed">{err}</Banner>}
+        {err&&<Banner tone="danger" icon="alert" title={t("auth.signInFailed")}>{err}</Banner>}
         {sso
           ? <>
               <Btn kind="primary" size="lg" full icon="shield" onClick={startSso} disabled={busy}>
-                {busy?"Redirecting…":`Continue with ${sso.company||"your company"} SSO`}</Btn>
+                {busy?t("auth.redirecting"):t("auth.continueWithSSO",{company:sso.company||t("auth.yourCompany")})}</Btn>
               <div className="text-xs text-text-3 text-center -mt-1">
-                Your organisation manages sign-in for this domain. You can still use a password below if you have one.</div>
-              <Btn kind="outline" size="lg" full onClick={submit} disabled={busy}>Sign in with password instead</Btn>
+                {t("auth.managedByOrg")}</div>
+              <Btn kind="outline" size="lg" full onClick={submit} disabled={busy}>{t("auth.signInPassword")}</Btn>
             </>
-          : <Btn kind="primary" size="lg" full iconR="arrowR" onClick={submit} disabled={busy}>{busy?"Signing in…":"Sign in"}</Btn>}
+          : <Btn kind="primary" size="lg" full iconR="arrowR" onClick={submit} disabled={busy}>{busy?t("auth.signingIn"):t("common.signIn")}</Btn>}
       </div>
       {(A.oauthProviders.google||A.oauthProviders.github)&&<>
         <div className="flex items-center gap-3 my-4"><div className="flex-1 h-px bg-line"/><span className="text-xs text-text-3">or</span><div className="flex-1 h-px bg-line"/></div>
