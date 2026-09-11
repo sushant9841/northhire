@@ -549,7 +549,20 @@ export const fr = {
       cancel: "Annuler"
     },
     payroll: { title: "Paie", period: "Période de paie", amount: "Montant", status: "Statut", processed: "Traitée" },
-    invoicing: { title: "Facturation", invoice: "Facture", amount: "Montant", dueDate: "Date d'échéance", paid: "Payée" },
+    invoicing: {
+      title: "Facturation", subtitle: "Facturation client", desc: "Cycle de facturation hebdomadaire. Feuilles de temps approuvées → facture client.",
+      arOutstanding: "Comptes clients impayés", overdue: "En souffrance", paidLast30d: "Payée les 30 derniers jours",
+      statusPending: "En attente", statusPaid: "Payée",
+      generateWeekly: "Générer les factures hebdomadaires",
+      tableNumber: "Numéro", tableClient: "Client·e", tableWeek: "Semaine", tableTotal: "Total", tableDue: "Échéance", tableStatus: "Statut", tableActions: "Actions",
+      markPaid: "Marquer comme payée",
+      emptyTitle: "Aucune facture", emptyBody: 'Cliquez sur « Générer les factures hebdomadaires » une fois les feuilles de temps approuvées.',
+      genModalTitle: "Générer les factures hebdomadaires",
+      genBannerTitle: "Cycle hebdomadaire",
+      genBannerBody: "Cela regroupera toutes les feuilles de temps approuvées pour une semaine donnée dans des factures par client·e. TVH/TPS ajoutée par province. Une notification est enregistrée auprès du contact facturation de chaque client·e (les client·e·s sans courriel de contact défini n'en recevront pas).",
+      genFieldLabel: "Semaine commençant",
+      genCancel: "Annuler", genSubmit: "Générer"
+    },
     placements: { title: "Placements", successful: "Placements réussis", onGoing: "En cours", completed: "Complétés" },
     clients: { title: "Client·e·s", name: "Nom du client", contact: "Personne-ressource", location: "Emplacement", active: "Actif·ve" },
     workers: { title: "Travailleur·euse·s", name: "Nom du travailleur", status: "Statut", rate: "Taux", available: "Disponible" },

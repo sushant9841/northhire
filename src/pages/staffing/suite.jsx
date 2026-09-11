@@ -1097,29 +1097,29 @@ export function AgencyInvoicing(){
 
   return <div>
     <div className="mb-3.5">
-      <div className="text-lg font-bold text-text">Client invoicing</div>
-      <div className="text-sm text-text-3 mt-0.5">Weekly invoice cycle. Approved timesheets → client invoice.</div>
+      <div className="text-lg font-bold text-text">{t("staffing.invoicing.title")}</div>
+      <div className="text-sm text-text-3 mt-0.5">{t("staffing.invoicing.desc")}</div>
     </div>
 
     <div className={`grid gap-3 mb-4 ${mob?"grid-cols-1":"grid-cols-3"}`}>
-      {[["AR outstanding",kpis.pending,C.brand],
-        ["Overdue",kpis.overdue,C.danger],
-        ["Paid last 30 days",kpis.paid30d,C.ok]].map(([l,v,t])=>
+      {[[t("staffing.invoicing.arOutstanding"),kpis.pending,C.brand],
+        [t("staffing.invoicing.overdue"),kpis.overdue,C.danger],
+        [t("staffing.invoicing.paidLast30d"),kpis.paid30d,C.ok]].map(([l,v,c])=>
         <Card key={l} pad={mob?16:20} style={{borderRadius:14}}>
-          <div className={`font-bold tracking-tight ${mob?"text-xl":"text-2xl"}`} style={{color:t}}>${(v/1000).toFixed(1)}k</div>
+          <div className={`font-bold tracking-tight ${mob?"text-xl":"text-2xl"}`} style={{color:c}}>${(v/1000).toFixed(1)}k</div>
           <div className="text-xs text-text-3 mt-1.5">{l}</div>
         </Card>)}
     </div>
 
     <div className="flex justify-between items-center mb-3.5 flex-wrap gap-2.5">
-      <_PillTabs items={[["pending","Pending"],["overdue","Overdue"],["paid","Paid"],["all","All"]]} value={tab} onChange={setTab}/>
-      <Btn kind="primary" size="sm" icon="plus" onClick={()=>{setGenWeek(_weekStart(1));setShowGen(true);}}>Generate weekly invoices</Btn>
+      <_PillTabs items={[["pending",t("staffing.invoicing.statusPending")],["overdue",t("staffing.invoicing.overdue")],["paid",t("staffing.invoicing.statusPaid")],["all",t("common.viewAll")]]} value={tab} onChange={setTab}/>
+      <Btn kind="primary" size="sm" icon="plus" onClick={()=>{setGenWeek(_weekStart(1));setShowGen(true);}}>{t("staffing.invoicing.generateWeekly")}</Btn>
     </div>
 
     <Card pad={0} style={{borderRadius:14,overflow:"hidden"}}>
       <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:720}}>
         <thead><tr className="border-b-2 border-line text-left">
-          {["Number","Client","Week","Total","Due","Status","Actions"].map(h=>
+          {[t("staffing.invoicing.tableNumber"),t("staffing.invoicing.tableClient"),t("staffing.invoicing.tableWeek"),t("staffing.invoicing.tableTotal"),t("staffing.invoicing.tableDue"),t("staffing.invoicing.tableStatus"),t("staffing.invoicing.tableActions")].map(h=>
             <th key={h} className={TH_CLS}>{h}</th>)}
         </tr></thead>
         <tbody>{pg.pageItems.map(inv=>{const client=A.staffingClient(inv.client);
@@ -1133,26 +1133,26 @@ export function AgencyInvoicing(){
             <td className={TD_CLS} style={{fontSize:12.5,color:daysOverdue>0?C.danger:C.text3}}>{inv.due}{daysOverdue>0?` (+${daysOverdue}d)`:""}</td>
             <td className={TD_CLS}><Tag tone={invoiceTone(inv.status)} sm>{inv.status}</Tag></td>
             <td className={TD_CLS}>
-              {inv.status!=="paid"&&<Btn kind="ghost" size="xs" onClick={()=>A.markStaffingInvoicePaid(inv.id)}>Mark paid</Btn>}
+              {inv.status!=="paid"&&<Btn kind="ghost" size="xs" onClick={()=>A.markStaffingInvoicePaid(inv.id)}>{t("staffing.invoicing.markPaid")}</Btn>}
             </td>
           </tr>;})}
-          {list.length===0&&<tr><td colSpan={7} className="p-5"><Empty icon="file" title="No invoices" body='Click "Generate weekly invoices" once approved timesheets are ready.'/></td></tr>}
+          {list.length===0&&<tr><td colSpan={7} className="p-5"><Empty icon="file" title={t("staffing.invoicing.emptyTitle")} body={t("staffing.invoicing.emptyBody")}/></td></tr>}
         </tbody>
       </table></div>
     </Card>
     <Pagination {...pg}/>
 
-    {showGen&&<Modal onClose={()=>setShowGen(false)} title="Generate weekly invoices">
+    {showGen&&<Modal onClose={()=>setShowGen(false)} title={t("staffing.invoicing.genModalTitle")}>
       <div className="flex flex-col gap-3.5">
-        <Banner tone="brand" icon="info" title="Weekly cycle">
-          This will batch all approved timesheets for a given week into per-client invoices. HST/GST added per province. A notification is logged to each client's billing contact on file (clients with no contact email set won't get one).
+        <Banner tone="brand" icon="info" title={t("staffing.invoicing.genBannerTitle")}>
+          {t("staffing.invoicing.genBannerBody")}
         </Banner>
-        <Field label="Week starting" required>
+        <Field label={t("staffing.invoicing.genFieldLabel")} required>
           <DatePicker value={genWeek} onChange={setGenWeek}/>
         </Field>
         <div className="flex gap-2.5 justify-end">
-          <Btn kind="ghost" onClick={()=>setShowGen(false)}>Cancel</Btn>
-          <Btn kind="primary" onClick={()=>{A.generateStaffingInvoices(genWeek); setShowGen(false);}}>Generate</Btn>
+          <Btn kind="ghost" onClick={()=>setShowGen(false)}>{t("staffing.invoicing.genCancel")}</Btn>
+          <Btn kind="primary" onClick={()=>{A.generateStaffingInvoices(genWeek); setShowGen(false);}}>{t("staffing.invoicing.genSubmit")}</Btn>
         </div>
       </div>
     </Modal>}
