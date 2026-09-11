@@ -16,86 +16,90 @@ import { sanitizeHtml } from "../../helpers/sanitize.js";
 import { PROVS, PCODE, CATS, CATM } from "../../store/seed/constants.js";
 import { jobTone, jobStatusLabel } from "../../helpers/statusTone.js";
 import { LocationInput, InlineList, QuestionBuilder, aiSuggestJD } from "../shared/formControls.jsx";
+import { useTranslation } from "../../i18n/i18n.jsx";
+import { formatNumber, formatDate, formatDateTime } from "../../i18n/format.js";
 
 export function EmpHome(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const e=A.company;
   const jobs=A.jobs.filter(j=>j.e===e.id);
   const apps=A.applications.filter(a=>jobs.some(j=>j.id===a.job));
   const stages=A.stagesFor(e.id);
   const byStage=stages.reduce((m,s)=>({...m,[s]:apps.filter(a=>a.stage===s).length}),{});
   const canContent=A.settings.employerContent;
+  const pendingApprovalCount=jobs.filter(j=>j.pendingOwnerApproval).length;
   return <Page wide>
-    <H1 sub={`${e.verified?"Verified employer":"Awaiting verification"} • ${A.planName?A.planName():e.plan||"Free"} plan`}
+    <H1 sub={`${e.verified?t("employer.home.verified"):t("employer.home.awaitingVerification")} • ${A.planName?A.planName():e.plan||"Free"} ${t("employer.home.planSuffix")}`}
       action={<div className="flex gap-2.5 flex-wrap">
-        <Btn kind="outline" onClick={()=>A.go("empPipeline")}>Candidates</Btn>
-        <Btn kind="primary" icon="plus" onClick={()=>A.go("empPost")}>Post a job</Btn></div>}>{e.name}</H1>
-    {!e.verified&&<Banner tone="warn" icon="clock" title="Verification in review" style={{marginBottom:18}}>
-      An administrator is reviewing your company. Verified employers get a badge on every listing and around 40% more applicants.</Banner>}
-    {!canContent&&<Banner tone="neutral" icon="lock" title="Content publishing is currently off" style={{marginBottom:18}}>
-      Publishing articles and trainings has been disabled platform-wide by an administrator. Your existing content stays visible.</Banner>}
-    {A.user?.employerRole==="owner"&&jobs.some(j=>j.pendingOwnerApproval)&&
-      <Banner tone="warn" icon="shield" title="A teammate posted a job that needs your approval" style={{marginBottom:18}}
-        action={<Btn kind="primary" size="sm" onClick={()=>A.go("empJobs")}>Review</Btn>}>
-        {jobs.filter(j=>j.pendingOwnerApproval).length} listing{jobs.filter(j=>j.pendingOwnerApproval).length===1?"":"s"} won't go live until you sign off.</Banner>}
+        <Btn kind="outline" onClick={()=>A.go("empPipeline")}>{t("employer.home.candidates")}</Btn>
+        <Btn kind="primary" icon="plus" onClick={()=>A.go("empPost")}>{t("employer.home.postAJob")}</Btn></div>}>{e.name}</H1>
+    {!e.verified&&<Banner tone="warn" icon="clock" title={t("employer.home.verificationTitle")} style={{marginBottom:18}}>
+      {t("employer.home.verificationBody")}</Banner>}
+    {!canContent&&<Banner tone="neutral" icon="lock" title={t("employer.home.contentOffTitle")} style={{marginBottom:18}}>
+      {t("employer.home.contentOffBody")}</Banner>}
+    {A.user?.employerRole==="owner"&&pendingApprovalCount>0&&
+      <Banner tone="warn" icon="shield" title={t("employer.home.needsApprovalTitle")} style={{marginBottom:18}}
+        action={<Btn kind="primary" size="sm" onClick={()=>A.go("empJobs")}>{t("employer.home.review")}</Btn>}>
+        {t(pendingApprovalCount===1?"employer.home.listingsWontGoLiveOne":"employer.home.listingsWontGoLiveOther",{n:pendingApprovalCount})}</Banner>}
     <div className="grid gap-3 mb-5" style={{gridTemplateColumns:`repeat(auto-fit,minmax(${mob?140:170}px,1fr))`}}>
-      <Stat icon="briefcase" label="Live listings" value={jobs.filter(j=>j.status==="live").length} tone={C.brand} onClick={()=>A.go("empJobs")}/>
-      <Stat icon="users" label="Total applicants" value={apps.length} onClick={()=>A.go("empPipeline")}/>
-      <Stat icon="calendar" label="In interview" value={byStage.Interview||0} tone={C.warn}/>
-      <Stat icon="award" label="Offers out" value={byStage.Offer||0} tone={C.ok}/></div>
+      <Stat icon="briefcase" label={t("employer.home.liveListings")} value={jobs.filter(j=>j.status==="live").length} tone={C.brand} onClick={()=>A.go("empJobs")}/>
+      <Stat icon="users" label={t("employer.home.totalApplicants")} value={apps.length} onClick={()=>A.go("empPipeline")}/>
+      <Stat icon="calendar" label={t("employer.home.inInterview")} value={byStage.Interview||0} tone={C.warn}/>
+      <Stat icon="award" label={t("employer.home.offersOut")} value={byStage.Offer||0} tone={C.ok}/></div>
     <div className="grid gap-4" style={{gridTemplateColumns:mob?"1fr":"1.4fr 1fr"}}>
       <Card>
-        <H2 action={<Btn kind="ghost" size="sm" onClick={()=>A.go("empJobs")}>Manage all</Btn>}>Your listings</H2>
-        {jobs.length===0?<Empty icon="briefcase" title="No listings yet" body="Post your first role and scored applicants arrive within hours."
-          action={<Btn kind="primary" icon="plus" onClick={()=>A.go("empPost")}>Post a job</Btn>}/>
+        <H2 action={<Btn kind="ghost" size="sm" onClick={()=>A.go("empJobs")}>{t("employer.home.manageAll")}</Btn>}>{t("employer.home.yourListings")}</H2>
+        {jobs.length===0?<Empty icon="briefcase" title={t("employer.home.noListingsYet")} body={t("employer.home.noListingsBody")}
+          action={<Btn kind="primary" icon="plus" onClick={()=>A.go("empPost")}>{t("employer.home.postAJob")}</Btn>}/>
           :jobs.slice(0,6).map(j=>{const n=A.applications.filter(a=>a.job===j.id).length;
             return <div key={j.id} onClick={()=>A.go("empPipeline")} className="flex items-center gap-3 py-3 border-b border-line-soft cursor-pointer">
               <div className={`w-2 h-2 rounded-full shrink-0 ${j.status==="live"?"bg-ok":j.status==="paused"?"bg-warn":"bg-text-3"}`}/>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap">{j.t}</div>
-                <div className="text-xs text-text-3 mt-1">{n} applicant{n===1?"":"s"} • {j.views.toLocaleString()} views • {j.posted}</div></div>
+                <div className="text-xs text-text-3 mt-1">{t(n===1?"employer.home.applicantOne":"employer.home.applicantOther",{n})} • {t("employer.home.viewsCount",{n:formatNumber(j.views,locale)})} • {j.posted}</div></div>
               <Tag tone={jobTone(j.status)} sm>{jobStatusLabel(j.status)}</Tag></div>;})}</Card>
       <div className="flex flex-col gap-4">
-        <Card><H2>Pipeline</H2>
+        <Card><H2>{t("employer.home.pipeline")}</H2>
           {stages.map(s=>{const n=byStage[s]||0;
             return <div key={s} className="mb-3.5">
               <div className="flex justify-between text-sm mb-1.5">
                 <span className="text-text-2 font-medium">{s}</span><span className="font-bold text-brand">{n}</span></div>
               <Bar v={apps.length?(n/apps.length)*100:0} h={6}/></div>;})}</Card>
-        <Card><H2>Quick actions</H2>
-          {[["plus","Post a new job","empPost"],["users","Review candidates","empPipeline"],
-            ["book","Publish an article","empContent"],["wallet","Billing and plan","empBilling"]].map(([ic,l,p])=>
+        <Card><H2>{t("employer.home.quickActions")}</H2>
+          {[["plus",t("employer.home.qaPostJob"),"empPost"],["users",t("employer.home.qaReviewCandidates"),"empPipeline"],
+            ["book",t("employer.home.qaPublishArticle"),"empContent"],["wallet",t("employer.home.qaBilling"),"empBilling"]].map(([ic,l,p])=>
             <button key={l} onClick={()=>A.go(p)} className="flex items-center gap-2.5 w-full py-2.5 px-2.5 rounded-lg border-0 bg-transparent cursor-pointer text-sm text-text text-left hover:bg-bg transition-colors duration-150">
               <I n={ic} s={17} c={C.brand}/>{l}</button>)}</Card></div></div>
   </Page>;
 }
 
 export function EmpJobs(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const jobs=A.jobs.filter(j=>j.e===A.company.id);
   const pg=usePagination(jobs,20);
   const [showImport,setShowImport]=useState(false);
   const [csv,setCsv]=useState(""); const [importResult,setImportResult]=useState(null);
   const sampleCSV="title,city,province,type,pay_low,pay_high,pay_unit,category,mode,vacancies,experience,education,skills,perks,duties,requirements,description\nJourneyperson Electrician,Calgary,Alberta,Full Time,42,52,hr,trades,On-site,2,3+ years,Apprenticeship / trade certificate,Red Seal;WHMIS;Fall Protection,Health benefits;RRSP match,Site fit-out;Panel installation;Testing,Red Seal cert;5+ years commercial,Hiring a Red Seal electrician for commercial fit-outs in Calgary.";
+  const applicantsN=A.applications.filter(a=>jobs.some(j=>j.id===a.job)).length;
   return <Page wide>
-    <H1 sub={`${jobs.length} listing${jobs.length===1?"":"s"} • ${A.applications.filter(a=>jobs.some(j=>j.id===a.job)).length} applicants`}
+    <H1 sub={t(jobs.length===1?"employer.jobs.subtitleOne":"employer.jobs.subtitleOther",{n:jobs.length,a:applicantsN})}
       action={<div className="flex gap-2.5 flex-wrap">
-        {A.can("csvImport")?<Btn kind="outline" icon="upload" onClick={()=>setShowImport(true)}>Import CSV</Btn>:<Btn kind="ghost" icon="lock" onClick={()=>A.go("pricing")} title="CSV import is a Growth+ feature">CSV import (Growth+)</Btn>}
-        <Btn kind="primary" icon="plus" onClick={()=>A.go("empPost")}>Post a job</Btn></div>}>My job listings</H1>
-    {showImport&&<Modal onClose={()=>{setShowImport(false);setImportResult(null);setCsv("");}} title="Import jobs from CSV">
-      <p className="text-sm text-text-2 leading-snug mb-3.5">Paste CSV below. First row must be headers. Required columns: <strong className="text-text">title, city, province, type, pay_low, pay_high, pay_unit, category</strong>. Multi-value fields (skills, perks, duties, requirements) use semicolons.</p>
+        {A.can("csvImport")?<Btn kind="outline" icon="upload" onClick={()=>setShowImport(true)}>{t("employer.jobs.importCsv")}</Btn>:<Btn kind="ghost" icon="lock" onClick={()=>A.go("pricing")} title={t("employer.jobs.csvImportTitle")}>{t("employer.jobs.csvImportLocked")}</Btn>}
+        <Btn kind="primary" icon="plus" onClick={()=>A.go("empPost")}>{t("employer.jobs.postAJob")}</Btn></div>}>{t("employer.jobs.title")}</H1>
+    {showImport&&<Modal onClose={()=>{setShowImport(false);setImportResult(null);setCsv("");}} title={t("employer.jobs.importTitle")}>
+      <p className="text-sm text-text-2 leading-snug mb-3.5">{t("employer.jobs.importIntroBefore")} <strong className="text-text">{t("employer.jobs.requiredCols")}</strong>{t("employer.jobs.importIntroAfter")}</p>
       <div className="flex gap-2 mb-3.5">
-        <Btn kind="outline" size="sm" onClick={()=>setCsv(sampleCSV)}>Load example</Btn>
-        <Btn kind="ghost" size="sm" onClick={()=>setCsv("")}>Clear</Btn></div>
-      <Area rows={10} value={csv} onChange={e=>setCsv(e.target.value)} placeholder="title,city,province,type,pay_low,pay_high,pay_unit,category..." style={{fontFamily:"ui-monospace,monospace",fontSize:12.5}}/>
-      {importResult&&<Banner tone={importResult.ok?"ok":"danger"} icon={importResult.ok?"check":"alert"} title={importResult.ok?`Imported ${importResult.imported} job${importResult.imported===1?"":"s"}`:"Import failed"} style={{marginTop:14}}>
-        {importResult.ok?<>Jobs are in review status until an admin approves them.{importResult.errors?.length?` Also skipped ${importResult.errors.length} rows.`:""}</>:importResult.msg}</Banner>}
+        <Btn kind="outline" size="sm" onClick={()=>setCsv(sampleCSV)}>{t("employer.jobs.loadExample")}</Btn>
+        <Btn kind="ghost" size="sm" onClick={()=>setCsv("")}>{t("employer.jobs.clear")}</Btn></div>
+      <Area rows={10} value={csv} onChange={e=>setCsv(e.target.value)} placeholder={t("employer.jobs.csvPlaceholder")} style={{fontFamily:"ui-monospace,monospace",fontSize:12.5}}/>
+      {importResult&&<Banner tone={importResult.ok?"ok":"danger"} icon={importResult.ok?"check":"alert"} title={importResult.ok?t(importResult.imported===1?"employer.jobs.importedOne":"employer.jobs.importedOther",{n:importResult.imported}):t("employer.jobs.importFailed")} style={{marginTop:14}}>
+        {importResult.ok?<>{t("employer.jobs.importedBody")}{importResult.errors?.length?t("employer.jobs.skippedRows",{n:importResult.errors.length}):""}</>:importResult.msg}</Banner>}
       <div className="flex gap-2.5 justify-end mt-3.5">
-        <Btn kind="ghost" onClick={()=>{setShowImport(false);setImportResult(null);setCsv("");}}>Cancel</Btn>
-        <Btn kind="primary" icon="upload" disabled={!csv.trim()} onClick={async()=>{const r=await A.importJobsCSV(csv);setImportResult(r);if(r.ok&&!r.errors?.length){setTimeout(()=>{setShowImport(false);setImportResult(null);setCsv("");},1500);}}}>Import</Btn></div>
+        <Btn kind="ghost" onClick={()=>{setShowImport(false);setImportResult(null);setCsv("");}}>{t("employer.jobs.cancel")}</Btn>
+        <Btn kind="primary" icon="upload" disabled={!csv.trim()} onClick={async()=>{const r=await A.importJobsCSV(csv);setImportResult(r);if(r.ok&&!r.errors?.length){setTimeout(()=>{setShowImport(false);setImportResult(null);setCsv("");},1500);}}}>{t("employer.jobs.import")}</Btn></div>
     </Modal>}
-    {jobs.length===0?<Empty icon="briefcase" title="No listings yet" body="Create your first posting to start receiving applications."
-      action={<Btn kind="primary" icon="plus" onClick={()=>A.go("empPost")}>Post a job</Btn>}/>
+    {jobs.length===0?<Empty icon="briefcase" title={t("employer.home.noListingsYet")} body={t("employer.jobs.noListingsYetBody")}
+      action={<Btn kind="primary" icon="plus" onClick={()=>A.go("empPost")}>{t("employer.jobs.postAJob")}</Btn>}/>
       :<><div className="flex flex-col gap-3">
         {pg.pageItems.map((j,i)=>{const apps=A.applications.filter(a=>a.job===j.id);
           return <Card key={j.id} delay={Math.min(i,6)*0.04}>
@@ -104,19 +108,19 @@ export function EmpJobs(){
                 <div className="flex items-center gap-2.5 flex-wrap">
                   <span className="font-bold text-text tracking-tight" style={{fontSize:16.5}}>{j.t}</span>
                   <Tag tone={jobTone(j.status)} sm>{jobStatusLabel(j.status)}</Tag>
-                  {j.flagged&&<Tag tone="danger" sm icon="alert">Flagged by admin</Tag>}
-                  {j.pendingOwnerApproval&&<Tag tone="warn" sm icon="shield">Needs owner approval</Tag>}</div>
+                  {j.flagged&&<Tag tone="danger" sm icon="alert">{t("employer.jobs.flaggedByAdmin")}</Tag>}
+                  {j.pendingOwnerApproval&&<Tag tone="warn" sm icon="shield">{t("employer.jobs.needsOwnerApproval")}</Tag>}</div>
                 <div className="text-sm text-text-2 mt-1.5">{j.city}, {j.prov} • {j.mode} • {j.type} • {pay(j)}{payShort(j)}</div>
                 <div className="flex gap-5 mt-3 flex-wrap">
-                  {[["Applicants",apps.length],["Views",j.views.toLocaleString()],["Posted",j.posted],["Closes",dlText(j.dl)]].map(([k,v])=>
+                  {[[t("employer.jobs.colApplicants"),apps.length],[t("employer.jobs.colViews"),formatNumber(j.views,locale)],[t("employer.jobs.colPosted"),j.posted],[t("employer.jobs.colCloses"),dlText(j.dl)]].map(([k,v])=>
                     <div key={k}><div className="text-xs text-text-3">{k}</div>
                       <div className="text-base font-bold text-text mt-0.5">{v}</div></div>)}</div></div>
               <div className="flex gap-2 flex-wrap items-center">
-                <Btn kind="outline" size="sm" onClick={()=>A.openJob(j.id,{preview:true})}>Preview</Btn>
+                <Btn kind="outline" size="sm" onClick={()=>A.openJob(j.id,{preview:true})}>{t("employer.jobs.preview")}</Btn>
                 {j.pendingOwnerApproval&&A.user?.employerRole==="owner"&&
-                  <Btn kind="ok" size="sm" icon="check" onClick={()=>A.approveJob(j.id)}>Approve</Btn>}
-                <Btn kind="outline" size="sm" onClick={()=>A.toggleJobStatus(j.id)}>{j.status==="live"?"Pause":"Reopen"}</Btn>
-                <Btn kind="primary" size="sm" onClick={()=>{A.setPipelineJob(j.id);A.go("empPipeline");}}>Candidates ({apps.length})</Btn></div></div></Card>;})}</div>
+                  <Btn kind="ok" size="sm" icon="check" onClick={()=>A.approveJob(j.id)}>{t("employer.jobs.approve")}</Btn>}
+                <Btn kind="outline" size="sm" onClick={()=>A.toggleJobStatus(j.id)}>{j.status==="live"?t("employer.jobs.pause"):t("employer.jobs.reopen")}</Btn>
+                <Btn kind="primary" size="sm" onClick={()=>{A.setPipelineJob(j.id);A.go("empPipeline");}}>{t("employer.jobs.candidatesN",{n:apps.length})}</Btn></div></div></Card>;})}</div>
       <Pagination {...pg}/></>}
   </Page>;
 }
@@ -137,7 +141,7 @@ const _defaultJobPostData=()=>({t:"",cat:"trades",type:"Full Time",mode:"On-site
 const _loadJobPostDraft=()=>{try{return JSON.parse(sessionStorage.getItem(JOBPOST_DRAFT_KEY)||"null");}catch{return null;}};
 
 export function EmpPost(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const draft=_loadJobPostDraft();
   const [resumed]=useState(!!draft&&draft.step>1);
   const [step,setStep]=useState(draft?.step||1); const [err,setErr]=useState({});
@@ -164,40 +168,42 @@ export function EmpPost(){
 
   const validate=()=>{const e={};
     if(step===1){
-      if(!f.t.trim())e.t="Job title is required";
+      if(!f.t.trim())e.t=t("employer.post.titleRequired");
       const descTxt=(f.desc||"").replace(/<[^>]+>/g,"").trim();
-      if(descTxt.length<40)e.desc="Give at least a couple of sentences";
-      if(f.mustHave.length===0)e.mustHave="Add at least one must-have skill";
+      if(descTxt.length<40)e.desc=t("employer.post.descTooShort");
+      if(f.mustHave.length===0)e.mustHave=t("employer.post.mustHaveRequired");
       if(lawRules.noCanadianExperience){
         const hit=findCanadianExperience([f.t,f.desc,f.duties,f.reqs]);
-        if(hit)e.desc=`Ontario's Bill 149 prohibits requiring Canadian experience — remove "${hit}".`;
+        if(hit)e.desc=t("employer.post.billNoCanExpDesc",{hit});
       }
     }
     if(step===2){
-      if(!f.location.trim())e.location="Choose a location";
+      if(!f.location.trim())e.location=t("employer.post.locationRequired");
       /* Presence + hi>lo alone let $1/hr or $1,000,000/hr both through - add sane per-period
          bounds so an obvious fat-finger (missing a digit, an extra zero) gets caught here
          instead of publishing a listing no one would believe. */
       const bounds={hr:[15,500],yr:[20000,500000],contract:[100,10000000]}[f.payPeriod]||[0,Infinity];
       const [minV,maxV]=bounds;
+      const realisticKey=f.payPeriod==="hr"?"employer.post.realisticAmountHourly":f.payPeriod==="yr"?"employer.post.realisticAmountYearly":f.payPeriod==="contract"?"employer.post.realisticAmountContract":"employer.post.realisticAmount";
+      const boundsParams={lo:`$${minV.toLocaleString()}`,hi:`$${maxV.toLocaleString()}`};
       if(f.payType==="range"){
-        if(!f.lo)e.lo="Required"; if(!f.hi)e.hi="Required";
-        if(f.lo&&f.hi&&Number(f.hi)<Number(f.lo))e.hi="Maximum must be above the minimum";
-        if(f.lo&&(Number(f.lo)<minV||Number(f.lo)>maxV))e.lo=`Enter a realistic ${f.payPeriod==="hr"?"hourly":f.payPeriod==="yr"?"yearly":"contract"} amount ($${minV.toLocaleString()}–$${maxV.toLocaleString()})`;
-        if(f.hi&&(Number(f.hi)<minV||Number(f.hi)>maxV)&&!e.lo)e.hi=`Enter a realistic ${f.payPeriod==="hr"?"hourly":f.payPeriod==="yr"?"yearly":"contract"} amount ($${minV.toLocaleString()}–$${maxV.toLocaleString()})`;
+        if(!f.lo)e.lo=t("employer.post.required"); if(!f.hi)e.hi=t("employer.post.required");
+        if(f.lo&&f.hi&&Number(f.hi)<Number(f.lo))e.hi=t("employer.post.maxAboveMin");
+        if(f.lo&&(Number(f.lo)<minV||Number(f.lo)>maxV))e.lo=t(realisticKey,boundsParams);
+        if(f.hi&&(Number(f.hi)<minV||Number(f.hi)>maxV)&&!e.lo)e.hi=t(realisticKey,boundsParams);
       } else {
-        if(!f.fixed)e.fixed="Required";
-        else if(Number(f.fixed)<minV||Number(f.fixed)>maxV)e.fixed=`Enter a realistic amount ($${minV.toLocaleString()}–$${maxV.toLocaleString()})`;
+        if(!f.fixed)e.fixed=t("employer.post.required");
+        else if(Number(f.fixed)<minV||Number(f.fixed)>maxV)e.fixed=t("employer.post.realisticAmount",boundsParams);
       }
-      if(!f.dlDate)e.dlDate="Choose a closing date";
+      if(!f.dlDate)e.dlDate=t("employer.post.closingDateRequired");
       if(f.payType==="range"&&f.lo&&f.hi&&!e.lo&&!e.hi){
         const rangeErr=checkPayRange({lo:f.lo,hi:f.hi,unit:f.payPeriod,rules:lawRules});
         if(rangeErr)e.hi=rangeErr;
       }
-      if(lawRules.vacancyConfirm&&!f.vacancyConfirmed)e.vacancyConfirmed="Confirm this is a real, currently open vacancy";
+      if(lawRules.vacancyConfirm&&!f.vacancyConfirmed)e.vacancyConfirmed=t("employer.post.vacancyConfirmRequired");
       if(lawRules.noCanadianExperience){
         const hit=findCanadianExperience([f.how,...(f.questions||[]).map(q=>q.prompt)]);
-        if(hit)e.how=`Ontario's Bill 149 prohibits requiring Canadian experience — remove "${hit}".`;
+        if(hit)e.how=t("employer.post.billNoCanExpHow",{hit});
       }
     }
     setErr(e); return !Object.keys(e).length;};
@@ -227,18 +233,18 @@ export function EmpPost(){
     else try{sessionStorage.removeItem(JOBPOST_DRAFT_KEY);}catch{}
   };
 
-  const steps=["Role details","Pay & location","Application"];
+  const steps=[t("employer.post.stepRoleDetails"),t("employer.post.stepPayLocation"),t("employer.post.stepApplication")];
   const today=new Date().toISOString().slice(0,10);
   const maxDate=(()=>{const d=new Date();d.setMonth(d.getMonth()+3);return d.toISOString().slice(0,10);})();
 
   return <Page narrow>
-    <H1 sub="About five minutes. Listings go live immediately.">Post a job</H1>
+    <H1 sub={t("employer.post.subtitle")}>{t("employer.post.title")}</H1>
 
     {resumed&&<Banner tone="brand" icon="clock" style={{marginBottom:16}}
-      action={<button onClick={discardDraft} className="bg-transparent border-0 p-0 cursor-pointer text-sm font-semibold text-brand">Start over</button>}>
-      Picked up where you left off.</Banner>}
-    {postErr&&<Banner tone="danger" icon="alert" title="Cannot publish" style={{marginBottom:16}}
-      action={<Btn kind="primary" size="sm" onClick={()=>A.go("pricing")}>See plans</Btn>}>{postErr}</Banner>}
+      action={<button onClick={discardDraft} className="bg-transparent border-0 p-0 cursor-pointer text-sm font-semibold text-brand">{t("employer.post.startOver")}</button>}>
+      {t("employer.post.resumedBanner")}</Banner>}
+    {postErr&&<Banner tone="danger" icon="alert" title={t("employer.post.cannotPublish")} style={{marginBottom:16}}
+      action={<Btn kind="primary" size="sm" onClick={()=>A.go("pricing")}>{t("employer.post.seePlans")}</Btn>}>{postErr}</Banner>}
 
     <Card pad={mob?16:20} style={{marginBottom:16}}>
       <div className="flex items-center">
@@ -254,107 +260,107 @@ export function EmpPost(){
       <div key={step} style={{animation:"slideIn .26s ease both"}}>
 
       {step===1&&<div className="flex flex-col gap-5">
-        <H2 sub="Clear titles and honest descriptions get far more qualified applicants">Role details</H2>
+        <H2 sub={t("employer.post.roleDetailsSub")}>{t("employer.post.stepRoleDetails")}</H2>
 
-        <Field label="Job title" required error={err.t}>
+        <Field label={t("employer.post.jobTitle")} required error={err.t}>
           <Input value={f.t} onChange={e=>set("t",e.target.value)}
-            placeholder="e.g. Red Seal Electrician, Registered Nurse, Line Cook" invalid={!!err.t}/></Field>
+            placeholder={t("employer.post.jobTitlePlaceholder")} invalid={!!err.t}/></Field>
 
         <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-3"}`}>
-          <Field label="Sector" required><Sel value={f.cat} onChange={e=>set("cat",e.target.value)}>
+          <Field label={t("employer.post.sector")} required><Sel value={f.cat} onChange={e=>set("cat",e.target.value)}>
             {CATS.map(c=><option key={c.id} value={c.id}>{c.label}</option>)}</Sel></Field>
-          <Field label="Employment type"><Sel value={f.type} onChange={e=>set("type",e.target.value)}>
+          <Field label={t("employer.post.employmentType")}><Sel value={f.type} onChange={e=>set("type",e.target.value)}>
             {["Full Time","Part Time","Contract","Seasonal","Apprenticeship","Casual"].map(o=><option key={o}>{o}</option>)}</Sel></Field>
-          <Field label="Work setting"><Sel value={f.mode} onChange={e=>set("mode",e.target.value)}>
+          <Field label={t("employer.post.workSetting")}><Sel value={f.mode} onChange={e=>set("mode",e.target.value)}>
             {["On-site","Hybrid","Remote"].map(o=><option key={o}>{o}</option>)}</Sel></Field>
         </div>
 
         <div className="rounded-xl border border-line-2 p-3.5 flex gap-3 items-center" style={{background:`linear-gradient(135deg,${C.tint} 0%,#F0F7FF 100%)`}}>
           <div className="w-10 h-10 rounded-xl bg-brand text-white flex items-center justify-center shrink-0"><I n="sparkle" s={19}/></div>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-semibold text-text">Auto-fill with AI</div>
-            <div className="text-xs text-text-2 mt-0.5">We'll draft the description, duties and requirements based on your title and sector. Edit anything you want.</div>
+            <div className="text-sm font-semibold text-text">{t("employer.post.autoFillTitle")}</div>
+            <div className="text-xs text-text-2 mt-0.5">{t("employer.post.autoFillBody")}</div>
           </div>
-          <Btn kind="primary" size="sm" onClick={applyAI} disabled={!f.t.trim()}>{f.t.trim()?"Suggest":"Enter title first"}</Btn>
+          <Btn kind="primary" size="sm" onClick={applyAI} disabled={!f.t.trim()}>{f.t.trim()?t("employer.post.suggest"):t("employer.post.enterTitleFirst")}</Btn>
         </div>
 
-        <Field label="Job description" required error={err.desc} hint="Describe the day-to-day work, the team and the site.">
+        <Field label={t("employer.post.jobDescription")} required error={err.desc} hint={t("employer.post.jobDescriptionHint")}>
           <RichText value={f.desc} onChange={v=>set("desc",v)}
-            placeholder="What will this person actually do week to week?" rows={6}/></Field>
+            placeholder={t("employer.post.jobDescriptionPlaceholder")} rows={6}/></Field>
 
-        <Field label="Main duties" hint="What they'll actually do. Use bullets for readability.">
+        <Field label={t("employer.post.mainDuties")} hint={t("employer.post.mainDutiesHint")}>
           <RichText value={f.duties} onChange={v=>set("duties",v)}
-            placeholder="e.g. Install and repair electrical systems to code" rows={5}/></Field>
+            placeholder={t("employer.post.mainDutiesPlaceholder")} rows={5}/></Field>
 
-        <Field label="Requirements" hint="Certifications, experience, tickets.">
+        <Field label={t("employer.post.requirements")} hint={t("employer.post.requirementsHint")}>
           <RichText value={f.reqs} onChange={v=>set("reqs",v)}
-            placeholder="e.g. Valid Red Seal certificate" rows={5}/></Field>
+            placeholder={t("employer.post.requirementsPlaceholder")} rows={5}/></Field>
 
-        <Field label="Must-have skills & tickets" required error={err.mustHave}
-          hint="Applicants missing these are auto-flagged. These drive the match score most.">
+        <Field label={t("employer.post.mustHaveSkills")} required error={err.mustHave}
+          hint={t("employer.post.mustHaveHint")}>
           <InlineList value={f.mustHave} onChange={v=>set("mustHave",v)} icon="check"
-            placeholder="Type a required skill and press Enter"/></Field>
+            placeholder={t("employer.post.mustHavePlaceholder")}/></Field>
 
-        <Field label="Nice-to-have skills" hint="Boost match score but not required.">
+        <Field label={t("employer.post.niceToHaveSkills")} hint={t("employer.post.niceToHaveHint")}>
           <InlineList value={f.skills} onChange={v=>set("skills",v)} icon="sparkle"
-            placeholder="Type a bonus skill and press Enter"/></Field>
+            placeholder={t("employer.post.niceToHavePlaceholder")}/></Field>
 
         <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
-          <Field label="Experience required"><Sel value={f.exp} onChange={e=>set("exp",e.target.value)}>
+          <Field label={t("employer.post.experienceRequired")}><Sel value={f.exp} onChange={e=>set("exp",e.target.value)}>
             {["No experience required","Entry level welcome","1+ years","2+ years","3+ years","4+ years","5+ years","10+ years"].map(o=><option key={o}>{o}</option>)}</Sel></Field>
-          <Field label="Education required"><Sel value={f.edu} onChange={e=>set("edu",e.target.value)}>
+          <Field label={t("employer.post.educationRequired")}><Sel value={f.edu} onChange={e=>set("edu",e.target.value)}>
             {["No formal education required","High School Diploma","Apprenticeship / trade certificate","College Diploma","Bachelor's Degree or equivalent","Red Seal Certificate","Professional registration","Master's Degree","Doctorate"].map(o=><option key={o}>{o}</option>)}</Sel></Field>
         </div>
       </div>}
 
       {step===2&&<div className="flex flex-col gap-5">
-        <H2 sub="Listings that publish a salary get roughly three times more applications">Pay, location & application</H2>
+        <H2 sub={t("employer.post.payLocationSub")}>{t("employer.post.stepPayLocation")}</H2>
 
-        <Field label="Location" required error={err.location}
-          hint="Type at least 2 letters to search Canadian cities, or use your current location.">
+        <Field label={t("employer.post.location")} required error={err.location}
+          hint={t("employer.post.locationHint")}>
           <LocationInput value={f.location} onChange={setLocation}
-            placeholder="Start typing a city..."/></Field>
+            placeholder={t("employer.post.locationPlaceholder")}/></Field>
 
-        <Field label="Pay structure">
+        <Field label={t("employer.post.payStructure")}>
           <div className="grid grid-cols-2 gap-2.5 mb-3">
-            {[["range","Range (min – max)"],["fixed","Fixed amount"]].map(([k,l])=>
+            {[["range",t("employer.post.payRange")],["fixed",t("employer.post.payFixed")]].map(([k,l])=>
               <button key={k} type="button" onClick={()=>set("payType",k)}
                 className={`p-3 rounded-xl cursor-pointer text-sm transition-all duration-150 border-2 ${f.payType===k?"border-brand bg-tint text-brand font-semibold":"border-line bg-white text-text font-medium"}`}>{l}</button>)}
           </div>
           <div className="grid gap-3" style={{gridTemplateColumns:mob?"1fr":f.payType==="range"?"1fr 1fr 1fr":"1fr 1fr"}}>
             {f.payType==="range"?<>
-              <Field label="Minimum" error={err.lo}><Input icon="wallet" type="number" inputMode="decimal" min="0" value={f.lo} onChange={e=>set("lo",e.target.value.replace(/[^\d.]/g,""))} placeholder={f.payPeriod==="yr"?"60000":"28"} invalid={!!err.lo}/></Field>
-              <Field label="Maximum" error={err.hi}><Input icon="wallet" type="number" inputMode="decimal" min="0" value={f.hi} onChange={e=>set("hi",e.target.value.replace(/[^\d.]/g,""))} placeholder={f.payPeriod==="yr"?"80000":"36"} invalid={!!err.hi}/></Field>
-            </>:<Field label="Amount" error={err.fixed}><Input icon="wallet" type="number" inputMode="decimal" min="0" value={f.fixed} onChange={e=>set("fixed",e.target.value.replace(/[^\d.]/g,""))} placeholder={f.payPeriod==="yr"?"70000":"32"} invalid={!!err.fixed}/></Field>}
-            <Field label="Pay period"><Sel value={f.payPeriod} onChange={e=>set("payPeriod",e.target.value)}>
-              <option value="hr">per hour</option>
-              <option value="yr">per year</option>
-              <option value="mi">per mile</option>
-              <option value="contract">total (contract)</option></Sel></Field>
+              <Field label={t("employer.post.minimum")} error={err.lo}><Input icon="wallet" type="number" inputMode="decimal" min="0" value={f.lo} onChange={e=>set("lo",e.target.value.replace(/[^\d.]/g,""))} placeholder={f.payPeriod==="yr"?"60000":"28"} invalid={!!err.lo}/></Field>
+              <Field label={t("employer.post.maximum")} error={err.hi}><Input icon="wallet" type="number" inputMode="decimal" min="0" value={f.hi} onChange={e=>set("hi",e.target.value.replace(/[^\d.]/g,""))} placeholder={f.payPeriod==="yr"?"80000":"36"} invalid={!!err.hi}/></Field>
+            </>:<Field label={t("employer.post.amount")} error={err.fixed}><Input icon="wallet" type="number" inputMode="decimal" min="0" value={f.fixed} onChange={e=>set("fixed",e.target.value.replace(/[^\d.]/g,""))} placeholder={f.payPeriod==="yr"?"70000":"32"} invalid={!!err.fixed}/></Field>}
+            <Field label={t("employer.post.payPeriod")}><Sel value={f.payPeriod} onChange={e=>set("payPeriod",e.target.value)}>
+              <option value="hr">{t("employer.post.perHour")}</option>
+              <option value="yr">{t("employer.post.perYear")}</option>
+              <option value="mi">{t("employer.post.perMile")}</option>
+              <option value="contract">{t("employer.post.totalContract")}</option></Sel></Field>
           </div>
         </Field>
 
         <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
-          <Field label="Number of vacancies"><Input type="number" min="1" value={f.vac} onChange={e=>set("vac",Math.max(1,Number(e.target.value)||1))}/></Field>
-          <Field label="Application closes on" required error={err.dlDate}>
+          <Field label={t("employer.post.numVacancies")}><Input type="number" min="1" value={f.vac} onChange={e=>set("vac",Math.max(1,Number(e.target.value)||1))}/></Field>
+          <Field label={t("employer.post.applicationCloses")} required error={err.dlDate}>
             <DatePicker value={f.dlDate} onChange={v=>set("dlDate",v)} min={today} max={maxDate}/></Field>
         </div>
 
-        <Field label="Benefits offered" hint="Shown as a highlighted grid on the listing.">
+        <Field label={t("employer.post.benefitsOffered")} hint={t("employer.post.benefitsHint")}>
           <InlineList value={f.perks} onChange={v=>set("perks",v)} icon="heart"
-            placeholder="e.g. RRSP matching, Health & dental"/></Field>
+            placeholder={t("employer.post.benefitsPlaceholder")}/></Field>
 
-        <Field label="How to apply" hint="What happens after someone applies.">
+        <Field label={t("employer.post.howToApply")} hint={t("employer.post.howToApplyHint")}>
           <Area rows={3} value={f.how} onChange={e=>set("how",e.target.value)}
-            placeholder="Apply through NorthHire with your resume. Shortlisted candidates are contacted within 3 business days."/></Field>
+            placeholder={t("employer.post.howToApplyPlaceholder")}/></Field>
 
         <div className="bg-bg border border-line rounded-xl p-4 mt-1.5">
           <div className="flex justify-between items-center mb-3 flex-wrap gap-2">
             <div>
-              <div className="text-sm font-semibold text-text">Additional application questions</div>
-              <div className="text-xs text-text-2 mt-1">Ask about work permits, driver's licence, willingness to travel, etc.</div>
+              <div className="text-sm font-semibold text-text">{t("employer.post.additionalQuestions")}</div>
+              <div className="text-xs text-text-2 mt-1">{t("employer.post.additionalQuestionsHint")}</div>
             </div>
-            <Tag tone="brand" sm>{f.questions.length} added</Tag>
+            <Tag tone="brand" sm>{t("employer.post.addedCount",{n:f.questions.length})}</Tag>
           </div>
           <QuestionBuilder value={f.questions} onChange={v=>set("questions",v)}/>
         </div>
@@ -364,41 +370,38 @@ export function EmpPost(){
             <div className="flex items-start gap-2.5 mb-3">
               <I n="alert" s={17} c={C.warn}/>
               <div className="min-w-0">
-                <div className="text-sm font-semibold text-text">Required disclosures for this posting</div>
+                <div className="text-sm font-semibold text-text">{t("employer.post.requiredDisclosuresTitle")}</div>
                 <div className="text-xs text-text-2 mt-1 leading-relaxed">
-                  Ontario's Bill 149 has applied to publicly advertised postings by employers with 25+ employees
-                  since 1 January 2026. These appear on the listing candidates see.</div>
+                  {t("employer.post.requiredDisclosuresBody")}</div>
               </div>
             </div>
             <div className="flex items-center justify-between gap-3.5 py-3 border-t border-warn-ln">
               <div className="min-w-0">
-                <div className="text-sm font-semibold text-text">AI is used to screen applicants</div>
+                <div className="text-sm font-semibold text-text">{t("employer.post.aiUsedTitle")}</div>
                 <div className="text-xs text-text-2 mt-0.5 leading-snug">
-                  NorthHire automatically scores every applicant against your must-have skills and ranks your
-                  pipeline by that score, so this normally stays on. Turn it off only if you ignore the ranking
-                  entirely and review every application yourself.</div>
+                  {t("employer.post.aiUsedBody")}</div>
               </div>
               <Switch on={f.aiScreening} onChange={v=>set("aiScreening",v)}/>
             </div>
             <div className="pt-3 border-t border-warn-ln">
               <CheckRow on={f.vacancyConfirmed} onChange={v=>set("vacancyConfirmed",v)}
-                label="This posting is for an existing, currently open vacancy"
-                sub="Bill 149 prohibits advertising a role you aren't actually hiring for."/>
+                label={t("employer.post.vacancyConfirmLabel")}
+                sub={t("employer.post.vacancyConfirmSub")}/>
               {err.vacancyConfirmed&&<div className="text-xs font-semibold text-red mt-1.5">{err.vacancyConfirmed}</div>}
             </div>
           </div>}
 
         <div className="flex items-center justify-between gap-3.5 py-3.5 border-t border-line-soft mt-2">
-          <div><div className="text-sm font-semibold text-text">Mark as urgent hire</div>
-            <div className="text-xs text-text-2 mt-0.5">Adds an "Urgent" badge candidates see on the listing.</div></div>
+          <div><div className="text-sm font-semibold text-text">{t("employer.post.markUrgent")}</div>
+            <div className="text-xs text-text-2 mt-0.5">{t("employer.post.markUrgentSub")}</div></div>
           <Switch on={f.urgent} onChange={v=>set("urgent",v)}/></div>
         <div className="flex items-center justify-between gap-3.5 py-3.5 border-t border-line-soft">
-          <div><div className="text-sm font-semibold text-text">Feature this listing</div>
+          <div><div className="text-sm font-semibold text-text">{t("employer.post.featureListing")}</div>
             <div className="text-xs text-text-2 mt-0.5">
               {A.can("featured")
-                ?`Pins it above regular results in search. ${featuredUsed}/${featuredLimit===Infinity?"unlimited":featuredLimit} used this month.`
-                :"Available on Growth and above."}
-              {!A.can("featured")&&<button type="button" onClick={()=>A.go("pricing")} className="bg-transparent border-0 p-0 ml-1 cursor-pointer text-brand font-semibold underline">See plans</button>}
+                ?t("employer.post.featurePinned",{used:featuredUsed,limit:featuredLimit===Infinity?t("employer.post.featureUnlimited"):featuredLimit})
+                :t("employer.post.featureAvailable")}
+              {!A.can("featured")&&<button type="button" onClick={()=>A.go("pricing")} className="bg-transparent border-0 p-0 ml-1 cursor-pointer text-brand font-semibold underline">{t("employer.post.seePlansLink")}</button>}
             </div></div>
           <Switch on={f.featured} onChange={v=>set("featured",v)} disabled={!canFeature&&!f.featured}/></div>
       </div>}
