@@ -647,47 +647,47 @@ function _NewJobOrderModal({onClose}){
     try{await A.createJobOrder(d); onClose();}
     catch(err){A.toast(err.message,"danger");}
   };
-  return <Modal onClose={onClose} title="New job order" wide>
+  return <Modal onClose={onClose} title={t("staffing.jobOrders.newJobOrderTitle")} wide>
     <div className="flex flex-col gap-3.5">
       <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
-        <Field label="Client" required>
+        <Field label={t("staffing.jobOrders.clientLabel")} required>
           <Sel value={d.client} onChange={e=>set("client",e.target.value)}>
-            <option value="">Select client…</option>
+            <option value="">{t("staffing.jobOrders.selectClient")}</option>
             {A.staffingClients.filter(c=>c.status==="active").map(c=>{const emp=A.employers.find(e=>e.id===c.employerId);
               return <option key={c.id} value={c.id}>{emp?.name||c.id}</option>;})}
           </Sel></Field>
-        <Field label="Urgency"><Sel value={d.urgency} onChange={e=>set("urgency",e.target.value)}>
-          {["low","medium","high"].map(u=><option key={u}>{u}</option>)}</Sel></Field>
+        <Field label={t("staffing.jobOrders.urgencyLabel")}><Sel value={d.urgency} onChange={e=>set("urgency",e.target.value)}>
+          {["low","medium","high"].map(u=>{const keyMap={low:"urgencyLow",medium:"urgencyMedium",high:"urgencyHigh"}; return <option key={u}>{t(`staffing.jobOrders.${keyMap[u]}`)}</option>;})}</Sel></Field>
       </div>
-      <Field label="Job title" required><Input value={d.title} onChange={e=>set("title",e.target.value)} placeholder="e.g. Journeyperson Electricians — Commercial Site"/></Field>
+      <Field label={t("staffing.jobOrders.jobTitleLabel")} required><Input value={d.title} onChange={e=>set("title",e.target.value)} placeholder={t("staffing.jobOrders.jobTitlePlaceholder")}/></Field>
       <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-3"}`}>
-        <Field label="Positions"><Input type="number" min="1" value={d.positions} onChange={e=>set("positions",Number(e.target.value)||1)}/></Field>
-        <Field label="Pay rate ($/hr)" required><Input type="number" min="0" step="0.5" value={d.payRate} onChange={e=>set("payRate",Number(e.target.value)||0)}/></Field>
-        <Field label="Bill rate ($/hr)" required><Input type="number" min="0" step="0.5" value={d.billRate} onChange={e=>set("billRate",Number(e.target.value)||0)}/></Field>
+        <Field label={t("staffing.jobOrders.positionsLabel")}><Input type="number" min="1" value={d.positions} onChange={e=>set("positions",Number(e.target.value)||1)}/></Field>
+        <Field label={t("staffing.jobOrders.payRateLabel")} required><Input type="number" min="0" step="0.5" value={d.payRate} onChange={e=>set("payRate",Number(e.target.value)||0)}/></Field>
+        <Field label={t("staffing.jobOrders.billRateLabel")} required><Input type="number" min="0" step="0.5" value={d.billRate} onChange={e=>set("billRate",Number(e.target.value)||0)}/></Field>
       </div>
-      {rateInvalid&&<Banner tone="danger" icon="alert">Bill rate can't be below pay rate.</Banner>}
+      {rateInvalid&&<Banner tone="danger" icon="alert">{t("staffing.jobOrders.billBelowPay")}</Banner>}
       <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
-        <Field label="Location"><Input icon="pin" value={d.location} onChange={e=>set("location",e.target.value)} placeholder="Calgary AB — Foothills Hospital"/></Field>
-        <Field label="Province"><Sel value={d.province} onChange={e=>set("province",e.target.value)}>
+        <Field label={t("staffing.jobOrders.locationLabel")}><Input icon="pin" value={d.location} onChange={e=>set("location",e.target.value)} placeholder={t("staffing.jobOrders.locationPlaceholder")}/></Field>
+        <Field label={t("staffing.jobOrders.provinceLabel")}><Sel value={d.province} onChange={e=>set("province",e.target.value)}>
           {Object.keys(A.STAFFING_RATES).map(p=><option key={p} value={p}>{A.STAFFING_RATES[p].label}</option>)}</Sel></Field>
       </div>
       <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-3"}`}>
-        <Field label="Start date" required><DatePicker value={d.startDate} onChange={v=>set("startDate",v)}/></Field>
-        <Field label="End date"><DatePicker value={d.endDate} onChange={v=>set("endDate",v)} min={d.startDate}/></Field>
+        <Field label={t("staffing.jobOrders.startDateLabel")} required><DatePicker value={d.startDate} onChange={v=>set("startDate",v)}/></Field>
+        <Field label={t("staffing.jobOrders.endDateLabel")}><DatePicker value={d.endDate} onChange={v=>set("endDate",v)} min={d.startDate}/></Field>
         <Field label=" "><label className="flex items-center gap-2 py-2 text-sm text-text-2">
-          <input type="checkbox" checked={d.ongoing} onChange={e=>set("ongoing",e.target.checked)}/> Ongoing</label></Field>
+          <input type="checkbox" checked={d.ongoing} onChange={e=>set("ongoing",e.target.checked)}/> {t("staffing.jobOrders.ongoingLabel")}</label></Field>
       </div>
-      <Field label="Shift pattern"><Input value={d.shiftPattern} onChange={e=>set("shiftPattern",e.target.value)}/></Field>
-      <Field label="Must-have tickets"><InlineList value={d.mustHave} onChange={v=>set("mustHave",v)} icon="alert" placeholder="e.g. Red Seal Electrician"/></Field>
-      <Field label="Nice-to-have"><InlineList value={d.niceToHave} onChange={v=>set("niceToHave",v)} icon="sparkle" placeholder="e.g. Blueprint Reading"/></Field>
+      <Field label={t("staffing.jobOrders.shiftPatternLabel")}><Input value={d.shiftPattern} onChange={e=>set("shiftPattern",e.target.value)}/></Field>
+      <Field label={t("staffing.jobOrders.mustHaveTickets")}><InlineList value={d.mustHave} onChange={v=>set("mustHave",v)} icon="alert" placeholder={t("staffing.jobOrders.mustHavePlaceholder")}/></Field>
+      <Field label={t("staffing.jobOrders.niceToHaveLabel")}><InlineList value={d.niceToHave} onChange={v=>set("niceToHave",v)} icon="sparkle" placeholder={t("staffing.jobOrders.niceToHavePlaceholder")}/></Field>
       <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
-        <Field label="Client supervisor"><Input value={d.supervisor} onChange={e=>set("supervisor",e.target.value)} placeholder="Site foreman name"/></Field>
-        <Field label="Supervisor email"><Input icon="mail" value={d.supervisorEmail} onChange={e=>set("supervisorEmail",e.target.value)}/></Field>
+        <Field label={t("staffing.jobOrders.clientSupervisorLabel")}><Input value={d.supervisor} onChange={e=>set("supervisor",e.target.value)} placeholder={t("staffing.jobOrders.supervisorPlaceholder")}/></Field>
+        <Field label={t("staffing.jobOrders.supervisorEmailLabel")}><Input icon="mail" value={d.supervisorEmail} onChange={e=>set("supervisorEmail",e.target.value)}/></Field>
       </div>
-      <Field label="Notes"><Area rows={3} value={d.notes} onChange={e=>set("notes",e.target.value)}/></Field>
+      <Field label={t("staffing.jobOrders.notesLabel")}><Area rows={3} value={d.notes} onChange={e=>set("notes",e.target.value)}/></Field>
       <div className="flex gap-2.5 justify-end">
-        <Btn kind="ghost" onClick={onClose}>Cancel</Btn>
-        <Btn kind="primary" onClick={submit} disabled={!d.title||!d.client||!d.payRate||!d.billRate||rateInvalid}>Create order</Btn>
+        <Btn kind="ghost" onClick={onClose}>{t("staffing.jobOrders.cancel")}</Btn>
+        <Btn kind="primary" onClick={submit} disabled={!d.title||!d.client||!d.payRate||!d.billRate||rateInvalid}>{t("staffing.jobOrders.createOrder")}</Btn>
       </div>
     </div>
   </Modal>;
