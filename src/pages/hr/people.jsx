@@ -369,7 +369,7 @@ function HrPeople_Manage(){
     if(editing.payType==="hourly"){if(!(Number(editing.hourlyRate)>0)){A.toast("Enter an hourly rate greater than $0.","danger");return;}}
     else if(!(Number(editing.salary)>0)){A.toast("Enter a salary greater than $0.","danger");return;}
     A.updateEmp(editing.id,{name:editing.name,title:editing.title,role:editing.role,dept:editing.dept,manager:editing.manager||null,phone:editing.phone,salary:editing.salary,certifications:editing.certifications||[],
-      td1OnFile:editing.td1OnFile,benefitsPerPay:Number(editing.benefitsPerPay)||0,benefitsPlan:editing.benefitsPlan||null,
+      td1OnFile:editing.td1OnFile,benefitsPerPay:Number(editing.benefitsPerPay)||0,benefitsPlan:editing.benefitsPlan||null,benefitsTier:editing.benefitsTier||null,
       payType:editing.payType||"salary",hourlyRate:editing.payType==="hourly"?Number(editing.hourlyRate)||0:editing.hourlyRate});
     setEditing(null);};
   const addCert=()=>setEditing(p=>({...p,certifications:[...(p.certifications||[]),{name:"",issued:"",expires:""}]}));
@@ -480,15 +480,45 @@ function HrPeople_Manage(){
             <Field label="TD1 on file" hint="No TD1 means no basic personal tax credit — higher withholding, same as CRA's real rule.">
               <Switch on={!!editing.td1OnFile} onChange={v=>setEditing({...editing,td1OnFile:v})}/>
             </Field>
+            {/* Multi-tier benefits: plan + tier together (Employee only vs. +Spouse vs. Family)
+                each drive a different per-pay deduction. The single-plan flat-amount fallback
+                is still supported for legacy records - a blank tier reads as employee-only. */}
             <Field label="Benefits plan">
-              <Sel value={editing.benefitsPlan||""} onChange={e=>setEditing({...editing,benefitsPlan:e.target.value||null,benefitsPerPay:e.target.value?editing.benefitsPerPay||42:0})}>
+              <Sel value={editing.benefitsPlan||""} onChange={e=>{
+                const plan=e.target.value||null;
+                // Default the per-pay to the tier map's Employee-only when a plan is picked.
+                const BENEFITS_TIER_DEFAULTS={
+                  "Health + Dental":{Employee:32,"Employee + Spouse":58,"Family":88},
+                  "Health + Dental + RRSP 3% match":{Employee:52,"Employee + Spouse":78,"Family":108},
+                  "RRSP 3% match":{Employee:20,"Employee + Spouse":20,"Family":20},
+                };
+                const tier=editing.benefitsTier||"Employee";
+                const nextPerPay=plan?(BENEFITS_TIER_DEFAULTS[plan]?.[tier]||editing.benefitsPerPay||32):0;
+                setEditing({...editing,benefitsPlan:plan,benefitsPerPay:nextPerPay});
+              }}>
                 <option value="">Not enrolled</option>
                 <option value="Health + Dental">Health + Dental</option>
                 <option value="Health + Dental + RRSP 3% match">Health + Dental + RRSP 3% match</option>
                 <option value="RRSP 3% match">RRSP 3% match</option>
               </Sel>
             </Field>
-            <Field label="Benefits deduction/pay" hint="Deducted from net pay each run.">
+            <Field label="Coverage tier" hint="Which of the plan's tiers the employee is enrolled in.">
+              <Sel value={editing.benefitsTier||"Employee"} disabled={!editing.benefitsPlan} onChange={e=>{
+                const tier=e.target.value;
+                const BENEFITS_TIER_DEFAULTS={
+                  "Health + Dental":{Employee:32,"Employee + Spouse":58,"Family":88},
+                  "Health + Dental + RRSP 3% match":{Employee:52,"Employee + Spouse":78,"Family":108},
+                  "RRSP 3% match":{Employee:20,"Employee + Spouse":20,"Family":20},
+                };
+                const nextPerPay=BENEFITS_TIER_DEFAULTS[editing.benefitsPlan]?.[tier]||editing.benefitsPerPay;
+                setEditing({...editing,benefitsTier:tier,benefitsPerPay:nextPerPay});
+              }}>
+                <option value="Employee">Employee only</option>
+                <option value="Employee + Spouse">Employee + Spouse</option>
+                <option value="Family">Family</option>
+              </Sel>
+            </Field>
+            <Field label="Benefits deduction/pay" hint="Prefilled from the plan+tier; override for a custom deduction.">
               <Input type="number" min="0" disabled={!editing.benefitsPlan} value={editing.benefitsPerPay||0} onChange={e=>setEditing({...editing,benefitsPerPay:Number(e.target.value)||0})}/>
             </Field>
           </div>

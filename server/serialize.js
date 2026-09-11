@@ -234,7 +234,7 @@ export function serializeHrEmployee(row) {
     skills: JSON.parse(rest.skills_json || "[]"), badges: JSON.parse(rest.badges_json || "[]"),
     certifications: JSON.parse(rest.certifications_json || "[]"),
     status: rest.status, terminatedAt: rest.terminated_at,
-    td1OnFile: !!rest.td1_on_file, benefitsPerPay: rest.benefits_per_pay, benefitsPlan: rest.benefits_plan,
+    td1OnFile: !!rest.td1_on_file, benefitsPerPay: rest.benefits_per_pay, benefitsPlan: rest.benefits_plan, benefitsTier: rest.benefits_tier,
     payType: rest.pay_type || "salary", hourlyRate: rest.hourly_rate,
     erased: !!rest.erased, erasedAt: rest.erased_at,
     visibility: JSON.parse(rest.visibility_json || "{}"),

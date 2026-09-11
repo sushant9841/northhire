@@ -121,7 +121,7 @@ hrRouter.patch("/employees/:id", requireHrAuth, requireHrPriv, (req, res) => {
   if (!row) return res.status(404).json({ error: "Employee not found." });
   const d = req.body || {};
   if (d.payType !== undefined && !["salary", "hourly"].includes(d.payType)) return res.status(400).json({ error: "payType must be 'salary' or 'hourly'." });
-  const fields = { name: "name", title: "title", role: "role", dept: "dept", manager: "manager", phone: "phone", salary: "salary", benefitsPerPay: "benefits_per_pay", benefitsPlan: "benefits_plan", payType: "pay_type", hourlyRate: "hourly_rate" };
+  const fields = { name: "name", title: "title", role: "role", dept: "dept", manager: "manager", phone: "phone", salary: "salary", benefitsPerPay: "benefits_per_pay", benefitsPlan: "benefits_plan", benefitsTier: "benefits_tier", payType: "pay_type", hourlyRate: "hourly_rate" };
   const setCols = []; const params = [];
   for (const [key, col] of Object.entries(fields)) if (d[key] !== undefined) { setCols.push(`${col} = ?`); params.push(d[key]); }
   if (d.td1OnFile !== undefined) { setCols.push("td1_on_file = ?"); params.push(d.td1OnFile ? 1 : 0); }

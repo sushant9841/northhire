@@ -880,6 +880,8 @@ for (const stmt of [
   // fee, referral bonus). Divided by hires produces a real per-hire cost the analytics page can
   // surface without inventing numbers.
   "ALTER TABLE jobs ADD COLUMN recruiting_cost REAL DEFAULT 0",
+  // Multi-tier benefits: coverage tier alongside the existing per-pay amount.
+  "ALTER TABLE hr_employees ADD COLUMN benefits_tier TEXT",
 ]) {
   try { db.exec(stmt); } catch (e) { if (!/duplicate column/i.test(e.message)) console.error("migration:", stmt, e.message); }
 }

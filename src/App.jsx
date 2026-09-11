@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Ctx } from "./store/context.js";
 import { useStore } from "./store/useStore.js";
 import { Header } from "./shells/Header.jsx";
@@ -95,7 +95,7 @@ export default function NorthHire(){
     account:<AccountMenuPage/>,
     accessibility:<AccessibilityPage/>,pipeda:<PipedaPage/>,credits:<CreditsPage/>,unsubscribe:<UnsubscribePage/>,matchScore:<MatchScorePage/>,offer:<OfferPage/>,verifyEmail:<VerifyEmailPage/>,
     admBlogs:<AdmShell><ContentManager scope="admin"/></AdmShell>,admTrainings:<AdmShell><ContentManager scope="admin"/></AdmShell>,
-    admSettings:<AdmShell><AdmSettings/></AdmShell>,admLog:<AdmShell><AdmLog/></AdmShell>,admStats:<AdmShell><AdmStats/></AdmShell>,admDesignSystem:<AdmShell><AdmDesignSystem/></AdmShell>,admDesignSystem:<AdmShell><AdmDesignSystem/></AdmShell>,
+    admSettings:<AdmShell><AdmSettings/></AdmShell>,admLog:<AdmShell><AdmLog/></AdmShell>,admStats:<AdmShell><AdmStats/></AdmShell>,admDesignSystem:<AdmShell><AdmDesignSystem/></AdmShell>,
     admConfig:<AdmShell><AdmConfig/></AdmShell>,admAdmins:<AdmShell><AdmAdmins/></AdmShell>,
     /* HR Suite */
     hrLogin:<HrLoginPage/>,hrKiosk:<KioskPage/>,
@@ -219,16 +219,39 @@ export default function NorthHire(){
                 bottom-left banner was overlapping and hiding them. Signed-in users have
                 obviously consented to session cookies to be signed in at all.
                 Button sizing: min-height 48 to clear WCAG comfortable-tap-target guidance,
-                since the banner is the first thing a mobile visitor sees. */}
-            {!cookieAck&&!_isBare&&<div style={{position:"fixed",bottom:mob?76:20,left:mob?12:20,right:mob?12:20,maxWidth:560,margin:mob?"0":"0",
-              background:C.ink,color:"#fff",borderRadius:14,padding:mob?"14px 16px":"16px 20px",boxShadow:SH.xl,
-              display:"flex",gap:14,alignItems:"center",flexWrap:"wrap",zIndex:600}} data-cookie-accepted="false">
-              <div style={{color:"#6AACFF",display:"flex",flexShrink:0}}><I n="shield" s={20}/></div>
-              <div style={{flex:"1 1 240px",minWidth:0,fontSize:13.5,lineHeight:1.55}}>
-                We use cookies for sign-in, saved jobs and analytics. See our <button onClick={()=>{acceptCookies();go("privacy");}}
-                  style={{background:"none",border:"none",padding:0,color:"#6AACFF",cursor:"pointer",fontFamily:"inherit",fontSize:13.5,fontWeight:600,textDecoration:"underline"}}>privacy policy</button>.</div>
-              <button onClick={acceptCookies} style={{background:"#fff",color:C.ink,border:"none",minHeight:48,padding:"12px 20px",borderRadius:10,cursor:"pointer",fontWeight:700,fontSize:14,fontFamily:"inherit",flexShrink:0}}>Got it</button>
-            </div>}
+                since the banner is the first thing a mobile visitor sees.
+                Auto-dismiss on scroll-past-footer: an IntersectionObserver watches the site
+                footer; as soon as it enters the viewport the banner hides itself, since a
+                reader who scrolled all the way down clearly saw the page and doesn't need a
+                second dismissal prompt overlapping the footer nav links. */}
+            {!cookieAck&&!_isBare&&<_CookieBanner mob={mob} onAccept={acceptCookies} onGoPolicy={()=>{acceptCookies();go("privacy");}}/>}
           </>}
     </div></Ctx.Provider>;
+}
+
+/* Cookie banner extracted so it can carry its own IntersectionObserver on the site footer
+   (or the bottom-of-page marker when no footer is rendered). Once the footer scrolls into
+   view the banner is hidden - a reader who's read the whole page has clearly seen it and
+   doesn't need a second dismissal prompt overlapping the footer's own nav links. */
+function _CookieBanner({mob,onAccept,onGoPolicy}){
+  const [hidden,setHidden]=useState(false);
+  useEffect(()=>{
+    const footer=document.querySelector("footer");
+    if(!footer||typeof IntersectionObserver!=="function")return;
+    const io=new IntersectionObserver(entries=>{
+      if(entries.some(e=>e.isIntersecting))setHidden(true);
+    },{rootMargin:"0px 0px -20px 0px"});
+    io.observe(footer);
+    return ()=>io.disconnect();
+  },[]);
+  if(hidden)return null;
+  return <div style={{position:"fixed",bottom:mob?76:20,left:mob?12:20,right:mob?12:20,maxWidth:560,margin:mob?"0":"0",
+    background:C.ink,color:"#fff",borderRadius:14,padding:mob?"14px 16px":"16px 20px",boxShadow:SH.xl,
+    display:"flex",gap:14,alignItems:"center",flexWrap:"wrap",zIndex:600}} data-cookie-accepted="false">
+    <div style={{color:"#6AACFF",display:"flex",flexShrink:0}}><I n="shield" s={20}/></div>
+    <div style={{flex:"1 1 240px",minWidth:0,fontSize:13.5,lineHeight:1.55}}>
+      We use cookies for sign-in, saved jobs and analytics. See our <button onClick={onGoPolicy}
+        style={{background:"none",border:"none",padding:0,color:"#6AACFF",cursor:"pointer",fontFamily:"inherit",fontSize:13.5,fontWeight:600,textDecoration:"underline"}}>privacy policy</button>.</div>
+    <button onClick={onAccept} style={{background:"#fff",color:C.ink,border:"none",minHeight:48,padding:"12px 20px",borderRadius:10,cursor:"pointer",fontWeight:700,fontSize:14,fontFamily:"inherit",flexShrink:0}}>Got it</button>
+  </div>;
 }
