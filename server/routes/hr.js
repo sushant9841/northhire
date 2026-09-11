@@ -854,6 +854,50 @@ hrRouter.patch("/payruns/:id/reverse", requireHrAuth, requireHrPriv, (req, res) 
   logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "payroll_reversed", `Reversed payroll for ${run.period_start} → ${run.period_end} ($${run.total_net?.toLocaleString()} net): ${reason}`);
   res.json({ ok: true });
 });
+/* Manager 1:1s - the manager and the report can both read and write; HR/owner can read
+   everything (they own the People module and need it for coaching + escalation) but the
+   colleague-visibility question is "no one else". */
+hrRouter.get("/one-on-ones", requireHrAuth, (req, res) => {
+  const { managerId, reportId } = req.query;
+  const me = req.hrEmployee;
+  const isOnPair = me.id === managerId || me.id === reportId;
+  if (!isOnPair && !isPriv(me)) return res.status(403).json({ error: "This is a private log between the manager and their report." });
+  if (!managerId || !reportId) return res.status(400).json({ error: "managerId and reportId are required." });
+  const rows = db.prepare(
+    "SELECT * FROM hr_one_on_ones WHERE company_id = ? AND manager_id = ? AND report_id = ? ORDER BY meeting_date DESC"
+  ).all(me.company_id, managerId, reportId);
+  res.json({ entries: rows.map(r => ({
+    id: r.id, meetingDate: r.meeting_date, agenda: r.agenda, notes: r.notes,
+    actionItems: r.action_items, createdBy: r.created_by, createdAt: r.created_at,
+  })) });
+});
+hrRouter.post("/one-on-ones", requireHrAuth, (req, res) => {
+  const { managerId, reportId, meetingDate, agenda, notes, actionItems } = req.body || {};
+  const me = req.hrEmployee;
+  if (!managerId || !reportId || !meetingDate) return res.status(400).json({ error: "managerId, reportId, meetingDate are required." });
+  // Both the manager and the report can log a 1:1 (either can capture what was discussed).
+  // HR/owner can also log on behalf of others - a real HRIS lets HR record a coaching note.
+  const isOnPair = me.id === managerId || me.id === reportId;
+  if (!isOnPair && !isPriv(me)) return res.status(403).json({ error: "You can only log a 1:1 you're part of." });
+  const id = nextId("oo", "hr_one_on_ones");
+  db.prepare(
+    `INSERT INTO hr_one_on_ones (id, company_id, manager_id, report_id, meeting_date, agenda, notes, action_items, created_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(id, me.company_id, managerId, reportId, meetingDate,
+    (agenda || "").slice(0, 2000), (notes || "").slice(0, 8000), (actionItems || "").slice(0, 4000), me.id);
+  res.status(201).json({ id });
+});
+hrRouter.delete("/one-on-ones/:id", requireHrAuth, (req, res) => {
+  const row = db.prepare("SELECT * FROM hr_one_on_ones WHERE id = ? AND company_id = ?").get(req.params.id, req.hrEmployee.company_id);
+  if (!row) return res.status(404).json({ error: "Not found." });
+  const me = req.hrEmployee;
+  // Only the person who logged the note can delete it; HR/owner can also (for compliance
+  // reasons - someone leaving needs their notes cleaned up).
+  if (row.created_by !== me.id && !isPriv(me)) return res.status(403).json({ error: "You can only remove notes you wrote." });
+  db.prepare("DELETE FROM hr_one_on_ones WHERE id = ?").run(req.params.id);
+  res.json({ ok: true });
+});
+
 hrRouter.get("/audit-log", requireHrAuth, (req, res) => {
   if (!isPriv(req.hrEmployee) && req.hrEmployee.role !== "finance") return res.status(403).json({ error: "Not allowed for your role." });
   const rows = db.prepare("SELECT hr_audit_log.*, hr_employees.name AS actor_name FROM hr_audit_log LEFT JOIN hr_employees ON hr_employees.id = hr_audit_log.actor_employee_id WHERE hr_audit_log.company_id = ? ORDER BY hr_audit_log.created_at DESC LIMIT 500").all(req.hrEmployee.company_id);

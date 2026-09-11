@@ -504,6 +504,24 @@ CREATE TABLE IF NOT EXISTS hr_employees (
 
 /* Real shift/roster scheduling - previously HR Suite only had after-the-fact attendance logging
    (punch in/out against no plan) with zero forward scheduling of who's supposed to work when. */
+/* Manager 1:1s - private notes and action items between a manager and a direct report over
+   time. Visible only to the two people on the record (manager and report) plus HR/owner - a
+   colleague can't read another pair's 1:1 log. This is the lightweight complement to full
+   performance reviews (still deferred as a separate module). */
+CREATE TABLE IF NOT EXISTS hr_one_on_ones (
+  id TEXT PRIMARY KEY,
+  company_id TEXT NOT NULL REFERENCES employers(id),
+  manager_id TEXT NOT NULL REFERENCES hr_employees(id),
+  report_id TEXT NOT NULL REFERENCES hr_employees(id),
+  meeting_date TEXT NOT NULL,
+  agenda TEXT,
+  notes TEXT,
+  action_items TEXT,
+  created_by TEXT REFERENCES hr_employees(id),
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_hr_one_on_ones_pair ON hr_one_on_ones(company_id, manager_id, report_id, meeting_date DESC);
+
 CREATE TABLE IF NOT EXISTS hr_shifts (
   id TEXT PRIMARY KEY,
   company_id TEXT NOT NULL REFERENCES employers(id),
@@ -858,6 +876,10 @@ for (const stmt of [
      actually apply a credit note) - this is the relationship + attribution half. */
   "ALTER TABLE employers ADD COLUMN referral_code TEXT",
   "ALTER TABLE employers ADD COLUMN referred_by_employer_id TEXT",
+  // Cost-per-hire: an employer enters what they spent to source this posting (ad spend, agency
+  // fee, referral bonus). Divided by hires produces a real per-hire cost the analytics page can
+  // surface without inventing numbers.
+  "ALTER TABLE jobs ADD COLUMN recruiting_cost REAL DEFAULT 0",
 ]) {
   try { db.exec(stmt); } catch (e) { if (!/duplicate column/i.test(e.message)) console.error("migration:", stmt, e.message); }
 }

@@ -179,7 +179,14 @@ jobsRouter.patch("/:id", requireAuth, requireRole("employer", "admin"), (req, re
   const isAdmin = req.user.role === "admin";
   if (!isAdmin && job.employer_id !== req.user.employer_id) return res.status(403).json({ error: "Not your listing." });
 
-  const { status, flagged, approve, scoreWeights } = req.body || {};
+  const { status, flagged, approve, scoreWeights, recruitingCost } = req.body || {};
+
+  if (recruitingCost !== undefined) {
+    if (isAdmin) return res.status(403).json({ error: "Recruiting cost is the employer's to track, not an administrator's." });
+    const c = Number(recruitingCost);
+    if (!Number.isFinite(c) || c < 0) return res.status(400).json({ error: "Recruiting cost must be a non-negative number." });
+    db.prepare("UPDATE jobs SET recruiting_cost = ? WHERE id = ?").run(c, req.params.id);
+  }
 
   /* Per-job scoring weights, so a ticketed trade can weight certifications heavily while a
      coordinator role weights experience. Values are clamped and only the four known components

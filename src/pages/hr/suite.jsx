@@ -405,9 +405,61 @@ export function HrProfile(){
               </div>}
         </Card>
         <_PunchPinCard A={A} empId={emp.id}/>
+        {emp.manager&&<_OneOnOneLog A={A} managerId={emp.manager} reportId={emp.id} me={emp}/>}
       </div>
     </div>
   </div>;
+}
+
+/* Manager 1:1 log for a manager-report pair. The employee viewing their own profile sees
+   the log with their manager; a manager viewing People and opening a direct report sees the
+   log with that report. Notes are private to the two on the pair (plus HR/owner). */
+function _OneOnOneLog({A,managerId,reportId,me}){
+  const [entries,setEntries]=useState(null);
+  const [showNew,setShowNew]=useState(false);
+  const [draft,setDraft]=useState({meetingDate:new Date().toISOString().slice(0,10),agenda:"",notes:"",actionItems:""});
+  const managerName=A.hrEmp(managerId)?.name||"manager";
+  const reload=async()=>{
+    try{const r=await A.hrApiGet(`/hr/one-on-ones?managerId=${managerId}&reportId=${reportId}`); setEntries(r.entries||[]);}
+    catch{setEntries([]);}
+  };
+  useEffect(()=>{reload();/* eslint-disable-next-line */},[managerId,reportId]);
+  const save=async()=>{
+    if(!draft.meetingDate)return;
+    try{await A.hrApiPost("/hr/one-on-ones",{managerId,reportId,...draft});
+      setDraft({meetingDate:new Date().toISOString().slice(0,10),agenda:"",notes:"",actionItems:""});
+      setShowNew(false); reload();}
+    catch(e){A.toast?.(e.message,"danger");}
+  };
+  return <Card pad={22} style={{borderRadius:14,marginTop:16}}>
+    <div className="flex justify-between items-center gap-2 mb-2 flex-wrap">
+      <div>
+        <Lbl style={{marginBottom:2}}>1:1 log with {managerName}</Lbl>
+        <div className="text-xs text-text-3">Private notes and action items between the two of you. Not visible to colleagues.</div>
+      </div>
+      <Btn kind="outline" size="sm" icon="plus" onClick={()=>setShowNew(v=>!v)}>{showNew?"Cancel":"Log a 1:1"}</Btn>
+    </div>
+    {showNew&&<div className="flex flex-col gap-2 mt-3 p-3 bg-bg rounded-lg">
+      <Field label="Meeting date"><Input type="date" value={draft.meetingDate} onChange={e=>setDraft(d=>({...d,meetingDate:e.target.value}))}/></Field>
+      <Field label="Agenda (optional)"><Input value={draft.agenda} onChange={e=>setDraft(d=>({...d,agenda:e.target.value}))} placeholder="What you planned to talk about"/></Field>
+      <Field label="Notes"><Area rows={4} value={draft.notes} onChange={e=>setDraft(d=>({...d,notes:e.target.value}))} placeholder="What was actually discussed."/></Field>
+      <Field label="Action items"><Area rows={2} value={draft.actionItems} onChange={e=>setDraft(d=>({...d,actionItems:e.target.value}))} placeholder="One item per line."/></Field>
+      <div className="flex justify-end"><Btn kind="primary" size="sm" onClick={save}>Save 1:1</Btn></div>
+    </div>}
+    {entries===null?<div className="text-sm text-text-3 py-2">Loading…</div>
+      :entries.length===0?<div className="text-sm text-text-3 py-2">No 1:1s logged yet. When you meet next, hit "Log a 1:1" to capture what was discussed.</div>
+      :<div className="flex flex-col gap-2 mt-3">{entries.map(e=>
+        <div key={e.id} className="py-2.5 px-3 bg-bg rounded-lg">
+          <div className="flex justify-between items-center gap-2 mb-1">
+            <div className="text-sm font-semibold text-text">{new Date(e.meetingDate).toLocaleDateString("en-CA",{year:"numeric",month:"long",day:"numeric"})}</div>
+            {e.createdBy===me.id&&<Btn kind="ghost" size="xs" icon="trash" title="Delete this note" onClick={async()=>{await A.hrApiDel(`/hr/one-on-ones/${e.id}`); reload();}}/>}
+          </div>
+          {e.agenda&&<div className="text-xs text-text-3 mb-1"><strong>Agenda:</strong> {e.agenda}</div>}
+          {e.notes&&<div className="text-sm text-text-2 whitespace-pre-wrap mb-1">{e.notes}</div>}
+          {e.actionItems&&<div className="text-xs text-text-3 whitespace-pre-wrap"><strong>Actions:</strong> {e.actionItems}</div>}
+        </div>)}
+      </div>}
+  </Card>;
 }
 
 /* Your own punch PIN for the shared time clock. Deliberately separate from your password: you key
@@ -1917,6 +1969,33 @@ export function HrSettings(){
   const setSection=(sec,k,v)=>setD(p=>({...p,[sec]:{...p[sec],[k]:v}}));
 
   return <div style={{maxWidth:900}}>
+    {/* Approval-chain visualisation: shows what actions require which approvers, derived from
+        the same routing the server enforces. Was implicit in code (leave/expense approvers,
+        payroll executor, invoice-paid role) - reading this off route guards is what an admin
+        actually wants to see, not a piece of documentation that could drift from the code. */}
+    <Card pad={mob?20:26} style={{borderRadius:16,marginBottom:16}}>
+      <Lbl>Approval chains</Lbl>
+      <div className="text-sm text-text-3 mb-3.5">Who signs off on what. Reflects what the server actually enforces - not a settings surface, just a map.</div>
+      <div className="flex flex-col gap-2">
+        {[
+          ["Leave request","The employee's direct manager, or any HR/Owner if no manager is set."],
+          ["Expense claim","The employee's direct manager approves; Finance or HR/Owner marks it paid (a separate role, kept distinct from approval)."],
+          ["Payroll execution","Owner, HR, or Finance can approve a run; Owner or Finance executes it."],
+          ["Invoice paid","Owner, HR, or Finance marks an invoice paid. Reversal is Owner/Finance only, with a required reason."],
+          ["Role change (demote Owner)","Cannot demote the last remaining Owner - blocked with a toast, not a silent no-op."],
+          ["Offboarding","Owner or HR runs the checklist. Manager on the person's chain does not by itself have offboarding rights."],
+          ["1:1 notes","Manager + report can log and read. HR/Owner can also read (for coaching and compliance). No other colleague can."],
+        ].map(([action,rule])=>
+          <div key={action} className="flex gap-3 items-start py-2.5 px-3 bg-bg rounded-lg">
+            <div className="w-9 h-9 rounded-lg bg-brand-wash text-brand flex items-center justify-center shrink-0"><I n="shield" s={16}/></div>
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-text">{action}</div>
+              <div className="text-xs text-text-2 mt-0.5 leading-relaxed">{rule}</div>
+            </div>
+          </div>)}
+      </div>
+    </Card>
+
     <Card pad={mob?20:26} style={{borderRadius:16,marginBottom:16}}>
       <Lbl>Module visibility</Lbl>
       <div className="text-sm text-text-3 mb-3.5">Turn off any module to hide it from every employee's sidebar.</div>

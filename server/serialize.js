@@ -77,6 +77,7 @@ export function serializeJob(row) {
     flagged: !!row.flagged,
     hiringType: row.hiring_type,
     pendingOwnerApproval: !!row.pending_owner_approval,
+    recruitingCost: Number(row.recruiting_cost || 0),
   };
 }
 

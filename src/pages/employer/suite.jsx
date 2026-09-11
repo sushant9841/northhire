@@ -1804,6 +1804,14 @@ export function EmpAnalyticsPage(){
           <Stat label="Applications" value={stats.totalApps} icon="send"/>
           <Stat label="View → apply" value={`${stats.conversion}%`} icon="target" tone={C.brand}/>
         </div>
+        {/* Cost-per-hire lands beside the top-line stats when the employer has recorded any
+            recruiting spend and at least one hire in the range - otherwise the tile would show
+            a hollow $0 that reads as broken. */}
+        {stats.hiresCount>0&&stats.totalCost>0&&<div className={`grid gap-3.5 mb-6 ${mob?"grid-cols-2":"grid-cols-4"}`}>
+          <Stat label="Recruiting spend" value={`$${stats.totalCost.toLocaleString()}`} icon="wallet"/>
+          <Stat label="Hires (in range)" value={stats.hiresCount} icon="check" tone={C.ok}/>
+          <Stat label="Cost per hire" value={stats.costPerHire?`$${stats.costPerHire.toLocaleString()}`:"—"} icon="target" tone={C.violet}/>
+        </div>}
         <Card pad={mob?24:32} style={{borderRadius:20,marginBottom:16}}>
           <div className="flex justify-between items-baseline mb-2 flex-wrap gap-2">
             <Lbl style={{marginBottom:0}}>Applications, last 30 days</Lbl>
@@ -1868,16 +1876,16 @@ export function EmpAnalyticsPage(){
           <div className="flex justify-between items-center py-4 px-6 border-b border-line-soft">
             <Lbl style={{margin:0}}>Per-job performance</Lbl>
             <Btn kind="outline" size="sm" icon="download" onClick={()=>{
-              const rows=[["Job","Status","Views","Applications","View → apply","Offers made"],
-                ...stats.byJob.map(j=>[j.title,j.status,j.views,j.applications,`${j.conversion}%`,j.offers])];
+              const rows=[["Job","Status","Views","Applications","View → apply","Offers made","Recruiting cost"],
+                ...stats.byJob.map(j=>[j.title,j.status,j.views,j.applications,`${j.conversion}%`,j.offers,j.recruitingCost||0])];
               const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
               const blob=new Blob([csv],{type:"text/csv"}); const url=URL.createObjectURL(blob);
               const a=document.createElement("a"); a.href=url; a.download="job-performance.csv"; a.click(); URL.revokeObjectURL(url);
             }}>Export CSV</Btn>
           </div>
-          <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:600}}>
+          <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:700}}>
             <thead><tr className="border-b-2 border-line text-left">
-              {["Job","Status","Views","Applications","View → apply","Offers"].map(h=>
+              {["Job","Status","Views","Applications","View → apply","Offers","Cost ($)",""].map(h=>
                 <th key={h} className="py-2.5 px-4 text-xs font-bold text-text-3 tracking-wide uppercase">{h}</th>)}
             </tr></thead>
             <tbody>{stats.byJob.map(j=>
@@ -1892,6 +1900,14 @@ export function EmpAnalyticsPage(){
                 <td className="py-2.5 px-4 text-sm text-text-2 tabular-nums">{j.applications}</td>
                 <td className="py-2.5 px-4 text-sm text-text-2 tabular-nums">{j.conversion}%</td>
                 <td className="py-2.5 px-4 text-sm text-text-2 tabular-nums">{j.offers}</td>
+                {/* Inline cost input - click a job row's cost cell to set/update recruiting
+                    spend for that posting. Kept minimal so the UI change adds a real capability
+                    without needing a full modal. Debounced write on blur. */}
+                <td className="py-2.5 px-2 text-sm tabular-nums" onClick={e=>e.stopPropagation()}>
+                  <input type="number" min="0" placeholder="cost" defaultValue={j.recruitingCost||""}
+                    onBlur={e=>{const v=Number(e.target.value)||0; if(v!==(j.recruitingCost||0))A.setJobRecruitingCost(j.id,v);}}
+                    className="w-20 py-1 px-2 border border-line rounded text-xs text-right"/>
+                </td>
                 <td className="py-2.5 px-2 text-right text-text-3"><I n="chevR" s={14}/></td>
               </tr>)}</tbody>
           </table></div>
@@ -1904,6 +1920,27 @@ export function EmpAnalyticsPage(){
               return <div key={label}>
                 <div className="flex justify-between text-sm mb-1.5"><span className="text-text">{label}</span><span className="font-semibold text-text-2">{count}</span></div>
                 <div className="h-2 bg-bg rounded-full overflow-hidden"><div className="h-full transition-[width] duration-300" style={{width:`${pct}%`,background:C.brand}}/></div></div>;})}
+          </div>
+        </Card>}
+
+        {/* Salary benchmarking: aggregates the platform's OWN live hourly postings by category
+            so a role posted at $28-$32/hr for retail can be compared to what similar-category
+            postings actually pay today. Anonymised, no per-employer breakdown. Only renders
+            when there's a meaningful comparable set (2+ postings in the category). */}
+        {stats.salaryBenchmarks?.length>0&&<Card pad={mob?24:32} style={{borderRadius:20,marginTop:16}}>
+          <Lbl>Salary benchmarks by sector</Lbl>
+          <p className="text-sm text-text-2 leading-snug mt-1 mb-4">Aggregated across every live hourly listing on NorthHire — a starting point when you set the pay range on a new role.</p>
+          <div className="flex flex-col gap-2">
+            {stats.salaryBenchmarks.filter(b=>b.count>=2).map(b=>
+              <div key={b.cat} className="flex items-center gap-3 py-2 border-b border-line-soft flex-wrap">
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold text-text">{b.label}</div>
+                  <div className="text-xs text-text-3 mt-0.5">Range ${b.min}–${b.max}/hr · {b.count} live listing{b.count===1?"":"s"}</div>
+                </div>
+                <div className="text-sm font-bold text-brand tabular-nums shrink-0">${b.avg.toFixed(2)}/hr avg</div>
+              </div>)}
+            {stats.salaryBenchmarks.filter(b=>b.count>=2).length===0&&
+              <div className="text-sm text-text-3 py-2">Not enough live listings across the platform to produce meaningful benchmarks yet.</div>}
           </div>
         </Card>}
       </div>

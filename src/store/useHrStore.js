@@ -628,8 +628,15 @@ export function useHrStore(){
   };
   const canAccessModule=(role,module)=>modulesForRole(role).includes(module);
 
-  return {
-    hrBridging,hrAuthChecked,
+  // Passthrough helpers so a small consumer (like the 1:1 log widget) can talk to a scoped HR
+// endpoint without needing its own store integration - keeps that surface's data local rather
+// than pushing every entry into the global roster load.
+const hrApiGet=(path,params)=>api.get(path,params);
+const hrApiPost=(path,body)=>api.post(path,body);
+const hrApiDel=path=>api.del(path);
+
+return {
+    hrBridging,hrAuthChecked,hrApiGet,hrApiPost,hrApiDel,
     hrEmployees,hrAttendance,hrLeave,hrTasks,hrEvents,hrInvoices,hrChats,hrChatMsgs,
     hrPayruns,hrCompanySettings,hrDepartments,hrExpenses,hrAuditLog,
     hrEmp,hrEmpsAtCompany,hrCurrentEmp,hrCurrentCompany,hrLogin,hrLogout,hrAutoLogin,

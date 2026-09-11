@@ -508,6 +508,12 @@ export function useStore(){
       return {ok:true};
     }catch(e){return {ok:false,msg:e.message};}
   };
+  const setJobRecruitingCost=async(jobId,cost)=>{
+    try{
+      const {job:updated}=await api.patch(`/jobs/${jobId}`,{recruitingCost:cost});
+      setJobs(l=>l.map(j=>j.id===jobId?mapApiJob(updated):j));
+    }catch(e){toast(e.message,"danger");}
+  };
 
   const scoreBreakdown=(u,j)=>{
     if(!u||!j)return [];
@@ -1135,9 +1141,33 @@ export function useStore(){
       const jApps=applications.filter(a=>a.job===j.id);
       return {id:j.id,title:j.t,status:j.status,views:j.views,applications:jApps.length,
         conversion:j.views?Math.min(100,Math.round((jApps.length/j.views)*1000)/10):0,
-        offers:jApps.filter(a=>a.stage==="Offer").length};
+        offers:jApps.filter(a=>a.stage==="Offer").length,
+        recruitingCost:Number(j.recruitingCost)||0};
     }).sort((a,b)=>b.applications-a.applications);
-    return {totalJobs:myJobs.length,liveJobs:myJobs.filter(j=>j.status==="live").length,totalViews,totalApps,conversion,byStage,topJob,avgScore,applicationTrend,eligibilityMix,byJob};
+    // Cost-per-hire: sum recruiting_cost of jobs that produced at least one hire in the window,
+    // divide by the hires. A job with no cost recorded contributes zero cost and zero hires
+    // (not a fake $0/hire). Hires here means an application at Hired stage.
+    const hiresInRange=myApps.filter(a=>a.stage==="Hired");
+    const costableJobs=myJobs.filter(j=>hiresInRange.some(a=>a.job===j.id));
+    const totalCost=costableJobs.reduce((s,j)=>s+(Number(j.recruitingCost)||0),0);
+    const costPerHire=hiresInRange.length&&totalCost>0?Math.round(totalCost/hiresInRange.length):null;
+
+    // Salary benchmarking: aggregate the employer's own published listings by category so
+    // pay-range decisions on new roles have a starting point that reflects what they actually
+    // pay elsewhere. All-time on this - a category benchmark based on 30 days of postings would
+    // be too noisy to be useful.
+    const bench={};
+    jobs.filter(j=>j.status==="live"&&j.lo>0&&j.hi>0&&j.unit==="hr").forEach(j=>{
+      if(!bench[j.cat])bench[j.cat]={sum:0,count:0,min:Infinity,max:0,catLabel:CATM[j.cat]?.label||j.cat};
+      const mid=(j.lo+j.hi)/2;
+      bench[j.cat].sum+=mid; bench[j.cat].count++;
+      bench[j.cat].min=Math.min(bench[j.cat].min,j.lo);
+      bench[j.cat].max=Math.max(bench[j.cat].max,j.hi);
+    });
+    const salaryBenchmarks=Object.entries(bench).map(([cat,b])=>({cat,label:b.catLabel,
+      avg:Math.round(b.sum/b.count*100)/100,min:b.min,max:b.max,count:b.count})).sort((a,b)=>b.count-a.count);
+
+    return {totalJobs:myJobs.length,liveJobs:myJobs.filter(j=>j.status==="live").length,totalViews,totalApps,conversion,byStage,topJob,avgScore,applicationTrend,eligibilityMix,byJob,costPerHire,totalCost,hiresCount:hiresInRange.length,salaryBenchmarks};
   };
 
   /* Fuzzy/synonym expansion now lives in helpers/synonyms.js so server/jobAlerts.js matches
@@ -1889,7 +1919,7 @@ export function useStore(){
     jobId,empId,blogId,trainingId,cvId,editId,candidateId,pipelineJob,applyDraft,setApplyDraft,
     contactPrefill,setContactPrefill,pendingPlan,setPendingPlan,employersPrefill,setEmployersPrefill,
     blogAuthorFilter,setBlogAuthorFilter,filterBlogsByAuthor,
-    emp,job,person,score,scoreCandidate,scoreBreakdown,saveScoreWeights,DEFAULT_SCORE_WEIGHTS,matchReasons,myApps,appliedJobIds,myNotifications,defaultCv,
+    emp,job,person,score,scoreCandidate,scoreBreakdown,saveScoreWeights,setJobRecruitingCost,DEFAULT_SCORE_WEIGHTS,matchReasons,myApps,appliedJobIds,myNotifications,defaultCv,
     stagesFor,stagesForApp,savePipelineStages,
     jobHiringType,jobHiringLabel,
     completeness,completenessHint,tabBadges,
