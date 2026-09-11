@@ -6,6 +6,7 @@ import { I } from "../design/icons.jsx";
 import { Btn, SmartLogo, SmartPortrait } from "../design/primitives.jsx";
 import { CATS } from "../store/seed/constants.js";
 import { ROUTES, TABS_BY_ROLE } from "../routes.js";
+import { useTranslation } from "../i18n/i18n.jsx";
 
 export function Wordmark({light,size=20,onClick}){
   return <div onClick={onClick} className={`flex items-center gap-2.5 shrink-0 ${onClick?"cursor-pointer":"cursor-default"}`}>
@@ -17,8 +18,11 @@ export function Wordmark({light,size=20,onClick}){
 
 export function Header(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
+  const {t,locale,setLocale}=useTranslation();
   const [menu,setMenu]=useState(false);
   const [browseOpen,setBrowseOpen]=useState(false);
+  const [langOpen,setLangOpen]=useState(false);
+  const chooseLocale=next=>{setLocale(next); if(A.setUserLocale)A.setUserLocale(next); setLangOpen(false);};
   /* Both dropdowns previously closed only via a click-catcher (menu) or a fragile
      onBlur+setTimeout hack (browseOpen) - neither responded to Escape. */
   useEffect(()=>{
@@ -34,15 +38,15 @@ export function Header(){
   const showBackDt=!mob&&!isRoot&&A.history?.length>0;
   const role=A.user?.role;
   /* Role-specific nav — hide "For employers" from seekers, show seeker-relevant links */
-  const seekerLinks=[["search","Browse jobs","browse"],["trainings","Trainings"],["blogs","Resources"]];
-  const guestLinks=[["search","Find jobs","browse"],["trainings","Trainings"],["blogs","Resources"],["forEmployers","For employers"]];
+  const seekerLinks=[["search",t("nav.browseJobs"),"browse"],["trainings",t("nav.trainings")],["blogs",t("nav.resources")]];
+  const guestLinks=[["search",t("nav.findJobs"),"browse"],["trainings",t("nav.trainings")],["blogs",t("nav.resources")],["forEmployers",t("nav.forEmployers")]];
   const publicLinks=role==="seeker"?seekerLinks:guestLinks;
   /* Browse-jobs dropdown categories */
   const browseCats=[
-    {h:"By sector",items:CATS.slice(0,6).map(c=>[c.label,()=>{A.setSearch({q:"",where:"",cats:[c.id]});A.go("search");setBrowseOpen(false);}])},
-    {h:"By location",items:[["Toronto, ON","Vancouver, BC","Calgary, AB","Montreal, QC","Edmonton, AB","Ottawa, ON"].map(l=>[l,()=>{A.setSearch({q:"",where:l,cats:[]});A.go("search");setBrowseOpen(false);}])].flat()},
-    {h:"By employer",items:[["Browse all companies",()=>{A.go("employers");setBrowseOpen(false);}],
-      ["Verified employers only",()=>{A.setEmployersPrefill("verified");A.go("employers");setBrowseOpen(false);}]]},
+    {h:t("nav.bySector"),items:CATS.slice(0,6).map(c=>[c.label,()=>{A.setSearch({q:"",where:"",cats:[c.id]});A.go("search");setBrowseOpen(false);}])},
+    {h:t("nav.byLocation"),items:[["Toronto, ON","Vancouver, BC","Calgary, AB","Montreal, QC","Edmonton, AB","Ottawa, ON"].map(l=>[l,()=>{A.setSearch({q:"",where:l,cats:[]});A.go("search");setBrowseOpen(false);}])].flat()},
+    {h:t("nav.byEmployer"),items:[[t("nav.browseAllCompanies"),()=>{A.go("employers");setBrowseOpen(false);}],
+      [t("nav.verifiedOnly"),()=>{A.setEmployersPrefill("verified");A.go("employers");setBrowseOpen(false);}]]},
   ];
 
   return <header className="h-15 bg-white border-b border-line sticky top-0 z-400 shrink-0">
@@ -79,8 +83,8 @@ export function Header(){
     </>}
 
     <div className={`ml-auto flex items-center ${mob?"gap-1.5":"gap-2.5"}`}>
-      {!mob&&!A.user&&<><Btn kind="ghost" size="sm" onClick={()=>A.go("login")}>Sign in</Btn>
-        <Btn kind="primary" size="sm" onClick={()=>A.go("signup")}>Create account</Btn></>}
+      {!mob&&!A.user&&<><Btn kind="ghost" size="sm" onClick={()=>A.go("login")}>{t("common.signIn")}</Btn>
+        <Btn kind="primary" size="sm" onClick={()=>A.go("signup")}>{t("common.createAccount")}</Btn></>}
       {/* Guest mobile: single sign-in pill only. Desktop already shows the two buttons above. */}
       {A.user&&<button onClick={()=>A.go("alerts")} aria-label="Notifications" className="relative bg-bg border-0 w-10 h-10 rounded-xl cursor-pointer flex items-center justify-center text-text">
         <I n="bell" s={19}/>
@@ -94,7 +98,7 @@ export function Header(){
                 : <SmartPortrait seed={A.user.seed??0} size={38} radius={11}/>}
             </button>
           : mob&&<button onClick={()=>A.go("login")} className="bg-brand text-white border-0 py-2.5 px-3.5 h-10 rounded-xl cursor-pointer text-sm font-semibold flex items-center gap-1.5 transition duration-150 hover:brightness-110 active:scale-95">
-              Sign in</button>}
+              {t("common.signIn")}</button>}
         {menu&&A.user&&<>
           <div onClick={()=>setMenu(false)} className="fixed inset-0 z-490"/>
           <div className="absolute top-12 right-0 w-64 bg-white border border-line rounded-2xl shadow-md z-500 overflow-hidden" style={{animation:"pop .16s ease"}}>
@@ -104,17 +108,32 @@ export function Header(){
                 : <SmartPortrait seed={A.user.seed??0} size={40} radius={11}/>}
               <div className="min-w-0">
                 <div className="text-sm font-bold text-text overflow-hidden text-ellipsis whitespace-nowrap">{A.user.name}</div>
-                <div className="text-xs text-text-3">{A.user.role==="seeker"?"Job seeker":A.user.role==="employer"?"Employer":"Administrator"}</div></div></div>
+                <div className="text-xs text-text-3">{A.user.role==="seeker"?t("account.jobSeeker"):A.user.role==="employer"?t("account.employer"):t("account.administrator")}</div></div></div>
             <div className="p-1.5">
-              {(A.user.role==="seeker"?[["account","My account","user"],["profile","Edit profile","edit"],["cvs","My CVs","file"],["status","Applications","activity"],["saved","Saved jobs","bookmark"],["settings","Settings","gear"]]
-                :A.user.role==="employer"?[["empHome","Dashboard","home"],["empPost","Post a job","plus"],["empPipeline","Candidates","users"],["empCompany","Company profile","building"],["empTeam","Team","users"],["empBilling","Billing","wallet"],["settings","Settings","gear"]]
-                :[["admHome","Overview","home"],["admSettings","Platform settings","gear"],["admLog","Activity log","file"],["admStats","Statistics","trend"]]
+              {(A.user.role==="seeker"?[["account",t("account.myAccount"),"user"],["profile",t("account.editProfile"),"edit"],["cvs",t("account.myCvs"),"file"],["status",t("account.applications"),"activity"],["saved",t("account.savedJobs"),"bookmark"],["settings",t("account.settings"),"gear"]]
+                :A.user.role==="employer"?[["empHome",t("account.dashboard"),"home"],["empPost",t("account.postAJob"),"plus"],["empPipeline",t("account.candidates"),"users"],["empCompany",t("account.companyProfile"),"building"],["empTeam",t("account.team"),"users"],["empBilling",t("account.billing"),"wallet"],["settings",t("account.settings"),"gear"]]
+                :[["admHome",t("account.overview"),"home"],["admSettings",t("account.platformSettings"),"gear"],["admLog",t("account.activityLog"),"file"],["admStats",t("account.statistics"),"trend"]]
               ).map(([p,l,ic])=>
                 <button key={p} onClick={()=>{A.go(p);setMenu(false);}} className="w-full flex items-center gap-3 py-2.5 px-3 border-0 bg-transparent cursor-pointer text-sm text-text rounded-xl text-left hover:bg-bg">
                   <I n={ic} s={17} c={C.text2}/>{l}</button>)}
               <div className="h-px bg-line-soft my-1.5 mx-1"/>
+              {/* Bill 96: language toggle in the top-right account menu, alongside the same
+                  control in Settings. Own click-catcher + Escape (via the effect above) rather
+                  than nesting inside the account dropdown's existing outside-click handler, so
+                  picking a language doesn't also close the account menu underneath it. */}
+              <div className="relative">
+                <button onClick={()=>setLangOpen(v=>!v)} className="w-full flex items-center gap-3 py-2.5 px-3 border-0 bg-transparent cursor-pointer text-sm text-text rounded-xl text-left hover:bg-bg">
+                  <I n="globe" s={17} c={C.text2}/>{t("account.language")}
+                  <span className="ml-auto text-xs text-text-3">{locale==="fr-CA"?t("account.languageFrench"):t("account.languageEnglish")}</span></button>
+                {langOpen&&<>
+                  <div onClick={()=>setLangOpen(false)} className="fixed inset-0 z-590"/>
+                  <div className="absolute top-full left-2 right-2 bg-white border border-line rounded-xl shadow-md z-600 overflow-hidden" style={{animation:"pop .16s ease"}}>
+                    <button onClick={()=>chooseLocale("en-CA")} className={`w-full text-left py-2 px-3 border-0 cursor-pointer text-sm hover:bg-bg ${locale==="en-CA"?"font-semibold text-brand":"text-text"}`}>{t("account.languageEnglish")}</button>
+                    <button onClick={()=>chooseLocale("fr-CA")} className={`w-full text-left py-2 px-3 border-0 cursor-pointer text-sm hover:bg-bg ${locale==="fr-CA"?"font-semibold text-brand":"text-text"}`}>{t("account.languageFrench")}</button>
+                  </div></>}
+              </div>
               <button onClick={()=>{A.logout();setMenu(false);}} className="w-full flex items-center gap-3 py-2.5 px-3 border-0 bg-transparent cursor-pointer text-sm text-red rounded-xl text-left hover:bg-red-bg">
-                <I n="logout" s={17}/>Sign out</button></div></div></>}
+                <I n="logout" s={17}/>{t("common.signOut")}</button></div></div></>}
       </div>
     </div>
   </div>

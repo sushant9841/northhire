@@ -6,6 +6,7 @@ import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
 import { Btn, Card, Switch, Field, Input, Empty, Banner, Lbl, Modal, Page, H1 } from "../../design/primitives.jsx";
 import { DeniedPage } from "./DeniedPage.jsx";
+import { useTranslation } from "../../i18n/i18n.jsx";
 
 /* Email verification. The account keeps working while unverified — locking someone out of
    browsing jobs because a confirmation mail is slow helps nobody — but the state is real and
@@ -63,6 +64,8 @@ function _TrustedDevices(){
 
 export function SettingsPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
+  const {t,locale,setLocale}=useTranslation();
+  const chooseLocale=next=>{setLocale(next); A.setUserLocale(next);};
   const u=A.user;
   /* Hooks before any early return - a conditional useState is a Rules-of-Hooks violation that
      crashes with "Rendered more hooks than during the previous render" the moment u goes from
@@ -77,8 +80,17 @@ export function SettingsPage(){
     <div className="flex-1 min-w-0"><div className="text-sm font-semibold text-text">{title}</div>
       {sub&&<div className="text-sm text-text-2 mt-1 leading-normal">{sub}</div>}</div>{children}</div>;
   return <Page narrow>
-    <H1 sub="Account, notifications and privacy">Settings</H1>
+    <H1 sub={t("settings.sub")}>{t("settings.title")}</H1>
     <_EmailVerification u={u}/>
+    <Card pad={mob?18:24} style={{marginBottom:16}}>
+      <Lbl>{t("settings.language")}</Lbl>
+      <Row icon="globe" title={t("account.language")} sub={t("settings.languageSub")}>
+        <div className="flex gap-1.5 bg-bg rounded-xl p-1">
+          <button onClick={()=>chooseLocale("en-CA")} className={`border-0 py-1.5 px-3 rounded-lg cursor-pointer text-sm font-semibold transition-colors duration-150 ${locale==="en-CA"?"bg-white text-brand shadow-sm":"bg-transparent text-text-2"}`}>{t("account.languageEnglish")}</button>
+          <button onClick={()=>chooseLocale("fr-CA")} className={`border-0 py-1.5 px-3 rounded-lg cursor-pointer text-sm font-semibold transition-colors duration-150 ${locale==="fr-CA"?"bg-white text-brand shadow-sm":"bg-transparent text-text-2"}`}>{t("account.languageFrench")}</button>
+        </div>
+      </Row>
+    </Card>
     <Card pad={mob?18:24} style={{marginBottom:16}}>
       <Lbl>Notifications</Lbl>
       {/* This switch IS the CASL consent record, not a cosmetic preference - the server refuses

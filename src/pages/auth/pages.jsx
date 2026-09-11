@@ -7,6 +7,7 @@ import { I } from "../../design/icons.jsx";
 import { Page, Card, Btn, Bar, Field, Input, Banner, Sel, Area, CheckRow, Lbl, Ring, Tag, SmartScene, SmartPortrait, HERO_QUIET } from "../../design/primitives.jsx";
 import { CATS, CATM, PROVS } from "../../store/seed/constants.js";
 import { TurnstileWidget } from "../shared/formControls.jsx";
+import { useTranslation } from "../../i18n/i18n.jsx";
 
 /* ═══════════════ SIGN UP · SIGN IN · FORGOT PASSWORD ═══════════════ */
 const SU_STEPS_SEEKER=[{k:"role",t:"Get started",d:"Are you looking for work, or hiring?"},
@@ -30,6 +31,7 @@ const _loadSignupDraft=()=>{try{return JSON.parse(sessionStorage.getItem(SIGNUP_
 
 export function SignupPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
+  const {locale}=useTranslation(); const isFr=locale==="fr-CA";
   const draft=_loadSignupDraft();
   const [resumed]=useState(!!draft&&draft.i>0);
   const [i,setI]=useState(draft?.i||0); const [err,setErr]=useState({}); const [submitErr,setSubmitErr]=useState("");
@@ -249,8 +251,15 @@ export function SignupPage(){
                     className={`py-3 px-3 rounded-xl cursor-pointer text-sm border-2 transition duration-150 ${on?"font-semibold border-brand bg-tint text-brand":"font-medium border-line bg-white text-text"}`}>{t}</button>;})}</div></div>
             <Field label="When can you start?"><Sel value={d.startWhen} onChange={e=>set("startWhen",e.target.value)}>
               {["Immediately","Within 2 weeks","Within 1 month","More than 1 month"].map(o=><option key={o}>{o}</option>)}</Sel></Field>
-            <CheckRow on={d.alerts} onChange={v=>set("alerts",v)} label="Email me new matching jobs"
-              sub="Optional. NorthHire Technologies Inc. will email you when a saved search matches a new listing. Every email has a one-click unsubscribe, and you can turn this off any time in Settings."/></div>}
+            {/* CASL (Loi canadienne anti-pourriel) express-consent text — required in French for
+                a Quebec resident under Bill 96, since a job-alert digest is a commercial
+                electronic message. Consent capture itself (unchecked-by-default, timestamped
+                server-side) is unaffected by which language it's presented in. */}
+            <CheckRow on={d.alerts} onChange={v=>set("alerts",v)}
+              label={isFr?"M'envoyer par courriel les nouveaux emplois correspondants":"Email me new matching jobs"}
+              sub={isFr
+                ?"Facultatif. NorthHire Technologies Inc. vous enverra un courriel lorsqu'une recherche sauvegardée correspond à une nouvelle offre. Chaque courriel comporte un lien de désabonnement en un clic, et vous pouvez désactiver cette option en tout temps dans les Paramètres."
+                :"Optional. NorthHire Technologies Inc. will email you when a saved search matches a new listing. Every email has a one-click unsubscribe, and you can turn this off any time in Settings."}/></div>}
         </div>
         {i===STEPS.length-1&&A.turnstileSiteKey&&<div style={{marginTop:18}}>
           <TurnstileWidget siteKey={A.turnstileSiteKey} onToken={t=>set("turnstileToken",t)}/></div>}
