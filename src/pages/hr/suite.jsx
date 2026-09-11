@@ -648,7 +648,7 @@ export function HrLeave(){
     if(req.type==="Vacation"||req.type==="Personal"){
       const daysNotice=Math.ceil((new Date(req.from)-new Date())/(1000*60*60*24));
       if(daysNotice<settings.leave.advanceNoticeDays){
-        setReqErr(`${req.type} requests need at least ${settings.leave.advanceNoticeDays} days' notice — choose a start date on or after ${_fmtDate(new Date(Date.now()+settings.leave.advanceNoticeDays*864e5))}.`);
+        setReqErr(t("hr.leave.advanceNoticeError",{type:req.type,days:settings.leave.advanceNoticeDays,date:_fmtDate(new Date(Date.now()+settings.leave.advanceNoticeDays*864e5))}));
         return;
       }
     }
@@ -658,7 +658,7 @@ export function HrLeave(){
     for(;d<=end;d.setDate(d.getDate()+1)){if(d.getDay()!==0&&d.getDay()!==6)days++;}
     days=Math.max(1,days);
     if(req.type==="Vacation"&&days>vacationBalanceDays){
-      setReqErr(`This request is for ${days} day${days===1?"":"s"}, but you have ${vacationBalanceDays} day${vacationBalanceDays===1?"":"s"} available (accrued so far this year, plus any carried over).`);
+      setReqErr(t("hr.leave.insufficientBalanceError",{days,plural:days===1?"":"s",available:vacationBalanceDays,availablePlural:vacationBalanceDays===1?"":"s"}));
       return;
     }
     A.requestLeave({...req,days}); setReq({type:"Vacation",from:"",to:"",reason:""}); setShowReq(false);};
@@ -668,15 +668,15 @@ export function HrLeave(){
         someone can still act on it. */}
     {bal.carriedIn>0&&bal.carryoverExpiresOn&&
       <Banner tone="warn" icon="clock" style={{marginBottom:14}}>
-        {bal.carriedIn} day{bal.carriedIn===1?"":"s"} carried over from last year expire on {bal.carryoverExpiresOn}. Book them before then or they are lost.
+        {t("hr.leave.carryoverExpiryWarning",{count:bal.carriedIn,plural:bal.carriedIn===1?"":"s",date:bal.carryoverExpiresOn})}
       </Banner>}
     <div className={`grid gap-3 mb-4 ${mob?"grid-cols-2":"grid-cols-4"}`}>
       {[
-        {l:"Vacation balance available",v:vacationBalanceDays,tone:vacationBalanceDays<0?C.danger:C.brand,
-          sub:`${accruedVacation} accrued this year${bal.carriedIn>0?` · ${bal.carriedIn} carried over`:""} · ${settings.leave.annualVacationDays}/yr`},
-        {l:"Sick days used",v:usedSick,total:settings.leave.sickDays,tone:C.ok},
-        {l:"Personal days used",v:usedPersonal,total:settings.leave.personalDays,tone:C.violet},
-        {l:"My open requests",v:myLeave.filter(l=>l.status==="pending").length,tone:C.warn}
+        {l:t("hr.leave.vacationBalanceLabel"),v:vacationBalanceDays,tone:vacationBalanceDays<0?C.danger:C.brand,
+          sub:`${accruedVacation} ${t("hr.leave.accruedThisYear")}${bal.carriedIn>0?` · ${bal.carriedIn} ${t("hr.leave.carriedOver")}`:""} · ${settings.leave.annualVacationDays}${t("hr.leave.annualSuffix")}`},
+        {l:t("hr.leave.sickDaysUsedLabel"),v:usedSick,total:settings.leave.sickDays,tone:C.ok},
+        {l:t("hr.leave.personalDaysUsedLabel"),v:usedPersonal,total:settings.leave.personalDays,tone:C.violet},
+        {l:t("hr.leave.myOpenRequestsLabel"),v:myLeave.filter(l=>l.status==="pending").length,tone:C.warn}
       ].map(k=><Card key={k.l} pad={mob?16:20} style={{borderRadius:14}}>
         <div className={`font-bold tracking-tight ${mob?"text-2xl":"text-3xl"}`} style={{color:k.tone}}>{k.v}{k.total?<span className="text-sm text-text-3 font-medium"> / {k.total}</span>:""}</div>
         <div className="text-xs text-text-3 mt-1.5">{k.l}</div>
@@ -686,42 +686,42 @@ export function HrLeave(){
 
     <Card pad={mob?16:20} style={{borderRadius:14}}>
       <div className="flex justify-between items-center mb-3.5 flex-wrap gap-2.5">
-        <_PillTabs items={[["mine","My requests"],...(canApprove?[["pending","Pending ("+pending.length+")"],["all","All"]]:[])]} value={tab} onChange={setTab}/>
-        <Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowReq(true)}>Request leave</Btn>
+        <_PillTabs items={[["mine",t("hr.leave.myRequestsTab")],...(canApprove?[["pending",t("hr.leave.pendingTabPrefix")+pending.length+t("hr.leave.pendingTabSuffix")],["all",t("hr.leave.allTab")]]:[])]} value={tab} onChange={setTab}/>
+        <Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowReq(true)}>{t("hr.leave.requestLeaveBtn")}</Btn>
       </div>
 
       {sorted.length===0
-        ? <Empty icon="calendar" title="No leave records to show" body="Requests will appear here once submitted."/>
+        ? <Empty icon="calendar" title={t("hr.leave.noLeaveRecords")} body={t("hr.leave.requestsWillAppear")}/>
         : <div className="flex flex-col gap-2">
             {sorted.map(r=>{const who=A.hrEmp(r.employee);
               return <div key={r.id} className="flex gap-3.5 items-center py-3 px-3.5 bg-bg rounded-xl border border-line flex-wrap">
                 <SmartPortrait seed={who?.seed||0} size={38} radius={10}/>
                 <div className="grow shrink basis-50 min-w-0">
                   <div className="text-sm font-semibold text-text">{who?.name} • {r.type}</div>
-                  <div className="text-xs text-text-3 mt-0.5">{r.from} → {r.to} ({r.days} day{r.days===1?"":"s"})</div>
+                  <div className="text-xs text-text-3 mt-0.5">{r.from} → {r.to} ({r.days} {r.days===1?t("hr.leave.daySingular"):t("hr.leave.dayPlural")})</div>
                   {r.reason&&<div className="text-xs text-text-2 mt-1 italic">"{r.reason}"</div>}
                 </div>
                 {r.status==="pending"&&canApprove&&r.employee!==emp.id?<div className="flex gap-1.5">
-                  <Btn kind="dangerSoft" size="xs" onClick={()=>A.decideLeave(r.id,"denied",emp.id)}>Deny</Btn>
-                  <Btn kind="primary" size="xs" onClick={()=>A.decideLeave(r.id,"approved",emp.id)}>Approve</Btn>
-                </div>:<Tag tone={r.status==="approved"?"ok":r.status==="denied"?"danger":"warn"} sm>{r.status}</Tag>}
+                  <Btn kind="dangerSoft" size="xs" onClick={()=>A.decideLeave(r.id,"denied",emp.id)}>{t("hr.leave.denyBtn")}</Btn>
+                  <Btn kind="primary" size="xs" onClick={()=>A.decideLeave(r.id,"approved",emp.id)}>{t("hr.leave.approveBtn")}</Btn>
+                </div>:<Tag tone={r.status==="approved"?"ok":r.status==="denied"?"danger":"warn"} sm>{t("hr.leave."+r.status)}</Tag>}
               </div>;})}
           </div>}
     </Card>
 
-    {showReq&&<Modal onClose={()=>setShowReq(false)} title="Request leave">
+    {showReq&&<Modal onClose={()=>setShowReq(false)} title={t("hr.leave.requestLeaveModalTitle")}>
       <div className="flex flex-col gap-3.5">
-        <Field label="Type" required><Sel value={req.type} onChange={e=>setReq({...req,type:e.target.value})}>
-          {["Vacation","Sick","Personal","Bereavement","Parental","Unpaid","Other"].map(t=><option key={t}>{t}</option>)}</Sel></Field>
+        <Field label={t("hr.leave.typeLabel")} required><Sel value={req.type} onChange={e=>setReq({...req,type:e.target.value})}>
+          {[t("hr.leave.vacation"),t("hr.leave.sick"),t("hr.leave.personal"),t("hr.leave.bereavement"),t("hr.leave.parental"),t("hr.leave.unpaid"),t("hr.leave.other")].map((label,i)=>{const types=["Vacation","Sick","Personal","Bereavement","Parental","Unpaid","Other"];return <option key={types[i]} value={types[i]}>{label}</option>})}</Sel></Field>
         <div className="grid grid-cols-2 gap-2.5">
-          <Field label="From" required><DatePicker value={req.from} onChange={v=>setReq({...req,from:v})}/></Field>
-          <Field label="To" required><DatePicker value={req.to} onChange={v=>setReq({...req,to:v})} min={req.from}/></Field>
+          <Field label={t("hr.leave.fromLabel")} required><DatePicker value={req.from} onChange={v=>setReq({...req,from:v})}/></Field>
+          <Field label={t("hr.leave.toLabel")} required><DatePicker value={req.to} onChange={v=>setReq({...req,to:v})} min={req.from}/></Field>
         </div>
-        <Field label="Reason" hint="Optional but helpful for approver."><Area rows={3} value={req.reason} onChange={e=>setReq({...req,reason:e.target.value})} placeholder="Family trip, medical appointment, etc."/></Field>
+        <Field label={t("hr.leave.reasonLabel")} hint={t("hr.leave.reasonHint")}><Area rows={3} value={req.reason} onChange={e=>setReq({...req,reason:e.target.value})} placeholder={t("hr.leave.reasonPlaceholder")}/></Field>
         {reqErr&&<Banner tone="danger" icon="alert">{reqErr}</Banner>}
         <div className="flex gap-2.5 justify-end">
-          <Btn kind="ghost" onClick={()=>{setShowReq(false);setReqErr("");}}>Cancel</Btn>
-          <Btn kind="primary" icon="check" onClick={submitReq} disabled={!req.from||!req.to}>Submit request</Btn>
+          <Btn kind="ghost" onClick={()=>{setShowReq(false);setReqErr("");}}>{t("hr.leave.cancelBtn")}</Btn>
+          <Btn kind="primary" icon="check" onClick={submitReq} disabled={!req.from||!req.to}>{t("hr.leave.submitRequestBtn")}</Btn>
         </div>
       </div>
     </Modal>}
