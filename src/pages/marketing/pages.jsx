@@ -13,6 +13,7 @@ import { money, pay, payShort, matchesQuery } from "../../helpers/utils.js";
 import { sanitizeHtml } from "../../helpers/sanitize.js";
 import { CATS } from "../../store/seed/constants.js";
 import { SEED_BLOGS } from "../../store/seed/blogs.js";
+import { useTranslation } from "../../i18n/i18n.jsx";
 import { JobCard, TrainingCard, BlogCard, EmpMark } from "../shared/cards.jsx";
 
 export function HomePage(){
@@ -341,9 +342,17 @@ export function BlogsPage(){
 
 export function BlogPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
+  const {locale}=useTranslation();
   const b=A.blogs.find(x=>x.id===A.blogId);
   if(!b) return <Page><Empty icon="book" title="Article not found" body="It may have been unpublished."
     action={<Btn kind="primary" onClick={()=>A.go("blogs")}>All articles</Btn>}/></Page>;
+  // Bill 96: render the employer/admin-authored French version when the reader's locale is
+  // fr-CA and one was actually written in the Content Manager; otherwise fall back to English
+  // rather than showing a half-French, half-English article.
+  const useFr=locale==="fr-CA"&&(b.titleFr||b.excerptFr||b.bodyFr?.length);
+  const bTitle=useFr&&b.titleFr?b.titleFr:b.title;
+  const bExcerpt=useFr&&b.excerptFr?b.excerptFr:b.excerpt;
+  const bBody=useFr&&b.bodyFr?.length?b.bodyFr:b.body;
   const more=A.blogs.filter(x=>x.status==="published"&&x.id!==b.id).slice(0,3);
   const pad=mob?"py-11 px-4":"py-18 px-8";
   return <div className="bg-white min-h-full">
@@ -352,8 +361,8 @@ export function BlogPage(){
       <div className="max-w-190 mx-auto text-center">
         {!mob&&<button onClick={A.back} className="inline-flex items-center gap-1.5 bg-transparent border-0 p-0 cursor-pointer text-sm text-text-2 mb-7"><I n="arrowL" s={17}/>All articles</button>}
         <Tag tone="brand" sm>{b.cat}</Tag>
-        <h1 className={`${HERO_WRAP} my-5 ${mob?"text-3xl":"text-5xl"}`}>{b.title}</h1>
-        <p className={`text-text-2 leading-snug mx-auto mb-7 max-w-160 ${mob?"text-base":"text-xl"}`}>{b.excerpt}</p>
+        <h1 className={`${HERO_WRAP} my-5 ${mob?"text-3xl":"text-5xl"}`}>{bTitle}</h1>
+        <p className={`text-text-2 leading-snug mx-auto mb-7 max-w-160 ${mob?"text-base":"text-xl"}`}>{bExcerpt}</p>
         <div className="inline-flex items-center gap-3 flex-wrap justify-center">
           <button onClick={()=>A.filterBlogsByAuthor(b.author)}
             className="inline-flex items-center gap-3 bg-transparent border-0 p-0 cursor-pointer hover:underline">
@@ -370,9 +379,9 @@ export function BlogPage(){
 
     <section className={`bg-white ${mob?"px-4 pb-14":"px-8 pb-24"}`}>
       <div className="max-w-180 mx-auto">
-        {b.body.map(([h,p],i)=>{
+        {bBody.map(([h,p],i)=>{
           const isHtml=/<[a-z][^>]*>/i.test(p);
-          return <section key={i} className={i===b.body.length-1?"mb-0":"mb-9"}>
+          return <section key={i} className={i===bBody.length-1?"mb-0":"mb-9"}>
             {h&&<h2 className={`${SECTION_CLS} mb-4 leading-tight ${mob?"text-2xl":"text-3xl"}`}>{h}</h2>}
             {isHtml
               ? <div className={`blog-body rich-content text-text-2 leading-loose ${mob?"text-base":"text-lg"}`} dangerouslySetInnerHTML={{__html:sanitizeHtml(p)}}/>
@@ -450,9 +459,14 @@ export function TrainingPage(){
   /* Hooks before conditional return - a useState after an early return is a Rules-of-Hooks
      violation and crashes the tab the moment a not-found training becomes findable. */
   const [payConfirm,setPayConfirm]=useState(null); /* {price,title} */
+  const {locale}=useTranslation();
   const t=A.trainings.find(x=>x.id===A.trainingId);
   if(!t) return <Page><Empty icon="cap" title="Training not found" body="It may have been unpublished."
     action={<Btn kind="primary" onClick={()=>A.go("trainings")}>All trainings</Btn>}/></Page>;
+  // Bill 96: same French-if-available, English-otherwise fallback as BlogPage.
+  const useFr=locale==="fr-CA"&&(t.titleFr||t.aboutFr);
+  const tTitle=useFr&&t.titleFr?t.titleFr:t.title;
+  const tAbout=useFr&&t.aboutFr?t.aboutFr:t.about;
   const enrolled=A.enrolled.has(t.id);
   const prog=A.trainingProgress[t.id]||0;
   const pad=mob?"py-11 px-4":"py-18 px-8";
@@ -470,8 +484,8 @@ export function TrainingPage(){
             <div className="flex gap-2 flex-wrap mb-5">
               <Tag tone="brand">{t.cat}</Tag><Tag>{t.level}</Tag><Tag icon="clock">{t.hours} hours</Tag>
               {t.price===0&&<Tag tone="ok">Free</Tag>}</div>
-            <h1 className={`${HERO_WRAP} mb-5 ${mob?"text-3xl":"text-5xl"}`}>{t.title}</h1>
-            <p className={`text-text-2 leading-snug mb-6 ${mob?"text-base":"text-lg"}`}>{t.about}</p>
+            <h1 className={`${HERO_WRAP} mb-5 ${mob?"text-3xl":"text-5xl"}`}>{tTitle}</h1>
+            <p className={`text-text-2 leading-snug mb-6 ${mob?"text-base":"text-lg"}`}>{tAbout}</p>
             <div className="flex items-center gap-4 flex-wrap text-sm text-text-2 pt-6 border-t border-line-soft">
               <span className="flex items-center gap-2"><SmartPortrait seed={t.providerSeed} size={34}/><strong className="text-text font-semibold">{t.provider}</strong></span>
               <span className="text-warn flex items-center gap-1 font-semibold"><I n="star" s={14} fill={C.warn} w={0}/>{t.rating}</span>
@@ -904,6 +918,28 @@ export function ContactPage(){
 }
 export function LegalPage({kind}){
   const A=use(); const mob=useMedia("(max-width: 900px)");
+  const {t,locale}=useTranslation();
+  const isFr=locale==="fr-CA";
+  /* Bill 96 (Loi 96): the Quebec French versions of these two documents. Also published as
+     static files at public/legal/{tos,privacy}-fr.md alongside the English -en.md baseline, for
+     anyone who wants the raw legal text outside the app (e.g. attached to an email, or reviewed
+     by counsel) rather than only reachable through this component. */
+  const privacyFr=[["Qui nous sommes","NorthHire Technologies Inc. est une entreprise canadienne dont le siège social est à Toronto, en Ontario. Nous exploitons la plateforme d'emploi NorthHire. La présente politique explique quels renseignements personnels nous recueillons, pourquoi, et ce que vous pouvez faire à ce sujet. Elle est rédigée pour respecter les exigences de la LPRPDE et de la législation provinciale applicable en matière de protection de la vie privée, y compris la Loi 25 du Québec."],
+    ["Ce que nous recueillons","Pour les chercheurs d'emploi : votre nom, vos coordonnées, votre statut d'admissibilité au travail, vos antécédents professionnels, vos compétences et certifications, les CV que vous créez, les emplois que vous sauvegardez et les candidatures que vous envoyez. Pour les employeurs : les coordonnées professionnelles, les renseignements sur l'entreprise et les détails de facturation. Pour tous : des données techniques de base telles que le type d'appareil et les pages visitées, utilisées pour assurer le bon fonctionnement du service."],
+    ["Pourquoi nous les recueillons","Nous utilisons vos renseignements pour vous jumeler à des postes pertinents, pour transmettre votre candidature à un employeur lorsque vous choisissez de postuler, pour vous informer de l'état de vos candidatures et pour assurer la sécurité de la plateforme. Nous n'utilisons pas votre profil pour entraîner des modèles publicitaires et nous ne vendons pas vos données à des tiers."],
+    ["Qui voit vos renseignements","Un employeur ne reçoit votre profil, votre CV et vos réponses que lorsque vous soumettez activement une candidature à son offre. Les employeurs ne peuvent pas consulter votre profil sans votre consentement, à moins que vous n'ayez activé la visibilité du profil dans les Paramètres. Notre propre personnel n'accède aux renseignements personnels que lorsque cela est nécessaire pour le soutien ou la modération, et cet accès est consigné."],
+    ["Vos droits","Vous pouvez accéder à vos renseignements personnels, les corriger, les exporter ou les supprimer en tout temps depuis les Paramètres, ou en écrivant à privacy@northhire.ca. Nous répondons aux demandes d'accès dans un délai de trente jours. La suppression de votre compte retire votre profil, vos CV et vos emplois sauvegardés; les candidatures déjà envoyées demeurent chez l'employeur, qui devient responsable de cette copie."],
+    ["Conservation","Les comptes actifs sont conservés tant qu'ils sont utilisés. Les comptes inactifs depuis 36 mois sont supprimés automatiquement après deux avis envoyés à votre courriel enregistré. Les dossiers de candidature sont conservés pendant 24 mois pour appuyer la résolution de différends, puis supprimés."],
+    ["Témoins (cookies)","Nous utilisons des témoins strictement nécessaires pour la connexion et la sécurité, ainsi qu'un petit nombre de témoins analytiques pour comprendre quelles parties du produit sont utilisées. Vous pouvez refuser les témoins analytiques sans perdre aucune fonctionnalité."],
+    ["Modifications et contact","Nous informerons les utilisateurs enregistrés par courriel au moins quatorze jours avant toute modification importante de cette politique. Les questions ou plaintes peuvent être adressées à privacy@northhire.ca, et vous pouvez également contacter le Commissariat à la protection de la vie privée du Canada."]];
+  const termsFr=[["Acceptation","En créant un compte ou en utilisant NorthHire, vous acceptez les présentes conditions. Si vous utilisez la plateforme pour le compte d'un employeur, vous confirmez être autorisé·e à engager cette organisation."],
+    ["Comptes des chercheurs d'emploi","Les comptes sont gratuits et personnels. Vous êtes responsable de l'exactitude des renseignements sur votre profil, y compris toute certification que vous prétendez détenir. Le fait de déformer un permis, une carte de compétence ou une inscription entraîne un retrait immédiat."],
+    ["Comptes des employeurs","Les employeurs doivent publier des offres réelles avec une fourchette salariale véritable, ne doivent exiger aucuns frais des candidat·e·s, et doivent se conformer à toute la législation applicable en matière de droits de la personne et de normes d'emploi. Les offres qui demandent un paiement, exigent des renseignements financiers personnels ou font preuve de discrimination fondée sur un motif protégé sont retirées et le compte est suspendu."],
+    ["Contenu que vous fournissez","Vous conservez la propriété de tout ce que vous téléversez, y compris vos CV et le contenu de votre profil. Vous nous accordez une licence limitée pour afficher ce contenu aux employeurs auprès desquels vous postulez et pour exploiter le service. Vous pouvez le retirer en tout temps en le supprimant."],
+    ["Contenu que nous fournissons","Les articles, formations et autres documents publiés sur NorthHire sont à titre informatif général. Ils ne constituent pas des conseils juridiques, financiers, d'immigration ou médicaux, et les exigences de certification varient selon la province — vérifiez toujours auprès de l'organisme de réglementation concerné."],
+    ["Disponibilité","Nous visons une disponibilité continue mais ne la garantissons pas. Nous pouvons suspendre le service à des fins de maintenance, et nous donnerons un avis lorsqu'une interruption planifiée devrait être importante."],
+    ["Responsabilité","Dans la mesure permise par la loi, NorthHire n'est pas responsable des décisions d'embauche prises par les employeurs, de l'exactitude du contenu des offres fourni par les employeurs, ni des pertes indirectes découlant de l'utilisation de la plateforme."],
+    ["Loi applicable","Les présentes conditions sont régies par les lois de la province de l'Ontario et les lois fédérales du Canada qui s'y appliquent."]];
   const privacy=[["Who we are","NorthHire Technologies Inc. is a Canadian company headquartered in Toronto, Ontario. We operate the NorthHire job platform. This policy explains what personal information we collect, why, and what you can do about it. It is written to meet the requirements of PIPEDA and applicable provincial privacy legislation."],
     ["What we collect","For job seekers: your name, contact details, work eligibility status, employment history, skills and certifications, the CVs you build, the jobs you save and the applications you send. For employers: business contact details, company information and billing details. For everyone: basic technical data such as device type and pages visited, used to keep the service working."],
     ["Why we collect it","We use your information to match you to relevant openings, to send your application to an employer when you choose to apply, to notify you about your applications, and to keep the platform secure. We do not use your profile to train advertising models and we do not sell your data to third parties."],
@@ -920,18 +956,20 @@ export function LegalPage({kind}){
     ["Availability","We aim for continuous availability but do not guarantee it. We may suspend the service for maintenance, and we will give notice where a planned interruption is expected to be significant."],
     ["Liability","To the extent permitted by law, NorthHire is not liable for hiring decisions made by employers, for the accuracy of employer-supplied listing content, or for indirect losses arising from use of the platform."],
     ["Governing law","These terms are governed by the laws of the Province of Ontario and the federal laws of Canada applicable there."]];
-  const data=kind==="privacy"?privacy:terms;
+  const data=kind==="privacy"?(isFr?privacyFr:privacy):(isFr?termsFr:terms);
+  const titleEn=kind==="privacy"?"Privacy policy":"Terms of service";
+  const titleFr=kind==="privacy"?"Politique de confidentialité":"Conditions d'utilisation";
   return <div className="bg-bg min-h-full">
     <div className="bg-white border-b border-line">
       <div className={`max-w-200 mx-auto ${mob?"pt-5 px-4 pb-6":"pt-9 px-6 pb-8"}`}>
-        <Tag tone="brand" sm icon={kind==="privacy"?"lock":"file"}>{kind==="privacy"?"Privacy":"Legal"}</Tag>
+        <Tag tone="brand" sm icon={kind==="privacy"?"lock":"file"}>{isFr?(kind==="privacy"?"Confidentialité":"Légal"):(kind==="privacy"?"Privacy":"Legal")}</Tag>
         <h1 className={`${HERO_QUIET} mt-3.5 mb-2.5 ${mob?"text-3xl":"text-4xl"}`}>
-          {kind==="privacy"?"Privacy policy":"Terms of service"}</h1>
-        <p className="text-sm text-text-2 m-0">Last updated 1 August 2026 • Effective for all users in Canada</p></div></div>
+          {isFr?titleFr:titleEn}</h1>
+        <p className="text-sm text-text-2 m-0">{isFr?`${t("legal.lastUpdated")} : 1 août 2026 • En vigueur pour tous les utilisateurs au Canada`:"Last updated 1 August 2026 • Effective for all users in Canada"}</p></div></div>
     <div className={`max-w-200 mx-auto ${mob?"pt-4 px-4 pb-8":"pt-7 px-6 pb-12"}`}>
       <Card pad={mob?20:32}>
         <div className="mb-7 pb-5 border-b border-line-soft">
-          <Lbl>On this page</Lbl>
+          <Lbl>{isFr?"Sur cette page":"On this page"}</Lbl>
           <div className="flex flex-wrap gap-2">
             {data.map(([h])=><Tag key={h} sm>{h}</Tag>)}</div></div>
         {data.map(([h,p],i)=><section key={h} className={i===data.length-1?"mb-0":"mb-7"}>
@@ -939,8 +977,10 @@ export function LegalPage({kind}){
           <p className="text-base text-text-2 leading-loose m-0">{p}</p></section>)}
         <div className="mt-8 pt-6 border-t border-line-soft flex gap-2.5 flex-wrap">
           <Btn kind="outline" onClick={()=>A.go(kind==="privacy"?"terms":"privacy")}>
-            Read the {kind==="privacy"?"terms of service":"privacy policy"}</Btn>
-          <Btn kind="ghost" onClick={()=>A.go("contact")}>Contact us about this</Btn></div></Card></div></div>;
+            {isFr
+              ? `Lire ${kind==="privacy"?"les conditions d'utilisation":"la politique de confidentialité"}`
+              : `Read the ${kind==="privacy"?"terms of service":"privacy policy"}`}</Btn>
+          <Btn kind="ghost" onClick={()=>A.go("contact")}>{isFr?"Nous contacter à ce sujet":"Contact us about this"}</Btn></div></Card></div></div>;
 }
 
 export function PricingPage(){
