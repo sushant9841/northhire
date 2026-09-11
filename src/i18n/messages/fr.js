@@ -129,6 +129,18 @@ export const fr = {
     noInterviewsEmployer: "Programmez-en une à partir du profil d'un·e candidat·e.",
     upcomingHead: "À venir", pastHead: "Passées",
   },
+  messages: {
+    signInTitle: "Se connecter pour voir les courriels", signInBody: "Votre boîte de réception est sur votre compte.",
+    pageTag: "Courriels", pageTitle: "Boîte de réception.",
+    pageSubSeeker: "Courriels entre vous et les employeurs.", pageSubEmployer: "Courriels entre vous et les candidat·e·s.",
+    conversationOne: "conversation", conversationOther: "conversations", unreadLabel: "non lu·e·s",
+    searchPlaceholder: "Rechercher par nom ou courriel", unreadOnly: "Non lu·e·s seulement",
+    noMessagesTitle: "Aucun courriel pour le moment",
+    noMessagesSeeker: "Lorsqu'un employeur vous envoie un courriel concernant une candidature, il apparaîtra ici.",
+    noMessagesEmployer: "Lorsque vous envoyez un courriel à un·e candidat·e à partir de son profil, la conversation s'affichera ici.",
+    noMatch: "Aucune conversation ne correspond", noMatchTip: "Essayez un terme de recherche différent ou désactivez le filtre non lu·e·s.",
+    unknownPerson: "Inconnu·e", unknownTitle: "Membre de l'équipe", replyPlaceholder: "Tapez une réponse…",
+  },
   legal: {
     lastUpdated: "Dernière mise à jour", readFull: "Lire le document complet",
   },

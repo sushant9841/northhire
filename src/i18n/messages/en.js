@@ -128,6 +128,18 @@ export const en = {
     noInterviewsEmployer: "Schedule one from a candidate's profile.",
     upcomingHead: "Upcoming", pastHead: "Past",
   },
+  messages: {
+    signInTitle: "Sign in to see messages", signInBody: "Your inbox lives on your account.",
+    pageTag: "Messages", pageTitle: "Inbox.",
+    pageSubSeeker: "Messages between you and employers.", pageSubEmployer: "Messages between you and candidates.",
+    conversationOne: "conversation", conversationOther: "conversations", unreadLabel: "unread",
+    searchPlaceholder: "Search by name or message", unreadOnly: "Unread only",
+    noMessagesTitle: "No messages yet",
+    noMessagesSeeker: "When an employer messages you about an application, it lands here.",
+    noMessagesEmployer: "When you message a candidate from their profile, the conversation appears here.",
+    noMatch: "No conversations match", noMatchTip: "Try a different search term or turn off the unread filter.",
+    unknownPerson: "Unknown", unknownTitle: "Team member", replyPlaceholder: "Type a reply…",
+  },
   legal: {
     lastUpdated: "Last updated", readFull: "Read the full document",
   },
