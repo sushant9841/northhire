@@ -117,6 +117,17 @@ export const en = {
     dataLinkedBody: "Their NorthHire seeker profile stays linked to this HR record. When they update their skills or certifications on NorthHire, it syncs to HR Suite automatically. You can adjust link privacy in HR Settings.",
     skipForNow: "Skip for now", createHrRecord: "Create HR record",
   },
+  interviews: {
+    signInTitle: "Sign in", signInBody: "Interview schedule lives on your account.",
+    interviewDefault: "Interview", videoCall: "Video call", onSiteInterview: "On-site interview",
+    cancelled: "Cancelled", scheduled: "Scheduled", cancelBtn: "Cancel",
+    pageTag: "Interviews", pageTitle: "Your schedule.",
+    upcomingPastSub: "{upcoming} upcoming, {past} past.",
+    noInterviews: "No interviews scheduled",
+    noInterviewsSeeker: "When an employer schedules an interview, it appears here.",
+    noInterviewsEmployer: "Schedule one from a candidate's profile.",
+    upcomingHead: "Upcoming", pastHead: "Past",
+  },
   legal: {
     lastUpdated: "Last updated", readFull: "Read the full document",
   },

@@ -118,6 +118,17 @@ export const fr = {
     dataLinkedBody: "Le profil de chercheur·euse d'emploi NorthHire reste lié à ce dossier RH. Lorsqu'il·elle met à jour ses compétences ou certifications sur NorthHire, cela se synchronise automatiquement avec la Suite RH. Vous pouvez ajuster la confidentialité des liens dans Paramètres RH.",
     skipForNow: "Ignorer pour maintenant", createHrRecord: "Créer le dossier RH",
   },
+  interviews: {
+    signInTitle: "Se connecter", signInBody: "L'horaire des entrevues est sur votre compte.",
+    interviewDefault: "Entrevue", videoCall: "Appel vidéo", onSiteInterview: "Entrevue sur place",
+    cancelled: "Annulée", scheduled: "Prévue", cancelBtn: "Annuler",
+    pageTag: "Entrevues", pageTitle: "Votre horaire.",
+    upcomingPastSub: "{upcoming} à venir, {past} passées.",
+    noInterviews: "Aucune entrevue prévue",
+    noInterviewsSeeker: "Lorsqu'un employeur programme une entrevue, elle s'affichera ici.",
+    noInterviewsEmployer: "Programmez-en une à partir du profil d'un·e candidat·e.",
+    upcomingHead: "À venir", pastHead: "Passées",
+  },
   legal: {
     lastUpdated: "Dernière mise à jour", readFull: "Lire le document complet",
   },
