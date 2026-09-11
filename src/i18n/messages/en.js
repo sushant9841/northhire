@@ -519,6 +519,14 @@ export const en = {
       industry: "Industry", size: "Company size", website: "Website", address: "Address", aboutCompany: "About the company",
       verificationStatus: "Verification status", verified: "Verified", notVerified: "Not verified", verificationLink: "Verification link",
       dangerZone: "Danger zone", leaveCompany: "Leave this company", leaveWarning: "You'll lose access to its job postings, applications, and settings.",
+      // EmpCompany tail translations
+      companySub: "What candidates see on your company page", viewPublicPage: "View public page",
+      logoMark: "Logo mark", brandedFeature: "Branded logo & colours", brandColour: "Brand colour",
+      companyName: "Company name", cityLabel: "City", provinceLabel: "Province", foundedLabel: "Founded",
+      websiteLabel: "Website", craBusinessNumber: "CRA business number", craHint: "9 digits — checked during admin verification.",
+      aboutCompanyLabel: "About the company", aboutCompanyHint: "Two or three sentences shown on your public page and on every listing.",
+      discard: "Discard", saveChanges: "Save changes", saved: "Saved",
+      discardTitle: "Discard unsaved changes?", discardBody: "This will revert every field on this page back to what's currently saved.",
     },
     team: {
       teamTitle: "Team", description: "People who have access to this company's NorthHire account.", addPerson: "Add person", email: "Email",

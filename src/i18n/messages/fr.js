@@ -521,6 +521,14 @@ export const fr = {
       industry: "Secteur d'activité", size: "Taille de l'entreprise", website: "Site Web", address: "Adresse", aboutCompany: "À propos de l'entreprise",
       verificationStatus: "Statut de vérification", verified: "Vérifiée", notVerified: "Non vérifiée", verificationLink: "Lien de vérification",
       dangerZone: "Zone de danger", leaveCompany: "Quitter cette entreprise", leaveWarning: "Vous perdrez l'accès à ses annonces d'emploi, ses candidatures et ses paramètres.",
+      // EmpCompany tail translations
+      companySub: "Ce que les candidat·e·s voient sur votre page d'entreprise", viewPublicPage: "Afficher la page publique",
+      logoMark: "Marque du logo", brandedFeature: "Logo et couleurs de marque", brandColour: "Couleur de marque",
+      companyName: "Nom de l'entreprise", cityLabel: "Ville", provinceLabel: "Province", foundedLabel: "Fondée",
+      websiteLabel: "Site Web", craBusinessNumber: "Numéro d'entreprise ARC", craHint: "9 chiffres — vérifiés lors de la vérification administrateur.",
+      aboutCompanyLabel: "À propos de l'entreprise", aboutCompanyHint: "Deux ou trois phrases affichées sur votre page publique et sur chaque annonce.",
+      discard: "Ignorer", saveChanges: "Enregistrer les modifications", saved: "Enregistré",
+      discardTitle: "Ignorer les modifications non enregistrées ?", discardBody: "Ceci rétablira chaque champ de cette page à ce qui est actuellement enregistré.",
     },
     team: {
       teamTitle: "Équipe", description: "Les personnes qui ont accès au compte NorthHire de cette entreprise.", addPerson: "Ajouter une personne", email: "Courriel",

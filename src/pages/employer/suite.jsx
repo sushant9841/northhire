@@ -1411,47 +1411,47 @@ export function EmpCompany(){
   const set=(k,v)=>setD(p=>({...p,[k]:v}));
   const branded=A.can("branded");
   return <Page narrow>
-    <H1 sub="What candidates see on your company page"
-      action={<Btn kind="outline" size="sm" iconR="chevR" onClick={()=>A.openEmployer(A.company.id)}>View public page</Btn>}>Company profile</H1>
+    <H1 sub={t("employer.company.companySub")}
+      action={<Btn kind="outline" size="sm" iconR="chevR" onClick={()=>A.openEmployer(A.company.id)}>{t("employer.company.viewPublicPage")}</Btn>}>{t("employer.company.companyProfile")}</H1>
     <Card pad={mob?20:26}>
       <div className="flex gap-4 items-center mb-6 flex-wrap">
         <SmartLogo e={d} size={72} radius={18}/>
         <div className="flex-1" style={{minWidth:180}}>
           <div className="flex items-center justify-between gap-2">
-            <Lbl>Logo mark</Lbl>
-            {!branded&&<button type="button" onClick={()=>A.requestUpgrade("branded","Branded logo & colours","building")}
+            <Lbl>{t("employer.company.logoMark")}</Lbl>
+            {!branded&&<button type="button" onClick={()=>A.requestUpgrade("branded",t("employer.company.brandedFeature"),"building")}
               className="inline-flex items-center gap-1 text-xs font-semibold text-brand bg-transparent border-0 cursor-pointer p-0"><I n="lock" s={12}/>Growth+</button>}
           </div>
           <div className={`flex gap-2 flex-wrap mb-3 ${branded?"":"opacity-45 pointer-events-none"}`}>
             {Object.keys(MARKS).map(k=><button key={k} onClick={()=>set("mark",k)} className="p-0 rounded-xl overflow-hidden cursor-pointer bg-transparent"
               style={{border:`2px solid ${d.mark===k?C.brand:C.line}`,lineHeight:0}}>
               <Mark kind={k} a={d.a} b={d.b} size={38}/></button>)}</div>
-          <Lbl>Brand colour</Lbl>
+          <Lbl>{t("employer.company.brandColour")}</Lbl>
           <div className={`flex gap-2 flex-wrap ${branded?"":"opacity-45 pointer-events-none"}`}>
             {["#005CCC","#B45309","#0F5C8C","#B02A26","#0B6B3A","#5B2E8C","#28404F","#A14A18"].map(c=>
               <button key={c} onClick={()=>set("a",c)} className="w-7 h-7 rounded-lg cursor-pointer" style={{background:c,
                 border:d.a===c?`3px solid ${C.text}`:`1px solid ${C.line}`}}/>)}</div></div></div>
       <div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
-        <Field label="Company name" required><Input value={d.name} onChange={e=>set("name",e.target.value)}/></Field>
-        <Field label="Industry"><Input value={d.industry} onChange={e=>set("industry",e.target.value)}/></Field>
-        <Field label="City"><Input icon="pin" value={d.city} onChange={e=>set("city",e.target.value)}/></Field>
-        <Field label="Province"><Sel value={PROVS.find(p=>PCODE[p]===d.prov)||"Ontario"} onChange={e=>set("prov",PCODE[e.target.value])}>
+        <Field label={t("employer.company.companyName")} required><Input value={d.name} onChange={e=>set("name",e.target.value)}/></Field>
+        <Field label={t("employer.company.industry")}><Input value={d.industry} onChange={e=>set("industry",e.target.value)}/></Field>
+        <Field label={t("employer.company.cityLabel")}><Input icon="pin" value={d.city} onChange={e=>set("city",e.target.value)}/></Field>
+        <Field label={t("employer.company.provinceLabel")}><Sel value={PROVS.find(p=>PCODE[p]===d.prov)||"Ontario"} onChange={e=>set("prov",PCODE[e.target.value])}>
           {PROVS.map(p=><option key={p}>{p}</option>)}</Sel></Field>
-        <Field label="Company size"><Sel value={d.size} onChange={e=>set("size",e.target.value)}>
+        <Field label={t("employer.company.size")}><Sel value={d.size} onChange={e=>set("size",e.target.value)}>
           {["1-50","51-200","201-1,000","1,000-5,000","5,000+","10,000+"].map(o=><option key={o}>{o}</option>)}</Sel></Field>
-        <Field label="Founded"><Input type="number" value={d.founded} onChange={e=>set("founded",Number(e.target.value)||2000)}/></Field>
-        <Field label="Website" style={{gridColumn:mob?"auto":"span 2"}}><Input icon="globe" value={d.site} onChange={e=>set("site",e.target.value)}/></Field>
-        <Field label="CRA business number" hint="9 digits — checked during admin verification."><Input icon="file" value={d.businessNumber||""} onChange={e=>set("businessNumber",e.target.value.replace(/\s/g,""))}/></Field>
-        <Field label="About the company" style={{gridColumn:mob?"auto":"span 2"}} hint="Two or three sentences shown on your public page and on every listing.">
+        <Field label={t("employer.company.foundedLabel")}><Input type="number" value={d.founded} onChange={e=>set("founded",Number(e.target.value)||2000)}/></Field>
+        <Field label={t("employer.company.websiteLabel")} style={{gridColumn:mob?"auto":"span 2"}}><Input icon="globe" value={d.site} onChange={e=>set("site",e.target.value)}/></Field>
+        <Field label={t("employer.company.craBusinessNumber")} hint={t("employer.company.craHint")}><Input icon="file" value={d.businessNumber||""} onChange={e=>set("businessNumber",e.target.value.replace(/\s/g,""))}/></Field>
+        <Field label={t("employer.company.aboutCompanyLabel")} style={{gridColumn:mob?"auto":"span 2"}} hint={t("employer.company.aboutCompanyHint")}>
           <Area rows={5} value={d.about} onChange={e=>set("about",e.target.value)}/></Field></div>
       <div className="flex gap-2.5 justify-end mt-6 pt-5 border-t border-line-soft">
-        {dirty&&<Btn kind="ghost" onClick={()=>setConfirmDiscard(true)}>Discard</Btn>}
-        <Btn kind="primary" icon="check" disabled={!dirty} onClick={()=>A.saveCompany(d)}>{dirty?"Save changes":"Saved"}</Btn></div></Card>
+        {dirty&&<Btn kind="ghost" onClick={()=>setConfirmDiscard(true)}>{t("employer.company.discard")}</Btn>}
+        <Btn kind="primary" icon="check" disabled={!dirty} onClick={()=>A.saveCompany(d)}>{dirty?t("employer.company.saveChanges"):t("employer.company.saved")}</Btn></div></Card>
     <_PipelineStageEditor A={A} mob={mob}/>
     <_StageAutomationsEditor A={A} mob={mob}/>
-    <ConfirmDialog open={confirmDiscard} onClose={()=>setConfirmDiscard(false)} confirmLabel="Discard changes"
-      title="Discard unsaved changes?" onConfirm={()=>setD({...A.company})}>
-      This will revert every field on this page back to what's currently saved.
+    <ConfirmDialog open={confirmDiscard} onClose={()=>setConfirmDiscard(false)} confirmLabel={t("employer.company.discard")}
+      title={t("employer.company.discardTitle")} onConfirm={()=>setD({...A.company})}>
+      {t("employer.company.discardBody")}
     </ConfirmDialog>
   </Page>;
 }
