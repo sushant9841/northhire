@@ -31,7 +31,7 @@ const _loadSignupDraft=()=>{try{return JSON.parse(sessionStorage.getItem(SIGNUP_
 
 export function SignupPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
-  const {locale}=useTranslation(); const isFr=locale==="fr-CA";
+  const {locale,t}=useTranslation(); const isFr=locale==="fr-CA";
   const draft=_loadSignupDraft();
   const [resumed]=useState(!!draft&&draft.i>0);
   const [i,setI]=useState(draft?.i||0); const [err,setErr]=useState({}); const [submitErr,setSubmitErr]=useState("");
@@ -101,21 +101,21 @@ export function SignupPage(){
   if(!A.settings.publicSignup) return <Page narrow>
     <Card pad={34} style={{textAlign:"center"}}>
       <div className="w-16 h-16 rounded-full bg-warn-bg border-2 border-warn-ln flex items-center justify-center mx-auto mb-5"><I n="lock" s={28} c={C.warn}/></div>
-      <h1 className={`${HERO_QUIET} text-2xl mb-2.5`}>Registration is temporarily closed</h1>
+      <h1 className={`${HERO_QUIET} text-2xl mb-2.5`}>{t("auth.registerClosed")}</h1>
       <p className="text-base text-text-2 leading-relaxed mx-auto mb-6 max-w-sm">
-        New sign-ups have been paused by an administrator. You can still browse every job on the platform.</p>
-      <Btn kind="primary" onClick={()=>A.go("search")}>Browse jobs</Btn></Card></Page>;
+        {t("auth.registerClosedBody")}</p>
+      <Btn kind="primary" onClick={()=>A.go("search")}>{t("nav.browseJobs")}</Btn></Card></Page>;
 
   return <div className="bg-bg min-h-full">
     <div className={`max-w-xl w-full mx-auto ${mob?"pt-5 px-4 pb-9":"pt-8 px-6 pb-13"}`}>
       <div className="flex items-center justify-between mb-3.5">
         <button onClick={()=>A.go("home")} className="flex items-center gap-2 bg-transparent border-0 cursor-pointer p-0 text-text-2 text-sm font-semibold hover:text-text">
-          <I n="chevL" s={16} w={2}/> Back to NorthHire</button>
-        <button onClick={()=>A.go("login")} className="bg-transparent border-0 cursor-pointer p-0 text-brand text-sm font-semibold">Already have an account?</button>
+          <I n="chevL" s={16} w={2}/> {t("auth.backToNorthHire")}</button>
+        <button onClick={()=>A.go("login")} className="bg-transparent border-0 cursor-pointer p-0 text-brand text-sm font-semibold">{t("auth.alreadyHaveAccount")}</button>
       </div>
       {resumed&&<Banner tone="brand" icon="clock" style={{marginBottom:14}}
-        action={<button onClick={startOver} className="bg-transparent border-0 p-0 cursor-pointer text-sm font-semibold text-brand">Start over</button>}>
-        Picked up where you left off.</Banner>}
+        action={<button onClick={startOver} className="bg-transparent border-0 p-0 cursor-pointer text-sm font-semibold text-brand">{t("auth.startOver")}</button>}>
+        {t("auth.pickedUpWhere")}</Banner>}
       {i>0&&<div className="mb-5">
         <div className="flex justify-between items-center mb-2.5">
           <span className="text-sm font-semibold text-text">Step {i} of {STEPS.length-1}</span>
@@ -135,8 +135,8 @@ export function SignupPage(){
             <p className="text-base text-text-2 mt-2">{step.d}</p></div>
 
           {step.k==="role"&&<div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
-            {[{k:"seeker",ic:"user",t:"I'm looking for work",d:"Build a profile, browse jobs, apply in one tap. Free forever."},
-              {k:"employer",ic:"building",t:"I'm hiring",d:`Post jobs, review scored applicants, manage your pipeline. Free to start, or from $${A.PLANS.Growth.price}/mo.`}].map(r=>{
+            {[{k:"seeker",ic:"user",t:t("auth.seekerRoleTitle"),d:t("auth.seekerRoleBody")},
+              {k:"employer",ic:"building",t:t("auth.employerRoleTitle"),d:t("auth.employerRoleBody",{price:A.PLANS.Growth.price})}].map(r=>{
               const on=d.role===r.k;
               return <button key={r.k} onClick={()=>set("role",r.k)}
                 className={`rounded-2xl cursor-pointer text-left transition duration-200 border-2 ${mob?"py-6 px-5":"py-7 px-6"} ${on?"border-brand bg-tint":"border-line bg-white"}`}>
@@ -148,8 +148,8 @@ export function SignupPage(){
             {(A.oauthProviders.google||A.oauthProviders.github)&&<div className="col-span-full">
               <div className="flex items-center gap-3 my-1"><div className="flex-1 h-px bg-line"/><span className="text-xs text-text-3">or, for job seekers</span><div className="flex-1 h-px bg-line"/></div>
               <div className={`grid gap-2.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
-                {A.oauthProviders.google&&<Btn kind="outline" full icon="globe" onClick={()=>A.oauthStart("google")}>Continue with Google</Btn>}
-                {A.oauthProviders.github&&<Btn kind="outline" full icon="hex" onClick={()=>A.oauthStart("github")}>Continue with GitHub</Btn>}
+                {A.oauthProviders.google&&<Btn kind="outline" full icon="globe" onClick={()=>A.oauthStart("google")}>{t("auth.continueWithGoogle")}</Btn>}
+                {A.oauthProviders.github&&<Btn kind="outline" full icon="hex" onClick={()=>A.oauthStart("github")}>{t("auth.continueWithGithub")}</Btn>}
               </div>
             </div>}</div>}
 
