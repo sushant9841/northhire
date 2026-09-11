@@ -1776,10 +1776,10 @@ export function AgencyCompliance(){
   return <div className="print-target">
     <div className="mb-3.5 flex justify-between items-start gap-3 flex-wrap">
       <div>
-        <div className="text-lg font-bold text-text">Compliance dashboard</div>
-        <div className="text-sm text-text-3 mt-0.5">Licensing, documentation, and audit-readiness across the desk.</div>
+        <div className="text-lg font-bold text-text">{t("staffing.compliance.dashboard")}</div>
+        <div className="text-sm text-text-3 mt-0.5">{t("staffing.compliance.desc")}</div>
       </div>
-      <Btn kind="outline" size="sm" icon="file" className="print-hide" onClick={()=>window.print()}>Print / Save as PDF</Btn>
+      <Btn kind="outline" size="sm" icon="file" className="print-hide" onClick={()=>window.print()}>{t("staffing.compliance.print")}</Btn>
     </div>
 
     <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
@@ -1793,7 +1793,7 @@ export function AgencyCompliance(){
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <div className="text-sm font-semibold text-text">{item.title}</div>
-              <Tag tone={item.ok?"ok":"warn"} sm>{item.ok?"OK":"Needs attention"}</Tag>
+              <Tag tone={item.ok?"ok":"warn"} sm>{item.ok?t("staffing.compliance.ok"):t("staffing.compliance.attention")}</Tag>
             </div>
             <div className="text-xs text-text-2 mt-1 leading-snug">{item.body}</div>
           </div>
@@ -1811,19 +1811,19 @@ export function AgencyCompliance(){
     </Modal>}
 
     <Card pad={mob?18:22} style={{marginTop:16,borderRadius:14,background:C.bg}}>
-      <Lbl>Statutory reminders</Lbl>
+      <Lbl>{t("staffing.compliance.statutory")}</Lbl>
       <div className="flex flex-col gap-2.5 text-sm text-text-2">
         <div className="py-2.5 px-3 bg-white rounded-lg border border-line">
-          <strong>ROEs</strong> must issue within 5 days of any assignment ending with a 7+ day break.
+          <strong>ROEs</strong> {t("staffing.compliance.roes")}
         </div>
         <div className="py-2.5 px-3 bg-white rounded-lg border border-line">
-          <strong>T4s</strong> must issue by end of February each year for all workers paid in the prior year.
+          <strong>T4s</strong> {t("staffing.compliance.t4s")}
         </div>
         <div className="py-2.5 px-3 bg-white rounded-lg border border-line">
-          <strong>Vacation pay</strong> accrues at 4% of gross (federally) — configured to accrue rather than pay-out per pay period.
+          <strong>{t("staffing.compliance.vacation")}</strong>
         </div>
         <div className="py-2.5 px-3 bg-white rounded-lg border border-line">
-          <strong>Pay equity certification</strong> required for Ontario assignments over 3 months. Client to certify equivalent-role rates.
+          <strong>{t("staffing.compliance.payEquity")}</strong>
         </div>
       </div>
     </Card>
