@@ -33,7 +33,7 @@ export function AgencyLoginPage(){
     setErr(""); setBusy(true);
     const r=await A.agencyLogin(id.trim(),pw);
     setBusy(false);
-    if(!r.ok){setErr(r.msg||"Sign-in failed"); return;}
+    if(!r.ok){setErr(r.msg||t("staffing.login.signInError")); return;}
     A.go("agencyDashboard");
   };
 
@@ -42,53 +42,51 @@ export function AgencyLoginPage(){
       <SmartScene kind="road" tone="#F5A524" w="100%" h="100%" seed={6} style={{position:"absolute",inset:0}}/>
       <div className="absolute inset-0" style={{background:"linear-gradient(180deg,rgba(11,18,32,.15) 0%,rgba(11,18,32,.75) 100%)"}}/>
       <div className="absolute left-8 right-8 bottom-9 text-white">
-        <div className="text-2xl font-bold tracking-tight leading-snug mb-2">Your desk, staffed and running.</div>
-        <p className="text-sm text-white/80 leading-relaxed max-w-90">Workers, timesheets, payroll and client billing — one console for the whole book.</p></div>
+        <div className="text-2xl font-bold tracking-tight leading-snug mb-2">{t("staffing.login.heroTitle")}</div>
+        <p className="text-sm text-white/80 leading-relaxed max-w-90">{t("staffing.login.heroBody")}</p></div>
       <div className="absolute right-7 top-7 bg-white rounded-2xl py-3 px-4 shadow-lg flex items-center gap-2.5">
         <div className="w-10 h-10 rounded-xl bg-[#FDF5E6] text-[#8F5B05] flex items-center justify-center"><I n="users" s={18}/></div>
-        <div><div className="text-sm font-bold text-text">7 workers</div>
-          <div className="text-xs text-text-2 mt-0.5">on assignment right now</div></div></div>
+        <div><div className="text-sm font-bold text-text">{t("staffing.login.workersNow")}</div>
+          <div className="text-xs text-text-2 mt-0.5">{t("staffing.login.onAssignmentNow")}</div></div></div>
     </div>}
     <div className={`flex-1 min-w-0 flex items-center justify-center ${mob?"p-4":"p-8"}`}>
       <div className="w-full max-w-110">
         <div className="flex items-center justify-between mb-6">
-          <button onClick={()=>A.go("home")} className="bg-transparent border border-white/20 text-white py-1.5 px-3.5 rounded-lg cursor-pointer text-sm font-semibold hover:bg-white/5">← Back to NorthHire</button>
+          <button onClick={()=>A.go("home")} className="bg-transparent border border-white/20 text-white py-1.5 px-3.5 rounded-lg cursor-pointer text-sm font-semibold hover:bg-white/5">{t("staffing.login.backToNorthHire")}</button>
         </div>
         <div className="mb-6 text-center">
           <div className="inline-flex items-center gap-2.5 text-white/75">
             <div className="w-9 h-9 rounded-xl bg-[rgba(245,165,36,.18)] border border-[rgba(245,165,36,.4)] flex items-center justify-center"><I n="sparkle" s={18} c="#F5A524"/></div>
             <div className="text-left">
               <div className="text-sm font-bold text-white tracking-tight">NorthHire</div>
-              <div className="text-xs text-[#F5A524] font-semibold mt-px tracking-wide">STAFFING · Agency Console</div>
+              <div className="text-xs text-[#F5A524] font-semibold mt-px tracking-wide">{t("footer.forStaffing")} · {t("account.dashboard")}</div>
             </div>
           </div>
         </div>
 
         {mode==="login"?<Card pad={mob?24:32} style={{borderRadius:20,background:"#fff"}}>
           <div className="mb-5">
-            <h1 className="text-2xl font-bold text-text mb-1.5 tracking-tight">Good to have you back</h1>
-            <p className="text-sm text-text-3 m-0 leading-snug">
-              For NorthHire Staffing recruiters, payroll and management.
-              Not for job seekers or clients.</p>
+            <h1 className="text-2xl font-bold text-text mb-1.5 tracking-tight">{t("staffing.login.welcome")}</h1>
+            <p className="text-sm text-text-3 m-0 leading-snug">{t("staffing.login.subtitle").split("\n").map((line,i)=><span key={i}>{line}{i===0&&<br/>}</span>)}</p>
           </div>
 
           <div className="flex flex-col gap-3.5">
-            <Field label="Login ID" required>
-              <Input icon="user" value={id} onChange={e=>setId(e.target.value)} placeholder="firstname.lastname"/></Field>
-            <Field label="Password" required>
-              <Input icon="lock" type="password" value={pw} onChange={e=>setPw(e.target.value)} placeholder="At least 8 characters"/></Field>
+            <Field label={t("staffing.login.loginIdLabel")} required>
+              <Input icon="user" value={id} onChange={e=>setId(e.target.value)} placeholder={t("staffing.login.loginIdPlaceholder")}/></Field>
+            <Field label={t("staffing.login.passwordLabel")} required>
+              <Input icon="lock" type="password" value={pw} onChange={e=>setPw(e.target.value)} placeholder={t("staffing.login.passwordPlaceholder")}/></Field>
             {err&&<Banner tone="danger" icon="alert">{err}</Banner>}
             <Btn kind="primary" size="lg" onClick={attempt} disabled={busy||!id||!pw} full>
-              {busy?"Signing in…":"Sign in"}</Btn>
-            <button onClick={()=>{setMode("resetRequest");setErr("");}} className="bg-transparent border-0 p-0 cursor-pointer text-sm font-semibold text-brand text-center">Forgot password?</button>
+              {busy?t("staffing.login.signingIn"):t("staffing.login.signIn")}</Btn>
+            <button onClick={()=>{setMode("resetRequest");setErr("");}} className="bg-transparent border-0 p-0 cursor-pointer text-sm font-semibold text-brand text-center">{t("staffing.login.forgotPassword")}</button>
           </div>
 
           <div className="mt-6 p-3.5 bg-bg rounded-xl text-xs text-text-3">
-            <div className="font-semibold text-text-2 mb-2">Demo agency accounts (password: <code className="font-mono text-brand">staff2026</code>)</div>
+            <div className="font-semibold text-text-2 mb-2">{t("staffing.login.demoTitle",{pwd:"staff2026"})}</div>
             <div className="flex flex-col gap-1.5">
-              {[["nadia.singh","Owner — Managing Director"],
-                ["joel.tremblay","Senior Recruiter"],
-                ["aisha.mohamed","Payroll & Compliance"]].map(([lid,role])=>
+              {[["nadia.singh",t("staffing.login.ownerRole")],
+                ["joel.tremblay",t("staffing.login.recruiterRole")],
+                ["aisha.mohamed",t("staffing.login.payrollRole")]].map(([lid,role])=>
                 <button key={lid} onClick={()=>{setId(lid); setPw("staff2026");}} className="bg-white border border-line rounded-lg py-1.5 px-2.5 cursor-pointer text-xs text-left text-text-2 flex justify-between gap-2">
                   <code className="text-brand font-mono">{lid}</code>
                   <span>{role}</span>
@@ -98,7 +96,7 @@ export function AgencyLoginPage(){
         </Card>:<AgencyResetFlow onDone={()=>setMode("login")}/>}
 
         <div className="text-center mt-4 text-xs text-white/50">
-          License: {SEED_AGENCY_LICENSE}
+          {t("staffing.login.license")}{SEED_AGENCY_LICENSE}
         </div>
       </div>
     </div>
@@ -111,47 +109,47 @@ function AgencyResetFlow({onDone}){
   const [email,setEmail]=useState(""); const [code,setCode]=useState(""); const [newPw,setNewPw]=useState("");
   const [err,setErr]=useState(""); const [busy,setBusy]=useState(false); const [sentCode,setSentCode]=useState("");
   const [cooldown,setCooldown]=useState(0);
-  useEffect(()=>{if(cooldown<=0)return; const t=setTimeout(()=>setCooldown(c=>c-1),1000); return()=>clearTimeout(t);},[cooldown]);
+  useEffect(()=>{if(cooldown<=0)return; const tid=setTimeout(()=>setCooldown(c=>c-1),1000); return()=>clearTimeout(tid);},[cooldown]);
 
   const request=async()=>{setErr("");setBusy(true);const r=await A.agencyResetRequest(email);setBusy(false);
     if(!r.ok){setErr(r.msg);return;} setSentCode(r.code); setStage("verify"); setCooldown(60);};
   const resend=async()=>{if(cooldown>0)return; setErr("");const r=await A.agencyResetRequest(email);
     if(!r.ok){setErr(r.msg);return;} setSentCode(r.code); setCooldown(60);};
-  const confirm=async()=>{setErr(""); if(newPw.length<8){setErr("Password must be at least 8 characters");return;}
+  const confirm=async()=>{setErr(""); if(newPw.length<8){setErr(t("staffing.login.passwordError"));return;}
     setBusy(true); const r=await A.agencyResetConfirm(email,code,newPw); setBusy(false);
     if(!r.ok){setErr(r.msg);return;} setStage("done");};
 
   return <Card pad={mob?24:32} style={{borderRadius:20,background:"#fff"}}>
     {stage==="request"&&<>
-      <h1 className="text-2xl font-bold text-text mb-1.5 tracking-tight">Reset your password</h1>
-      <p className="text-sm text-text-3 mb-4 leading-snug">Enter the email on your agency account and we'll send a reset code.</p>
-      <Field label="Email"><Input icon="mail" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@northhirestaffing.ca"/></Field>
+      <h1 className="text-2xl font-bold text-text mb-1.5 tracking-tight">{t("staffing.login.resetTitle")}</h1>
+      <p className="text-sm text-text-3 mb-4 leading-snug">{t("staffing.login.resetDesc")}</p>
+      <Field label={t("common.email")}><Input icon="mail" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder={t("staffing.login.resetEmail")}/></Field>
       {err&&<Banner tone="danger" icon="alert" style={{marginTop:12}}>{err}</Banner>}
       <div className="flex gap-2.5 mt-4">
-        <Btn kind="ghost" onClick={onDone}>Back to sign in</Btn>
-        <Btn kind="primary" onClick={request} disabled={busy||!email} full>{busy?"Sending…":"Send reset code"}</Btn>
+        <Btn kind="ghost" onClick={onDone}>{t("staffing.login.backToSignIn")}</Btn>
+        <Btn kind="primary" onClick={request} disabled={busy||!email} full>{busy?t("staffing.login.sendingReset"):t("staffing.login.sendCode")}</Btn>
       </div>
     </>}
     {stage==="verify"&&<>
-      <h1 className="text-2xl font-bold text-text mb-1.5 tracking-tight">Enter your code</h1>
-      <p className="text-sm text-text-3 mb-4 leading-snug">We sent a 6-digit code to {email}. {sentCode&&<span>(Demo code: <strong>{sentCode}</strong>)</span>}</p>
+      <h1 className="text-2xl font-bold text-text mb-1.5 tracking-tight">{t("staffing.login.verifyTitle")}</h1>
+      <p className="text-sm text-text-3 mb-4 leading-snug">{t("staffing.login.verifyDesc",{email})} {sentCode&&<span>({t("staffing.login.demoCodeLabel",{code:sentCode})})</span>}</p>
       <div className="flex flex-col gap-3">
-        <Field label="Reset code"><Input value={code} onChange={e=>setCode(e.target.value)} placeholder="123456"/></Field>
-        <Field label="New password"><Input type="password" value={newPw} onChange={e=>setNewPw(e.target.value)} placeholder="At least 8 characters"/></Field>
+        <Field label={t("staffing.login.resetTitle")}><Input value={code} onChange={e=>setCode(e.target.value)} placeholder={t("staffing.login.resetCodePlaceholder")}/></Field>
+        <Field label={t("staffing.login.newPasswordLabel")}><Input type="password" value={newPw} onChange={e=>setNewPw(e.target.value)} placeholder={t("staffing.login.passwordPlaceholder")}/></Field>
       </div>
       {err&&<Banner tone="danger" icon="alert" style={{marginTop:12}}>{err}</Banner>}
       <div className="flex justify-between items-center mt-3">
-        <button onClick={()=>setStage("request")} className="bg-transparent border-0 p-0 cursor-pointer text-sm text-text-2">← Different email</button>
+        <button onClick={()=>setStage("request")} className="bg-transparent border-0 p-0 cursor-pointer text-sm text-text-2">{t("staffing.login.differentEmail")}</button>
         <button onClick={resend} disabled={cooldown>0} className={`bg-transparent border-0 p-0 text-sm font-semibold ${cooldown>0?"text-text-3 cursor-not-allowed":"text-brand cursor-pointer"}`}>
-          {cooldown>0?`Resend in ${cooldown}s`:"Resend code"}</button>
+          {cooldown>0?t("staffing.login.resendIn",{n:cooldown}):t("staffing.login.resendCode")}</button>
       </div>
-      <Btn kind="primary" size="lg" full onClick={confirm} disabled={busy} style={{marginTop:14}}>{busy?"Resetting…":"Reset password"}</Btn>
+      <Btn kind="primary" size="lg" full onClick={confirm} disabled={busy} style={{marginTop:14}}>{busy?t("staffing.login.resetting"):t("staffing.login.resetPassword")}</Btn>
     </>}
     {stage==="done"&&<div className="text-center">
       <div className="w-14 h-14 rounded-full bg-ok-bg border-2 border-ok-ln flex items-center justify-center mx-auto mb-4"><I n="check" s={26} c={C.ok}/></div>
-      <h1 className="text-xl font-bold text-text mb-1.5 tracking-tight">Password updated</h1>
-      <p className="text-sm text-text-3 mb-5">Sign in with your new password.</p>
-      <Btn kind="primary" full onClick={onDone}>Back to sign in</Btn>
+      <h1 className="text-xl font-bold text-text mb-1.5 tracking-tight">{t("staffing.login.passwordUpdated")}</h1>
+      <p className="text-sm text-text-3 mb-5">{t("staffing.login.signInWithNew")}</p>
+      <Btn kind="primary" full onClick={onDone}>{t("staffing.login.backToSignIn")}</Btn>
     </div>}
   </Card>;
 }
@@ -161,32 +159,32 @@ export function AgencyDashboard(){
   const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const staff=A.agencyCurrentStaff();
   const kpi=A.agencyKPIs();
-  const submittedTs=A.timesheets.filter(t=>t.status==="submitted");
+  const submittedTs=A.timesheets.filter(ts=>ts.status==="submitted");
   const openOrders=A.openJobOrders().sort((a,b)=>{
     const uw={high:0,medium:1,low:2};return (uw[a.urgency]||9)-(uw[b.urgency]||9);}).slice(0,4);
 
   return <div>
     <div className="mb-6">
       <div className={`font-bold text-text tracking-tight ${mob?"text-2xl":"text-3xl"}`}>
-        {(()=>{const h=new Date().getHours();return h<12?"Good morning":h<17?"Good afternoon":"Good evening";})()}, {staff.name.split(" ")[0]}
+        {(()=>{const h=new Date().getHours();return h<12?t("staffing.dashboard.goodMorning"):h<17?t("staffing.dashboard.goodAfternoon"):t("staffing.dashboard.goodEvening");})()}, {staff.name.split(" ")[0]}
       </div>
       <div className="text-sm text-text-3 mt-1.5">
-        {new Date().toLocaleDateString("en-CA",{weekday:"long",month:"long",day:"numeric"})} · Here's the state of the desk.
+        {new Date().toLocaleDateString(locale==="fr-CA"?"fr-CA":"en-CA",{weekday:"long",month:"long",day:"numeric"})} · {t("staffing.dashboard.desktateDesc")}
       </div>
     </div>
 
     {/* KPI Row */}
     <div className={`grid gap-3 mb-5 ${mob?"grid-cols-2":"grid-cols-4"}`}>
       {[
-        {l:"Active assignments",v:kpi.activeCount,t:C.brand,ic:"activity",clk:"agencyAssignments"},
-        {l:"Open positions",v:kpi.openPositions,t:C.warn,ic:"briefcase",clk:"agencyJobOrders",sub:`${kpi.openOrdersCount} orders`},
-        {l:"Available workers",v:kpi.availableWorkers,t:C.ok,ic:"users",clk:"agencyBench"},
-        {l:"Weekly run rate",v:`$${(kpi.runRateWeekly/1000).toFixed(1)}k`,t:C.violet,ic:"trend",clk:"agencyMargins",sub:"Billings @ 40hr"},
+        {l:t("staffing.dashboard.activeAssignments"),v:kpi.activeCount,tc:C.brand,ic:"activity",clk:"agencyAssignments"},
+        {l:t("staffing.dashboard.openPositions"),v:kpi.openPositions,tc:C.warn,ic:"briefcase",clk:"agencyJobOrders",sub:`${kpi.openOrdersCount} ${t("staffing.jobOrders.title").toLowerCase()}`},
+        {l:t("staffing.dashboard.availableWorkers"),v:kpi.availableWorkers,tc:C.ok,ic:"users",clk:"agencyBench"},
+        {l:t("staffing.dashboard.weeklyRunRate"),v:`$${(kpi.runRateWeekly/1000).toFixed(1)}k`,tc:C.violet,ic:"trend",clk:"agencyMargins",sub:t("staffing.dashboard.billingSubtitle")},
       ].map(k=><div key={k.l} data-card onClick={()=>A.go(k.clk)} className={`bg-white rounded-2xl border border-line cursor-pointer ${mob?"p-4":"p-5"}`}>
         <div className="flex justify-between items-start mb-2.5">
-          <div className="w-9 h-9 rounded-lg bg-bg flex items-center justify-center" style={{color:k.t}}><I n={k.ic} s={17}/></div>
+          <div className="w-9 h-9 rounded-lg bg-bg flex items-center justify-center" style={{color:k.tc}}><I n={k.ic} s={17}/></div>
         </div>
-        <div className={`font-bold tracking-tight ${mob?"text-2xl":"text-3xl"}`} style={{color:k.t}}>{k.v}</div>
+        <div className={`font-bold tracking-tight ${mob?"text-2xl":"text-3xl"}`} style={{color:k.tc}}>{k.v}</div>
         <div className="text-xs text-text-3 mt-1">{k.l}</div>
         {k.sub&&<div className="text-xs text-text-3 mt-0.5">{k.sub}</div>}
       </div>)}
@@ -197,12 +195,12 @@ export function AgencyDashboard(){
       <div>
         <Card pad={mob?18:24} style={{borderRadius:16}}>
           <div className="flex justify-between items-center mb-3.5">
-            <Lbl style={{margin:0}}>Urgent job orders</Lbl>
-            <Btn kind="ghost" size="sm" onClick={()=>A.go("agencyJobOrders")}>See all</Btn>
+            <Lbl style={{margin:0}}>{t("staffing.dashboard.urgentJobOrders")}</Lbl>
+            <Btn kind="ghost" size="sm" onClick={()=>A.go("agencyJobOrders")}>{t("staffing.dashboard.seeAll")}</Btn>
           </div>
           {openOrders.length===0
-            ? <Empty icon="briefcase" title="No open orders" body="You're all filled. Time to prospect for new clients."
-                action={<Btn kind="primary" size="sm" icon="plus" onClick={()=>A.go("agencyJobOrders")}>Add job order</Btn>}/>
+            ? <Empty icon="briefcase" title={t("staffing.dashboard.noOpenOrders")} body={t("staffing.dashboard.noOrdersDesc")}
+                action={<Btn kind="primary" size="sm" icon="plus" onClick={()=>A.go("agencyJobOrders")}>{t("staffing.dashboard.addJobOrder")}</Btn>}/>
             : <div className="flex flex-col gap-2.5">
                 {openOrders.map(jo=>{const client=A.staffingClient(jo.client); const remaining=jo.positions-jo.filled;
                   return <div key={jo.id} data-card onClick={()=>A.go("agencyJobOrders")}
@@ -214,7 +212,7 @@ export function AgencyDashboard(){
                     </div>
                     <div className="text-right shrink-0">
                       <div className="text-sm font-bold text-brand">{jo.filled}/{jo.positions}</div>
-                      <div className="text-xs text-text-3 mt-0.5">{remaining} to fill</div>
+                      <div className="text-xs text-text-3 mt-0.5">{remaining} {t("staffing.dashboard.toFill")}</div>
                     </div>
                   </div>;})}
               </div>}
@@ -223,25 +221,25 @@ export function AgencyDashboard(){
 
       <div className="flex flex-col gap-4">
         <Card pad={mob?18:20} style={{borderRadius:16}}>
-          <Lbl>Money on the desk</Lbl>
+          <Lbl>{t("staffing.dashboard.moneyOnDesk")}</Lbl>
           <div className="flex flex-col gap-2.5">
             <div className="flex justify-between items-center py-2.5 px-3 bg-bg rounded-lg">
-              <span className="text-sm text-text-2">AR outstanding</span>
-              <span className="text-base font-bold text-brand tabular-nums">${kpi.arTotal.toLocaleString("en-CA",{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+              <span className="text-sm text-text-2">{t("staffing.dashboard.arOutstanding")}</span>
+              <span className="text-base font-bold text-brand tabular-nums">${kpi.arTotal.toLocaleString(locale==="fr-CA"?"fr-CA":"en-CA",{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
             </div>
             {kpi.overdueTotal>0&&<div className="flex justify-between items-center py-2.5 px-3 bg-red-bg rounded-lg border border-red-ln">
-              <span className="text-sm text-text-2">Overdue (chase)</span>
+              <span className="text-sm text-text-2">{t("staffing.dashboard.overdue")}</span>
               {/* Explicit min/max fraction digits so a value ending in .20 renders as $3,435.20
                   not $3,435.2 - a hand-rolled Math.round or toLocaleString() without options
                   drops the trailing zero, which reads as broken next to sibling values. */}
-              <span className="text-base font-bold text-red tabular-nums">${kpi.overdueTotal.toLocaleString("en-CA",{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+              <span className="text-base font-bold text-red tabular-nums">${kpi.overdueTotal.toLocaleString(locale==="fr-CA"?"fr-CA":"en-CA",{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
             </div>}
             <div className="flex justify-between items-center py-2.5 px-3 bg-bg rounded-lg">
-              <span className="text-sm text-text-2">Placements in flight</span>
+              <span className="text-sm text-text-2">{t("staffing.dashboard.placementsInFlight")}</span>
               <span className="text-base font-bold text-violet">{kpi.inProgressPlacements}</span>
             </div>
             {kpi.guaranteeExpiring>0&&<div className="flex justify-between items-center py-2.5 px-3 bg-warn-bg rounded-lg border border-warn-ln">
-              <span className="text-sm text-text-2">Guarantees ending soon</span>
+              <span className="text-sm text-text-2">{t("staffing.dashboard.guaranteesEndingSoon")}</span>
               <span className="text-base font-bold text-warn">{kpi.guaranteeExpiring}</span>
             </div>}
           </div>
@@ -251,23 +249,23 @@ export function AgencyDashboard(){
           <div className="flex gap-3 items-center mb-3">
             <div className="w-9 h-9 rounded-xl bg-white text-warn flex items-center justify-center"><I n="clock" s={18}/></div>
             <div>
-              <div className="text-sm font-semibold text-text">Timesheets waiting</div>
-              <div className="text-xs text-text-2 mt-0.5">{submittedTs.length} submitted, awaiting approval</div>
+              <div className="text-sm font-semibold text-text">{t("staffing.dashboard.timesheetsWaiting")}</div>
+              <div className="text-xs text-text-2 mt-0.5">{submittedTs.length} {t("staffing.dashboard.submitted")}</div>
             </div>
           </div>
-          <Btn kind="warn" size="sm" full onClick={()=>A.go("agencyTimesheets")}>Review pending timesheets</Btn>
+          <Btn kind="warn" size="sm" full onClick={()=>A.go("agencyTimesheets")}>{t("staffing.dashboard.reviewPending")}</Btn>
         </Card>}
       </div>
     </div>
 
     {/* Quick actions */}
     <Card pad={mob?18:24} style={{borderRadius:16}}>
-      <Lbl>Quick actions</Lbl>
+      <Lbl>{t("staffing.dashboard.quickActions")}</Lbl>
       <div className={`grid gap-2.5 ${mob?"grid-cols-2":"grid-cols-4"}`}>
-        {[["Add job order","plus","agencyJobOrders","brand"],
-          ["Place a worker","user","agencyBench","ok"],
-          ["Run payroll","wallet","agencyPayroll","violet"],
-          ["Generate invoices","file","agencyInvoicing","warn"]].map(([l,ic,go,tone])=>
+        {[[t("staffing.dashboard.addJobOrderAction"),"plus","agencyJobOrders","brand"],
+          [t("staffing.dashboard.placeWorker"),"user","agencyBench","ok"],
+          [t("staffing.dashboard.runPayroll"),"wallet","agencyPayroll","violet"],
+          [t("staffing.dashboard.generateInvoices"),"file","agencyInvoicing","warn"]].map(([l,ic,go,tone])=>
           <button key={l} onClick={()=>A.go(go)}
             className={`p-3.5 rounded-xl cursor-pointer text-sm font-semibold text-text text-left bg-bg border border-line flex gap-2.5 items-center ${TONE_CLS[tone].hoverBorder}`}>
             <div className={`w-8 h-8 rounded-lg bg-white flex items-center justify-center ${TONE_CLS[tone].text}`}><I n={ic} s={16}/></div>
