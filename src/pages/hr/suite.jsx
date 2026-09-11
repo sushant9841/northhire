@@ -17,6 +17,7 @@ import { HR_ROLES, HR_COMPANY_SETTINGS_DEFAULT, PUNCH_VENDORS, PRIOR_HR_VENDORS,
 import { HR_DEPARTMENTS } from "../../store/seed/hrDepartments.js";
 import { InlineList } from "../shared/formControls.jsx";
 import { TrainingCard } from "../shared/cards.jsx";
+import { useTranslation } from "../../i18n/i18n.jsx";
 
 /* Small pill-style tab bar reused across most HR Suite modules (attendance view,
    leave/tasks/calendar/invoices scope switches). Not string-interpolated into a
@@ -29,7 +30,7 @@ function _PillTabs({items,value,onChange}){
 }
 
 export function HrLoginPage(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const [company,setCompany]=useState("PCL Construction");
   const [loginId,setLoginId]=useState("");
   const [pw,setPw]=useState("");
@@ -106,7 +107,7 @@ export function HrLoginPage(){
 /* ═════ Dashboard — each module gets its own function ═════ */
 
 export function HrDashboard(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
   if(!emp) return null;
   const myTasks=A.hrTasks.filter(t=>t.assignee===emp.id&&t.status!=="done");
@@ -282,7 +283,7 @@ function _MyDocuments({empId}){
 }
 
 export function HrProfile(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const emp=A.hrCurrentEmp();
   const [d,setD]=useState({...emp});
   useEffect(()=>setD({...emp}),[emp?.id]);
@@ -497,7 +498,7 @@ function _PunchPinCard({A,empId}){
 
 /* ─── Attendance: log view + punch machine integration ─── */
 export function HrAttendance(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
   const canSeeAll=emp.role==="owner"||emp.role==="admin"||emp.role==="hr";
   const [view,setView]=useState(canSeeAll?"team":"mine");
@@ -604,7 +605,7 @@ export function HrAttendance(){
 
 /* ─── Leave: request + approve workflow ─── */
 export function HrLeave(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const emp=A.hrCurrentEmp();
   const isPriv=emp.role==="owner"||emp.role==="admin"||emp.role==="hr";
   /* A plain-"employee"-role manager approves just their own direct reports' leave - the real
@@ -823,7 +824,7 @@ function _TaskBoard({cols,source,emp,A,mob,onComments}){
   </DndContext>;
 }
 export function HrTasks(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
   const canAssignOthers=emp.role!=="employee";
   const [scope,setScope]=useState("mine"); /* mine | assigned | all */
@@ -878,7 +879,7 @@ export function HrTasks(){
 
 /* ─── Calendar: events + trainings ─── */
 export function HrCalendar(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const emp=A.hrCurrentEmp();
   const canAdd=emp.role!=="employee";
   const [showAdd,setShowAdd]=useState(false);
@@ -958,7 +959,7 @@ export function HrCalendar(){
 
 /* ─── Chat: 1:1 + groups ─── */
 export function HrChat(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
   const chatSettings=(A.hrCompanySettings[company?.id]||HR_COMPANY_SETTINGS_DEFAULT).chat;
   const [selected,setSelected]=useState(A.hrChats[0]?.id||null);
@@ -1089,7 +1090,7 @@ function _HrNewChat({onClose,onCreate,allowDm=true,allowGroup=true}){
 
 /* ─── Invoices ─── */
 export function HrInvoices(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
   const [showAdd,setShowAdd]=useState(false);
   const [detail,setDetail]=useState(null);
@@ -1212,7 +1213,7 @@ export function HrInvoices(){
 }
 
 function InvoiceDetailModal({invoice:inv,company,onClose,canManage,onMarkPaid,onSend,onReverse}){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const [reversing,setReversing]=useState(false); const [reverseReason,setReverseReason]=useState("");
   const items=inv.items||[{desc:"Services",qty:1,unitPrice:inv.amount}];
   const subtotal=inv.subtotal||inv.amount;
@@ -1398,7 +1399,7 @@ function _YearEndSlips({A,mob,isEmployee,isPayrollMgr}){
 }
 
 export function HrPayroll(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
   const isEmployee=emp.role==="employee";
   const isPayrollMgr=["owner","admin","finance"].includes(emp.role);
@@ -1558,7 +1559,7 @@ export function HrPayroll(){
 }
 
 function PayrollDetailModal({run,onClose,canApprove,onApprove,onExecute,onReverse}){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const [reversing,setReversing]=useState(false); const [reverseReason,setReverseReason]=useState("");
   const exportRegister=()=>{
     const rows=[["Employee","Pay type","Gross","Unpaid leave","Reg. hrs","OT hrs","Stat hrs","Night diff hrs","CPP","EI","Federal tax","Provincial tax","Reimbursement","Net"],
@@ -1629,7 +1630,7 @@ function PayrollDetailModal({run,onClose,canApprove,onApprove,onExecute,onRevers
 
 /* ─── Trainings ─── */
 export function HrTrainings(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const list=A.trainings.filter(t=>t.status==="published");
   return <div>
     <Card pad={mob?20:24} style={{borderRadius:14,marginBottom:16,background:`linear-gradient(135deg,${C.tint} 0%,#F0F7FF 100%)`,border:`1px solid ${C.line2}`}}>
@@ -1649,7 +1650,7 @@ export function HrTrainings(){
 
 /* ─── Badges & recognition ─── */
 export function HrBadges(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
   const all=A.hrEmpsAtCompany(company.id).filter(e=>e.status==="active");
   const [sortBy,setSortBy]=useState("count");
@@ -1755,7 +1756,7 @@ export function HrBadges(){
 
 /* ─── Hiring: post job → link to existing NorthHire recruiting ─── */
 export function HrHiring(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const company=A.hrCurrentCompany();
   const jobs=A.jobs.filter(j=>j.e===company.id);
   const apps=A.applications.filter(a=>jobs.some(j=>j.id===a.job));
@@ -1784,7 +1785,7 @@ export function HrHiring(){
 
 /* ─── Reports ─── */
 export function HrReports(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const company=A.hrCurrentCompany();
   const all=A.hrEmpsAtCompany(company.id).filter(e=>e.status==="active");
   const byDept={};
@@ -1958,7 +1959,7 @@ function _TimeClocks({A,mob}){
 }
 
 export function HrSettings(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
   const settings=A.hrCompanySettings[company.id]||HR_COMPANY_SETTINGS_DEFAULT;
   const [d,setD]=useState({...settings});
@@ -2136,7 +2137,7 @@ export function HrSettings(){
    Every active employee sees documents assigned to them and can sign; owner/admin/hr additionally
    see completion stats across the whole company and can publish new documents. */
 export function HrPolicies(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const emp=A.hrCurrentEmp();
   const isPriv=emp.role==="owner"||emp.role==="admin"||emp.role==="hr";
   useEffect(()=>{A.loadSignDocuments();},[]);
@@ -2247,7 +2248,7 @@ function weekBounds(anchor){
   return {from:_fmtDate(monday),to:_fmtDate(sunday),monday};
 }
 export function HrRoster(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
   const isPriv=emp.role==="owner"||emp.role==="admin"||emp.role==="hr";
   const [anchor,setAnchor]=useState(new Date());
@@ -2317,7 +2318,7 @@ export function HrRoster(){
 }
 
 export function HrIntegrations(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const company=A.hrCurrentCompany();
   const settings=A.hrCompanySettings[company.id]||HR_COMPANY_SETTINGS_DEFAULT;
   const [showPunch,setShowPunch]=useState(false);
