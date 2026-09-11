@@ -573,6 +573,17 @@ export const en = {
       peakDate: " on {date}", pipelineBreakdown: "Pipeline breakdown", applicationRate: "Application rate",
       timeToHire: "Time to hire", conversionReport: "Conversion rate report", applicationsOpen: "Applications opened",
       applicationsClicked: "Applications clicked-through from search", applicationsApplied: "Applications completed", avgDaysToHire: "Avg days to hire",
+      // EmpAnalyticsPage tail translations
+      avgCandidateMatch: "Average candidate match", acrossApplicants: "Across all applicants who applied to your jobs.",
+      topPerformingRole: "Top performing role", applicants: "applicants", views: "views", openPipeline: "Open pipeline",
+      perJobPerformance: "Per-job performance", exportCsv: "Export CSV", workAuthorizationMix: "Applicant work-authorization mix",
+      authMixDesc: "From each applicant's own eligibility answer at signup — for compliance reporting, not a hiring filter.",
+      salaryBenchmarks: "Salary benchmarks by sector", benchmarkDesc: "Aggregated across every live hourly listing on NorthHire — a starting point when you set the pay range on a new role.",
+      rangePerHr: "Range ${min}–${max}/hr", listing: "live listing", hiringVelocity: "Hiring velocity",
+      noHiresYet: "No completed hires yet — time-to-hire appears once someone reaches Hired. Counting still-open applications would just measure how long ago you started looking.",
+      medianTimeToHire: "days median time to hire", medianDesc: "Across {hires} completed hire. Median, not mean — one unusually slow role shouldn't move it.",
+      avgDaysPerStage: "Average days in each stage", whereHiresCameFrom: "Where hires came from", whichChannelDesc: "Shows which channels actually produced hires once you've made one — a more useful question than which produced the most applications.",
+      sitUnused14: "Sitting untouched 14+ days", notEnoughListings: "Not enough live listings across the platform to produce meaningful benchmarks yet.",
     },
   },
   staffing: {

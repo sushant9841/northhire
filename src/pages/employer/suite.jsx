@@ -1808,14 +1808,14 @@ export function EmpAnalyticsPage(){
   // stay all-time because the app doesn't have per-day view events to slice.
   const [range,setRange]=useState(null); // null = all-time
   const stats=A.employerAnalytics(range); if(!stats) return <Page><Empty icon="activity" title="No data" body="Post a job first."/></Page>;
-  const ranges=[[null,"All time"],[7,"Last 7d"],[30,"Last 30d"],[90,"Last 90d"],[365,"Last 12mo"]];
+  const ranges=[[null,t("employer.analytics.allTime")],[7,t("employer.analytics.last7d")],[30,t("employer.analytics.last30d")],[90,t("employer.analytics.last90d")],[365,t("employer.analytics.last12mo")]];
   const pad=mob?"py-11 px-4":"py-18 px-8";
   return <div className="bg-white min-h-full">
     <section className={`bg-white border-b border-line-soft ${pad}`}>
       <div className="max-w-280 mx-auto">
-        <Tag tone="brand" icon="activity">Analytics</Tag>
-        <h1 className={`${HERO_WIDE} mt-5 mb-3 ${mob?"text-4xl":"text-6xl"}`}>How your hiring is doing.</h1>
-        <p className={`text-text-2 leading-snug m-0 max-w-140 ${mob?"text-base":"text-xl"}`}>Live numbers from your postings.</p></div>
+        <Tag tone="brand" icon="activity">{t("employer.analytics.analyticsTag")}</Tag>
+        <h1 className={`${HERO_WIDE} mt-5 mb-3 ${mob?"text-4xl":"text-6xl"}`}>{t("employer.analytics.analyticsHeader")}</h1>
+        <p className={`text-text-2 leading-snug m-0 max-w-140 ${mob?"text-base":"text-xl"}`}>{t("employer.analytics.analyticsSubtitle")}</p></div>
     </section>
     <section className={`bg-bg ${mob?"pt-8 px-4 pb-14":"pt-12 px-8 pb-24"}`}>
       <div className="max-w-280 mx-auto">
@@ -1826,31 +1826,31 @@ export function EmpAnalyticsPage(){
             {label}</button>)}
         </div>
         <div className={`grid gap-3.5 mb-6 ${mob?"grid-cols-2":"grid-cols-4"}`}>
-          <Stat label="Live jobs" value={stats.liveJobs} icon="briefcase"/>
-          <Stat label="Total views" value={stats.totalViews.toLocaleString()} icon="eye"/>
-          <Stat label="Applications" value={stats.totalApps} icon="send"/>
-          <Stat label="View → apply" value={`${stats.conversion}%`} icon="target" tone={C.brand}/>
+          <Stat label={t("employer.analytics.liveJobs")} value={stats.liveJobs} icon="briefcase"/>
+          <Stat label={t("employer.analytics.totalViews")} value={stats.totalViews.toLocaleString()} icon="eye"/>
+          <Stat label={t("employer.analytics.applications")} value={stats.totalApps} icon="send"/>
+          <Stat label={t("employer.analytics.viewToApply")} value={`${stats.conversion}%`} icon="target" tone={C.brand}/>
         </div>
         {/* Cost-per-hire lands beside the top-line stats when the employer has recorded any
             recruiting spend and at least one hire in the range - otherwise the tile would show
             a hollow $0 that reads as broken. */}
         {stats.hiresCount>0&&stats.totalCost>0&&<div className={`grid gap-3.5 mb-6 ${mob?"grid-cols-2":"grid-cols-4"}`}>
-          <Stat label="Recruiting spend" value={`$${stats.totalCost.toLocaleString()}`} icon="wallet"/>
-          <Stat label="Hires (in range)" value={stats.hiresCount} icon="check" tone={C.ok}/>
-          <Stat label="Cost per hire" value={stats.costPerHire?`$${stats.costPerHire.toLocaleString()}`:"—"} icon="target" tone={C.violet}/>
+          <Stat label={t("employer.analytics.recruitingSpend")} value={`$${stats.totalCost.toLocaleString()}`} icon="wallet"/>
+          <Stat label={t("employer.analytics.hiresInRange")} value={stats.hiresCount} icon="check" tone={C.ok}/>
+          <Stat label={t("employer.analytics.costPerHire")} value={stats.costPerHire?`$${stats.costPerHire.toLocaleString()}`:"—"} icon="target" tone={C.violet}/>
         </div>}
         <Card pad={mob?24:32} style={{borderRadius:20,marginBottom:16}}>
           <div className="flex justify-between items-baseline mb-2 flex-wrap gap-2">
-            <Lbl style={{marginBottom:0}}>Applications, last 30 days</Lbl>
-            {stats.applicationTrend?.length>0&&(()=>{const t=stats.applicationTrend;
-              const total=t.reduce((s,x)=>s+x.count,0);
-              const max=Math.max(...t.map(x=>x.count),0);
-              const peak=t.find(x=>x.count===max);
-              return <span className="text-xs text-text-3 tabular-nums">Total {total} · peak {max}{peak?.date?` on ${peak.date}`:""}</span>;})()}
+            <Lbl style={{marginBottom:0}}>{t("employer.analytics.applicationsLast30")}</Lbl>
+            {stats.applicationTrend?.length>0&&(()=>{const tr=stats.applicationTrend;
+              const total=tr.reduce((s,x)=>s+x.count,0);
+              const max=Math.max(...tr.map(x=>x.count),0);
+              const peak=tr.find(x=>x.count===max);
+              return <span className="text-xs text-text-3 tabular-nums">{t("employer.analytics.totalApplications",{total,max})}{peak?.date?t("employer.analytics.peakDate",{date:peak.date}):""}</span>;})()}
           </div>
           {(()=>{const trend=stats.applicationTrend||[]; const max=Math.max(...trend.map(t=>t.count),1);
             const total=trend.reduce((s,t)=>s+t.count,0);
-            if(total===0)return <div className="text-sm text-text-3 py-4">No applications in the last 30 days yet.</div>;
+            if(total===0)return <div className="text-sm text-text-3 py-4">{t("employer.analytics.noApplications")}</div>;
             /* Explicit y-axis so a reader can read absolute values off the bars, not only their
                relative shape. Three tick marks (0, mid, max) is enough context without
                competing with the bar row for space. */
@@ -1877,7 +1877,7 @@ export function EmpAnalyticsPage(){
         </Card>
         <div className="grid gap-4" style={{gridTemplateColumns:mob?"1fr":"1.2fr 1fr"}}>
           <Card pad={mob?24:32} style={{borderRadius:20}}>
-            <Lbl>Pipeline breakdown</Lbl>
+            <Lbl>{t("employer.analytics.pipelineBreakdown")}</Lbl>
             {stats.byStage.map(({stage,count})=>{const max=Math.max(...stats.byStage.map(s=>s.count),1);
               const pct=Math.round((count/max)*100);
               return <div key={stage} className="mb-3.5">
@@ -1887,28 +1887,28 @@ export function EmpAnalyticsPage(){
                   <div className="h-full transition-[width] duration-300" style={{width:`${pct}%`,background:stage==="Offer"?C.ok:stage==="Interview"?C.warn:C.brand}}/></div></div>;})}</Card>
           <div className="flex flex-col gap-3.5">
             <Card pad={mob?24:32} style={{borderRadius:20}}>
-              <Lbl>Average candidate match</Lbl>
+              <Lbl>{t("employer.analytics.avgCandidateMatch")}</Lbl>
               <div className="flex items-center gap-5 mt-1">
                 <Ring v={stats.avgScore} size={90}/>
                 <div><div className="text-sm text-text-2 leading-snug">Across all applicants who applied to your jobs.</div>
                   <div className="text-xs text-text-3 mt-2">Above 75 is strong; publish honest requirements to raise this.</div></div></div></Card>
             {stats.topJob&&<Card pad={mob?24:32} style={{borderRadius:20}}>
-              <Lbl>Top performing role</Lbl>
+              <Lbl>{t("employer.analytics.topPerformingRole")}</Lbl>
               <div className="font-semibold text-text tracking-tight mb-1.5" style={{fontSize:15.5}}>{stats.topJob.j.t}</div>
-              <div className="text-sm text-text-2 mb-3.5">{stats.topJob.apps} applicants • {stats.topJob.j.views.toLocaleString()} views</div>
-              <Btn kind="outline" size="sm" onClick={()=>{A.setPipelineJob(stats.topJob.j.id);A.go("empPipeline");}}>Open pipeline</Btn></Card>}
+              <div className="text-sm text-text-2 mb-3.5">{stats.topJob.apps} {t("employer.analytics.applicants")} • {stats.topJob.j.views.toLocaleString()} {t("employer.analytics.views")}</div>
+              <Btn kind="outline" size="sm" onClick={()=>{A.setPipelineJob(stats.topJob.j.id);A.go("empPipeline");}}>{t("employer.analytics.openPipeline")}</Btn></Card>}
           </div>
         </div>
         {stats.byJob?.length>0&&<Card pad={0} style={{borderRadius:20,marginTop:16,overflow:"hidden"}}>
           <div className="flex justify-between items-center py-4 px-6 border-b border-line-soft">
-            <Lbl style={{margin:0}}>Per-job performance</Lbl>
+            <Lbl style={{margin:0}}>{t("employer.analytics.perJobPerformance")}</Lbl>
             <Btn kind="outline" size="sm" icon="download" onClick={()=>{
               const rows=[["Job","Status","Views","Applications","View → apply","Offers made","Recruiting cost"],
                 ...stats.byJob.map(j=>[j.title,j.status,j.views,j.applications,`${j.conversion}%`,j.offers,j.recruitingCost||0])];
               const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
               const blob=new Blob([csv],{type:"text/csv"}); const url=URL.createObjectURL(blob);
               const a=document.createElement("a"); a.href=url; a.download="job-performance.csv"; a.click(); URL.revokeObjectURL(url);
-            }}>Export CSV</Btn>
+            }}>{t("employer.analytics.exportCsv")}</Btn>
           </div>
           <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:700}}>
             <thead><tr className="border-b-2 border-line text-left">
@@ -1940,8 +1940,8 @@ export function EmpAnalyticsPage(){
           </table></div>
         </Card>}
         {stats.eligibilityMix?.length>0&&<Card pad={mob?24:32} style={{borderRadius:20,marginTop:16}}>
-          <Lbl>Applicant work-authorization mix</Lbl>
-          <p className="text-sm text-text-2 leading-snug mt-1 mb-4">From each applicant's own eligibility answer at signup — for compliance reporting, not a hiring filter.</p>
+          <Lbl>{t("employer.analytics.workAuthorizationMix")}</Lbl>
+          <p className="text-sm text-text-2 leading-snug mt-1 mb-4">{t("employer.analytics.authMixDesc")}</p>
           <div className="flex flex-col gap-3">
             {stats.eligibilityMix.map(({label,count})=>{const max=Math.max(...stats.eligibilityMix.map(x=>x.count),1); const pct=Math.round((count/max)*100);
               return <div key={label}>
@@ -1955,8 +1955,8 @@ export function EmpAnalyticsPage(){
             postings actually pay today. Anonymised, no per-employer breakdown. Only renders
             when there's a meaningful comparable set (2+ postings in the category). */}
         {stats.salaryBenchmarks?.length>0&&<Card pad={mob?24:32} style={{borderRadius:20,marginTop:16}}>
-          <Lbl>Salary benchmarks by sector</Lbl>
-          <p className="text-sm text-text-2 leading-snug mt-1 mb-4">Aggregated across every live hourly listing on NorthHire — a starting point when you set the pay range on a new role.</p>
+          <Lbl>{t("employer.analytics.salaryBenchmarks")}</Lbl>
+          <p className="text-sm text-text-2 leading-snug mt-1 mb-4">{t("employer.analytics.benchmarkDesc")}</p>
           <div className="flex flex-col gap-2">
             {stats.salaryBenchmarks.filter(b=>b.count>=2).map(b=>
               <div key={b.cat} className="flex items-center gap-3 py-2 border-b border-line-soft flex-wrap">

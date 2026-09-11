@@ -575,6 +575,17 @@ export const fr = {
       peakDate: " le {date}", pipelineBreakdown: "Ventilation du pipeline", applicationRate: "Taux de candidature",
       timeToHire: "Délai d'embauche", conversionReport: "Rapport de taux de conversion", applicationsOpen: "Candidatures ouvertes",
       applicationsClicked: "Candidatures cliquées depuis la recherche", applicationsApplied: "Candidatures complétées", avgDaysToHire: "Jours moyens pour embaucher",
+      // EmpAnalyticsPage tail translations
+      avgCandidateMatch: "Correspondance moyenne des candidat·e·s", acrossApplicants: "Parmi tous les·les candidat·e·s qui ont postulé pour vos emplois.",
+      topPerformingRole: "Poste les plus performant", applicants: "candidat·e·s", views: "vues", openPipeline: "Ouvrir le pipeline",
+      perJobPerformance: "Performance par emploi", exportCsv: "Exporter en CSV", workAuthorizationMix: "Mélange d'autorisation de travail des candidat·e·s",
+      authMixDesc: "D'après la réponse à la question d'admissibilité de chaque candidat·e au moment de l'inscription — pour la conformité, pas comme filtre d'embauche.",
+      salaryBenchmarks: "Comparatifs salariaux par secteur", benchmarkDesc: "Agrégé sur chaque annonce horaire en direct sur NorthHire — un point de départ lorsque vous définissez la plage de rémunération sur un nouvel emploi.",
+      rangePerHr: "Plage ${min}–${max}/h", listing: "annonce en direct", hiringVelocity: "Vitesse d'embauche",
+      noHiresYet: "Pas d'embauches complétées pour l'instant — le délai d'embauche apparaît une fois que quelqu'un atteint Embauché·e. Compter les candidatures encore ouvertes serait juste mesurer depuis combien de temps vous cherchez.",
+      medianTimeToHire: "jours de délai médian pour embaucher", medianDesc: "Parmi {hires} embauche complétée. Médiane, pas moyenne — un rôle inhabituellement lent ne devrait pas la modifier.",
+      avgDaysPerStage: "Jours moyens dans chaque étape", whereHiresCameFrom: "Provenance des embauches", whichChannelDesc: "Montre quels canaux ont réellement produit des embauches une fois que vous en avez faites — une question plus utile que laquelle a produit le plus de candidatures.",
+      sitUnused14: "Immobiles depuis 14+ jours", notEnoughListings: "Pas assez d'annonces en direct sur la plateforme pour produire des comparatifs significatifs pour l'instant.",
     },
   },
   staffing: {
