@@ -586,7 +586,26 @@ export const fr = {
       genCancel: "Annuler", genSubmit: "Générer"
     },
     placements: { title: "Placements", successful: "Placements réussis", onGoing: "En cours", completed: "Complétés" },
-    clients: { title: "Client·e·s", name: "Nom du client", contact: "Personne-ressource", location: "Emplacement", active: "Actif·ve" },
+    clients: {
+      title: "Client·e·s", name: "Nom du client", contact: "Personne-ressource", location: "Emplacement", active: "Actif·ve",
+      subtitle: "Employeur·euse·s avec lesquel·le·s nous avons (ou voulons) une relation d'effectif.",
+      addBtn: "Ajouter un client·e",
+      searchPlaceholder: "Rechercher par employeur ou secteur",
+      sortName: "Trier : Nom", sortRisk: "Trier : Risque de comptes clients (le plus élevé d'abord)",
+      allBranches: "Toutes les succursales",
+      net: "Net", active: "Actif·ve", openOrders: "Commandes ouvertes", ar: "Comptes clients",
+      msaSigned: "MSA signé", msaNotSigned: "MSA non signé", msaSignBtn: "Marquer comme signé",
+      markupTarget: "Cible de majoration {markup}%",
+      arFollowUp: "Enregistrer le suivi des comptes clients", arFollowUpLogged: "Suivi enregistré pour {name}",
+      noBranchAssigned: "Aucune succursale assignée",
+      emptyTitle: "Aucun client·e ne correspond", emptyBody: "Essayez une autre recherche ou ajoutez un nouveau client·e ci-dessous.",
+      addModal: "Ajouter un client·e d'effectif",
+      employerLabel: "Employeur·euse", employerHint: "Doit être un compte employeur NorthHire existant.",
+      employerPlaceholder: "Choisir un employeur·euse…",
+      industryLabel: "Secteur d'activité", industryPlaceholder: "p. ex. Construction, Soins de santé",
+      provinceLabel: "Province", cityLabel: "Ville", cityPlaceholder: "p. ex. Winnipeg",
+      cancel: "Annuler", addProspect: "Ajouter comme prospect"
+    },
     workers: { title: "Travailleur·euse·s", name: "Nom du travailleur", status: "Statut", rate: "Taux", available: "Disponible" },
     margins: {
       title: "Marges", profit: "Marge bénéficiaire", revenue: "Revenu", cost: "Coût",

@@ -1283,17 +1283,17 @@ export function AgencyClients(){
   return <div>
     <div className="flex justify-between items-start gap-3 flex-wrap mb-3.5">
       <div>
-        <div className="text-lg font-bold text-text">{list.length} clients</div>
-        <div className="text-sm text-text-3 mt-0.5">Employers we have (or want) a staffing relationship with.</div>
+        <div className="text-lg font-bold text-text">{list.length} {t("staffing.clients.title")}</div>
+        <div className="text-sm text-text-3 mt-0.5">{t("staffing.clients.subtitle")}</div>
       </div>
-      <Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowAdd(true)}>Add client</Btn>
+      <Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowAdd(true)}>{t("staffing.clients.addBtn")}</Btn>
     </div>
     <div className="flex gap-3 mb-4 flex-wrap items-center">
-      <div className="max-w-105 flex-1 min-w-60"><Input icon="search" placeholder="Search by employer or industry" value={q} onChange={e=>setQ(e.target.value)}/></div>
+      <div className="max-w-105 flex-1 min-w-60"><Input icon="search" placeholder={t("staffing.clients.searchPlaceholder")} value={q} onChange={e=>setQ(e.target.value)}/></div>
       <Sel value={sort} onChange={e=>setSort(e.target.value)} style={{width:170}}>
-        <option value="name">Sort: Name</option><option value="risk">Sort: AR risk (highest first)</option></Sel>
+        <option value="name">{t("staffing.clients.sortName")}</option><option value="risk">{t("staffing.clients.sortRisk")}</option></Sel>
       {A.staffingBranches.length>0&&<Sel value={branchFilter} onChange={e=>setBranchFilter(e.target.value)} style={{width:170}}>
-        <option value="">All branches</option>
+        <option value="">{t("staffing.clients.allBranches")}</option>
         {A.staffingBranches.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}
       </Sel>}
     </div>
@@ -1307,56 +1307,56 @@ export function AgencyClients(){
             <SmartLogo e={emp||{mark:"hex",a:C.brand,b:"#fff"}} size={44} radius={11}/>
             <div className="flex-1 min-w-0">
               <div className="text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap">{emp?.name||"—"}</div>
-              <div className="text-xs text-text-3 mt-1">{c.industry} · Net {c.paymentTermsDays}</div>
+              <div className="text-xs text-text-3 mt-1">{c.industry} · {t("staffing.clients.net")} {c.paymentTermsDays}</div>
             </div>
             <Tag tone={c.status==="active"?"ok":c.status==="prospect"?"warn":"neutral"} sm>{c.status}</Tag>
           </div>
           <div className="grid grid-cols-3 gap-2 mb-3">
             <div className="py-2.5 px-3 bg-bg rounded-lg text-center">
               <div className="text-base font-bold text-brand">{activeAsns}</div>
-              <div className="text-xs text-text-3 mt-0.5" style={{fontSize:10.5}}>Active</div></div>
+              <div className="text-xs text-text-3 mt-0.5" style={{fontSize:10.5}}>{t("staffing.clients.active")}</div></div>
             <div className="py-2.5 px-3 bg-bg rounded-lg text-center">
               <div className="text-base font-bold text-warn">{openOrds}</div>
-              <div className="text-xs text-text-3 mt-0.5" style={{fontSize:10.5}}>Open orders</div></div>
+              <div className="text-xs text-text-3 mt-0.5" style={{fontSize:10.5}}>{t("staffing.clients.openOrders")}</div></div>
             <div className="py-2.5 px-3 bg-bg rounded-lg text-center">
               <div className="text-base font-bold" style={{color:c.currentAR>c.creditLimit*0.8?C.danger:C.text}}>${(c.currentAR/1000).toFixed(0)}k</div>
-              <div className="text-xs text-text-3 mt-0.5" style={{fontSize:10.5}}>AR</div></div>
+              <div className="text-xs text-text-3 mt-0.5" style={{fontSize:10.5}}>{t("staffing.clients.ar")}</div></div>
           </div>
           <div className="text-xs text-text-3 pt-3 border-t border-line-soft">
-            {c.signedMsa?<>MSA signed {c.signedMsa}</>:<span className="text-warn font-semibold">MSA not signed</span>}
-            {" · "}Markup target {c.markup}%
+            {c.signedMsa?<>{t("staffing.clients.msaSigned")} {c.signedMsa}</>:<span className="text-warn font-semibold">{t("staffing.clients.msaNotSigned")}</span>}
+            {" · "}{t("staffing.clients.markupTarget").replace("{markup}",c.markup)}
           </div>
           {A.staffingBranches.length>0&&<div className="mt-2.5">
             <Sel value={c.branchId||""} onChange={e=>A.upsertStaffingClient({employerId:c.employerId,branchId:e.target.value||null})} style={{fontSize:12,padding:"5px 8px",width:"100%"}}>
-              <option value="">No branch assigned</option>
+              <option value="">{t("staffing.clients.noBranchAssigned")}</option>
               {A.staffingBranches.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}
             </Sel>
           </div>}
-          {!c.signedMsa&&<Btn kind="primary" size="xs" full style={{marginTop:10}} onClick={()=>A.signMsa(c.id)}>Mark MSA signed</Btn>}
+          {!c.signedMsa&&<Btn kind="primary" size="xs" full style={{marginTop:10}} onClick={()=>A.signMsa(c.id)}>{t("staffing.clients.msaSignBtn")}</Btn>}
           {c.currentAR>c.creditLimit*0.8&&<Btn kind="dangerSoft" size="xs" full style={{marginTop:10}}
-            onClick={()=>{A.logActivity("client.ar_followup",`Followed up with ${emp?.name||c.id} on $${(c.currentAR/1000).toFixed(0)}k outstanding AR`,"alert");A.toast(`Follow-up logged for ${emp?.name}`,"ok");}}>
-            Log AR follow-up</Btn>}
+            onClick={()=>{A.logActivity("client.ar_followup",`Followed up with ${emp?.name||c.id} on $${(c.currentAR/1000).toFixed(0)}k outstanding AR`,"alert");A.toast(t("staffing.clients.arFollowUpLogged").replace("{name}",emp?.name||""),"ok");}}>
+            {t("staffing.clients.arFollowUp")}</Btn>}
         </Card>;})}
-      {list.length===0&&<Empty icon="building" title="No clients match" body="Try a different search, or add a new client below."/>}
+      {list.length===0&&<Empty icon="building" title={t("staffing.clients.emptyTitle")} body={t("staffing.clients.emptyBody")}/>}
     </div>
     <Pagination {...pg}/>
-    {showAdd&&<Modal onClose={()=>setShowAdd(false)} title="Add a staffing client">
+    {showAdd&&<Modal onClose={()=>setShowAdd(false)} title={t("staffing.clients.addModal")}>
       <div className="flex flex-col gap-3.5">
-        <Field label="Employer" required hint="Must already be a NorthHire employer account.">
+        <Field label={t("staffing.clients.employerLabel")} required hint={t("staffing.clients.employerHint")}>
           <Sel value={nc.employerId} onChange={e=>setNc({...nc,employerId:e.target.value})}>
-            <option value="">Choose an employer…</option>
+            <option value="">{t("staffing.clients.employerPlaceholder")}</option>
             {availableEmployers.map(e=><option key={e.id} value={e.id}>{e.name}</option>)}
           </Sel>
         </Field>
-        <Field label="Industry"><Input value={nc.industry} onChange={e=>setNc({...nc,industry:e.target.value})} placeholder="e.g. Construction, Healthcare"/></Field>
+        <Field label={t("staffing.clients.industryLabel")}><Input value={nc.industry} onChange={e=>setNc({...nc,industry:e.target.value})} placeholder={t("staffing.clients.industryPlaceholder")}/></Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Province"><Sel value={nc.province} onChange={e=>setNc({...nc,province:e.target.value})}>
+          <Field label={t("staffing.clients.provinceLabel")}><Sel value={nc.province} onChange={e=>setNc({...nc,province:e.target.value})}>
             {["AB","BC","MB","NB","NS","ON","QC","SK"].map(p=><option key={p}>{p}</option>)}</Sel></Field>
-          <Field label="City"><Input value={nc.city} onChange={e=>setNc({...nc,city:e.target.value})} placeholder="e.g. Winnipeg"/></Field>
+          <Field label={t("staffing.clients.cityLabel")}><Input value={nc.city} onChange={e=>setNc({...nc,city:e.target.value})} placeholder={t("staffing.clients.cityPlaceholder")}/></Field>
         </div>
         <div className="flex gap-2.5 justify-end">
-          <Btn kind="ghost" onClick={()=>setShowAdd(false)}>Cancel</Btn>
-          <Btn kind="primary" disabled={!nc.employerId} onClick={submitAdd}>Add as prospect</Btn>
+          <Btn kind="ghost" onClick={()=>setShowAdd(false)}>{t("staffing.clients.cancel")}</Btn>
+          <Btn kind="primary" disabled={!nc.employerId} onClick={submitAdd}>{t("staffing.clients.addProspect")}</Btn>
         </div>
       </div>
     </Modal>}
