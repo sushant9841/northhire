@@ -64,10 +64,13 @@ function _TrustedDevices(){
 export function SettingsPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const u=A.user;
-  if(!u) return <DeniedPage/>;
+  /* Hooks before any early return - a conditional useState is a Rules-of-Hooks violation that
+     crashes with "Rendered more hooks than during the previous render" the moment u goes from
+     null (guest) to a real user without a route change. */
   const [confirm,setConfirm]=useState(false);
   const [show2FA,setShow2FA]=useState(false); const [tfaPhone,setTfaPhone]=useState(""); const [tfaResult,setTfaResult]=useState(null);
   const [showOutbox,setShowOutbox]=useState(false);
+  if(!u) return <DeniedPage/>;
   const S=A.userSettings;
   const Row=({icon,title,sub,children})=><div className="flex gap-3.5 items-center py-4 border-b border-line-soft">
     <div className="w-10 h-10 rounded-xl bg-bg text-text-2 flex items-center justify-center shrink-0"><I n={icon} s={18}/></div>

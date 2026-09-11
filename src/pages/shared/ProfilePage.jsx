@@ -10,19 +10,24 @@ import { EmpMark } from "./cards.jsx";
 export function ProfilePage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const u=A.user;
+  /* All hooks live at the top before any conditional return - conditionally-called hooks are a
+     Rules-of-Hooks violation and crash the tab with "Rendered more hooks than during the
+     previous render" the moment the branch changes (guest -> signed-in seeker, or seeker <->
+     employer). The u-shape defaults let the useState initializers run before we know u.role. */
+  const seed=u||{skills:[]};
+  const [tab,setTab]=useState("about");
+  const [d,setD]=useState({...seed});
+  const [skill,setSkill]=useState("");
+  const [showRef,setShowRef]=useState(false);
+  const [ref,setRef]=useState({name:"",title:"",company:"",email:"",phone:"",relationship:""});
+  useEffect(()=>{ if(u) setD({...u}); },[u]);
   if(!u) return <Page narrow><Empty icon="user" title="Sign in to view your profile"
     body="Create a free account to build a profile, save jobs and track applications."
     action={<div className="flex gap-2.5 justify-center flex-wrap">
       <Btn kind="primary" onClick={()=>A.go("signup")}>Create account</Btn>
       <Btn kind="outline" onClick={()=>A.go("login")}>Sign in</Btn></div>}/></Page>;
   if(u.role!=="seeker") return <EmployerAccountPage/>;
-  const [tab,setTab]=useState("about");
-  const [d,setD]=useState({...u});
-  const [skill,setSkill]=useState("");
-  const [showRef,setShowRef]=useState(false);
-  const [ref,setRef]=useState({name:"",title:"",company:"",email:"",phone:"",relationship:""});
   const dirty=JSON.stringify(d)!==JSON.stringify(u);
-  useEffect(()=>setD({...u}),[u]);
   const set=(k,v)=>setD(p=>({...p,[k]:v}));
   const addSkill=s=>{const v=s.trim(); if(!v||d.skills.includes(v))return; set("skills",[...d.skills,v]); setSkill("");};
   const SUG=({trades:["Red Seal","WHMIS","Fall Protection","Blueprint Reading","Welding"],
@@ -107,7 +112,7 @@ export function ProfilePage(){
               <option value="need">Requires employer sponsorship</option></Sel></Field>
           <Field label="Professional summary" style={{gridColumn:mob?"auto":"span 2"}} hint="Two or three sentences. This appears at the top of your CV.">
             <Area rows={4} value={d.summary||""} onChange={e=>set("summary",e.target.value)}
-              placeholder={`${d.years}+ years as a ${d.title.toLowerCase()} in ${d.city}. …`}/></Field></div></div>}
+              placeholder={`${d.years||0}+ years as a ${(d.title||"role").toLowerCase()} in ${d.city||"your city"}. …`}/></Field></div></div>}
 
       {tab==="skills"&&<div>
         <H2 sub="These drive every match score you see">Skills, tickets and certificates</H2>

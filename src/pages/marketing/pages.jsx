@@ -447,13 +447,15 @@ export function TrainingsPage(){
 
 export function TrainingPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
+  /* Hooks before conditional return - a useState after an early return is a Rules-of-Hooks
+     violation and crashes the tab the moment a not-found training becomes findable. */
+  const [payConfirm,setPayConfirm]=useState(null); /* {price,title} */
   const t=A.trainings.find(x=>x.id===A.trainingId);
   if(!t) return <Page><Empty icon="cap" title="Training not found" body="It may have been unpublished."
     action={<Btn kind="primary" onClick={()=>A.go("trainings")}>All trainings</Btn>}/></Page>;
   const enrolled=A.enrolled.has(t.id);
   const prog=A.trainingProgress[t.id]||0;
   const pad=mob?"py-11 px-4":"py-18 px-8";
-  const [payConfirm,setPayConfirm]=useState(null); /* {price,title} */
   const tryEnrol=()=>{
     const r=A.enrol(t.id);
     if(r&&r.needsPayment)setPayConfirm(r);

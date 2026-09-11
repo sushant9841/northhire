@@ -6,10 +6,13 @@ import { Btn, Card, Tag, Input, Empty, SmartPortrait, Page, HERO_TIGHT } from ".
 
 export function MessagesPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
+  /* All hooks before any early return - a conditional useState/useEffect is a Rules-of-Hooks
+     violation and crashes the tab with "Rendered more hooks than during the previous render"
+     the moment A.user goes from null (guest) to signed-in without a route change. */
   const [reply,setReply]=useState({}); // keyed by other party's id
   const [q,setQ]=useState(""); const [unreadOnly,setUnreadOnly]=useState(false);
-  if(!A.user) return <Page><Empty icon="mail" title="Sign in to see messages" body="Your inbox lives on your account."/></Page>;
-  const myMessages=A.messages.filter(m=>m.from===A.user.id||m.to===A.user.id);
+  const [openThread,setOpenThread]=useState(null);
+  const myMessages=A.user?A.messages.filter(m=>m.from===A.user.id||m.to===A.user.id):[];
   const threads={};
   myMessages.forEach(m=>{const other=m.from===A.user.id?m.to:m.from;
     if(!threads[other])threads[other]=[]; threads[other].push(m);});
@@ -17,6 +20,12 @@ export function MessagesPage(){
     const sorted=msgs.slice().sort((a,b)=>b.at-a.at);
     return {otherId,msgs:sorted.reverse(),last:sorted[0],unread:msgs.filter(m=>m.to===A.user.id&&!m.read).length};
   }).sort((a,b)=>b.last.at-a.last.at);
+  // Auto-pick the first thread after mount (was a useState initializer, which only ran once and
+  // silently missed a first thread that loaded in a later render).
+  useEffect(()=>{ if(!openThread&&allThreadList[0]) setOpenThread(allThreadList[0].otherId); },[allThreadList,openThread]);
+  const markRead=id=>{if(!id||!A.user)return; threads[id]?.forEach(m=>{if(m.to===A.user.id&&!m.read)A.markMessageRead(m.id);});};
+  useEffect(()=>{markRead(openThread);/* eslint-disable-next-line*/},[openThread]);
+  if(!A.user) return <Page><Empty icon="mail" title="Sign in to see messages" body="Your inbox lives on your account."/></Page>;
   const threadList=allThreadList.filter(t=>{
     if(unreadOnly&&t.unread===0)return false;
     if(q){const p=A.person(t.otherId)||A.people.find(x=>x.id===t.otherId);
@@ -24,13 +33,10 @@ export function MessagesPage(){
       if(!((p?.name||"").toLowerCase().includes(s)||t.last.text.toLowerCase().includes(s)))return false;}
     return true;
   });
-  const [openThread,setOpenThread]=useState(allThreadList[0]?.otherId||null);
   const other=A.person(openThread)||A.people.find(p=>p.id===openThread);
   const thread=threads[openThread]?.slice().sort((a,b)=>a.at-b.at)||[];
   const send=()=>{const t=(reply[openThread]||"").trim(); if(!t)return;
     A.sendMessage(openThread,thread[0]?.job||null,t); setReply(r=>({...r,[openThread]:""}));};
-  const markRead=id=>{if(!id)return; threads[id]?.forEach(m=>{if(m.to===A.user.id&&!m.read)A.markMessageRead(m.id);});};
-  useEffect(()=>{markRead(openThread);/* eslint-disable-next-line*/},[openThread]);
 
   /* When rendered inside a dashboard shell (employer/admin), skip the site hero and heavy padding — the shell owns the topbar */
   const inShell=A.user.role==="employer"||A.user.role==="admin";

@@ -226,11 +226,14 @@ export function AgencyDashboard(){
           <div className="flex flex-col gap-2.5">
             <div className="flex justify-between items-center py-2.5 px-3 bg-bg rounded-lg">
               <span className="text-sm text-text-2">AR outstanding</span>
-              <span className="text-base font-bold text-brand">${kpi.arTotal.toLocaleString()}</span>
+              <span className="text-base font-bold text-brand tabular-nums">${kpi.arTotal.toLocaleString("en-CA",{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
             </div>
             {kpi.overdueTotal>0&&<div className="flex justify-between items-center py-2.5 px-3 bg-red-bg rounded-lg border border-red-ln">
               <span className="text-sm text-text-2">Overdue (chase)</span>
-              <span className="text-base font-bold text-red">${kpi.overdueTotal.toLocaleString()}</span>
+              {/* Explicit min/max fraction digits so a value ending in .20 renders as $3,435.20
+                  not $3,435.2 - a hand-rolled Math.round or toLocaleString() without options
+                  drops the trailing zero, which reads as broken next to sibling values. */}
+              <span className="text-base font-bold text-red tabular-nums">${kpi.overdueTotal.toLocaleString("en-CA",{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
             </div>}
             <div className="flex justify-between items-center py-2.5 px-3 bg-bg rounded-lg">
               <span className="text-sm text-text-2">Placements in flight</span>

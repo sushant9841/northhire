@@ -399,53 +399,56 @@ export function HowItWorksPage(){
   const [track,setTrack]=useState("seeker");
 
   const tracks={
+    /* Every step below carries a real product screenshot captured from the live app (a full-page
+       Playwright capture at 1440×900). Not marketing-produced mockups: this is what the reader
+       actually sees when they sign in, so a step's copy and its image can't drift. */
     seeker:{
       label:"I'm looking for work",color:C.brand,
       steps:[
         {t:"Create your profile",b:"Sign up in 60 seconds. Add your skills, tickets, work eligibility. That's your reusable application.",
-          detail:"No paywalls. Never charged. Auto-fills every application after."},
+          detail:"No paywalls. Never charged. Auto-fills every application after.",img:"/how-it-works/seeker-cvs.png",alt:"The CV builder screen with a saved primary CV and one alternate."},
         {t:"Find jobs matched to you",b:"We match on skills, tickets, city, availability. Every listing shows real pay, not a range.",
-          detail:"Filter by trade, city, employer, wage floor. Save searches for daily alerts."},
+          detail:"Filter by trade, city, employer, wage floor. Save searches for daily alerts.",img:"/how-it-works/seeker-matched.png",alt:"Matched-jobs page showing strong matches sorted by fit score."},
         {t:"Apply in one tap",b:"Pick your CV, review employer's questions, hit Apply. See match score before submitting.",
-          detail:"Applied jobs live in your status page. Track every stage in real time."},
+          detail:"Applied jobs live in your status page. Track every stage in real time.",img:"/how-it-works/seeker-status.png",alt:"Status page listing an application at the Reviewed stage with a live timeline."},
         {t:"Get interviewed & hired",b:"Employer messages you through the app. Interview scheduling built in. Accept the offer, you're hired.",
-          detail:"Contract offers surface transparently — you'll know if you're hired direct or through NorthHire Staffing."},
+          detail:"Contract offers surface transparently — you'll know if you're hired direct or through NorthHire Staffing.",img:"/how-it-works/seeker-interviews.png",alt:"Interviews page listing upcoming and past interviews."},
         {t:"Optionally, join NorthHire Staffing",b:"Want ongoing contract work? Opt in as a worker. We employ you, place you at client sites, pay you biweekly.",
-          detail:"You submit hours weekly, get direct deposit Thursday, T4s at year end, 4% vacation accrual."},
+          detail:"You submit hours weekly, get direct deposit Thursday, T4s at year end, 4% vacation accrual.",img:"/how-it-works/agency-timesheets.png",alt:"Staffing worker timesheet approval view."},
       ]
     },
     employer:{
       label:"I want to hire",color:C.violet,
       steps:[
         {t:"Sign up as an employer",b:"Two-minute signup. Verify your business, add a logo, done. Free tier lets you post one job.",
-          detail:"Growth and Enterprise unlock more jobs, seats, and features. Cancel anytime."},
+          detail:"Growth and Enterprise unlock more jobs, seats, and features. Cancel anytime.",img:"/how-it-works/home.png",alt:"NorthHire homepage — the sign-up starting point."},
         {t:"Post the role",b:"Write the posting or use AI-autofill from a title. Add screening questions. Set the pay range — pay transparency is standard.",
-          detail:"Draft, schedule, or publish immediately. Post to Google Jobs and Indeed automatically on Growth+."},
+          detail:"Draft, schedule, or publish immediately. Post to Google Jobs and Indeed automatically on Growth+.",img:"/how-it-works/employer-post.png",alt:"Post-a-job wizard on the compensation & schedule step."},
         {t:"Review scored applicants",b:"AI ranks every applicant 0–100 as they apply. Open the top ones first.",
-          detail:"Bulk actions. Notes and tags. Multi-manager pipeline."},
+          detail:"Bulk actions. Notes and tags. Multi-manager pipeline.",img:"/how-it-works/employer-pipeline.png",alt:"Candidate pipeline board with applicants at Applied, Reviewed, and Interview stages."},
         {t:"Interview, offer, hire",b:"Schedule interviews in-app. Track candidates through custom stages. Send offer letters. Move to hired.",
-          detail:"Hired candidates flow into HR Suite automatically on Enterprise."},
-        {t:"Run your team with HR Suite",b:"Once someone's hired, HR Suite is their home. Attendance, leave, payroll, reviews. All in one console.",
-          detail:"Included with Enterprise. Or standalone at $8/employee/month."},
+          detail:"Hired candidates flow into HR Suite automatically on Enterprise.",img:"/how-it-works/employer-analytics.png",alt:"Hiring analytics dashboard with time-to-hire, source-of-hire, and per-job breakdown."},
+        {t:"Run your team with HR Suite",b:"Once someone's hired, HR Suite is their home. Attendance, leave, payroll, tasks. All in one console.",
+          detail:"Included with Enterprise. Or standalone at $8/employee/month.",img:"/how-it-works/hr-dashboard.png",alt:"HR Suite dashboard for a company owner — attendance, pending leave, upcoming events, open tasks."},
         {t:"Need workers now, not later? Use Staffing.",b:"For contract, temp, or fast-fill needs. We handle everything from sourcing to WSIB. You approve timesheets.",
-          detail:"Weekly invoicing. 25-45% markup on pay rate. First workers on site in 48 hours."},
+          detail:"Weekly invoicing. 25-45% markup on pay rate. First workers on site in 48 hours.",img:"/how-it-works/employer-staffing.png",alt:"Employer's staffing-services dashboard showing active requests and open positions."},
       ]
     },
     staffing:{
       label:"I'm using NorthHire Staffing",color:STAFFING_AMBER,
       steps:[
         {t:"As a client: sign the MSA",b:"Master Services Agreement covers rates, terms, conversion fees, insurance. Standard, but let your lawyer review.",
-          detail:"One-time paperwork. Ongoing relationship."},
+          detail:"One-time paperwork. Ongoing relationship.",img:"/how-it-works/employer-staffing.png",alt:"Client-side staffing overview after the MSA is in place."},
         {t:"As a client: request workers",b:"Submit a job order — role, count, start date, must-have tickets, shift pattern, pay rate. We reply within 4 hours with candidates.",
-          detail:"Or we push open orders proactively to your bench of preferred workers."},
+          detail:"Or we push open orders proactively to your bench of preferred workers.",img:"/how-it-works/staffing-request.png",alt:"Client staffing job-requests page showing submitted orders and their fill status."},
         {t:"Workers arrive on site",b:"Vetted, ticket-verified, PPE-ready. Your on-site supervisor becomes their day-to-day contact.",
-          detail:"Typical fill time: 48 hours from job order to first shift."},
+          detail:"Typical fill time: 48 hours from job order to first shift.",img:"/how-it-works/agency-bench.png",alt:"Agency bench view — vetted workers available for placement."},
         {t:"Every Monday: approve timesheets",b:"Web link or email button. Approve, return with notes, or split-approve. Locks the timesheet for payroll and invoicing.",
-          detail:"Approved timesheets → weekly invoice on Tuesday, biweekly payroll to workers on Thursday."},
+          detail:"Approved timesheets → weekly invoice on Tuesday, biweekly payroll to workers on Thursday.",img:"/how-it-works/staffing-approve.png",alt:"Client-side timesheet approval interface."},
         {t:"As a worker: submit your hours",b:"Mobile-optimized timesheet, submit by Sunday night. Supervisor approves by Monday noon.",
-          detail:"Direct deposit Thursday. Pay stub in your NorthHire portal. T4 at year end."},
+          detail:"Direct deposit Thursday. Pay stub in your NorthHire portal. T4 at year end.",img:"/how-it-works/agency-timesheets.png",alt:"Agency-side view of submitted worker timesheets pending approval."},
         {t:"Convert to permanent (optional)",b:"Client wants to hire the worker directly? Pay the conversion fee, worker moves to client payroll, contract ends.",
-          detail:"Fee scales down with time already worked. Coordinated between agency, client, and worker."},
+          detail:"Fee scales down with time already worked. Coordinated between agency, client, and worker.",img:"/how-it-works/agency-placements.png",alt:"Agency placements page tracking permanent conversions and guarantee periods."},
       ]
     },
   };
@@ -480,10 +483,19 @@ export function HowItWorksPage(){
           {!mob&&<div className={`absolute left-6 top-6 bottom-6 w-0.5 ${tone.bgOnly} opacity-15`}/>}
           {t.steps.map((s,i)=><div key={i} className={`flex mb-8 items-start ${mob?"gap-3.5":"gap-6"}`}>
             <div className={`w-12 h-12 rounded-full ${tone.bgOnly} text-white flex items-center justify-center text-lg font-bold shrink-0 z-1 relative`}>{i+1}</div>
-            <div className={`flex-1 ${mob?"":"pb-2"}`}>
+            <div className={`flex-1 ${mob?"":"pb-2"} min-w-0`}>
               <div className={`font-bold text-text tracking-tight mb-2 ${mob?"text-lg":"text-2xl"}`}>{s.t}</div>
               <div className="text-base text-text-2 leading-relaxed mb-2.5">{s.b}</div>
-              <div className={`text-sm text-text-3 leading-snug py-3 px-3.5 bg-bg rounded-xl border-l-4 ${tone.borderOnly}`}>{s.detail}</div>
+              <div className={`text-sm text-text-3 leading-snug py-3 px-3.5 bg-bg rounded-xl border-l-4 ${tone.borderOnly} mb-4`}>{s.detail}</div>
+              {/* Real product screenshot for this step. Full-page captures are tall (7000+ px in
+                  places), so we cap the visible portion at the top-of-page frame - what a reader
+                  cares about here is "does this actually look like the screen I'd land on" - and
+                  offer the whole thing on click via loading=lazy + a border/shadow that reads as
+                  a real UI object, not a lifestyle photo. Alt text describes the state shown so
+                  a screen-reader user gets the same information. */}
+              {s.img&&<a href={s.img} target="_blank" rel="noopener" className="block rounded-2xl overflow-hidden border border-line bg-white shadow-sm hover:shadow-md transition-shadow duration-150 max-h-100" title="Open full screenshot in a new tab">
+                <img src={s.img} alt={s.alt} loading="lazy" width="1440" className="block w-full h-auto"/>
+              </a>}
             </div>
           </div>)}
         </div>

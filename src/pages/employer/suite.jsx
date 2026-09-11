@@ -476,7 +476,7 @@ function _PipelineCard({a,u,s,idx,selected,tog,A,notice,stages}){
       <SmartPortrait seed={u.seed} size={32}/>
       <div className="flex-1 min-w-0">
         <div className="text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap">{u.name}</div>
-        <div className="text-xs text-text-3 mt-px">{u.years} yrs • {u.city}</div></div>
+        <div className="text-xs text-text-3 mt-px">{u.years} {u.years===1?"yr":"yrs"} • {u.city}</div></div>
       <Ring v={s} size={32}/></div>
     {/* Ontario Bill 149: an interviewed applicant has to be told the outcome within 45 days. */}
     {notice&&!notice.decided&&(notice.overdue||notice.daysLeft<=14)&&
@@ -797,7 +797,7 @@ export function EmpCandidate(){
         <SmartPortrait seed={u.seed} size={mob?62:74} radius={18}/>
         <div className="grow shrink basis-50 min-w-0">
           <div className={`font-bold text-text tracking-tight ${mob?"text-xl":"text-2xl"}`}>{u.name}</div>
-          <div className="text-sm text-text-2 mt-1">{u.title} • {u.years} years • {u.city}, {u.prov}</div>
+          <div className="text-sm text-text-2 mt-1">{u.title} • {u.years} {u.years===1?"year":"years"} • {u.city}, {u.prov}</div>
           <div className="text-sm text-text-3 mt-0.5">
             {contact===undefined?"Loading contact info…":
               [contact?.email,contact?.phone].filter(Boolean).join(" • ")||"Contact details hidden by this candidate"}</div>

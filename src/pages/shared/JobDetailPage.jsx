@@ -10,12 +10,16 @@ import { AI_DISCLOSURE_TEXT, VACANCY_CONFIRMED_TEXT } from "../../helpers/jobPos
 
 export function JobDetailPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
+  /* All hooks before any early return - a conditional useEffect is a Rules-of-Hooks violation
+     that crashes when the job goes from initial-null to loaded (or the other way). */
   const [reporting,setReporting]=useState(false); const [reportReason,setReportReason]=useState(""); const [reportSent,setReportSent]=useState(false);
-  const job=A.job(A.jobId); if(!job) return <Page><Empty icon="briefcase" title="Job not found" body="This listing may have been closed or removed."
+  const job=A.job(A.jobId);
+  const e=job?A.emp(job.e):null;
+  useEffect(()=>{ if(e?.id) A.loadEmployerReviews(e.id); },[e?.id]);
+  if(!job) return <Page><Empty icon="briefcase" title="Job not found" body="This listing may have been closed or removed."
     action={<Btn kind="primary" onClick={()=>A.go("search")}>Browse jobs</Btn>}/></Page>;
-  const e=A.emp(job.e); const applied=A.appliedJobIds.has(job.id); const score=A.score(job);
+  const applied=A.appliedJobIds.has(job.id); const score=A.score(job);
   const relatedJobs=A.jobs.filter(j=>j.id!==job.id&&j.status==="live"&&(j.cat===job.cat||(j.city===job.city&&j.prov===job.prov))).slice(0,3);
-  useEffect(()=>{A.loadEmployerReviews(e.id);},[e.id]);
   const employerReviews=A.reviews.filter(r=>r.employer===e.id);
   const Meta=({icon,k,v})=><div className="flex gap-3 items-start">
     <div className="w-10 h-10 rounded-xl bg-bg flex items-center justify-center text-brand shrink-0"><I n={icon} s={17}/></div>

@@ -106,16 +106,19 @@ export function WorkerDashboard(){
 /* ─── Worker: submit weekly timesheet ─── */
 export function WorkerTimesheet(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
-  if(!A.user){A.go("login"); return null;}
-  const worker=A.workerByPersonId(A.user.id);
-  if(!worker){A.go("workerDashboard"); return null;}
-  const activeAsns=A.workerAssignments(worker.id).filter(a=>a.status==="active");
+  /* All hooks before the conditional redirects - a hook after an early return is a
+     Rules-of-Hooks violation that crashes with "Rendered more hooks than during the previous
+     render" the moment the guard flips (guest signs in, or a non-worker becomes a worker). */
+  const worker=A.user?A.workerByPersonId(A.user.id):null;
+  const activeAsns=worker?A.workerAssignments(worker.id).filter(a=>a.status==="active"):[];
   const [asnId,setAsnId]=useState(activeAsns[0]?.id||"");
   const [weekStart,setWeekStart]=useState(_weekStart(0));
   const existing=A.timesheets.find(t=>t.assignment===asnId&&t.weekStart===weekStart);
   const [hours,setHours]=useState(existing?.hours||{mon:0,tue:0,wed:0,thu:0,fri:0,sat:0,sun:0});
   const [otHours,setOtHours]=useState(existing?.otHours||0);
   const [notes,setNotes]=useState(existing?.notes||"");
+  if(!A.user){A.go("login"); return null;}
+  if(!worker){A.go("workerDashboard"); return null;}
   useEffect(()=>{const e=A.timesheets.find(t=>t.assignment===asnId&&t.weekStart===weekStart);
     if(e){setHours(e.hours||{mon:0,tue:0,wed:0,thu:0,fri:0,sat:0,sun:0}); setOtHours(e.otHours||0); setNotes(e.notes||"");}
     else{setHours({mon:0,tue:0,wed:0,thu:0,fri:0,sat:0,sun:0}); setOtHours(0); setNotes("");}
