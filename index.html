@@ -1,7 +1,25 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-CA">
   <head>
     <meta charset="UTF-8" />
+    <!-- Bill 96: set <html lang> from the visitor's saved language preference before the app
+         hydrates, so a screen reader / browser translation prompt sees the right language on
+         first paint instead of a one-frame flash of "en". React's LocaleProvider (src/i18n/i18n.jsx)
+         keeps this in sync afterwards for anyone who switches language while the page is open. -->
+    <script>
+      (function(){
+        try{
+          var l=window.localStorage.getItem("nh_locale");
+          document.documentElement.lang=(l==="fr-CA"||l==="fr")?"fr-CA":"en-CA";
+        }catch(e){}
+      })();
+    </script>
+    <!-- NorthHire is a single-page app with one URL serving both languages via the in-app
+         toggle (no /fr/ URL prefix), so these are self-referencing alternates rather than
+         pointing at distinct localized URLs — the standard pattern for a client-toggled SPA. -->
+    <link rel="alternate" hreflang="en-ca" href="https://northhire.ca/" />
+    <link rel="alternate" hreflang="fr-ca" href="https://northhire.ca/" />
+    <link rel="alternate" hreflang="x-default" href="https://northhire.ca/" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- Progressive Web App: manifest + theme colour so a field worker on a construction site

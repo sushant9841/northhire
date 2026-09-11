@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Ctx } from "./store/context.js";
 import { useStore } from "./store/useStore.js";
+import { useTranslation } from "./i18n/i18n.jsx";
 import { Header } from "./shells/Header.jsx";
 import { TabBar } from "./shells/TabBar.jsx";
 import { Footer } from "./shells/Footer.jsx";
@@ -69,6 +70,13 @@ export default function NorthHire(){
   const mob=useMedia("(max-width: 900px)");
   const A=useStore();
   const {pg,user,settings,impersonating,stopImpersonating,hireOnboarding,setHireOnboarding,go}=A;
+  const {locale,setLocale}=useTranslation();
+  /* Once a session loads a user with a saved `locale`, that account's preference wins over
+     whatever this browser had stored locally (e.g. signing into a fr-CA account on a machine
+     that was last used in English switches the UI to French, matching what Settings shows). */
+  useEffect(()=>{
+    if(user?.locale&&user.locale!==locale)setLocale(user.locale);
+  },[user?.locale]);
   /* In-memory only - the banner reappears on a fresh load rather than persisting a "seen it"
      flag to storage, since nothing on the client persists across reloads any more. */
   const [cookieAck,setCookieAck]=useState(false);
@@ -234,6 +242,7 @@ export default function NorthHire(){
    view the banner is hidden - a reader who's read the whole page has clearly seen it and
    doesn't need a second dismissal prompt overlapping the footer's own nav links. */
 function _CookieBanner({mob,onAccept,onGoPolicy}){
+  const {t}=useTranslation();
   const [hidden,setHidden]=useState(false);
   useEffect(()=>{
     const footer=document.querySelector("footer");
@@ -250,8 +259,8 @@ function _CookieBanner({mob,onAccept,onGoPolicy}){
     display:"flex",gap:14,alignItems:"center",flexWrap:"wrap",zIndex:600}} data-cookie-accepted="false">
     <div style={{color:"#6AACFF",display:"flex",flexShrink:0}}><I n="shield" s={20}/></div>
     <div style={{flex:"1 1 240px",minWidth:0,fontSize:13.5,lineHeight:1.55}}>
-      We use cookies for sign-in, saved jobs and analytics. See our <button onClick={onGoPolicy}
-        style={{background:"none",border:"none",padding:0,color:"#6AACFF",cursor:"pointer",fontFamily:"inherit",fontSize:13.5,fontWeight:600,textDecoration:"underline"}}>privacy policy</button>.</div>
-    <button onClick={onAccept} style={{background:"#fff",color:C.ink,border:"none",minHeight:48,padding:"12px 20px",borderRadius:10,cursor:"pointer",fontWeight:700,fontSize:14,fontFamily:"inherit",flexShrink:0}}>Got it</button>
+      {t("cookie.text",{link:""})}<button onClick={onGoPolicy}
+        style={{background:"none",border:"none",padding:0,color:"#6AACFF",cursor:"pointer",fontFamily:"inherit",fontSize:13.5,fontWeight:600,textDecoration:"underline"}}>{t("cookie.linkText")}</button>.</div>
+    <button onClick={onAccept} style={{background:"#fff",color:C.ink,border:"none",minHeight:48,padding:"12px 20px",borderRadius:10,cursor:"pointer",fontWeight:700,fontSize:14,fontFamily:"inherit",flexShrink:0}}>{t("cookie.gotIt")}</button>
   </div>;
 }
