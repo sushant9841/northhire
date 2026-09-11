@@ -60,6 +60,11 @@ const DEFAULT_DEV_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"];
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(",").map(o => o.trim())
   : DEFAULT_DEV_ORIGINS;
+// Dev-only: accept private-network LAN origins on the Vite port so a phone/tablet on the same
+// wifi can hit the dev server via the machine's LAN IP without ALLOWED_ORIGINS gymnastics.
+// Production runs with ALLOWED_ORIGINS set explicitly, so this branch never applies there.
+const DEV_LAN_RE = /^http:\/\/(?:10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(?:1[6-9]|2\d|3[01])\.\d+\.\d+):(?:5173|5174)$/;
+const isDevLanOrigin = (o) => process.env.NODE_ENV !== "production" && DEV_LAN_RE.test(o);
 app.use(cors({
   origin: (origin, cb) => {
     // No Origin header at all means a same-origin or non-browser caller (curl, server-to-server) -
@@ -68,7 +73,7 @@ app.use(cors({
     // so the browser refuses the real call and the preflight still returns 2xx) instead of
     // `cb(new Error(...))` which would trigger a spurious 500 that both misleads the browser and
     // pollutes the ops-health metric with what is really a policy decision, not a service error.
-    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+    if (!origin || allowedOrigins.includes(origin) || isDevLanOrigin(origin)) return cb(null, true);
     cb(null, false);
   },
   credentials: true,
