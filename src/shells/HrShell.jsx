@@ -7,13 +7,27 @@ import { SmartPortrait, Tag, Input } from "../design/primitives.jsx";
 import { HR_COMPANY_SETTINGS_DEFAULT, HR_MODULES } from "../store/seed/hrCompanySettings.js";
 import { ROUTES } from "../routes.js";
 import { matchesQuery } from "../helpers/utils.js";
+import { useTranslation } from "../i18n/i18n.jsx";
+
+/* HR_MODULES/HR_ROLES in store/seed/hrCompanySettings.js carry English labels used by other,
+   already-partly-translated pages (src/pages/hr/suite.jsx) - rather than change that shared
+   constant (and risk regressing a consumer outside this file's scope), this shell translates its
+   own display of them through local key maps, keyed by the same canonical .k/.module ids. */
+const HR_MODULE_LABEL_KEY={hrDashboard:"account.dashboard",hrPeople:"tabs.people",hrProfile:"hrShell.myProfile",
+  hrAttendance:"dashShell.modHrAttendance",hrLeave:"dashShell.modHrLeave",hrExpenses:"dashShell.modHrExpenses",
+  hrTasks:"hrShell.tasks",hrCalendar:"hrShell.calendar",hrChat:"hrShell.chat",hrTrainings:"nav.trainings",
+  hrBadges:"hrShell.badges",hrHiring:"hrShell.hiring",hrInvoices:"hrShell.invoices",hrPayroll:"dashShell.modHrPayroll",
+  hrReports:"dashShell.modHrReports",hrSettings:"account.settings",hrIntegrations:"hrShell.integrations",
+  hrPolicies:"hrShell.policies",hrRoster:"hrShell.roster"};
+const HR_ROLE_LABEL_KEY={owner:"hrShell.roleOwner",admin:"hrShell.roleAdmin",hr:"hrShell.roleHr",
+  finance:"hrShell.roleFinance",employee:"hrShell.roleEmployee"};
 
 /* Org-wide search - previously only per-module search boxes existed (directory, tasks), so
    finding "that one leave request" or "the invoice for X" meant guessing which module to open
    first. Doesn't deep-link to the specific row (no module here has a per-item detail route to
    land on), but it does the real job of this finding: telling you which module has it. */
 function HrGlobalSearch(){
-  const A=use();
+  const A=use(); const {t}=useTranslation();
   const [q,setQ]=useState(""); const [open,setOpen]=useState(false);
   const boxRef=useRef(null);
   useEffect(()=>{
@@ -21,7 +35,7 @@ function HrGlobalSearch(){
     document.addEventListener("mousedown",onDocClick);
     return ()=>document.removeEventListener("mousedown",onDocClick);
   },[]);
-  const empName=id=>A.hrEmployees.find(e=>e.id===id)?.name||"Unknown";
+  const empName=id=>A.hrEmployees.find(e=>e.id===id)?.name||t("hrShell.unknownPerson");
   const results=useMemo(()=>{
     const query=q.trim(); if(!query)return null;
     return {
@@ -35,30 +49,30 @@ function HrGlobalSearch(){
   const hasAny=results&&Object.values(results).some(arr=>arr.length>0);
   const go=k=>{A.go(k);setOpen(false);setQ("");};
   return <div ref={boxRef} className="relative flex-1 min-w-0" style={{maxWidth:320}}>
-    <Input icon="search" placeholder="Search people, tasks, leave, expenses…" value={q}
+    <Input icon="search" placeholder={t("hrShell.searchPlaceholder")} value={q}
       onChange={e=>{setQ(e.target.value);setOpen(true);}} onFocus={()=>setOpen(true)}/>
     {open&&q.trim()&&<div className="absolute top-full left-0 right-0 mt-1.5 bg-white border border-line rounded-xl shadow-md z-500 max-h-100 overflow-y-auto" style={{minWidth:300}}>
-      {!hasAny?<div className="py-4 px-4 text-sm text-text-3">No matches.</div>:<>
+      {!hasAny?<div className="py-4 px-4 text-sm text-text-3">{t("hrShell.noMatches")}</div>:<>
         {results.people.length>0&&<div className="py-2">
-          <div className="text-xs font-semibold text-text-3 uppercase tracking-wide px-4 py-1">People</div>
+          <div className="text-xs font-semibold text-text-3 uppercase tracking-wide px-4 py-1">{t("hrShell.sectionPeople")}</div>
           {results.people.map(p=><button key={p.id} onClick={()=>go("hrPeople")}
             className="flex items-center gap-2.5 w-full py-2 px-4 bg-transparent border-0 cursor-pointer text-left hover:bg-bg">
             <SmartPortrait seed={p.seed} size={24} radius={6}/><span className="text-sm text-text">{p.name}</span>
             <span className="text-xs text-text-3 ml-auto">{p.title}</span></button>)}</div>}
         {results.tasks.length>0&&<div className="py-2 border-t border-line-soft">
-          <div className="text-xs font-semibold text-text-3 uppercase tracking-wide px-4 py-1">Tasks</div>
-          {results.tasks.map(t=><button key={t.id} onClick={()=>go("hrTasks")}
-            className="block w-full py-2 px-4 bg-transparent border-0 cursor-pointer text-left text-sm text-text hover:bg-bg">{t.title}</button>)}</div>}
+          <div className="text-xs font-semibold text-text-3 uppercase tracking-wide px-4 py-1">{t("hrShell.sectionTasks")}</div>
+          {results.tasks.map(ts=><button key={ts.id} onClick={()=>go("hrTasks")}
+            className="block w-full py-2 px-4 bg-transparent border-0 cursor-pointer text-left text-sm text-text hover:bg-bg">{ts.title}</button>)}</div>}
         {results.leave.length>0&&<div className="py-2 border-t border-line-soft">
-          <div className="text-xs font-semibold text-text-3 uppercase tracking-wide px-4 py-1">Leave</div>
+          <div className="text-xs font-semibold text-text-3 uppercase tracking-wide px-4 py-1">{t("hrShell.sectionLeave")}</div>
           {results.leave.map(l=><button key={l.id} onClick={()=>go("hrLeave")}
             className="block w-full py-2 px-4 bg-transparent border-0 cursor-pointer text-left text-sm text-text hover:bg-bg">{empName(l.employee)} • {l.type}</button>)}</div>}
         {results.expenses.length>0&&<div className="py-2 border-t border-line-soft">
-          <div className="text-xs font-semibold text-text-3 uppercase tracking-wide px-4 py-1">Expenses</div>
+          <div className="text-xs font-semibold text-text-3 uppercase tracking-wide px-4 py-1">{t("hrShell.sectionExpenses")}</div>
           {results.expenses.map(x=><button key={x.id} onClick={()=>go("hrExpenses")}
             className="block w-full py-2 px-4 bg-transparent border-0 cursor-pointer text-left text-sm text-text hover:bg-bg">{empName(x.employee)} • {x.merchant}</button>)}</div>}
         {results.invoices.length>0&&<div className="py-2 border-t border-line-soft">
-          <div className="text-xs font-semibold text-text-3 uppercase tracking-wide px-4 py-1">Invoices</div>
+          <div className="text-xs font-semibold text-text-3 uppercase tracking-wide px-4 py-1">{t("hrShell.sectionInvoices")}</div>
           {results.invoices.map(i=><button key={i.id} onClick={()=>go("hrInvoices")}
             className="block w-full py-2 px-4 bg-transparent border-0 cursor-pointer text-left text-sm text-text hover:bg-bg">{i.client} • {i.number}</button>)}</div>}
       </>}
@@ -67,7 +81,7 @@ function HrGlobalSearch(){
 }
 
 export function HrShell({children}){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t}=useTranslation();
   const [navOpen,setNavOpen]=useState(!mob);
   const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
   const settings=A.hrCompanySettings[company?.id]||HR_COMPANY_SETTINGS_DEFAULT;
@@ -103,7 +117,7 @@ export function HrShell({children}){
       <button onClick={()=>A.go("home")} className="flex items-center gap-2.5 bg-transparent border-0 text-white cursor-pointer p-0">
         <div className="w-8 h-8 rounded-lg bg-accent/20 border border-accent/35 flex items-center justify-center"><I n="sparkle" s={16} c="#6AACFF"/></div>
         <div><div className="text-sm font-bold tracking-tight">NorthHire</div>
-          <div className="text-xs text-accent font-semibold mt-px">HR Suite</div></div>
+          <div className="text-xs text-accent font-semibold mt-px">{t("hrShell.hrSuiteTag")}</div></div>
       </button>
     </div>
     <div className="py-4 px-3.5 border-b border-white/8">
@@ -112,7 +126,7 @@ export function HrShell({children}){
           {company?.name?.charAt(0)||"P"}</div>
         <div className="flex-1 min-w-0">
           <div className="text-sm font-bold text-white overflow-hidden text-ellipsis whitespace-nowrap">{company?.name}</div>
-          <div className="text-xs text-white/55 mt-px">Enterprise plan</div>
+          <div className="text-xs text-white/55 mt-px">{t("hrShell.enterprisePlan")}</div>
         </div></div>
     </div>
     <nav className="flex-1 overflow-y-auto py-2.5 px-2">
@@ -120,27 +134,28 @@ export function HrShell({children}){
         return <button key={m.k} onClick={()=>{A.go(m.k); if(mob)setNavOpen(false);}}
           className={`w-full flex gap-3 items-center py-2.5 px-3.5 border-0 cursor-pointer text-left rounded-xl my-px text-sm transition duration-150
            ${active?"bg-accent/15 text-accent font-semibold":"text-white/75 font-medium hover:bg-white/5"}`}>
-          <I n={m.icon} s={17}/>{m.label}</button>;})}
+          <I n={m.icon} s={17}/>{t(HR_MODULE_LABEL_KEY[m.k]||m.label)}</button>;})}
     </nav>
     <div className="p-3.5 border-t border-white/8">
       <button onClick={()=>{A.hrLogout(); A.go("hrLogin");}} className="w-full flex gap-3 items-center py-2.5 px-3.5 bg-transparent border-0 cursor-pointer text-left rounded-xl text-white/75 text-sm font-medium hover:bg-white/5">
-        <I n="logout" s={17}/>Sign out</button>
+        <I n="logout" s={17}/>{t("common.signOut")}</button>
     </div>
   </div>;
 
   const topbar=<div className={`bg-white border-b border-line flex gap-3 items-center sticky top-0 z-20 ${mob?"py-3 px-4":"py-3.5 px-7"}`}>
-    {mob&&<button onClick={()=>setNavOpen(!navOpen)} className="bg-transparent border-0 cursor-pointer p-1.5 text-text flex">
+    {mob&&<button onClick={()=>setNavOpen(!navOpen)} aria-label={t("dashShell.menuAria")} className="bg-transparent border-0 cursor-pointer p-1.5 text-text flex">
       <I n="menu" s={22}/></button>}
     {!mob&&<div className="min-w-0 shrink-0">
       <div className="text-base font-bold text-text tracking-tight">
-        {HR_MODULES.find(m=>m.k===A.pg)?.label||A.pageTitle||ROUTES[A.pg]?.title||"HR Suite"}</div>
+        {(()=>{const m=HR_MODULES.find(m=>m.k===A.pg);
+          return m?t(HR_MODULE_LABEL_KEY[m.k]||m.label):(A.pageTitle||ROUTES[A.pg]?.title||t("hrShell.hrSuiteTag"));})()}</div>
       <div className="text-xs text-text-3 mt-0.5">{company?.name} • {emp?.title}</div>
     </div>}
     <HrGlobalSearch/>
     <button onClick={()=>A.go("hrProfile")} className="flex gap-2.5 items-center bg-bg border border-line rounded-full py-1.5 pr-3 pl-1.5 cursor-pointer shrink-0">
       <SmartPortrait seed={emp.seed} size={32}/>
       {!mob&&<span className="text-sm font-semibold text-text">{emp.name.split(" ")[0]}</span>}
-      <Tag tone={emp.role==="owner"?"warn":emp.role==="admin"?"brand":emp.role==="hr"?"ok":emp.role==="finance"?"violet":"neutral"} sm>{emp.role}</Tag>
+      <Tag tone={emp.role==="owner"?"warn":emp.role==="admin"?"brand":emp.role==="hr"?"ok":emp.role==="finance"?"violet":"neutral"} sm>{t(HR_ROLE_LABEL_KEY[emp.role]||emp.role)}</Tag>
     </button>
   </div>;
 

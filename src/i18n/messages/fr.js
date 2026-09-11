@@ -273,6 +273,16 @@ export const fr = {
     home: "Accueil", jobs: "Emplois", matched: "Correspondances", status: "Statut", profile: "Profil",
     candidates: "Candidat·e·s", post: "Publier", content: "Contenu", people: "Personnes", moderation: "Modération",
   },
+  hrShell: {
+    myProfile: "Mon profil", tasks: "Tâches", calendar: "Calendrier", chat: "Clavardage", badges: "Badges",
+    hiring: "Recrutement", invoices: "Factures", integrations: "Intégrations", policies: "Politiques et approbations",
+    roster: "Horaire de travail",
+    roleOwner: "Propriétaire", roleAdmin: "Administrateur·rice", roleHr: "RH", roleFinance: "Finances", roleEmployee: "Employé·e",
+    hrSuiteTag: "Suite RH", enterprisePlan: "Forfait Entreprise",
+    searchPlaceholder: "Rechercher personnes, tâches, congés, dépenses…", noMatches: "Aucun résultat.",
+    sectionPeople: "Personnes", sectionTasks: "Tâches", sectionLeave: "Congés", sectionExpenses: "Dépenses", sectionInvoices: "Factures",
+    unknownPerson: "Inconnu·e",
+  },
   alerts: {
     title: "Notifications", unreadCount: "{unread} non lu·e·s", allCaughtUp: "Vous êtes à jour",
     markAllRead: "Tout marquer comme lu", unreadOnly: "Non lu seulement", allTypes: "Tous les types",

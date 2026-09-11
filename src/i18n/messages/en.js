@@ -272,6 +272,16 @@ export const en = {
     home: "Home", jobs: "Jobs", matched: "Matched", status: "Status", profile: "Profile",
     candidates: "Candidates", post: "Post", content: "Content", people: "People", moderation: "Moderation",
   },
+  hrShell: {
+    myProfile: "My profile", tasks: "Tasks", calendar: "Calendar", chat: "Chat", badges: "Badges",
+    hiring: "Hiring", invoices: "Invoices", integrations: "Integrations", policies: "Policies & sign-off",
+    roster: "Shift roster",
+    roleOwner: "Owner", roleAdmin: "Admin", roleHr: "HR", roleFinance: "Finance", roleEmployee: "Employee",
+    hrSuiteTag: "HR Suite", enterprisePlan: "Enterprise plan",
+    searchPlaceholder: "Search people, tasks, leave, expenses…", noMatches: "No matches.",
+    sectionPeople: "People", sectionTasks: "Tasks", sectionLeave: "Leave", sectionExpenses: "Expenses", sectionInvoices: "Invoices",
+    unknownPerson: "Unknown",
+  },
   alerts: {
     title: "Notifications", unreadCount: "{unread} unread", allCaughtUp: "You are all caught up",
     markAllRead: "Mark all read", unreadOnly: "Unread only", allTypes: "All types",
