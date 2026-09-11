@@ -11,13 +11,13 @@ import { useTranslation } from "../../i18n/i18n.jsx";
 /* Email verification. The account keeps working while unverified — locking someone out of
    browsing jobs because a confirmation mail is slow helps nobody — but the state is real and
    shown, because a wrong address means job alerts and employer messages go to a stranger. */
-function _EmailVerification({u}){
+function _EmailVerification({u,t}){
   const [sent,setSent]=useState(false); const [err,setErr]=useState(""); const [busy,setBusy]=useState(false);
   const [verified,setVerified]=useState(!!u.emailVerified);
   useEffect(()=>{
-    const t=new URLSearchParams(window.location.search).get("token");
-    if(!t||!window.location.pathname.includes("verify-email"))return;
-    api.get(`/auth/verify-email?token=${encodeURIComponent(t)}`).then(()=>setVerified(true)).catch(()=>{});
+    const tok=new URLSearchParams(window.location.search).get("token");
+    if(!tok||!window.location.pathname.includes("verify-email"))return;
+    api.get(`/auth/verify-email?token=${encodeURIComponent(tok)}`).then(()=>setVerified(true)).catch(()=>{});
   },[]);
   if(verified)return null;
   const send=async()=>{
@@ -27,36 +27,36 @@ function _EmailVerification({u}){
     finally{setBusy(false);}
   };
   return <Banner tone={sent?"ok":"warn"} icon={sent?"check":"alert"} style={{marginBottom:16}}
-    title={sent?"Confirmation sent":"Confirm your email address"}
-    action={!sent&&<Btn kind="outline" size="sm" onClick={send} disabled={busy}>{busy?"Sending…":"Send link"}</Btn>}>
+    title={sent?t("settings.emailVerifySent"):t("settings.emailVerifyTitle")}
+    action={!sent&&<Btn kind="outline" size="sm" onClick={send} disabled={busy}>{busy?t("settings.emailVerifySending"):t("settings.emailVerifySendBtn")}</Btn>}>
     {err||(sent
-      ? `We sent a link to ${u.email}. Open it to confirm this is your address.`
-      : "Until it's confirmed, we can't be sure job alerts and employer messages are reaching you rather than someone else.")}
+      ? t("settings.emailVerifySentBody",{email:u.email})
+      : t("settings.emailVerifyBody"))}
   </Banner>;
 }
 
 /* Devices that skip the 2FA prompt. Revoking has to work from a DIFFERENT device — that's what
    someone reaches for after losing a laptop — so this lists them per account, not per cookie. */
-function _TrustedDevices(){
+function _TrustedDevices({t}){
   const [devices,setDevices]=useState([]);
   const load=()=>api.get("/auth/trusted-devices").then(r=>setDevices(r.devices)).catch(()=>{});
   useEffect(()=>{load();},[]);
   if(!devices.length)return null;
   return <Card pad={20} style={{marginBottom:16}}>
-    <Lbl>Devices that skip two-factor</Lbl>
+    <Lbl>{t("settings.devicesLabel")}</Lbl>
     <div className="text-sm text-text-2 mb-3.5">
-      These browsers won't be asked for a sign-in code. Revoke any you don't recognise or no longer have.
+      {t("settings.devicesDesc")}
     </div>
     <div className="flex flex-col gap-2">
       {devices.map(d=>
         <div key={d.id} className="flex justify-between items-center gap-3 border border-line rounded-xl py-2.5 px-3.5 flex-wrap">
           <div className="min-w-0">
-            <div className="text-sm font-semibold text-text">{d.label}{d.current&&<span className="text-xs font-normal text-brand ml-2">this device</span>}</div>
+            <div className="text-sm font-semibold text-text">{d.label}{d.current&&<span className="text-xs font-normal text-brand ml-2">{t("settings.thisDevice")}</span>}</div>
             <div className="text-xs text-text-3 mt-0.5">
-              {d.lastUsed?`Last used ${new Date(d.lastUsed.replace(" ","T")+"Z").toLocaleDateString("en-CA")}`:"Not used yet"}
-              {" · expires "}{new Date(d.expiresAt).toLocaleDateString("en-CA")}</div>
+              {d.lastUsed?t("settings.lastUsed",{date:new Date(d.lastUsed.replace(" ","T")+"Z").toLocaleDateString("en-CA")}):t("settings.notUsedYet")}
+              {" · "}{t("settings.expires")} {new Date(d.expiresAt).toLocaleDateString("en-CA")}</div>
           </div>
-          <Btn kind="ghost" size="xs" onClick={async()=>{await api.del(`/auth/trusted-devices/${d.id}`).catch(()=>{});load();}}>Revoke</Btn>
+          <Btn kind="ghost" size="xs" onClick={async()=>{await api.del(`/auth/trusted-devices/${d.id}`).catch(()=>{});load();}}>{t("settings.revokeBtn")}</Btn>
         </div>)}
     </div>
   </Card>;
@@ -81,7 +81,7 @@ export function SettingsPage(){
       {sub&&<div className="text-sm text-text-2 mt-1 leading-normal">{sub}</div>}</div>{children}</div>;
   return <Page narrow>
     <H1 sub={t("settings.sub")}>{t("settings.title")}</H1>
-    <_EmailVerification u={u}/>
+    <_EmailVerification u={u} t={t}/>
     <Card pad={mob?18:24} style={{marginBottom:16}}>
       <Lbl>{t("settings.language")}</Lbl>
       <Row icon="globe" title={t("account.language")} sub={t("settings.languageSub")}>
@@ -92,78 +92,78 @@ export function SettingsPage(){
       </Row>
     </Card>
     <Card pad={mob?18:24} style={{marginBottom:16}}>
-      <Lbl>Notifications</Lbl>
+      <Lbl>{t("settings.notifications")}</Lbl>
       {/* This switch IS the CASL consent record, not a cosmetic preference - the server refuses
           to send a job-alert email without it, and stores when and how it was given. */}
-      <Row icon="bell" title="New matching jobs"
+      <Row icon="bell" title={t("settings.newJobsTitle")}
         sub={A.marketingConsent?.consent
-          ? `Emailed by NorthHire Technologies Inc. when a saved search matches a new listing.${A.marketingConsent.at?` Consent recorded ${new Date(A.marketingConsent.at).toLocaleDateString()}.`:""}`
-          : "Off — you'll still see matches in the app, but no email will be sent."}>
+          ? `${t("settings.newJobsBody")}${A.marketingConsent.at?` ${t("settings.emailVerifyConsentRecorded",{date:new Date(A.marketingConsent.at).toLocaleDateString()})}`:""}`
+          : t("settings.jobAlertsOff")}>
         <Switch on={!!A.marketingConsent?.consent} onChange={v=>A.setMarketingConsent(v)}/></Row>
-      <Row icon="activity" title="Application updates" sub="When an employer moves you to a new stage">
+      <Row icon="activity" title={t("settings.jobAlertsTitle")} sub={t("settings.jobAlertsSub")}>
         <Switch on={S.appAlerts} onChange={v=>A.setUserSetting("appAlerts",v)}/></Row>
-      <Row icon="mail" title="Product and career emails" sub="New articles, trainings and platform updates">
+      <Row icon="mail" title={t("settings.marketingTitle")} sub={t("settings.marketingSub")}>
         <Switch on={S.marketing} onChange={v=>A.setUserSetting("marketing",v)}/></Row>
     </Card>
-    <_TrustedDevices/>
+    <_TrustedDevices t={t}/>
     {u.role==="seeker"&&<Card pad={mob?18:24} style={{marginBottom:16}}>
-      <Lbl>Privacy</Lbl>
-      <Row icon="eye" title="Let verified employers find my profile" sub="Only verified employers, and only for roles matching your preferences">
+      <Lbl>{t("settings.privacy")}</Lbl>
+      <Row icon="eye" title={t("settings.privacyProfileTitle")} sub={t("settings.privacyProfileSub")}>
         <Switch on={S.discoverable} onChange={v=>A.setUserSetting("discoverable",v)}/></Row>
-      <Row icon="lock" title="Hide my current employer" sub="Your work history still shows, without the company name">
+      <Row icon="lock" title={t("settings.privacyEmployerTitle")} sub={t("settings.privacyEmployerSub")}>
         <Switch on={S.hideEmployer} onChange={v=>A.setUserSetting("hideEmployer",v)}/></Row>
-      <Row icon="mail" title="Show my email to employers I apply to" sub="Turn off to keep your email private on every application">
+      <Row icon="mail" title={t("settings.privacyEmailTitle")} sub={t("settings.privacyEmailSub")}>
         <Switch on={u.visibility?.email!==false} onChange={v=>A.saveProfile({...u,visibility:{...u.visibility,email:v}})}/></Row>
-      <Row icon="phone" title="Show my phone number to employers I apply to" sub="Turn off to keep your phone number private on every application">
+      <Row icon="phone" title={t("settings.privacyPhoneTitle")} sub={t("settings.privacyPhoneSub")}>
         <Switch on={u.visibility?.phone!==false} onChange={v=>A.saveProfile({...u,visibility:{...u.visibility,phone:v}})}/></Row>
     </Card>}
     <Card pad={mob?18:24} style={{marginBottom:16}}>
-      <Lbl>Your data</Lbl>
-      <Row icon="download" title="Export my data" sub="A copy of your profile, CVs and applications">
-        <Btn kind="outline" size="sm" onClick={A.exportData}>Export</Btn></Row>
-      <Row icon="file" title="Privacy policy" sub="How we handle your personal information">
-        <Btn kind="ghost" size="sm" iconR="chevR" onClick={()=>A.go("privacy")}>Read</Btn></Row>
+      <Lbl>{t("settings.yourData")}</Lbl>
+      <Row icon="download" title={t("settings.dataExportTitle")} sub={t("settings.dataExportSub")}>
+        <Btn kind="outline" size="sm" onClick={A.exportData}>{t("settings.exportBtn")}</Btn></Row>
+      <Row icon="file" title={t("settings.privacyPolicyTitle")} sub={t("settings.privacyPolicySub")}>
+        <Btn kind="ghost" size="sm" iconR="chevR" onClick={()=>A.go("privacy")}>{t("settings.readBtn")}</Btn></Row>
     </Card>
     <Card pad={mob?18:24} style={{marginBottom:16}}>
-      <Lbl>Security</Lbl>
+      <Lbl>{t("settings.security")}</Lbl>
       {(()=>{const tfa=A.twoFactor[u.id];
-        return <Row icon="shield" title={tfa?.enabled?"Two-factor authentication enabled":"Two-factor authentication"}
-          sub={tfa?.enabled?`Codes sent to ${tfa.phone}. Backup codes issued.`:"Add a second step at sign-in using your phone number."}>
-          {tfa?.enabled?<Btn kind="outline" size="sm" onClick={()=>{A.disable2FA();}}>Disable</Btn>
-            :<Btn kind="primary" size="sm" onClick={()=>setShow2FA(true)}>Set up</Btn>}
+        return <Row icon="shield" title={tfa?.enabled?t("settings.tfa2FAEnabledTitle"):t("settings.tfa2FATitle")}
+          sub={tfa?.enabled?t("settings.tfa2FAEnabledSub",{phone:tfa.phone}):t("settings.tfa2FASub")}>
+          {tfa?.enabled?<Btn kind="outline" size="sm" onClick={()=>{A.disable2FA();}}>{t("settings.disableBtn")}</Btn>
+            :<Btn kind="primary" size="sm" onClick={()=>setShow2FA(true)}>{t("settings.setupBtn")}</Btn>}
         </Row>;})()}
     </Card>
 
     <Card pad={mob?18:24} style={{marginBottom:16}}>
-      <Lbl>Outbox</Lbl>
-      <Row icon="mail" title="Sent messages" sub={`${A.outbox.length} email${A.outbox.length===1?"":"s"} sent from this account (password resets, notifications)`}>
-        <Btn kind="ghost" size="sm" iconR="chevR" onClick={()=>setShowOutbox(true)}>View</Btn></Row>
+      <Lbl>{t("settings.outbox")}</Lbl>
+      <Row icon="mail" title={t("settings.outboxEmailsTitle")} sub={`${A.outbox.length} ${A.outbox.length===1?t("settings.outboxEmailsSub"):t("settings.outboxEmailsSubPlural")} ${t("settings.outboxEmailsTitle").toLowerCase()} (password resets, notifications)`}>
+        <Btn kind="ghost" size="sm" iconR="chevR" onClick={()=>setShowOutbox(true)}>{t("settings.outboxViewBtn")}</Btn></Row>
     </Card>
 
     <Card pad={mob?18:24} style={{borderColor:C.redLn}}>
-      <Lbl>Danger zone</Lbl>
-      <Row icon="alert" title="Delete my account" sub="Removes your profile, CVs and saved jobs. Applications already sent stay with the employer.">
-        <Btn kind="dangerSoft" size="sm" onClick={()=>setConfirm(true)}>Delete</Btn></Row>
+      <Lbl>{t("settings.dangerZone")}</Lbl>
+      <Row icon="alert" title={t("settings.deleteAccountTitle")} sub={t("settings.deleteAccountSub")}>
+        <Btn kind="dangerSoft" size="sm" onClick={()=>setConfirm(true)}>{t("settings.deleteAccountBtn")}</Btn></Row>
     </Card>
 
-    {show2FA&&<Modal onClose={()=>setShow2FA(false)} title="Set up two-factor authentication">
+    {show2FA&&<Modal onClose={()=>setShow2FA(false)} title={t("settings.setupTFATitle")}>
       {tfaResult?<div>
-        <Banner tone="ok" icon="check" title="Two-factor is now on">Save your backup codes somewhere safe — each one can be used once if you lose your phone.</Banner>
+        <Banner tone="ok" icon="check" title={t("settings.tfaEnabledTitle")}>{t("settings.tfaEnabledBody")}</Banner>
         <div className="mt-4 p-4 bg-bg rounded-xl font-mono text-sm">
-          <div className="text-xs text-text-3 font-semibold uppercase tracking-wide mb-2.5">Backup codes</div>
+          <div className="text-xs text-text-3 font-semibold uppercase tracking-wide mb-2.5">{t("settings.tfaBackupCodes")}</div>
           <div className="grid grid-cols-2 gap-2">
             {tfaResult.codes.map(c=><div key={c} className="py-2 px-2.5 bg-white border border-line rounded-md text-center">{c}</div>)}</div></div>
-        <Btn kind="primary" full style={{marginTop:16}} onClick={()=>{setShow2FA(false);setTfaResult(null);}}>Done</Btn>
+        <Btn kind="primary" full style={{marginTop:16}} onClick={()=>{setShow2FA(false);setTfaResult(null);}}>{t("settings.doneBtn")}</Btn>
       </div>:<div className="flex flex-col gap-3.5">
-        <Banner tone="brand" icon="shield" title="Demo mode">Real 2FA would send an SMS code via Twilio. Here we just save your phone and issue backup codes.</Banner>
-        <Field label="Phone number" hint="Where verification codes would be sent.">
-          <Input icon="phone" value={tfaPhone} onChange={e=>setTfaPhone(e.target.value)} placeholder="416 555 0100"/></Field>
+        <Banner tone="brand" icon="shield" title={t("settings.tfaDemoTitle")}>{t("settings.tfaDemoBody")}</Banner>
+        <Field label={t("settings.tfaPhoneLabel")} hint={t("settings.tfaPhoneHint")}>
+          <Input icon="phone" value={tfaPhone} onChange={e=>setTfaPhone(e.target.value)} placeholder={t("settings.tfaPhonePlaceholder")}/></Field>
         <div className="flex gap-2.5 justify-end">
-          <Btn kind="ghost" onClick={()=>setShow2FA(false)}>Cancel</Btn>
-          <Btn kind="primary" icon="shield" disabled={tfaPhone.replace(/\D/g,"").length<10} onClick={async()=>{const r=await A.enable2FA(tfaPhone);if(r.ok)setTfaResult(r);}}>Enable 2FA</Btn></div></div>}</Modal>}
+          <Btn kind="ghost" onClick={()=>setShow2FA(false)}>{t("settings.cancelBtn")}</Btn>
+          <Btn kind="primary" icon="shield" disabled={tfaPhone.replace(/\D/g,"").length<10} onClick={async()=>{const r=await A.enable2FA(tfaPhone);if(r.ok)setTfaResult(r);}}>{t("settings.enableBtn")}</Btn></div></div>}</Modal>}
 
-    {showOutbox&&<Modal onClose={()=>setShowOutbox(false)} title="Outbox — all sent messages">
-      {A.outbox.length===0?<Empty icon="mail" title="Nothing sent" body="Password resets and notification emails would appear here."/>
+    {showOutbox&&<Modal onClose={()=>setShowOutbox(false)} title={`${t("settings.outbox")} — ${t("settings.outboxEmailsTitle").toLowerCase()}`}>
+      {A.outbox.length===0?<Empty icon="mail" title={t("settings.outboxNothing")} body={t("settings.outboxBody")}/>
         :<div className="flex flex-col gap-2.5 max-h-100 overflow-y-auto">
           {A.outbox.map(m=><div key={m.id} className="p-3.5 bg-bg rounded-xl border border-line">
             <div className="flex justify-between gap-2.5 items-baseline mb-1.5">
@@ -172,11 +172,10 @@ export function SettingsPage(){
             <div className="text-xs text-text-3 mb-2">To: {m.to}</div>
             <div className="text-sm text-text-2 leading-normal">{m.body}</div>
             {m.previewUrl&&<a href={m.previewUrl} target="_blank" rel="noreferrer" className="text-xs text-brand font-semibold mt-2 inline-block">View the actual sent email →</a>}</div>)}</div>}</Modal>}
-    <Modal open={confirm} onClose={()=>setConfirm(false)} title="Delete your account?" sub="This cannot be undone"
-      footer={<div className="flex gap-2.5"><Btn kind="outline" full onClick={()=>setConfirm(false)}>Keep my account</Btn>
-        <Btn kind="danger" full icon="trash" onClick={()=>{setConfirm(false);A.deleteAccount();}}>Delete permanently</Btn></div>}>
+    <Modal open={confirm} onClose={()=>setConfirm(false)} title={t("settings.deleteModalTitle")} sub={t("settings.deleteModalSub")}
+      footer={<div className="flex gap-2.5"><Btn kind="outline" full onClick={()=>setConfirm(false)}>{t("settings.keepAccountBtn")}</Btn>
+        <Btn kind="danger" full icon="trash" onClick={()=>{setConfirm(false);A.deleteAccount();}}>{t("settings.deletePermanentlyBtn")}</Btn></div>}>
       <p className="text-base text-text-2 leading-relaxed">
-        Deleting removes your profile, your {A.cvs.length} saved {A.cvs.length===1?"CV":"CVs"}, your saved jobs and your notification history.
-        Applications you have already sent remain with those employers, who become responsible for that copy under PIPEDA.</p></Modal>
+        {t("settings.deleteModalBody",{count:A.cvs.length,cvLabel:A.cvs.length===1?"CV":"CVs"})}</p></Modal>
   </Page>;
 }
