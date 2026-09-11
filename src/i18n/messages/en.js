@@ -2182,5 +2182,18 @@ export const en = {
       nothingSavedTitle: "Nothing saved yet", nothingSavedBody: "Tap the bookmark on any listing and it is kept here.",
       browseJobsBtn: "Browse jobs",
     },
+    savedSearches: {
+      savedSearchesTag: "Saved searches", heroTitle: "Alerts on your searches.",
+      heroSub: "Save any search and we'll notify you the moment a matching job posts.",
+      noneYetTitle: "No saved searches yet",
+      noneYetBody: "Search for something you want, then tap 'Save this search' on the results page.",
+      searchJobsBtn: "Search jobs", allSectors: "All sectors",
+      matchesNowOne: "{count} match right now", matchesNowOther: "{count} matches right now",
+      freqInstant: "Instantly", freqDaily: "Daily digest", freqWeekly: "Weekly digest",
+      editFiltersBtn: "Edit filters", runSearchBtn: "Run search",
+      editModalTitle: "Edit saved search", nameLabel: "Name",
+      alertFrequencyLabel: "Alert frequency", alertFrequencyHint: "How often we notify you about new matches.",
+      saveChangesBtn: "Save changes",
+    },
   },
 };

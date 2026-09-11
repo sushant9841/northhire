@@ -2295,5 +2295,18 @@ export const fr = {
       nothingSavedTitle: "Rien de sauvegardé pour l'instant", nothingSavedBody: "Touchez le signet sur n'importe quelle annonce et elle est conservée ici.",
       browseJobsBtn: "Parcourir les emplois",
     },
+    savedSearches: {
+      savedSearchesTag: "Recherches sauvegardées", heroTitle: "Alertes sur vos recherches.",
+      heroSub: "Sauvegardez n'importe quelle recherche et nous vous avertirons dès qu'un emploi correspondant est publié.",
+      noneYetTitle: "Aucune recherche sauvegardée pour l'instant",
+      noneYetBody: "Recherchez ce que vous voulez, puis touchez « Sauvegarder cette recherche » sur la page de résultats.",
+      searchJobsBtn: "Rechercher des emplois", allSectors: "Tous les secteurs",
+      matchesNowOne: "{count} correspondance en ce moment", matchesNowOther: "{count} correspondances en ce moment",
+      freqInstant: "Instantané", freqDaily: "Résumé quotidien", freqWeekly: "Résumé hebdomadaire",
+      editFiltersBtn: "Modifier les filtres", runSearchBtn: "Lancer la recherche",
+      editModalTitle: "Modifier la recherche sauvegardée", nameLabel: "Nom",
+      alertFrequencyLabel: "Fréquence des alertes", alertFrequencyHint: "À quelle fréquence nous vous avisons des nouvelles correspondances.",
+      saveChangesBtn: "Enregistrer les modifications",
+    },
   },
 };
