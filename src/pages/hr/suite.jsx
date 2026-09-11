@@ -1768,22 +1768,22 @@ export function HrHiring(){
   const apps=A.applications.filter(a=>jobs.some(j=>j.id===a.job));
   return <div>
     <div className={`grid gap-3 mb-4 ${mob?"grid-cols-2":"grid-cols-4"}`}>
-      {[["Live listings",jobs.filter(j=>j.status==="live").length,C.brand],
-        ["Applicants",apps.length,C.ok],
-        ["Interviewing",apps.filter(a=>a.stage==="Interview").length,C.warn],
-        ["Offers out",apps.filter(a=>a.stage==="Offer").length,C.violet]].map(([l,v,t])=>
+      {[[t("hr.hiring.liveListings"),jobs.filter(j=>j.status==="live").length,C.brand],
+        [t("hr.hiring.applicantsCount"),apps.length,C.ok],
+        [t("hr.hiring.interviewing"),apps.filter(a=>a.stage==="Interview").length,C.warn],
+        [t("hr.hiring.offersOut"),apps.filter(a=>a.stage==="Offer").length,C.violet]].map(([l,v,c])=>
         <Card key={l} pad={mob?14:18} style={{borderRadius:12}}>
-          <div className={`font-bold tracking-tight ${mob?"text-xl":"text-2xl"}`} style={{color:t}}>{v}</div>
+          <div className={`font-bold tracking-tight ${mob?"text-xl":"text-2xl"}`} style={{color:c}}>{v}</div>
           <div className="text-xs text-text-3 mt-1">{l}</div>
         </Card>)}
     </div>
     <Card pad={mob?20:24} style={{borderRadius:16,textAlign:"center",background:`linear-gradient(135deg,${C.tint} 0%,#F0F7FF 100%)`,border:`1px solid ${C.line2}`}}>
       <div className="w-13 h-13 rounded-2xl bg-brand text-white flex items-center justify-center mx-auto mb-3.5"><I n="briefcase" s={26}/></div>
-      <div className="text-lg font-semibold text-text mb-1.5">Integrated with NorthHire recruiting</div>
-      <div className="text-sm text-text-2 leading-relaxed mx-auto mb-5 max-w-130">Post jobs, review candidates, and hire directly from your existing employer console. Hired candidates are automatically added to your HR Suite.</div>
+      <div className="text-lg font-semibold text-text mb-1.5">{t("hr.hiring.integratedWithNorthHire")}</div>
+      <div className="text-sm text-text-2 leading-relaxed mx-auto mb-5 max-w-130">{t("hr.hiring.integratedDescription")}</div>
       <div className="flex gap-2.5 justify-center flex-wrap">
-        <Btn kind="primary" icon="plus" onClick={()=>A.go("empPost")}>Post a job</Btn>
-        <Btn kind="outline" onClick={()=>A.go("empPipeline")}>Review candidates</Btn>
+        <Btn kind="primary" icon="plus" onClick={()=>A.go("empPost")}>{t("hr.hiring.postJobBtn")}</Btn>
+        <Btn kind="outline" onClick={()=>A.go("empPipeline")}>{t("hr.hiring.reviewCandidatesBtn")}</Btn>
       </div>
     </Card>
   </div>;
