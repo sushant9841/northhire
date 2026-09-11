@@ -5,13 +5,14 @@ import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
 import { Btn, Field, Input, Sel, Banner } from "../../design/primitives.jsx";
 import { _fmtDate } from "../../helpers/utils.js";
+import { useTranslation } from "../../i18n/i18n.jsx";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    HIRE ONBOARDING MODAL — surfaces when employer moves candidate to "Hired"
    Bridges Employer console (hiring) with HR Suite (people ops)
    ═══════════════════════════════════════════════════════════════════════════ */
 export function HireOnboardingModal({payload,onClose}){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const { t } = useTranslation(); const mob=useMedia("(max-width: 900px)");
   const {app,job,person}=payload;
   const company=A.company; const depts=A.hrDeptsAtCompany?.(company.id)||[];
   const defaultDept=depts[0]?.id||"d1";
@@ -46,11 +47,11 @@ export function HireOnboardingModal({payload,onClose}){
             <I n="award" s={26}/>
           </div>
           <div className="flex-1 min-w-0">
-            <div className="inline-block py-1 px-2.5 bg-ok-bg text-ok border border-ok-ln rounded-full text-xs font-bold tracking-wide uppercase mb-2">Hire confirmed</div>
-            <h2 className={`font-bold tracking-tight text-text mb-1.5 leading-tight ${mob?"text-xl":"text-2xl"}`}>Welcome {person.name.split(" ")[0]} to {company.name}</h2>
-            <div className="text-sm text-text-2">Hired for <strong>{job.t}</strong> · Set up their HR Suite profile now.</div>
+            <div className="inline-block py-1 px-2.5 bg-ok-bg text-ok border border-ok-ln rounded-full text-xs font-bold tracking-wide uppercase mb-2">{t("hireOnboarding.hireConfirmed")}</div>
+            <h2 className={`font-bold tracking-tight text-text mb-1.5 leading-tight ${mob?"text-xl":"text-2xl"}`}>{t("hireOnboarding.welcomeGreeting",{firstName:person.name.split(" ")[0],companyName:company.name})}</h2>
+            <div className="text-sm text-text-2">{t("hireOnboarding.hiredForJob",{jobTitle:job.t})}</div>
           </div>
-          <button onClick={onClose} aria-label="Close" className="bg-transparent border-0 cursor-pointer p-1.5 text-text-3 flex shrink-0"><I n="x" s={20}/></button>
+          <button onClick={onClose} aria-label={t("hireOnboarding.closeLabel")} className="bg-transparent border-0 cursor-pointer p-1.5 text-text-3 flex shrink-0"><I n="x" s={20}/></button>
         </div>
       </div>
 
@@ -59,39 +60,39 @@ export function HireOnboardingModal({payload,onClose}){
         <label className="flex gap-3 items-start cursor-pointer">
           <input type="checkbox" checked={addToHr} onChange={e=>setAddToHr(e.target.checked)} className="w-5 h-5 mt-0.5 cursor-pointer shrink-0" style={{accentColor:C.brand}}/>
           <div className="flex-1">
-            <div className="text-sm font-bold text-text mb-1">Add {person.name.split(" ")[0]} to HR Suite</div>
-            <div className="text-xs text-text-3 leading-normal">Creates their employee record for attendance, leave, payroll, expenses, and reviews. They'll receive an email with sign-in details for their employee portal.</div>
+            <div className="text-sm font-bold text-text mb-1">{t("hireOnboarding.addToHrTitle",{firstName:person.name.split(" ")[0]})}</div>
+            <div className="text-xs text-text-3 leading-normal">{t("hireOnboarding.addToHrBody")}</div>
           </div>
         </label>
       </div>
 
       {addToHr&&<div className={mob?"py-5 px-6":"py-6 px-8"}>
         <div className={`grid gap-3 mb-3.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
-          <Field label="Job title" required><Input value={title} onChange={e=>setTitle(e.target.value)}/></Field>
-          <Field label="Start date" required><Input type="date" value={startDate} onChange={e=>setStartDate(e.target.value)}/></Field>
-          <Field label="Department" required><Sel value={dept} onChange={e=>setDept(e.target.value)}>
+          <Field label={t("hireOnboarding.jobTitleLabel")} required><Input value={title} onChange={e=>setTitle(e.target.value)}/></Field>
+          <Field label={t("hireOnboarding.startDateLabel")} required><Input type="date" value={startDate} onChange={e=>setStartDate(e.target.value)}/></Field>
+          <Field label={t("hireOnboarding.departmentLabel")} required><Sel value={dept} onChange={e=>setDept(e.target.value)}>
             {depts.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}
           </Sel></Field>
-          <Field label="Reports to"><Sel value={manager} onChange={e=>setManager(e.target.value)}>
-            <option value="">— No manager (top level) —</option>
+          <Field label={t("hireOnboarding.reportsToLabel")}><Sel value={manager} onChange={e=>setManager(e.target.value)}>
+            <option value="">{t("hireOnboarding.noManagerOption")}</option>
             {activeEmps.map(e=><option key={e.id} value={e.id}>{e.name} ({e.title})</option>)}
           </Sel></Field>
-          <Field label="Access role" hint="What they can do in HR Suite">
+          <Field label={t("hireOnboarding.roleLabel")} hint={t("hireOnboarding.roleHint")}>
             <Sel value={role} onChange={e=>setRole(e.target.value)}>
               {A.HR_ROLES.map(r=><option key={r.k} value={r.k}>{r.label} — {r.desc}</option>)}
             </Sel>
           </Field>
-          <Field label="Annual salary (CAD)"><Input type="number" value={salary} onChange={e=>setSalary(Number(e.target.value)||0)}/></Field>
+          <Field label={t("hireOnboarding.salaryLabel")}><Input type="number" value={salary} onChange={e=>setSalary(Number(e.target.value)||0)}/></Field>
         </div>
-        <Banner tone="brand" icon="shield" title="Data linked between products">
-          Their NorthHire seeker profile stays linked to this HR record. When they update their skills or certifications on NorthHire, it syncs to HR Suite automatically. You can adjust link privacy in HR Settings.
+        <Banner tone="brand" icon="shield" title={t("hireOnboarding.dataLinkedTitle")}>
+          {t("hireOnboarding.dataLinkedBody")}
         </Banner>
       </div>}
 
       {/* Footer */}
       <div className={`border-t border-line bg-bg flex gap-2.5 justify-end flex-wrap ${mob?"pt-4 px-6 pb-5":"pt-5 px-8 pb-6"}`}>
-        <Btn kind="ghost" onClick={onClose}>{addToHr?"Skip for now":"Close"}</Btn>
-        {addToHr&&<Btn kind="primary" icon="check" onClick={finish}>Create HR record</Btn>}
+        <Btn kind="ghost" onClick={onClose}>{addToHr?t("hireOnboarding.skipForNow"):t("hireOnboarding.closeLabel")}</Btn>
+        {addToHr&&<Btn kind="primary" icon="check" onClick={finish}>{t("hireOnboarding.createHrRecord")}</Btn>}
       </div>
     </div>
   </div>;
