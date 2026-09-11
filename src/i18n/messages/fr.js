@@ -539,7 +539,15 @@ export const fr = {
     jobOrders: { title: "Commandes de travail", create: "Créer une commande", active: "Actif·ve", filled: "Remplie", closed: "Fermée" },
     bench: { title: "Banc", unassigned: "Non assigné·e", assigned: "Assigné·e", onLeave: "En congé" },
     assignments: { title: "Assignations", worker: "Travailleur·euse", client: "Client·e", startDate: "Date de début", endDate: "Date de fin" },
-    timesheets: { title: "Feuilles de temps", pending: "En attente d'approbation", approved: "Approuvée", rejected: "Rejetée" },
+    timesheets: {
+      title: "Feuilles de temps", pending: "En attente d'approbation", approved: "Approuvée", rejected: "Rejetée",
+      subtitle: "Feuilles de temps", desc: "Heures hebdomadaires soumises par les travailleur·euse·s, approuvées par les superviseur·euse·s du client·e.",
+      importCsv: "Importer CSV", draft: "Brouillon", submitted: "Soumise", approved: "Approuvée", paid: "Payée", all: "Tout",
+      week: "Semaine", worker: "Travailleur·euse", client: "Client·e", hours: "Heures", grossPay: "Paie brute", bill: "Facturation", status: "Statut", actions: "Actions",
+      return: "Retourner", approve: "Approuver pour le compte du client·e", chase: "Relance:", noTimesheets: "Aucune feuille de temps dans cet état", noTimesheetsBody: "Essayez un autre onglet.",
+      returnTS: "Retourner la feuille de temps", reason: "Raison pour le client·e / travailleur·euse", reasonPlaceholder: "p. ex. Les heures ne correspondent pas à la feuille de présence du site pour jeudi — veuillez confirmer et soumettre à nouveau.",
+      cancel: "Annuler"
+    },
     payroll: { title: "Paie", period: "Période de paie", amount: "Montant", status: "Statut", processed: "Traitée" },
     invoicing: { title: "Facturation", invoice: "Facture", amount: "Montant", dueDate: "Date d'échéance", paid: "Payée" },
     placements: { title: "Placements", successful: "Placements réussis", onGoing: "En cours", completed: "Complétés" },

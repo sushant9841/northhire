@@ -920,56 +920,56 @@ export function AgencyTimesheets(){
   return <div>
     <div className="mb-3.5 flex justify-between items-start gap-3 flex-wrap">
       <div>
-        <div className="text-lg font-bold text-text">Timesheets</div>
-        <div className="text-sm text-text-3 mt-0.5">Weekly hours submitted by workers, approved by client supervisors.</div>
+        <div className="text-lg font-bold text-text">{t("staffing.timesheets.subtitle")}</div>
+        <div className="text-sm text-text-3 mt-0.5">{t("staffing.timesheets.desc")}</div>
       </div>
-      <Btn kind="outline" size="sm" icon="upload" onClick={()=>setImporting(true)}>Import CSV</Btn>
+      <Btn kind="outline" size="sm" icon="upload" onClick={()=>setImporting(true)}>{t("staffing.timesheets.importCsv")}</Btn>
     </div>
 
-    <div className="mb-3.5"><_PillTabs items={[["draft","Draft"],["submitted","Submitted"],["approved","Approved"],["paid","Paid"],["all","All"]].map(([v,l])=>
-      [v,`${l} (${A.timesheets.filter(t=>v==="all"?true:t.status===v).length})`])} value={tab} onChange={setTab}/></div>
+    <div className="mb-3.5"><_PillTabs items={[["draft",t("staffing.timesheets.draft")],["submitted",t("staffing.timesheets.submitted")],["approved",t("staffing.timesheets.approved")],["paid",t("staffing.timesheets.paid")],["all",t("staffing.timesheets.all")]].map(([v,l])=>
+      [v,`${l} (${A.timesheets.filter(ts=>v==="all"?true:ts.status===v).length})`])} value={tab} onChange={setTab}/></div>
     {importing&&<_TimesheetImportModal onClose={()=>setImporting(false)}/>}
 
     <Card pad={0} style={{borderRadius:14,overflow:"hidden"}}>
       <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:720}}>
         <thead><tr className="border-b-2 border-line text-left">
-          {["Week","Worker","Client","Hours","Gross pay","Bill","Status","Actions"].map(h=>
+          {[t("staffing.timesheets.week"),t("staffing.timesheets.worker"),t("staffing.timesheets.client"),t("staffing.timesheets.hours"),t("staffing.timesheets.grossPay"),t("staffing.timesheets.bill"),t("staffing.timesheets.status"),t("staffing.timesheets.actions")].map(h=>
             <th key={h} className={TH_CLS}>{h}</th>)}
         </tr></thead>
-        <tbody>{pg.pageItems.map(t=>{const w=A.worker(t.worker); const person=w?(A.people||[]).find(p=>p.id===w.personId):null;
-          const asn=A.assignment(t.assignment); const client=asn?A.staffingClient(asn.client):null;
+        <tbody>{pg.pageItems.map(ts=>{const w=A.worker(ts.worker); const person=w?(A.people||[]).find(p=>p.id===w.personId):null;
+          const asn=A.assignment(ts.assignment); const client=asn?A.staffingClient(asn.client):null;
           const emp=client?A.employers.find(e=>e.id===client.employerId):null;
-          const totalHrs=A.timesheetTotal(t); const gross=A.timesheetGross(t); const bill=A.timesheetBill(t);
-          return <tr key={t.id} className="border-b border-line-soft">
-            <td className={`${TD_CLS} text-xs text-text-2 font-mono`}>{t.weekStart}</td>
+          const totalHrs=A.timesheetTotal(ts); const gross=A.timesheetGross(ts); const bill=A.timesheetBill(ts);
+          return <tr key={ts.id} className="border-b border-line-soft">
+            <td className={`${TD_CLS} text-xs text-text-2 font-mono`}>{ts.weekStart}</td>
             <td className={TD_CLS}><div className="flex gap-2.5 items-center">
               <SmartPortrait seed={person?.seed||0} size={28} radius={7}/>
               <span className="text-sm text-text font-semibold">{person?.name||"—"}</span></div></td>
             <td className={`${TD_CLS} text-xs text-text-2`}>{emp?.name||"—"}</td>
-            <td className={`${TD_CLS} text-sm text-text font-semibold`}>{totalHrs}h{t.otHours>0?` (${t.otHours} OT)`:""}</td>
+            <td className={`${TD_CLS} text-sm text-text font-semibold`}>{totalHrs}h{ts.otHours>0?` (${ts.otHours} OT)`:""}</td>
             <td className={`${TD_CLS} text-sm text-text`}>${gross.toFixed(2)}</td>
             <td className={`${TD_CLS} text-sm text-brand font-semibold`}>${bill.toFixed(2)}</td>
-            <td className={TD_CLS}><Tag tone={timesheetTone(t.status)} sm>{t.status}</Tag></td>
+            <td className={TD_CLS}><Tag tone={timesheetTone(ts.status)} sm>{ts.status}</Tag></td>
             <td className={TD_CLS}>
-              {t.status==="submitted"&&<div className="flex gap-1">
-                <Btn kind="dangerSoft" size="xs" onClick={()=>{setReturning(t.id);setReason("");}}>Return</Btn>
-                <Btn kind="primary" size="xs" onClick={()=>A.approveTimesheet(t.id,client?.defaultSupervisorEmail||"—")}>Approve on client's behalf</Btn>
+              {ts.status==="submitted"&&<div className="flex gap-1">
+                <Btn kind="dangerSoft" size="xs" onClick={()=>{setReturning(ts.id);setReason("");}}>{t("staffing.timesheets.return")}</Btn>
+                <Btn kind="primary" size="xs" onClick={()=>A.approveTimesheet(ts.id,client?.defaultSupervisorEmail||"—")}>{t("staffing.timesheets.approve")}</Btn>
               </div>}
-              {t.status==="submitted"&&<div className="text-xs text-text-3 mt-0.5" style={{fontSize:10.5}}>Chase: {client?.defaultSupervisorEmail}</div>}
+              {ts.status==="submitted"&&<div className="text-xs text-text-3 mt-0.5" style={{fontSize:10.5}}>{t("staffing.timesheets.chase")}: {client?.defaultSupervisorEmail}</div>}
             </td>
           </tr>;})}
-          {list.length===0&&<tr><td colSpan={8} className="p-5"><Empty icon="clock" title="No timesheets in this state" body="Try a different tab."/></td></tr>}
+          {list.length===0&&<tr><td colSpan={8} className="p-5"><Empty icon="clock" title={t("staffing.timesheets.noTimesheets")} body={t("staffing.timesheets.noTimesheetsBody")}/></td></tr>}
         </tbody>
       </table></div>
     </Card>
     <Pagination {...pg}/>
-    {returning&&<Modal onClose={()=>setReturning(null)} title="Return timesheet">
+    {returning&&<Modal onClose={()=>setReturning(null)} title={t("staffing.timesheets.returnTS")}>
       <div className="flex flex-col gap-3.5">
-        <Field label="Reason for the client / worker" required>
-          <Area rows={3} value={reason} onChange={e=>setReason(e.target.value)} placeholder="e.g. Hours don't match the site sign-in sheet for Thursday — please confirm and resubmit."/></Field>
+        <Field label={t("staffing.timesheets.reason")} required>
+          <Area rows={3} value={reason} onChange={e=>setReason(e.target.value)} placeholder={t("staffing.timesheets.reasonPlaceholder")}/></Field>
         <div className="flex gap-2.5 justify-end">
-          <Btn kind="ghost" onClick={()=>setReturning(null)}>Cancel</Btn>
-          <Btn kind="dangerSoft" disabled={!reason.trim()} onClick={()=>{A.rejectTimesheet(returning,reason.trim());setReturning(null);}}>Return timesheet</Btn>
+          <Btn kind="ghost" onClick={()=>setReturning(null)}>{t("staffing.timesheets.cancel")}</Btn>
+          <Btn kind="dangerSoft" disabled={!reason.trim()} onClick={()=>{A.rejectTimesheet(returning,reason.trim());setReturning(null);}}>{t("staffing.timesheets.returnTS")}</Btn>
         </div>
       </div>
     </Modal>}
