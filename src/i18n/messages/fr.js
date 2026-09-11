@@ -546,7 +546,15 @@ export const fr = {
     clients: { title: "Client·e·s", name: "Nom du client", contact: "Personne-ressource", location: "Emplacement", active: "Actif·ve" },
     workers: { title: "Travailleur·euse·s", name: "Nom du travailleur", status: "Statut", rate: "Taux", available: "Disponible" },
     margins: { title: "Marges", profit: "Marge bénéficiaire", revenue: "Revenu", cost: "Coût" },
-    branches: { title: "Succursales", location: "Emplacement", manager: "Gestionnaire", workers: "Travailleur·euse·s" },
+    branches: {
+      title: "Succursales", location: "Emplacement", manager: "Gestionnaire", workers: "Travailleur·euse·s",
+      countBranches: "{n} succursales", desc: "Assignez les client·e·s et recruteur·euse·s à une succursale/bureau au lieu d'un seul livre partagé.",
+      addBranch: "Ajouter une succursale", clients: "Client·e·s", staff: "Personnel",
+      noBranches: "Aucune succursale pour l'instant", noBranchesBody: "Ajoutez-en une pour commencer à assigner les client·e·s et recruteur·euse·s à un bureau spécifique.",
+      staffAssignment: "Assignation du personnel", name: "Nom", role: "Rôle", branch: "Succursale", unassigned: "Non assigné·e",
+      branchName: "Nom de la succursale", branchPlaceholder: "p. ex. Bureau de Calgary", city: "Ville", province: "Province",
+      cancel: "Annuler"
+    },
     compliance: { title: "Conformité", requirement: "Exigence", status: "Statut", dueDate: "Date d'échéance" },
   },
   hr: {

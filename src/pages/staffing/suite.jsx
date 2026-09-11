@@ -1664,10 +1664,10 @@ export function AgencyBranches(){
   return <div>
     <div className="flex justify-between items-center mb-4 flex-wrap gap-2.5">
       <div>
-        <div className="text-lg font-bold text-text">{A.staffingBranches.length} branches</div>
-        <div className="text-sm text-text-3 mt-0.5">Assign clients and recruiters to a branch/desk instead of one shared book.</div>
+        <div className="text-lg font-bold text-text">{t("staffing.branches.countBranches",{n:A.staffingBranches.length})}</div>
+        <div className="text-sm text-text-3 mt-0.5">{t("staffing.branches.desc")}</div>
       </div>
-      <Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowAdd(true)}>Add branch</Btn>
+      <Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowAdd(true)}>{t("staffing.branches.addBranch")}</Btn>
     </div>
     <div className="grid gap-3 mb-6" style={{gridTemplateColumns:mob?"1fr":"repeat(auto-fill,minmax(280px,1fr))"}}>
       {A.staffingBranches.map(b=>{
@@ -1682,25 +1682,25 @@ export function AgencyBranches(){
             <Btn kind="ghost" size="xs" icon="trash" onClick={()=>A.deleteBranch(b.id)}/>
           </div>
           <div className="flex gap-4 mt-3.5 pt-3 border-t border-line-soft">
-            <div><div className="text-lg font-bold text-brand">{clientCount}</div><div className="text-xs text-text-3">Clients</div></div>
-            <div><div className="text-lg font-bold text-brand">{staffCount}</div><div className="text-xs text-text-3">Staff</div></div>
+            <div><div className="text-lg font-bold text-brand">{clientCount}</div><div className="text-xs text-text-3">{t("staffing.branches.clients")}</div></div>
+            <div><div className="text-lg font-bold text-brand">{staffCount}</div><div className="text-xs text-text-3">{t("staffing.branches.staff")}</div></div>
           </div>
         </Card>;})}
-      {A.staffingBranches.length===0&&<Empty icon="building" title="No branches yet" body="Add one to start assigning clients and recruiters to a specific desk."/>}
+      {A.staffingBranches.length===0&&<Empty icon="building" title={t("staffing.branches.noBranches")} body={t("staffing.branches.noBranchesBody")}/>}
     </div>
 
-    <div className="text-base font-semibold text-text mb-2.5">Staff assignment</div>
+    <div className="text-base font-semibold text-text mb-2.5">{t("staffing.branches.staffAssignment")}</div>
     <Card pad={0} style={{borderRadius:14,overflow:"hidden"}}>
       <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:480}}>
         <thead><tr className="border-b-2 border-line text-left">
-          {["Name","Role","Branch"].map(h=><th key={h} className={TH_CLS}>{h}</th>)}
+          {[t("staffing.branches.name"),t("staffing.branches.role"),t("staffing.branches.branch")].map(h=><th key={h} className={TH_CLS}>{h}</th>)}
         </tr></thead>
         <tbody>{A.agencyStaffRoster.map(s=><tr key={s.id} className="border-b border-line-soft">
           <td className={`${TD_CLS} text-sm font-semibold text-text`}>{s.name}</td>
           <td className={`${TD_CLS} text-sm text-text-2`}>{s.title||s.role}</td>
           <td className={TD_CLS}>
             <Sel value={s.branchId||""} onChange={e=>A.assignStaffBranch(s.id,e.target.value||null)} style={{fontSize:13,padding:"5px 8px"}}>
-              <option value="">Unassigned</option>
+              <option value="">{t("staffing.branches.unassigned")}</option>
               {A.staffingBranches.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}
             </Sel>
           </td>
@@ -1708,17 +1708,17 @@ export function AgencyBranches(){
       </table></div>
     </Card>
 
-    {showAdd&&<Modal onClose={()=>setShowAdd(false)} title="Add a branch">
+    {showAdd&&<Modal onClose={()=>setShowAdd(false)} title={t("staffing.branches.addBranch")}>
       <div className="flex flex-col gap-3.5">
-        <Field label="Branch name" required><Input value={nb.name} onChange={e=>setNb({...nb,name:e.target.value})} placeholder="e.g. Calgary Desk"/></Field>
+        <Field label={t("staffing.branches.branchName")} required><Input value={nb.name} onChange={e=>setNb({...nb,name:e.target.value})} placeholder={t("staffing.branches.branchPlaceholder")}/></Field>
         <div className="grid grid-cols-2 gap-2.5">
-          <Field label="City"><Input value={nb.city} onChange={e=>setNb({...nb,city:e.target.value})}/></Field>
-          <Field label="Province"><Sel value={nb.province} onChange={e=>setNb({...nb,province:e.target.value})}>
+          <Field label={t("staffing.branches.city")}><Input value={nb.city} onChange={e=>setNb({...nb,city:e.target.value})}/></Field>
+          <Field label={t("staffing.branches.province")}><Sel value={nb.province} onChange={e=>setNb({...nb,province:e.target.value})}>
             {A.STAFFING_AGENCY.provinces.map(p=><option key={p} value={p}>{p}</option>)}</Sel></Field>
         </div>
         <div className="flex gap-2.5 justify-end">
-          <Btn kind="ghost" onClick={()=>setShowAdd(false)}>Cancel</Btn>
-          <Btn kind="primary" disabled={!nb.name.trim()} onClick={submit}>Add branch</Btn>
+          <Btn kind="ghost" onClick={()=>setShowAdd(false)}>{t("staffing.branches.cancel")}</Btn>
+          <Btn kind="primary" disabled={!nb.name.trim()} onClick={submit}>{t("staffing.branches.addBranch")}</Btn>
         </div>
       </div>
     </Modal>}
