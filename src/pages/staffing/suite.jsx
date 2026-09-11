@@ -1176,22 +1176,22 @@ export function AgencyPlacements(){
   const commissionPaid=withRecruiter.filter(p=>p.commissionPaid).reduce((s,p)=>s+(p.commission||0),0);
   return <div>
     <div className="mb-3.5">
-      <div className="text-lg font-bold text-text">Permanent placements</div>
-      <div className="text-sm text-text-3 mt-0.5">Perm hires we source. Fee due on start. 90-day guarantee.</div>
+      <div className="text-lg font-bold text-text">{t("staffing.placements.title")}</div>
+      <div className="text-sm text-text-3 mt-0.5">{t("staffing.placements.subtitle")}</div>
     </div>
 
     {withRecruiter.length>0&&<div className={`grid gap-3 mb-3.5 ${mob?"grid-cols-2":"grid-cols-2"}`} style={{maxWidth:400}}>
       <Card pad={14} style={{borderRadius:12}}>
-        <div className="text-xs font-bold text-text-3 uppercase tracking-wide">Commission owed</div>
+        <div className="text-xs font-bold text-text-3 uppercase tracking-wide">{t("staffing.placements.commissionOwed")}</div>
         <div className="text-lg font-bold text-warn mt-1">${commissionOwed.toLocaleString()}</div>
       </Card>
       <Card pad={14} style={{borderRadius:12}}>
-        <div className="text-xs font-bold text-text-3 uppercase tracking-wide">Commission paid</div>
+        <div className="text-xs font-bold text-text-3 uppercase tracking-wide">{t("staffing.placements.commissionPaid")}</div>
         <div className="text-lg font-bold text-ok mt-1">${commissionPaid.toLocaleString()}</div>
       </Card>
     </div>}
 
-    <div className="mb-3.5"><_PillTabs items={[["in-progress","In progress"],["accepted","Accepted"],["guaranteed","In guarantee"],["clawed-back","Clawed back"],["all","All"]].map(([v,l])=>
+    <div className="mb-3.5"><_PillTabs items={[["in-progress",t("staffing.placements.tabInProgress")],["accepted",t("staffing.placements.tabAccepted")],["guaranteed",t("staffing.placements.tabGuaranteed")],["clawed-back",t("staffing.placements.tabClawedBack")],["all",t("staffing.placements.tabAll")]].map(([v,l])=>
       [v,`${l} (${A.placements.filter(p=>v==="all"?true:p.status===v).length})`])} value={tab} onChange={setTab}/></div>
 
     <div className="grid gap-3" style={{gridTemplateColumns:mob?"1fr":"repeat(auto-fill,minmax(340px,1fr))"}}>
@@ -1206,54 +1206,54 @@ export function AgencyPlacements(){
                 on today - the previous flat "guarantee left" tag looked the same 25 days out as
                 2 days out. */}
             {guaranteeDaysLeft!==null&&guaranteeDaysLeft>0&&guaranteeDaysLeft<=30&&
-              <Tag tone={guaranteeDaysLeft<=7?"danger":"warn"} sm icon={guaranteeDaysLeft<=7?"alert":"clock"}>{guaranteeDaysLeft}d guarantee left</Tag>}
+              <Tag tone={guaranteeDaysLeft<=7?"danger":"warn"} sm icon={guaranteeDaysLeft<=7?"alert":"clock"}>{t("staffing.placements.guaranteeLeft").replace("{days}",guaranteeDaysLeft)}</Tag>}
             {guaranteeDaysLeft!==null&&guaranteeDaysLeft<=0&&p.status==="accepted"&&
-              <Tag tone="ok" sm icon="check">Guarantee cleared</Tag>}
+              <Tag tone="ok" sm icon="check">{t("staffing.placements.guaranteeCleared")}</Tag>}
           </div>
           <div className="text-base font-semibold text-text tracking-tight">{p.role}</div>
           <div className="text-sm text-text-2 mt-1">{emp?.name||"—"}</div>
 
           <div className="grid grid-cols-2 gap-2.5 mt-3.5 mb-3">
-            <div><div className="text-xs font-bold text-text-3 tracking-wide uppercase">Salary</div>
+            <div><div className="text-xs font-bold text-text-3 tracking-wide uppercase">{t("staffing.placements.salary")}</div>
               <div className="text-sm font-semibold text-text mt-1">${p.salary.toLocaleString()}</div></div>
-            <div><div className="text-xs font-bold text-text-3 tracking-wide uppercase">Fee ({p.feePct}%)</div>
+            <div><div className="text-xs font-bold text-text-3 tracking-wide uppercase">{t("staffing.placements.fee").replace("{pct}",p.feePct)}</div>
               <div className="text-sm font-bold text-brand mt-1">${p.fee.toLocaleString()}</div></div>
           </div>
           <div className="mb-3">
-            <div className="text-xs font-bold text-text-3 tracking-wide uppercase mb-1">Recruiter</div>
+            <div className="text-xs font-bold text-text-3 tracking-wide uppercase mb-1">{t("staffing.placements.recruiter")}</div>
             <Sel value={p.recruiterId||""} onChange={e=>A.assignPlacementRecruiter(p.id,e.target.value||null)} style={{fontSize:13,padding:"6px 10px"}}>
-              <option value="">Unassigned</option>
+              <option value="">{t("staffing.placements.unassigned")}</option>
               {A.agencyStaffRoster.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
             </Sel>
             {p.recruiterId&&<div className="flex justify-between items-center mt-1.5">
-              <span className="text-xs text-text-2">Commission: <strong className="text-text">${(p.commission||0).toLocaleString()}</strong></span>
+              <span className="text-xs text-text-2">{t("staffing.placements.commission")}<strong className="text-text">${(p.commission||0).toLocaleString()}</strong></span>
               {p.commissionPaid
-                ?<Tag tone="ok" sm icon="check">Paid {p.commissionPaidAt}</Tag>
-                :p.status==="guaranteed"&&<Btn kind="outline" size="xs" onClick={()=>A.payCommission(p.id)}>Pay commission</Btn>}
+                ?<Tag tone="ok" sm icon="check">{t("staffing.placements.paid").replace("{date}",p.commissionPaidAt)}</Tag>
+                :p.status==="guaranteed"&&<Btn kind="outline" size="xs" onClick={()=>A.payCommission(p.id)}>{t("staffing.placements.payCommission")}</Btn>}
             </div>}
           </div>
           <div className="text-xs text-text-3 mb-2.5">
-            Offered {p.offeredAt}{p.startDate?` · Started ${p.startDate}`:""}
-            {p.invoicedOn?` · Invoiced ${p.invoicedOn}`:""}
-            {p.paidOn?` · Paid ${p.paidOn}`:""}
+            {t("staffing.placements.offered")} {p.offeredAt}{p.startDate?` · ${t("staffing.placements.started")} ${p.startDate}`:""}
+            {p.invoicedOn?` · ${t("staffing.placements.invoiced")} ${p.invoicedOn}`:""}
+            {p.paidOn?` · ${t("staffing.placements.paidOn")} ${p.paidOn}`:""}
           </div>
-          {p.status==="clawed-back"&&<Banner tone="danger" icon="alert" title="Clawed back">
-            {p.clawbackReason||"Replacement owed to client."}</Banner>}
-          {p.status==="in-progress"&&<Btn kind="primary" size="xs" full onClick={()=>A.acceptPlacement(p.id,_fmtDate(new Date()))}>Mark accepted &amp; started</Btn>}
-          {p.status==="accepted"&&<Btn kind="primary" size="xs" full onClick={()=>A.invoicePlacement(p.id)}>Invoice on start</Btn>}
-          {p.status==="guaranteed"&&<Btn kind="dangerSoft" size="xs" full onClick={()=>{setClawingBack(p.id);setClawReason("");}}>Claw back (guarantee)</Btn>}
+          {p.status==="clawed-back"&&<Banner tone="danger" icon="alert" title={t("staffing.placements.clawedBackMsg")}>
+            {p.clawbackReason||t("staffing.placements.clawedBackDefault")}</Banner>}
+          {p.status==="in-progress"&&<Btn kind="primary" size="xs" full onClick={()=>A.acceptPlacement(p.id,_fmtDate(new Date()))}>{t("staffing.placements.markAccepted")}</Btn>}
+          {p.status==="accepted"&&<Btn kind="primary" size="xs" full onClick={()=>A.invoicePlacement(p.id)}>{t("staffing.placements.invoiceOnStart")}</Btn>}
+          {p.status==="guaranteed"&&<Btn kind="dangerSoft" size="xs" full onClick={()=>{setClawingBack(p.id);setClawReason("");}}>{t("staffing.placements.clawBackBtn")}</Btn>}
         </div>;})}
-      {list.length===0&&<div style={{gridColumn:"1 / -1"}}><Empty icon="award" title="No placements in this state" body="Start with a job order and convert to placement."/></div>}
+      {list.length===0&&<div style={{gridColumn:"1 / -1"}}><Empty icon="award" title={t("staffing.placements.emptyTitle")} body={t("staffing.placements.emptyBody")}/></div>}
     </div>
     <Pagination {...pg}/>
-    {clawingBack&&<Modal onClose={()=>setClawingBack(null)} title="Claw back placement">
+    {clawingBack&&<Modal onClose={()=>setClawingBack(null)} title={t("staffing.placements.clawBackModal")}>
       <div className="flex flex-col gap-3.5">
-        <Banner tone="warn" icon="alert">This marks the placement clawed-back and flags a replacement owed to the client under the 90-day guarantee.</Banner>
-        <Field label="Reason" required>
-          <Area rows={3} value={clawReason} onChange={e=>setClawReason(e.target.value)} placeholder="e.g. Worker resigned after 3 weeks — client requesting a replacement."/></Field>
+        <Banner tone="warn" icon="alert">{t("staffing.placements.clawBackWarning")}</Banner>
+        <Field label={t("staffing.placements.clawBackReason")} required>
+          <Area rows={3} value={clawReason} onChange={e=>setClawReason(e.target.value)} placeholder={t("staffing.placements.clawBackPlaceholder")}/></Field>
         <div className="flex gap-2.5 justify-end">
-          <Btn kind="ghost" onClick={()=>setClawingBack(null)}>Cancel</Btn>
-          <Btn kind="dangerSoft" disabled={!clawReason.trim()} onClick={()=>{A.clawbackPlacement(clawingBack,clawReason.trim());setClawingBack(null);}}>Confirm claw back</Btn>
+          <Btn kind="ghost" onClick={()=>setClawingBack(null)}>{t("staffing.placements.cancel")}</Btn>
+          <Btn kind="dangerSoft" disabled={!clawReason.trim()} onClick={()=>{A.clawbackPlacement(clawingBack,clawReason.trim());setClawingBack(null);}}>{t("staffing.placements.confirm")}</Btn>
         </div>
       </div>
     </Modal>}

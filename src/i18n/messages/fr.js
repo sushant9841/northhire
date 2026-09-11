@@ -597,7 +597,24 @@ export const fr = {
       genFieldLabel: "Semaine commençant",
       genCancel: "Annuler", genSubmit: "Générer"
     },
-    placements: { title: "Placements", successful: "Placements réussis", onGoing: "En cours", completed: "Complétés" },
+    placements: {
+      title: "Placements", successful: "Placements réussis", onGoing: "En cours", completed: "Complétés",
+      subtitle: "Embauches permanentes que nous approvisionnons. Honoraire dû au démarrage. Garantie de 90 jours.",
+      commissionOwed: "Commission due", commissionPaid: "Commission payée",
+      tabInProgress: "En cours", tabAccepted: "Accepté·e", tabGuaranteed: "En garantie", tabClawedBack: "Récupéré·e", tabAll: "Tout",
+      guaranteeLeft: "{days}d garantie restante", guaranteeCleared: "Garantie effacée",
+      salary: "Salaire", fee: "Honoraire ({pct}%)", recruiter: "Recruteur·euse", unassigned: "Non assigné·e",
+      commission: "Commission : ", paid: "Payée le {date}", payCommission: "Payer la commission",
+      offered: "Offert le", started: "Démarré le", invoiced: "Facturé le", paidOn: "Payé le",
+      clawedBackMsg: "Récupéré·e", clawedBackDefault: "Remplacement dû au client·e.",
+      markAccepted: "Marquer accepté·e et démarré·e", invoiceOnStart: "Facturer au démarrage",
+      clawBackBtn: "Récupérer (garantie)",
+      emptyTitle: "Aucun placement dans cet état", emptyBody: "Commencez par une commande d'emploi et convertissez-la en placement.",
+      clawBackModal: "Récupérer la placement",
+      clawBackWarning: "Cela marque la placement comme récupérée et signale un remplacement dû au client·e sous la garantie de 90 jours.",
+      clawBackReason: "Motif", clawBackPlaceholder: "p. ex. Travailleur·euse a démissionné après 3 semaines — client·e demandant un remplacement.",
+      cancel: "Annuler", confirm: "Confirmer la récupération"
+    },
     clients: {
       title: "Client·e·s", name: "Nom du client", contact: "Personne-ressource", location: "Emplacement", active: "Actif·ve",
       subtitle: "Employeur·euse·s avec lesquel·le·s nous avons (ou voulons) une relation d'effectif.",
