@@ -7,11 +7,21 @@ import { Btn, Tag, Card, Input, Area, Sel, Field, Banner, H2, Lbl, Modal, Page, 
 import { pay, payUnit, payShort } from "../../helpers/utils.js";
 import { CV_TEMPLATES } from "../../store/seed/constants.js";
 import { JobCard, EmpMark } from "../shared/cards.jsx";
+import { useTranslation } from "../../i18n/i18n.jsx";
+
+/* Availability / experience filter values below are stored and matched as canonical English
+   strings elsewhere in the app (see the STANDING RULE) - these maps translate only the label. */
+const AVAIL_KEY={"Immediately":"auth.immediately","Within 2 weeks":"auth.withinWeeks",
+  "Within 1 month":"auth.withinMonth","More than 1 month":"auth.moreThanMonth"};
+const EXP_KEY={"No experience required":"seeker.search.expNoneRequired","Entry level welcome":"seeker.search.expEntryLevel",
+  "1+ years":"seeker.search.exp1Plus","2+ years":"seeker.search.exp2Plus","3+ years":"seeker.search.exp3Plus","4+ years":"seeker.search.exp4Plus"};
+const YESNO_KEY={"Yes":"common.yes","No":"common.no"};
 
 /* ---- Apply: three full pages + confirmation ---- */
 function ApplyShell({step,job,children,onNext,onBack,nextLabel,nextDisabled}){
   const A=use(); const mob=useMedia("(max-width: 900px)"); const e=A.emp(job.e);
-  const steps=["Your profile","Questions","Review"];
+  const {t}=useTranslation();
+  const steps=[t("seeker.apply.stepProfile"),t("seeker.apply.stepQuestions"),t("seeker.apply.stepReview")];
   return <div className="bg-bg min-h-full">
     <div className="bg-white border-b border-line">
       <div className={`max-w-3xl mx-auto ${mob?"p-4":"py-5 px-6"}`}>
@@ -31,13 +41,13 @@ function ApplyShell({step,job,children,onNext,onBack,nextLabel,nextDisabled}){
     <div className={`max-w-3xl mx-auto ${mob?"pt-5 px-4 pb-8":"pt-7 px-6 pb-12"}`}>
       <div key={step} style={{animation:"slideIn .28s cubic-bezier(.22,.68,.35,1) both"}}>{children}</div>
       <div className="flex gap-2.5 justify-between mt-6">
-        <Btn kind="ghost" icon="arrowL" onClick={onBack}>{step===1?"Cancel":"Back"}</Btn>
+        <Btn kind="ghost" icon="arrowL" onClick={onBack}>{step===1?t("seeker.apply.cancelBtn"):t("seeker.apply.backBtn")}</Btn>
         <Btn kind="primary" size="lg" iconR={step===3?"send":"arrowR"} onClick={onNext} disabled={nextDisabled}>{nextLabel}</Btn></div></div>
   </div>;
 }
 
 function _CvPicker(){
-  const A=use();
+  const A=use(); const {t}=useTranslation();
   const [open,setOpen]=useState(false);
   const myCvs=(A.cvs||[]).filter(c=>c.user===A.user?.id);
   const activeId=A.applyDraft.cv||A.defaultCv?.id||myCvs[0]?.id;
@@ -45,22 +55,22 @@ function _CvPicker(){
   const setActive=(id)=>{A.setApplyDraft({...A.applyDraft,cv:id}); setOpen(false);};
 
   if(myCvs.length===0){
-    return <Banner tone="warn" icon="alert" title="No CV attached"
-      action={<Btn kind="primary" size="sm" onClick={()=>A.go("cvs")}>Build one</Btn>}>
-      Employers are far more likely to shortlist applications with a CV attached.</Banner>;
+    return <Banner tone="warn" icon="alert" title={t("seeker.apply.noCvAttachedTitle")}
+      action={<Btn kind="primary" size="sm" onClick={()=>A.go("cvs")}>{t("seeker.apply.buildOneBtn")}</Btn>}>
+      {t("seeker.apply.noCvAttachedBody")}</Banner>;
   }
 
   return <>
     <div className="flex items-center gap-3 border border-line rounded-xl py-3.5 px-4">
       <div className="w-9 h-9 rounded-lg bg-wash text-brand flex items-center justify-center"><I n="file" s={18}/></div>
       <div className="flex-1 min-w-0">
-        <div className="text-sm font-semibold text-text">{active?.name||"No CV selected"}</div>
-        <div className="text-xs text-text-3 mt-0.5">{active?`${CV_TEMPLATES.find(t=>t.id===active.template)?.name||"Standard"} template • updated ${active.updated||"—"}`:""}</div>
+        <div className="text-sm font-semibold text-text">{active?.name||t("seeker.apply.noCvSelected")}</div>
+        <div className="text-xs text-text-3 mt-0.5">{active?t("seeker.apply.cvUpdated",{template:CV_TEMPLATES.find(ct=>ct.id===active.template)?.name||t("seeker.apply.standardTemplate"),date:active.updated||"—"}):""}</div>
       </div>
-      <Btn kind="ghost" size="sm" onClick={()=>setOpen(true)}>Change</Btn>
+      <Btn kind="ghost" size="sm" onClick={()=>setOpen(true)}>{t("seeker.apply.changeBtn")}</Btn>
     </div>
 
-    {open&&<Modal onClose={()=>setOpen(false)} title="Choose a CV to send">
+    {open&&<Modal onClose={()=>setOpen(false)} title={t("seeker.apply.chooseCvModalTitle")}>
       <div className="flex flex-col gap-2 mb-3.5">
         {myCvs.map(cv=>{const isActive=activeId===cv.id;
           return <button key={cv.id} onClick={()=>setActive(cv.id)}
@@ -68,17 +78,17 @@ function _CvPicker(){
             <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${isActive?"bg-brand text-white":"bg-wash text-brand"}`}><I n="file" s={18}/></div>
             <div className="flex-1 min-w-0">
               <div className="text-sm font-bold text-text">{cv.name}</div>
-              <div className="text-xs text-text-3 mt-0.5">{CV_TEMPLATES.find(t=>t.id===cv.template)?.name||"Standard"} template • {cv.updated||"just now"}</div>
+              <div className="text-xs text-text-3 mt-0.5">{t("seeker.apply.cvUpdatedNow",{template:CV_TEMPLATES.find(ct=>ct.id===cv.template)?.name||t("seeker.apply.standardTemplate"),date:cv.updated||t("seeker.apply.justNow")})}</div>
             </div>
-            {isActive&&<Tag tone="brand" sm icon="check">Selected</Tag>}
+            {isActive&&<Tag tone="brand" sm icon="check">{t("seeker.apply.selectedTag")}</Tag>}
           </button>;})}
       </div>
       <div className="p-3.5 bg-bg rounded-xl flex gap-3 items-center justify-between flex-wrap">
         <div>
-          <div className="text-sm font-semibold text-text">Need a different CV?</div>
-          <div className="text-xs text-text-3 mt-0.5">You can have up to 5 CVs for different job types.</div>
+          <div className="text-sm font-semibold text-text">{t("seeker.apply.needDifferentCvTitle")}</div>
+          <div className="text-xs text-text-3 mt-0.5">{t("seeker.apply.needDifferentCvBody")}</div>
         </div>
-        <Btn kind="outline" size="sm" icon="plus" onClick={()=>{setOpen(false); A.editCv("new");}}>Create new CV</Btn>
+        <Btn kind="outline" size="sm" icon="plus" onClick={()=>{setOpen(false); A.editCv("new");}}>{t("seeker.apply.createNewCvBtn")}</Btn>
       </div>
     </Modal>}
   </>;
@@ -86,20 +96,20 @@ function _CvPicker(){
 
 export function Apply1(){
   const A=use(); const job=A.job(A.applyDraft.job); if(!job) return null;
-  const e=A.emp(job.e); const u=A.user;
+  const e=A.emp(job.e); const u=A.user; const {t}=useTranslation();
   const missing=job.skills.filter(s=>!(u.skills||[]).some(x=>x.toLowerCase()===s.toLowerCase()));
-  return <ApplyShell step={1} job={job} onBack={()=>A.go("job")} onNext={()=>A.go("apply2")} nextLabel="Continue">
+  return <ApplyShell step={1} job={job} onBack={()=>A.go("job")} onNext={()=>A.go("apply2")} nextLabel={t("seeker.apply.continueBtn")}>
     <Card pad={22}>
-      <H2 sub="This is exactly what the employer will receive">Confirm your details</H2>
+      <H2 sub={t("seeker.apply.confirmDetailsSub")}>{t("seeker.apply.confirmDetailsTitle")}</H2>
       <div className="flex gap-3.5 items-center bg-tint border border-line-2 rounded-xl p-4 mb-5">
         <SmartPortrait seed={u.seed??0} size={54} radius={13}/>
         <div className="min-w-0 flex-1">
           <div className="text-base font-bold text-text">{u.name}</div>
           <div className="text-sm text-text-2 mt-1">{u.title} • {u.city}, {u.prov}</div>
           <div className="text-sm text-text-2 mt-0.5">{u.email} • {u.phone}</div></div>
-        <Btn kind="outline" size="sm" icon="edit" onClick={()=>A.go("profile")}>Edit</Btn></div>
+        <Btn kind="outline" size="sm" icon="edit" onClick={()=>A.go("profile")}>{t("seeker.apply.editBtn")}</Btn></div>
       <div className="mb-5">
-        <Lbl>Attached CV</Lbl>
+        <Lbl>{t("seeker.apply.attachedCvLabel")}</Lbl>
         <_CvPicker/>
       </div>
       {(job.mustHave||[]).length>0&&(()=>{
@@ -107,32 +117,32 @@ export function Apply1(){
         const mustPresent=job.mustHave.filter(s=>(u.skills||[]).some(x=>x.toLowerCase()===s.toLowerCase()));
         return <div className="mb-5">
           <div className="flex justify-between items-center mb-2">
-            <Lbl style={{margin:0}}>Must-have skills</Lbl>
-            <Tag tone={mustMissing.length===0?"ok":"warn"} sm>{mustPresent.length} of {job.mustHave.length}</Tag>
+            <Lbl style={{margin:0}}>{t("seeker.apply.mustHaveSkillsLabel")}</Lbl>
+            <Tag tone={mustMissing.length===0?"ok":"warn"} sm>{t("seeker.apply.ofCount",{present:mustPresent.length,total:job.mustHave.length})}</Tag>
           </div>
           <div className="flex flex-wrap gap-2">
             {job.mustHave.map(s=>{const mine=(u.skills||[]).some(x=>x.toLowerCase()===s.toLowerCase());
               return <Tag key={s} tone={mine?"ok":"danger"} icon={mine?"check":"alert"}>{s}</Tag>;})}
           </div>
-          {mustMissing.length>0&&<Banner tone="warn" icon="alert" title="You are missing some must-have skills" style={{marginTop:11}}
-            action={<Btn kind="outline" size="sm" onClick={()=>A.go("profile")}>Add to profile</Btn>}>
-            The employer flagged these as required: <strong>{mustMissing.join(", ")}</strong>. You can still apply, but add them to your profile first if you actually have them.
+          {mustMissing.length>0&&<Banner tone="warn" icon="alert" title={t("seeker.apply.missingMustHaveTitle")} style={{marginTop:11}}
+            action={<Btn kind="outline" size="sm" onClick={()=>A.go("profile")}>{t("seeker.apply.addToProfileBtn")}</Btn>}>
+            {t("seeker.apply.employerFlaggedRequired",{skills:mustMissing.join(", ")})}
           </Banner>}
         </div>;})()}
       <div className="mb-5">
-        <Lbl>Nice-to-have skills</Lbl>
+        <Lbl>{t("seeker.apply.niceToHaveSkillsLabel")}</Lbl>
         <div className="flex flex-wrap gap-2">
           {job.skills.map(s=>{const mine=(u.skills||[]).some(x=>x.toLowerCase()===s.toLowerCase());
             return <Tag key={s} tone={mine?"ok":"neutral"} icon={mine?"check":undefined}>{s}</Tag>;})}</div>
         {missing.length>0&&<div className="text-sm text-text-2 mt-3 leading-relaxed">
-          Bonus if you have {missing.slice(0,3).join(", ")}. Add them to your profile so the employer sees them.</div>}</div>
-      <Banner tone="neutral" icon="shield" title="How your data is used">
-        {e.name} receives your profile, CV and answers for this application only. You can withdraw at any time from My Status, in line with PIPEDA.</Banner>
+          {t("seeker.apply.bonusIfYouHave",{skills:missing.slice(0,3).join(", ")})}</div>}</div>
+      <Banner tone="neutral" icon="shield" title={t("seeker.apply.dataUsedTitle")}>
+        {t("seeker.apply.dataUsedBody",{employer:e.name})}</Banner>
     </Card></ApplyShell>;
 }
 export function Apply2(){
   const A=use(); const job=A.job(A.applyDraft.job); if(!job) return null;
-  const e=A.emp(job.e);
+  const e=A.emp(job.e); const {t}=useTranslation();
   const d=A.applyDraft; const set=(k,v)=>A.setApplyDraft({...d,[k]:v});
   const setAnswer=(qid,v)=>set("screeningAnswers",{...(d.screeningAnswers||{}),[qid]:v});
   const toggleChecklistAnswer=(qid,opt)=>{const cur=d.screeningAnswers?.[qid]||[];
@@ -142,17 +152,17 @@ export function Apply2(){
   const answersComplete=questions.every(q=>{if(!q.required)return true; const v=d.screeningAnswers?.[q.id];
     return q.type==="checkbox"?Array.isArray(v)&&v.length>0:!!String(v||"").trim();});
   const nextDisabled=!d.avail||(meetsRequired&&!d.meets)||!answersComplete;
-  return <ApplyShell step={2} job={job} onBack={()=>A.go("apply1")} onNext={()=>A.go("apply3")} nextLabel="Review application" nextDisabled={nextDisabled}>
+  return <ApplyShell step={2} job={job} onBack={()=>A.go("apply1")} onNext={()=>A.go("apply3")} nextLabel={t("seeker.apply.reviewApplicationBtn")} nextDisabled={nextDisabled}>
     <Card pad={22}>
-      <H2 sub="A few quick questions before you apply">A few questions</H2>
+      <H2 sub={t("seeker.apply.questionsSub")}>{t("seeker.apply.questionsTitle")}</H2>
       <div className="flex flex-col gap-5">
-        {questions.length>0&&<Banner tone="neutral" icon="briefcase" title={`${e?.name||"This employer"} asks every applicant`}>
-          Answer each one below — the employer sees your responses alongside your application.</Banner>}
+        {questions.length>0&&<Banner tone="neutral" icon="briefcase" title={t("seeker.apply.employerAsksEveryone",{employer:e?.name||t("seeker.apply.defaultEmployer")})}>
+          {t("seeker.apply.answerEachBelow")}</Banner>}
         {questions.map(q=>{const v=d.screeningAnswers?.[q.id];
           return <Field key={q.id} label={q.prompt} required={q.required}>
             {q.type==="yesno"&&<div className="grid grid-cols-2 gap-2.5">
               {["Yes","No"].map(o=><button key={o} type="button" onClick={()=>setAnswer(q.id,o)}
-                className={`p-3 rounded-xl cursor-pointer text-sm border-2 transition duration-150 ${v===o?"font-bold border-brand bg-tint text-brand":"font-medium border-line bg-white text-text"}`}>{o}</button>)}</div>}
+                className={`p-3 rounded-xl cursor-pointer text-sm border-2 transition duration-150 ${v===o?"font-bold border-brand bg-tint text-brand":"font-medium border-line bg-white text-text"}`}>{t(YESNO_KEY[o])}</button>)}</div>}
             {q.type==="radio"&&<div className="flex flex-col gap-2">
               {(q.options||[]).map(o=><button key={o} type="button" onClick={()=>setAnswer(q.id,o)}
                 className={`p-3 rounded-xl cursor-pointer text-sm text-left border-2 transition duration-150 ${v===o?"font-bold border-brand bg-tint text-brand":"font-medium border-line bg-white text-text"}`}>{o}</button>)}</div>}
@@ -161,65 +171,65 @@ export function Apply2(){
                 return <button key={o} type="button" onClick={()=>toggleChecklistAnswer(q.id,o)}
                   className={`flex items-center gap-2.5 p-3 rounded-xl cursor-pointer text-sm text-left border-2 transition duration-150 ${on?"font-bold border-brand bg-tint text-brand":"font-medium border-line bg-white text-text"}`}>
                   <span className={`w-4.5 h-4.5 rounded-md shrink-0 border-2 flex items-center justify-center ${on?"border-brand bg-brand":"border-line"}`}>{on&&<I n="check" s={10} c="#fff" w={3}/>}</span>{o}</button>;})}</div>}
-            {q.type==="short"&&<Input value={v||""} onChange={ev=>setAnswer(q.id,ev.target.value)} placeholder="Your answer"/>}
-            {q.type==="long"&&<Area rows={3} value={v||""} onChange={ev=>setAnswer(q.id,ev.target.value)} placeholder="Your answer"/>}
+            {q.type==="short"&&<Input value={v||""} onChange={ev=>setAnswer(q.id,ev.target.value)} placeholder={t("seeker.apply.yourAnswerPlaceholder")}/>}
+            {q.type==="long"&&<Area rows={3} value={v||""} onChange={ev=>setAnswer(q.id,ev.target.value)} placeholder={t("seeker.apply.yourAnswerPlaceholder")}/>}
           </Field>;})}
-        <Field label="When could you start?" required>
+        <Field label={t("seeker.apply.whenCouldStartLabel")} required>
           <Sel value={d.avail} onChange={e=>set("avail",e.target.value)}>
-            {["Immediately","Within 2 weeks","Within 1 month","More than 1 month"].map(o=><option key={o}>{o}</option>)}</Sel></Field>
-        <Field label="Your expected pay"
-          hint={`This role offers ${pay(job)} ${payUnit(job)}. Leave blank to accept the posted range.`}>
+            {["Immediately","Within 2 weeks","Within 1 month","More than 1 month"].map(o=><option key={o} value={o}>{t(AVAIL_KEY[o])}</option>)}</Sel></Field>
+        <Field label={t("seeker.apply.yourExpectedPayLabel")}
+          hint={t("seeker.apply.expectedPayHint",{pay:pay(job),unit:payUnit(job)})}>
           <Input placeholder={job.unit==="yr"?"62000":"32.00"} type="number" inputMode="decimal" min="0" value={d.expect} onChange={e=>set("expect",e.target.value.replace(/[^0-9.]/g,""))}
             icon="wallet" suffix={payShort(job)}/></Field>
-        <Field label="Anything the employer should know?" hint="Optional. Two or three specific sentences work better than a long letter.">
+        <Field label={t("seeker.apply.anythingElseLabel")} hint={t("seeker.apply.anythingElseHint")}>
           <Area rows={6} value={d.letter} onChange={e=>set("letter",e.target.value)}
-            placeholder={`I am applying for the ${job.t} role because…`}/></Field>
+            placeholder={t("seeker.apply.applyingForRolePlaceholder",{job:job.t})}/></Field>
         {job.exp!=="No experience required"&&job.exp!=="Entry level welcome"&&
-          <Field label={`This role asks for ${job.exp}. Do you meet that?`} required>
+          <Field label={t("seeker.apply.roleAsksForLabel",{exp:t(EXP_KEY[job.exp]||job.exp)})} required>
             <div className="grid grid-cols-2 gap-2.5">
               {["Yes","Close to it"].map(o=><button key={o} onClick={()=>set("meets",o)}
-                className={`p-3 rounded-xl cursor-pointer text-sm border-2 transition duration-150 ${d.meets===o?"font-bold border-brand bg-tint text-brand":"font-medium border-line bg-white text-text"}`}>{o}</button>)}</div></Field>}
+                className={`p-3 rounded-xl cursor-pointer text-sm border-2 transition duration-150 ${d.meets===o?"font-bold border-brand bg-tint text-brand":"font-medium border-line bg-white text-text"}`}>{o==="Yes"?t("common.yes"):t("seeker.apply.closeToItOption")}</button>)}</div></Field>}
       </div></Card></ApplyShell>;
 }
 export function Apply3(){
   const A=use(); const job=A.job(A.applyDraft.job); if(!job) return null;
-  const e=A.emp(job.e); const d=A.applyDraft; const u=A.user;
+  const e=A.emp(job.e); const d=A.applyDraft; const u=A.user; const {t}=useTranslation();
   const selectedCv=(A.cvs||[]).find(c=>c.id===d.cv)||A.defaultCv;
-  const rows=[["Position",job.t],["Employer",e.name],["Location",`${job.city}, ${job.prov} • ${job.mode}`],
-    ["Posted pay",`${pay(job)} ${payUnit(job)}`],["Applicant",u.name],["Contact",`${u.email} • ${u.phone}`],
-    ["CV",selectedCv?selectedCv.name:"None attached"],["Available from",d.avail],
-    ["Expected pay",d.expect?`${d.expect}${payShort(job)}`:"Open to posted range"],
-    ["Note",d.letter.trim()?`${d.letter.trim().split(/\s+/).length} words`:"Not included"],
-    ...(job.questions?.length?[["Screening questions",`${job.questions.length} answered`]]:[])];
-  return <ApplyShell step={3} job={job} onBack={()=>A.go("apply2")} onNext={()=>A.submitApply()} nextLabel="Send application">
+  const rows=[[t("seeker.apply.rowPosition"),job.t],[t("seeker.apply.rowEmployer"),e.name],[t("seeker.apply.rowLocation"),`${job.city}, ${job.prov} • ${job.mode}`],
+    [t("seeker.apply.rowPostedPay"),`${pay(job)} ${payUnit(job)}`],[t("seeker.apply.rowApplicant"),u.name],[t("seeker.apply.rowContact"),`${u.email} • ${u.phone}`],
+    [t("seeker.apply.rowCv"),selectedCv?selectedCv.name:t("seeker.apply.noneAttached")],[t("seeker.apply.rowAvailableFrom"),t(AVAIL_KEY[d.avail]||d.avail)],
+    [t("seeker.apply.rowExpectedPay"),d.expect?`${d.expect}${payShort(job)}`:t("seeker.apply.openToPostedRange")],
+    [t("seeker.apply.rowNote"),d.letter.trim()?t("seeker.apply.wordsCount",{count:d.letter.trim().split(/\s+/).length}):t("seeker.apply.notIncluded")],
+    ...(job.questions?.length?[[t("seeker.apply.rowScreeningQuestions"),t("seeker.apply.answeredCount",{count:job.questions.length})]]:[])];
+  return <ApplyShell step={3} job={job} onBack={()=>A.go("apply2")} onNext={()=>A.submitApply()} nextLabel={t("seeker.apply.sendApplicationBtn")}>
     <Card pad={22}>
-      <H2 sub="Check everything, then send">Review your application</H2>
+      <H2 sub={t("seeker.apply.reviewSub")}>{t("seeker.apply.reviewTitle")}</H2>
       <div className="border border-line rounded-xl overflow-hidden mb-4">
         {rows.map(([k,v],i)=><div key={k} className={`flex justify-between gap-4 py-3 px-4 text-sm ${i<rows.length-1?"border-b border-line-soft":""} ${i%2?"bg-bg":"bg-white"}`}>
           <span className="text-text-2 shrink-0">{k}</span>
           <span className="font-semibold text-text text-right">{v}</span></div>)}</div>
       {d.letter.trim()&&<div className="mb-4">
-        <Lbl>Your note</Lbl>
+        <Lbl>{t("seeker.apply.yourNoteLabel")}</Lbl>
         <div className="bg-bg border border-line rounded-xl p-3.5 text-sm text-text-2 leading-relaxed whitespace-pre-wrap">{d.letter}</div></div>}
-      <Banner tone="brand" icon="sparkle" title="What happens next">
-        Your application goes straight into {e.name}'s pipeline. You will see every stage change in My Status, and get a notification when they review it.</Banner>
+      <Banner tone="brand" icon="sparkle" title={t("seeker.apply.whatHappensNextTitle")}>
+        {t("seeker.apply.whatHappensNextBody",{employer:e.name})}</Banner>
     </Card></ApplyShell>;
 }
 export function ApplyDone(){
-  const A=use(); const job=A.job(A.applyDraft.job);
+  const A=use(); const job=A.job(A.applyDraft.job); const {t}=useTranslation();
   const e=job?A.emp(job.e):null;
   const more=A.jobs.filter(j=>j.status==="live"&&j.cat===job?.cat&&j.id!==job?.id).slice(0,3);
   return <Page narrow>
     <div className="text-center pt-5 pb-2" style={{animation:"rise .4s ease both"}}>
       <div className="w-19 h-19 rounded-full bg-ok-bg border-2 border-ok-ln flex items-center justify-center mx-auto mb-5" style={{animation:"pop .45s cubic-bezier(.22,.68,.35,1) both"}}>
         <I n="check" s={38} c={C.ok} w={2.6}/></div>
-      <h1 className={`${HERO_QUIET} text-2xl mb-2.5`}>Application sent</h1>
+      <h1 className={`${HERO_QUIET} text-2xl mb-2.5`}>{t("seeker.apply.appSentTitle")}</h1>
       <p className="text-base text-text-2 leading-relaxed mx-auto mb-7 max-w-md">
-        {e?<>Your application for <strong className="text-text">{job.t}</strong> is now with {e.name}. You will be notified the moment they review it.</>:"Your application has been submitted."}</p>
+        {e?t("seeker.apply.appSentBodyWithEmployer",{job:job.t,employer:e.name}):t("seeker.apply.appSentBodyGeneric")}</p>
       <div className="flex gap-2.5 justify-center flex-wrap mb-8">
-        <Btn kind="primary" icon="activity" onClick={()=>A.go("status")}>Track in My Status</Btn>
-        <Btn kind="outline" icon="search" onClick={()=>A.go("search")}>Keep searching</Btn></div></div>
-    {more.length>0&&<><H2 sub="Other openings in the same field">Similar jobs</H2>
+        <Btn kind="primary" icon="activity" onClick={()=>A.go("status")}>{t("seeker.apply.trackInStatusBtn")}</Btn>
+        <Btn kind="outline" icon="search" onClick={()=>A.go("search")}>{t("seeker.apply.keepSearchingBtn")}</Btn></div></div>
+    {more.length>0&&<><H2 sub={t("seeker.apply.similarJobsSub")}>{t("seeker.apply.similarJobsTitle")}</H2>
       <div className="flex flex-col gap-3">{more.map((j,i)=><JobCard key={j.id} job={j} delay={i*0.05}/>)}</div></>}
   </Page>;
 }
