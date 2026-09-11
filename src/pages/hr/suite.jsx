@@ -1981,8 +1981,8 @@ export function HrSettings(){
         payroll executor, invoice-paid role) - reading this off route guards is what an admin
         actually wants to see, not a piece of documentation that could drift from the code. */}
     <Card pad={mob?20:26} style={{borderRadius:16,marginBottom:16}}>
-      <Lbl>Approval chains</Lbl>
-      <div className="text-sm text-text-3 mb-3.5">Who signs off on what. Reflects what the server actually enforces - not a settings surface, just a map.</div>
+      <Lbl>{t("hr.settings.approvalChains")}</Lbl>
+      <div className="text-sm text-text-3 mb-3.5">{t("hr.settings.approvalChainsDesc")}</div>
       <div className="flex flex-col gap-2">
         {[
           ["Leave request","The employee's direct manager, or any HR/Owner if no manager is set."],
@@ -2004,8 +2004,8 @@ export function HrSettings(){
     </Card>
 
     <Card pad={mob?20:26} style={{borderRadius:16,marginBottom:16}}>
-      <Lbl>Module visibility</Lbl>
-      <div className="text-sm text-text-3 mb-3.5">Turn off any module to hide it from every employee's sidebar.</div>
+      <Lbl>{t("hr.settings.moduleVisibility")}</Lbl>
+      <div className="text-sm text-text-3 mb-3.5">{t("hr.settings.moduleVisibilityDesc")}</div>
       <div className={`grid gap-0.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
         {Object.entries(d.modules).map(([k,v])=>
           <div key={k} className="flex justify-between items-center py-3 px-3 rounded-lg transition-colors duration-150 hover:bg-bg">
@@ -2016,15 +2016,15 @@ export function HrSettings(){
     </Card>
 
     <Card pad={mob?20:26} style={{borderRadius:16,marginBottom:16}}>
-      <Lbl>Working hours & attendance</Lbl>
+      <Lbl>{t("hr.settings.workingHours")}</Lbl>
       <div className={`grid gap-3 mb-3.5 ${mob?"grid-cols-1":"grid-cols-3"}`}>
-        <Field label="Day starts"><Input type="time" value={d.attendance.workingHoursStart} onChange={e=>setSection("attendance","workingHoursStart",e.target.value)}/></Field>
-        <Field label="Day ends"><Input type="time" value={d.attendance.workingHoursEnd} onChange={e=>setSection("attendance","workingHoursEnd",e.target.value)}/></Field>
-        <Field label="Late threshold (min)"><Input type="number" value={d.attendance.lateThresholdMin} onChange={e=>setSection("attendance","lateThresholdMin",Number(e.target.value)||15)}/></Field>
+        <Field label={t("hr.settings.dayStarts")}><Input type="time" value={d.attendance.workingHoursStart} onChange={e=>setSection("attendance","workingHoursStart",e.target.value)}/></Field>
+        <Field label={t("hr.settings.dayEnds")}><Input type="time" value={d.attendance.workingHoursEnd} onChange={e=>setSection("attendance","workingHoursEnd",e.target.value)}/></Field>
+        <Field label={t("hr.settings.lateThreshold")}><Input type="number" value={d.attendance.lateThresholdMin} onChange={e=>setSection("attendance","lateThresholdMin",Number(e.target.value)||15)}/></Field>
       </div>
       <div className="flex justify-between items-center py-3 border-t border-line-soft">
-        <div><div className="text-sm text-text font-semibold">Allow remote punch-in</div>
-          <div className="text-xs text-text-3 mt-0.5">Employees can punch from the web, not just the office machine.</div></div>
+        <div><div className="text-sm text-text font-semibold">{t("hr.settings.allowRemotePunch")}</div>
+          <div className="text-xs text-text-3 mt-0.5">{t("hr.settings.allowRemotePunchDesc")}</div></div>
         <Switch on={d.attendance.allowRemotePunch} onChange={v=>setSection("attendance","allowRemotePunch",v)}/>
       </div>
     </Card>
@@ -2032,13 +2032,13 @@ export function HrSettings(){
     <_TimeClocks A={A} mob={mob}/>
 
     <Card pad={mob?20:26} style={{borderRadius:16,marginBottom:16}}>
-      <Lbl>Leave policy</Lbl>
+      <Lbl>{t("hr.settings.leavePolicy")}</Lbl>
       <div className={`grid gap-3 mb-3.5 ${mob?"grid-cols-1":"grid-cols-3"}`}>
-        <Field label="Annual vacation (days)"><Input type="number" value={d.leave.annualVacationDays} onChange={e=>setSection("leave","annualVacationDays",Number(e.target.value)||15)}/></Field>
-        <Field label="Sick days"><Input type="number" value={d.leave.sickDays} onChange={e=>setSection("leave","sickDays",Number(e.target.value)||10)}/></Field>
-        <Field label="Personal days"><Input type="number" value={d.leave.personalDays} onChange={e=>setSection("leave","personalDays",Number(e.target.value)||3)}/></Field>
+        <Field label={t("hr.settings.annualVacation")}><Input type="number" value={d.leave.annualVacationDays} onChange={e=>setSection("leave","annualVacationDays",Number(e.target.value)||15)}/></Field>
+        <Field label={t("hr.settings.sickDays")}><Input type="number" value={d.leave.sickDays} onChange={e=>setSection("leave","sickDays",Number(e.target.value)||10)}/></Field>
+        <Field label={t("hr.settings.personalDays")}><Input type="number" value={d.leave.personalDays} onChange={e=>setSection("leave","personalDays",Number(e.target.value)||3)}/></Field>
       </div>
-      <Field label="Minimum advance notice (days)"><Input type="number" value={d.leave.advanceNoticeDays} onChange={e=>setSection("leave","advanceNoticeDays",Number(e.target.value)||14)}/></Field>
+      <Field label={t("hr.settings.advanceNotice")}><Input type="number" value={d.leave.advanceNoticeDays} onChange={e=>setSection("leave","advanceNoticeDays",Number(e.target.value)||14)}/></Field>
 
       <div className="mt-4 pt-4 border-t border-line-soft">
         <div className="text-sm font-semibold text-text mb-1">Year-end carryover</div>
@@ -2131,8 +2131,8 @@ export function HrSettings(){
     </Card>
 
     <div className="flex gap-2.5 justify-end sticky bottom-3.5 bg-bg py-3.5">
-      {dirty&&<Btn kind="ghost" onClick={()=>setD({...settings})}>Discard</Btn>}
-      <Btn kind="primary" icon="check" disabled={!dirty} onClick={save}>{dirty?"Save changes":"All saved"}</Btn>
+      {dirty&&<Btn kind="ghost" onClick={()=>setD({...settings})}>{t("hr.settings.discardBtn")}</Btn>}
+      <Btn kind="primary" icon="check" disabled={!dirty} onClick={save}>{dirty?t("hr.settings.saveChangesBtn"):t("hr.settings.allSavedBtn")}</Btn>
     </div>
   </div>;
 }
