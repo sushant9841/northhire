@@ -993,25 +993,25 @@ export function AgencyPayroll(){
   const pg=usePagination(A.staffingPayruns,20);
   return <div>
     <div className="mb-3.5">
-      <div className="text-lg font-bold text-text">Staffing payroll</div>
-      <div className="text-sm text-text-3 mt-0.5">Biweekly runs. Workers paid Thursday for the previous two weeks' approved hours.</div>
+      <div className="text-lg font-bold text-text">{t("staffing.payroll.title")}</div>
+      <div className="text-sm text-text-3 mt-0.5">{t("staffing.payroll.desc")}</div>
     </div>
 
     <Card pad={mob?18:22} style={{marginBottom:14,borderRadius:14,background:readyToPay>0?C.tint:C.bg,border:`1px solid ${readyToPay>0?C.line2:C.line}`}}>
       <div className="flex gap-3.5 items-center flex-wrap">
         <div className="w-11 h-11 rounded-xl bg-white text-brand flex items-center justify-center shrink-0"><I n="wallet" s={22}/></div>
         <div className="flex-1 min-w-0">
-          <div className="text-base font-semibold text-text">Ready for next run</div>
-          <div className="text-xs text-text-2 mt-0.5">{readyToPay} approved timesheets · ${readyGross.toFixed(2)} gross</div>
+          <div className="text-base font-semibold text-text">{t("staffing.payroll.readyCard")}</div>
+          <div className="text-xs text-text-2 mt-0.5">{readyToPay} {t("staffing.payroll.readyTs")} · ${readyGross.toFixed(2)} {t("staffing.payroll.readyGross")}</div>
         </div>
-        <Btn kind="primary" size="sm" icon="play" disabled={readyToPay===0} onClick={()=>setShowRun(true)}>Run biweekly payroll</Btn>
+        <Btn kind="primary" size="sm" icon="play" disabled={readyToPay===0} onClick={()=>setShowRun(true)}>{t("staffing.payroll.runBtn")}</Btn>
       </div>
     </Card>
 
     <Card pad={0} style={{borderRadius:14,overflow:"hidden"}}>
       <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:720}}>
         <thead><tr className="border-b-2 border-line text-left">
-          {["Period","Run date","Workers","Hours","Gross","Net","Status","Actions"].map(h=>
+          {t("staffing.payroll.tableHeader").map(h=>
             <th key={h} className={TH_CLS}>{h}</th>)}
         </tr></thead>
         <tbody>{pg.pageItems.map(p=><tr key={p.id} className="border-b border-line-soft">
@@ -1023,56 +1023,56 @@ export function AgencyPayroll(){
           <td className={`${TD_CLS} text-sm text-brand font-semibold`}>${p.totalNet.toLocaleString()}</td>
           <td className={TD_CLS}><Tag tone={p.status==="paid"?"ok":p.status==="reversed"?"neutral":"warn"} sm>{p.status}</Tag></td>
           <td className={TD_CLS}>
-            {p.status==="pending"&&<Btn kind="primary" size="xs" onClick={()=>setFinalizing(p)}>Finalize</Btn>}
-            {p.status==="paid"&&<Btn kind="dangerSoft" size="xs" onClick={()=>{setReversing(p);setReverseReason("");}}>Reverse</Btn>}
+            {p.status==="pending"&&<Btn kind="primary" size="xs" onClick={()=>setFinalizing(p)}>{t("staffing.payroll.finalize")}</Btn>}
+            {p.status==="paid"&&<Btn kind="dangerSoft" size="xs" onClick={()=>{setReversing(p);setReverseReason("");}}>{t("staffing.payroll.reverse")}</Btn>}
           </td>
         </tr>)}
-        {A.staffingPayruns.length===0&&<tr><td colSpan={8} className="p-5"><Empty icon="wallet" title="No payroll runs yet" body="Run payroll once approved timesheets are ready."/></td></tr>}
+        {A.staffingPayruns.length===0&&<tr><td colSpan={8} className="p-5"><Empty icon="wallet" title={t("staffing.payroll.emptyTitle")} body={t("staffing.payroll.emptyBody")}/></td></tr>}
         </tbody>
       </table></div>
     </Card>
     <Pagination {...pg}/>
 
-    {showRun&&<Modal onClose={()=>setShowRun(false)} title="Run biweekly payroll">
+    {showRun&&<Modal onClose={()=>setShowRun(false)} title={t("staffing.payroll.runModal")}>
       <div className="flex flex-col gap-3.5">
-        <Banner tone="brand" icon="info" title="This will">
-          Batch all approved timesheets from the last 2 weeks into a payroll run. Timesheets will be locked (marked "paid" in the system). Workers receive direct deposit Thursday.
+        <Banner tone="brand" icon="info" title={t("staffing.payroll.bannerTitle")}>
+          {t("staffing.payroll.bannerBody")}
         </Banner>
         <div className="p-3.5 bg-bg rounded-lg">
-          <div className="text-sm text-text-2">Ready timesheets: <strong>{readyToPay}</strong></div>
-          <div className="text-sm text-text-2 mt-1">Total gross: <strong className="text-brand">${readyGross.toFixed(2)}</strong></div>
+          <div className="text-sm text-text-2">{t("staffing.payroll.readyTimesheets")}<strong>{readyToPay}</strong></div>
+          <div className="text-sm text-text-2 mt-1">{t("staffing.payroll.totalGross")}<strong className="text-brand">${readyGross.toFixed(2)}</strong></div>
         </div>
         <div>
-          <Lbl style={{margin:"0 0 8px"}}>Workers included in this run</Lbl>
+          <Lbl style={{margin:"0 0 8px"}}>{t("staffing.payroll.includedWorkers")}</Lbl>
           <div className="flex flex-col gap-1.5" style={{maxHeight:220,overflowY:"auto"}}>
-            {readyTs.map(t=>{const w=A.worker(t.worker); const person=w?(A.people||[]).find(p=>p.id===w.personId):null;
-              return <div key={t.id} className="flex justify-between items-center py-2 px-3 bg-bg rounded-lg text-sm">
+            {readyTs.map(ts=>{const w=A.worker(ts.worker); const person=w?(A.people||[]).find(p=>p.id===w.personId):null;
+              return <div key={ts.id} className="flex justify-between items-center py-2 px-3 bg-bg rounded-lg text-sm">
                 <span className="text-text font-medium">{person?.name||"—"}</span>
-                <span className="text-text-3 text-xs">{t.weekStart} · {A.timesheetTotal(t)}h · ${A.timesheetGross(t).toFixed(2)}</span>
+                <span className="text-text-3 text-xs">{ts.weekStart} · {A.timesheetTotal(ts)}h · ${A.timesheetGross(ts).toFixed(2)}</span>
               </div>;})}
           </div>
         </div>
         <div className="flex gap-2.5 justify-end">
-          <Btn kind="ghost" onClick={()=>setShowRun(false)}>Cancel</Btn>
+          <Btn kind="ghost" onClick={()=>setShowRun(false)}>{t("staffing.payroll.runCancel")}</Btn>
           <Btn kind="primary" onClick={()=>{
             A.runStaffingPayroll(periodStart,periodEnd);
             setShowRun(false);
-          }}>Run payroll</Btn>
+          }}>{t("staffing.payroll.runConfirm")}</Btn>
         </div>
       </div>
     </Modal>}
-    <ConfirmDialog open={!!finalizing} onClose={()=>setFinalizing(null)} kind="primary" confirmLabel="Finalize run"
-      title={`Finalize the ${finalizing?.periodStart} → ${finalizing?.periodEnd} run?`}
+    <ConfirmDialog open={!!finalizing} onClose={()=>setFinalizing(null)} kind="primary" confirmLabel={t("staffing.payroll.finalizeBtn")}
+      title={finalizing?`${t("staffing.payroll.finalizeModal").replace("{period}",`${finalizing.periodStart} → ${finalizing.periodEnd}`)}`:undefined}
       onConfirm={()=>A.finalizeStaffingPayrun(finalizing.id)}>
-      This marks the run and its {finalizing?.workers} worker payment{finalizing?.workers===1?"":"s"} as paid. It can be reversed later from this page if needed.
+      {t("staffing.payroll.finalizeBody")}
     </ConfirmDialog>
-    <Modal open={!!reversing} onClose={()=>setReversing(null)} title={`Reverse the ${reversing?.periodStart} → ${reversing?.periodEnd} run?`}>
+    <Modal open={!!reversing} onClose={()=>setReversing(null)} title={reversing?`${t("staffing.payroll.reverseModal").replace("{period}",`${reversing.periodStart} → ${reversing.periodEnd}`)}`:undefined}>
       <div className="flex flex-col gap-3.5">
-        <Field label="Reason for reversal" required hint="Recorded in the staffing audit log.">
-          <Area rows={2} value={reverseReason} onChange={e=>setReverseReason(e.target.value)} placeholder="e.g. Finalized against the wrong period"/></Field>
+        <Field label={t("staffing.payroll.reverseLabel")} required hint={t("staffing.payroll.reverseHint")}>
+          <Area rows={2} value={reverseReason} onChange={e=>setReverseReason(e.target.value)} placeholder={t("staffing.payroll.reversePlaceholder")}/></Field>
         <div className="flex gap-2.5 justify-end">
-          <Btn kind="ghost" onClick={()=>setReversing(null)}>Cancel</Btn>
-          <Btn kind="danger" disabled={!reverseReason.trim()} onClick={()=>{A.reverseStaffingPayrun(reversing.id,reverseReason.trim());setReversing(null);}}>Confirm reversal</Btn>
+          <Btn kind="ghost" onClick={()=>setReversing(null)}>{t("staffing.payroll.reverseCancel")}</Btn>
+          <Btn kind="danger" disabled={!reverseReason.trim()} onClick={()=>{A.reverseStaffingPayrun(reversing.id,reverseReason.trim());setReversing(null);}}>{t("staffing.payroll.reverseConfirm")}</Btn>
         </div>
       </div>
     </Modal>
