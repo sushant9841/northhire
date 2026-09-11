@@ -2285,5 +2285,15 @@ export const fr = {
       noMatchesTitle: "Aucune correspondance pour l'instant", noMatchesBody: "Ajoutez quelques compétences à votre profil et les correspondances apparaissent immédiatement.",
       updateProfileBtn: "Mettre à jour le profil", jobOne: "emploi", jobOther: "emplois", matchLabel: "Correspondance",
     },
+    saved: {
+      savedTag: "Sauvegardés", heroTitle: "Vos emplois sauvegardés.",
+      jobsSavedOne: "{count} emploi sauvegardé. Conservé sur tous vos appareils.", jobsSavedOther: "{count} emplois sauvegardés. Conservés sur tous vos appareils.",
+      sortAria: "Trier les emplois sauvegardés", sortRecent: "Plus récent d'abord", sortPay: "Salaire le plus élevé",
+      sortClosing: "Fermeture la plus proche", sortTitle: "Titre A à Z",
+      viewModeAria: "Mode d'affichage", viewGrid: "Grille", viewList: "Liste",
+      savedSearchesBtn: "Recherches sauvegardées ({count})",
+      nothingSavedTitle: "Rien de sauvegardé pour l'instant", nothingSavedBody: "Touchez le signet sur n'importe quelle annonce et elle est conservée ici.",
+      browseJobsBtn: "Parcourir les emplois",
+    },
   },
 };

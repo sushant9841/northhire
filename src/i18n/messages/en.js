@@ -2172,5 +2172,15 @@ export const en = {
       noMatchesTitle: "No matches yet", noMatchesBody: "Add a few skills to your profile and matches appear immediately.",
       updateProfileBtn: "Update profile", jobOne: "job", jobOther: "jobs", matchLabel: "Match",
     },
+    saved: {
+      savedTag: "Saved", heroTitle: "Your bookmarked jobs.",
+      jobsSavedOne: "{count} job saved. Kept on every device.", jobsSavedOther: "{count} jobs saved. Kept on every device.",
+      sortAria: "Sort saved jobs", sortRecent: "Newest first", sortPay: "Highest pay",
+      sortClosing: "Closing soonest", sortTitle: "Title A–Z",
+      viewModeAria: "View mode", viewGrid: "Grid", viewList: "List",
+      savedSearchesBtn: "Saved searches ({count})",
+      nothingSavedTitle: "Nothing saved yet", nothingSavedBody: "Tap the bookmark on any listing and it is kept here.",
+      browseJobsBtn: "Browse jobs",
+    },
   },
 };

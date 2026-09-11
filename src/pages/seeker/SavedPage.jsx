@@ -4,9 +4,11 @@ import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
 import { Btn, Tag, Sel, Empty, usePagination, Pagination, HERO_TIGHT } from "../../design/primitives.jsx";
 import { JobCard } from "../shared/cards.jsx";
+import { useTranslation } from "../../i18n/i18n.jsx";
 
 export function SavedPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
+  const {t}=useTranslation();
   /* Saved jobs had no sort of their own and no way to switch to a denser list - fine at three
      bookmarks, poor at thirty, which is exactly when someone is comparing them. */
   const [sort,setSort]=useState("recent");
@@ -22,34 +24,34 @@ export function SavedPage(){
     <section className={`${heroPad} bg-white border-b border-line-soft`}>
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-end gap-5 flex-wrap">
-          <div><Tag tone="brand" icon="bookmark">Saved</Tag>
+          <div><Tag tone="brand" icon="bookmark">{t("seeker.saved.savedTag")}</Tag>
             <h1 className={`${HERO_TIGHT} mt-5 mb-3 ${mob?"text-3xl":"text-5xl"}`}>
-              Your bookmarked jobs.</h1>
+              {t("seeker.saved.heroTitle")}</h1>
             <p className={`text-text-2 leading-normal max-w-xl ${mob?"text-base":"text-lg"}`}>
-              {list.length} job{list.length===1?"":"s"} saved. Kept on every device.</p></div>
+              {t(list.length===1?"seeker.saved.jobsSavedOne":"seeker.saved.jobsSavedOther",{count:list.length})}</p></div>
           <div className="flex gap-2.5 items-center flex-wrap">
             {list.length>1&&<>
-              <Sel value={sort} onChange={e=>setSort(e.target.value)} style={{width:170}} aria-label="Sort saved jobs">
-                <option value="recent">Newest first</option>
-                <option value="pay">Highest pay</option>
-                <option value="closing">Closing soonest</option>
-                <option value="title">Title A–Z</option>
+              <Sel value={sort} onChange={e=>setSort(e.target.value)} style={{width:170}} aria-label={t("seeker.saved.sortAria")}>
+                <option value="recent">{t("seeker.saved.sortRecent")}</option>
+                <option value="pay">{t("seeker.saved.sortPay")}</option>
+                <option value="closing">{t("seeker.saved.sortClosing")}</option>
+                <option value="title">{t("seeker.saved.sortTitle")}</option>
               </Sel>
-              <div className="flex border border-line rounded-lg overflow-hidden" role="group" aria-label="View mode">
-                {[["grid","Grid"],["list","List"]].map(([k,l])=>
+              <div className="flex border border-line rounded-lg overflow-hidden" role="group" aria-label={t("seeker.saved.viewModeAria")}>
+                {[["grid",t("seeker.saved.viewGrid")],["list",t("seeker.saved.viewList")]].map(([k,l])=>
                   <button key={k} type="button" onClick={()=>setView(k)} aria-pressed={view===k}
                     className={`text-sm font-medium py-2 px-3 cursor-pointer border-0 transition-colors duration-150 ${view===k?"bg-brand text-white":"bg-white text-text-2 hover:bg-bg"}`}>{l}</button>)}
               </div>
             </>}
-            <Btn kind="outline" icon="search" onClick={()=>A.go("savedSearches")}>Saved searches ({A.savedSearches.filter(s=>s.user===A.user?.id).length})</Btn>
+            <Btn kind="outline" icon="search" onClick={()=>A.go("savedSearches")}>{t("seeker.saved.savedSearchesBtn",{count:A.savedSearches.filter(s=>s.user===A.user?.id).length})}</Btn>
           </div></div>
       </div>
     </section>
     <section className={`bg-bg min-h-100 ${mob?"pt-8 px-4 pb-14":"pt-12 px-8 pb-24"}`}>
       <div className="max-w-6xl mx-auto">
-        {list.length===0?<Empty icon="bookmark" title="Nothing saved yet"
-          body="Tap the bookmark on any listing and it is kept here."
-          action={<Btn kind="primary" onClick={()=>A.go("search")}>Browse jobs</Btn>}/>
+        {list.length===0?<Empty icon="bookmark" title={t("seeker.saved.nothingSavedTitle")}
+          body={t("seeker.saved.nothingSavedBody")}
+          action={<Btn kind="primary" onClick={()=>A.go("search")}>{t("seeker.saved.browseJobsBtn")}</Btn>}/>
           :<><div className="grid gap-4" style={{gridTemplateColumns:view==="list"?"1fr":`repeat(auto-fill,minmax(${mob?260:320}px,1fr))`}}>
             {pg.pageItems.map(j=><JobCard key={j.id} job={j}/>)}</div>
             <Pagination {...pg}/></>}
