@@ -3,6 +3,7 @@ import { C, SH } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
 import { Btn, Tag, Input } from "../../design/primitives.jsx";
 import { uid } from "../../helpers/utils.js";
+import { useTranslation } from "../../i18n/i18n.jsx";
 
 /* Canadian cities for LocationInput autocomplete */
 const CA_LOCATIONS=[
@@ -55,11 +56,13 @@ export function TurnstileWidget({siteKey,onToken}){
   return <div ref={ref}/>;
 }
 
-export function LocationInput({value,onChange,placeholder="City or province",required,onLocate}){
+export function LocationInput({value,onChange,placeholder,required,onLocate}){
+  const { t } = useTranslation();
   const [q,setQ]=useState(value||"");
   const [open,setOpen]=useState(false);
   const [idx,setIdx]=useState(-1);
   const listRef=useRef(null);
+  const placeholderText=placeholder||t("formControls.locationPlaceholder");
   useEffect(()=>{setQ(value||"");},[value]);
   const matches=q.length>=2
     ? CA_LOCATIONS.filter(l=>l.toLowerCase().includes(q.toLowerCase())).slice(0,8)
@@ -84,8 +87,8 @@ export function LocationInput({value,onChange,placeholder="City or province",req
     );
   };
   return <div className="relative">
-    <Input icon="pin" value={q} required={required} placeholder={placeholder}
-      suffix={<button type="button" onClick={useGeoloc} title="Use my location"
+    <Input icon="pin" value={q} required={required} placeholder={placeholderText}
+      suffix={<button type="button" onClick={useGeoloc} title={t("formControls.useMyLocation")}
         className="bg-transparent border-0 cursor-pointer p-0 flex text-brand">
         <I n="target" s={16}/></button>}
       onChange={e=>{setQ(e.target.value); setOpen(true); setIdx(-1);}}
@@ -103,28 +106,30 @@ export function LocationInput({value,onChange,placeholder="City or province",req
         className={`flex gap-2.5 items-center w-full py-2.5 px-3.5 border-0 cursor-pointer text-sm text-text text-left transition-colors duration-100 ${idx===i?"bg-bg":"bg-white"}`}>
         <I n="pin" s={15} c={C.text3}/>{m}</button>)}
     </div>}
-    {q.length>=2&&open&&matches.length===0&&<div className="absolute left-0 right-0 bg-white border border-line rounded-xl shadow-md z-200 py-3 px-3.5 text-sm text-text-3" style={{top:"calc(100% + 4px)"}}>No Canadian city found. Try a nearby city or use your location.</div>}
+    {q.length>=2&&open&&matches.length===0&&<div className="absolute left-0 right-0 bg-white border border-line rounded-xl shadow-md z-200 py-3 px-3.5 text-sm text-text-3" style={{top:"calc(100% + 4px)"}}>{t("formControls.noCityFound")}</div>}
   </div>;
 }
 
 /* InlineList — chips with inline add + delete. Used for skills, benefits, tags */
-export function InlineList({value=[],onChange,placeholder="Add and press Enter",icon,max=20}){
+export function InlineList({value=[],onChange,placeholder,icon,max=20}){
+  const { t } = useTranslation();
+  const placeholderText=placeholder||t("formControls.inlineListPlaceholder");
   const [v,setV]=useState("");
-  const add=()=>{const t=v.trim(); if(!t||value.includes(t)||value.length>=max)return;
-    onChange([...value,t]); setV("");};
+  const add=()=>{const item=v.trim(); if(!item||value.includes(item)||value.length>=max)return;
+    onChange([...value,item]); setV("");};
   const del=(x)=>onChange(value.filter(y=>y!==x));
   return <div>
     <div className={`flex flex-wrap gap-1.5 ${value.length?"mb-2.5":""}`}>
       {value.map(x=><span key={x} className="inline-flex items-center gap-1.5 bg-tint text-brand border border-line-2 py-1.5 pr-1.5 pl-3 rounded-full text-xs font-medium transition-transform duration-200 hover:scale-105">{x}
-        <button type="button" onClick={()=>del(x)} aria-label={`Remove ${x}`}
+        <button type="button" onClick={()=>del(x)} aria-label={t("formControls.inlineListRemove",{item:x})}
           className="bg-black/8 border-0 cursor-pointer w-5 h-5 rounded-full flex items-center justify-center text-text-2"><I n="x" s={11} w={2.4}/></button>
       </span>)}
     </div>
     <div className="flex gap-2">
       <div className="flex-1"><Input icon={icon} value={v} onChange={e=>setV(e.target.value)}
         onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault(); add();}}}
-        placeholder={value.length>=max?`Maximum ${max}`:placeholder} disabled={value.length>=max}/></div>
-      <Btn kind="outline" onClick={add} disabled={!v.trim()||value.length>=max} icon="plus">Add</Btn>
+        placeholder={value.length>=max?t("formControls.inlineListMax",{max}):placeholderText} disabled={value.length>=max}/></div>
+      <Btn kind="outline" onClick={add} disabled={!v.trim()||value.length>=max} icon="plus">{t("formControls.inlineListAdd")}</Btn>
     </div>
   </div>;
 }
@@ -139,6 +144,11 @@ const QUESTION_TYPES=[
 ];
 
 export function QuestionBuilder({value=[],onChange}){
+  const { t } = useTranslation();
+  const getTLabelForType=(type)=>{
+    const mapping={yesno:"formControls.qtYesNo",radio:"formControls.qtSingleChoice",checkbox:"formControls.qtMultipleChoice",short:"formControls.qtShortAnswer",long:"formControls.qtLongAnswer"};
+    return t(mapping[type]||"");
+  };
   const add=(type)=>{const q={id:uid("q"),type,prompt:"",required:false,options:type==="radio"||type==="checkbox"?["Option 1","Option 2"]:[]};
     onChange([...value,q]);};
   const upd=(id,patch)=>onChange(value.map(q=>q.id===id?{...q,...patch}:q));
@@ -149,12 +159,12 @@ export function QuestionBuilder({value=[],onChange}){
 
   /* Common presets */
   const presets=[
-    {t:"Do you have a valid Canadian driver's licence?",type:"yesno"},
-    {t:"Are you willing to relocate for this role?",type:"yesno"},
-    {t:"Do you have a valid Canadian work permit?",type:"yesno"},
-    {t:"Do you require visa sponsorship?",type:"yesno"},
-    {t:"Which shifts are you available for?",type:"checkbox",options:["Days","Evenings","Overnights","Weekends"]},
-    {t:"When could you start?",type:"radio",options:["Immediately","Within 2 weeks","Within 1 month","More than 1 month"]},
+    {t:t("formControls.qDriver"),type:"yesno"},
+    {t:t("formControls.qRelocate"),type:"yesno"},
+    {t:t("formControls.qWorkPermit"),type:"yesno"},
+    {t:t("formControls.qVisa"),type:"yesno"},
+    {t:t("formControls.qShifts"),type:"checkbox",options:t("formControls.qShiftsOpts").split(",")},
+    {t:t("formControls.qStart"),type:"radio",options:t("formControls.qStartOpts").split(",")},
   ];
   const addPreset=(p)=>onChange([...value,{id:uid("q"),...p,prompt:p.t,required:true,options:p.options||[]}]);
 
@@ -163,31 +173,31 @@ export function QuestionBuilder({value=[],onChange}){
       {value.map((q,i)=><div key={q.id} className="border border-line rounded-xl p-3.5 bg-white">
         <div className="flex gap-2.5 items-center mb-2.5">
           <div className="w-6 h-6 rounded-full bg-wash text-brand flex items-center justify-center text-xs font-bold shrink-0">{i+1}</div>
-          <Tag tone="neutral" sm>{QUESTION_TYPES.find(t=>t.k===q.type)?.label}</Tag>
+          <Tag tone="neutral" sm>{getTLabelForType(q.type)}</Tag>
           <div className="ml-auto flex gap-1.5 items-center">
             <label className="flex gap-1.5 items-center text-xs text-text-2 cursor-pointer">
-              <input type="checkbox" checked={q.required} onChange={e=>upd(q.id,{required:e.target.checked})}/>Required</label>
+              <input type="checkbox" checked={q.required} onChange={e=>upd(q.id,{required:e.target.checked})}/>{t("formControls.qRequired")}</label>
             <Btn kind="ghost" size="xs" icon="trash" onClick={()=>del(q.id)}/>
           </div>
         </div>
-        <Input value={q.prompt} onChange={e=>upd(q.id,{prompt:e.target.value})} placeholder="Type the question…"/>
+        <Input value={q.prompt} onChange={e=>upd(q.id,{prompt:e.target.value})} placeholder={t("formControls.qPlaceholder")}/>
         {(q.type==="radio"||q.type==="checkbox")&&<div className="mt-2.5 pl-1.5 flex flex-col gap-1.5">
           {q.options.map((o,j)=><div key={j} className="flex gap-2 items-center">
             <span className="text-text-3 text-xs">{q.type==="radio"?"○":"☐"}</span>
-            <Input value={o} onChange={e=>updOpt(q.id,j,e.target.value)} placeholder={`Option ${j+1}`}/>
+            <Input value={o} onChange={e=>updOpt(q.id,j,e.target.value)} placeholder={t("formControls.qOptionPlaceholder",{num:j+1})}/>
             {q.options.length>2&&<Btn kind="ghost" size="xs" icon="x" onClick={()=>delOpt(q.id,j)}/>}
           </div>)}
-          <Btn kind="ghost" size="xs" icon="plus" onClick={()=>addOpt(q.id)}>Add option</Btn>
+          <Btn kind="ghost" size="xs" icon="plus" onClick={()=>addOpt(q.id)}>{t("formControls.qAddOption")}</Btn>
         </div>}
       </div>)}
     </div>}
 
     <div className="flex flex-wrap gap-1.5 mb-3">
-      {QUESTION_TYPES.map(t=><Btn key={t.k} kind="outline" size="sm" icon="plus" onClick={()=>add(t.k)}>{t.label}</Btn>)}
+      {QUESTION_TYPES.map(qt=><Btn key={qt.k} kind="outline" size="sm" icon="plus" onClick={()=>add(qt.k)}>{getTLabelForType(qt.k)}</Btn>)}
     </div>
 
     <details className="mt-3.5">
-      <summary className="cursor-pointer text-sm text-text-2 font-semibold">Common questions (click to add)</summary>
+      <summary className="cursor-pointer text-sm text-text-2 font-semibold">{t("formControls.qCommonTitle")}</summary>
       <div className="mt-2.5 flex flex-col gap-1.5">
         {presets.map(p=><button key={p.t} type="button" onClick={()=>addPreset(p)}
           className="text-left bg-bg border border-line rounded-lg py-2.5 px-3 cursor-pointer text-sm text-text transition duration-150 hover:bg-tint hover:border-line-2">
