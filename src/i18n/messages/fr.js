@@ -283,6 +283,14 @@ export const fr = {
     sectionPeople: "Personnes", sectionTasks: "Tâches", sectionLeave: "Congés", sectionExpenses: "Dépenses", sectionInvoices: "Factures",
     unknownPerson: "Inconnu·e",
   },
+  agencyShell: {
+    sectionOperations: "Opérations", sectionPayrollBilling: "Paie et facturation", sectionInsights: "Aperçus",
+    modDashboard: "Tableau de bord", modJobOrders: "Commandes d'emploi", modBench: "Bassin", modAssignments: "Affectations",
+    modTimesheets: "Feuilles de temps", modPayroll: "Paie", modInvoicing: "Facturation", modPlacements: "Placements",
+    modClients: "Client·e·s", modWorkers: "Travailleurs·euses", modMargins: "Marges", modCompliance: "Conformité",
+    modBranches: "Succursales",
+    licenseLabel: "Licence", agencyConsoleFallback: "Console de placement",
+  },
   alerts: {
     title: "Notifications", unreadCount: "{unread} non lu·e·s", allCaughtUp: "Vous êtes à jour",
     markAllRead: "Tout marquer comme lu", unreadOnly: "Non lu seulement", allTypes: "Tous les types",

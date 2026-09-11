@@ -282,6 +282,14 @@ export const en = {
     sectionPeople: "People", sectionTasks: "Tasks", sectionLeave: "Leave", sectionExpenses: "Expenses", sectionInvoices: "Invoices",
     unknownPerson: "Unknown",
   },
+  agencyShell: {
+    sectionOperations: "Operations", sectionPayrollBilling: "Payroll & Billing", sectionInsights: "Insights",
+    modDashboard: "Dashboard", modJobOrders: "Job orders", modBench: "Bench", modAssignments: "Assignments",
+    modTimesheets: "Timesheets", modPayroll: "Payroll", modInvoicing: "Invoicing", modPlacements: "Placements",
+    modClients: "Clients", modWorkers: "Workers", modMargins: "Margins", modCompliance: "Compliance",
+    modBranches: "Branches",
+    licenseLabel: "License", agencyConsoleFallback: "Agency console",
+  },
   alerts: {
     title: "Notifications", unreadCount: "{unread} unread", allCaughtUp: "You are all caught up",
     markAllRead: "Mark all read", unreadOnly: "Unread only", allTypes: "All types",
