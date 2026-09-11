@@ -97,7 +97,7 @@ export function AgencyShell({children}){
       <I n="chevL" s={16} w={2}/>{!mob&&t("nav.back")}</button>}
     <div className={`flex-1 min-w-0 ${mob?"text-center":"text-left"}`}>
       <div className="text-base font-bold text-text tracking-tight">
-        {currentModule?t(AGENCY_MODULE_LABEL_KEY[currentModule.k]||currentModule.label):(A.pageTitle||ROUTES[A.pg]?.title||t("agencyShell.agencyConsoleFallback"))}</div>
+        {currentModule?t(AGENCY_MODULE_LABEL_KEY[currentModule.k]||currentModule.label):(A.pageTitle||(ROUTES[A.pg]?.titleKey&&t(ROUTES[A.pg].titleKey))||t("agencyShell.agencyConsoleFallback"))}</div>
       {!mob&&<div className="text-xs text-text-3 mt-0.5">{A.STAFFING_AGENCY.name} · {staff.title}</div>}
     </div>
     <button onClick={()=>A.go("agencyDashboard")} className="flex gap-2.5 items-center bg-bg border border-line rounded-full py-1.5 pr-3 pl-1.5 cursor-pointer">

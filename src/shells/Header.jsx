@@ -53,7 +53,7 @@ export function Header(){
   <div className={`h-full max-w-site mx-auto flex items-center gap-3.5 ${mob?"px-3.5":"px-6"}`}>
     {showBackMob ? <>
       <button onClick={A.back} aria-label={t("nav.back")} className="bg-bg border-0 w-10 h-10 rounded-xl cursor-pointer flex items-center justify-center text-text shrink-0 transition duration-150 active:scale-95"><I n="chevL" s={19} w={2.2}/></button>
-      <div className="text-lg font-bold tracking-tight text-text overflow-hidden text-ellipsis whitespace-nowrap flex-1 min-w-0 text-center">{A.pageTitle||r.title}</div>
+      <div className="text-lg font-bold tracking-tight text-text overflow-hidden text-ellipsis whitespace-nowrap flex-1 min-w-0 text-center">{A.pageTitle||t(r.titleKey)}</div>
     </> : <>
       {showBackDt&&<button onClick={A.back} aria-label={t("nav.back")} className="bg-transparent border border-line h-9 pr-3 pl-2 rounded-lg cursor-pointer flex items-center gap-1 text-text-2 shrink-0 text-sm font-medium transition duration-150 hover:bg-bg hover:text-text">
         <I n="chevL" s={17} w={2}/>{t("nav.back")}</button>}

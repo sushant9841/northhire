@@ -257,7 +257,7 @@ export function DashShell({modules,children,brandKind}){
     {!mob&&A.history?.length>0&&<button onClick={A.back} aria-label={t("nav.back")} className="bg-transparent border border-line h-9 pr-3 pl-2 rounded-lg cursor-pointer flex items-center gap-1 text-text-2 text-sm font-medium transition duration-150 hover:bg-bg hover:text-text">
       <I n="chevL" s={16} w={2}/>{t("nav.back")}</button>}
     <div className={`flex-1 min-w-0 ${mob?"text-center":"text-left"}`}>
-      <div className="text-base font-bold text-text tracking-tight">{currentModule?t(currentModule.label):(A.pageTitle||ROUTES[A.pg]?.title||t("dashShell.dashboardFallback"))}</div>
+      <div className="text-base font-bold text-text tracking-tight">{currentModule?t(currentModule.label):(A.pageTitle||(ROUTES[A.pg]?.titleKey&&t(ROUTES[A.pg].titleKey))||t("dashShell.dashboardFallback"))}</div>
     </div>
     <button onClick={()=>{const target=A.user?.role==="admin"?"admLog":A.user?.role==="employer"?"messages":"alerts"; A.go(target);}} aria-label={t("nav.notificationsAria")} className="relative bg-bg border-0 w-9 h-9 rounded-lg cursor-pointer flex items-center justify-center text-text">
       <I n="bell" s={17}/>

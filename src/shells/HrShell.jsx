@@ -148,7 +148,7 @@ export function HrShell({children}){
     {!mob&&<div className="min-w-0 shrink-0">
       <div className="text-base font-bold text-text tracking-tight">
         {(()=>{const m=HR_MODULES.find(m=>m.k===A.pg);
-          return m?t(HR_MODULE_LABEL_KEY[m.k]||m.label):(A.pageTitle||ROUTES[A.pg]?.title||t("hrShell.hrSuiteTag"));})()}</div>
+          return m?t(HR_MODULE_LABEL_KEY[m.k]||m.label):(A.pageTitle||(ROUTES[A.pg]?.titleKey&&t(ROUTES[A.pg].titleKey))||t("hrShell.hrSuiteTag"));})()}</div>
       <div className="text-xs text-text-3 mt-0.5">{company?.name} • {emp?.title}</div>
     </div>}
     <HrGlobalSearch/>
