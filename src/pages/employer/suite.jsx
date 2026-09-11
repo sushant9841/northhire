@@ -461,7 +461,7 @@ export function EmpPost(){
    buttons (kept as the accessible, no-pointer-required path - drag is an addition, not a
    replacement). A PointerSensor activation distance stops an ordinary click-to-open-candidate
    from being swallowed as an accidental drag. ─── */
-function _PipelineCard({a,u,s,idx,selected,tog,A,notice,stages}){
+function _PipelineCard({a,u,s,idx,selected,tog,A,notice,stages,t}){
   const {attributes,listeners,setNodeRef,transform,isDragging}=useDraggable({id:a.id});
   const style=transform?{transform:`translate3d(${transform.x}px,${transform.y}px,0)`,zIndex:50,opacity:0.9}:undefined;
   return <div ref={setNodeRef} style={{...style,border:`${selected?2:1}px solid ${selected?C.brand:C.line}`,padding:selected?12:13}}
@@ -479,21 +479,21 @@ function _PipelineCard({a,u,s,idx,selected,tog,A,notice,stages}){
       <SmartPortrait seed={u.seed} size={32}/>
       <div className="flex-1 min-w-0">
         <div className="text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap">{u.name}</div>
-        <div className="text-xs text-text-3 mt-px">{u.years} {u.years===1?"yr":"yrs"} • {u.city}</div></div>
+        <div className="text-xs text-text-3 mt-px">{u.years} {u.years===1?t("employer.pipeline.yearSingular"):t("employer.pipeline.yearPlural")} • {u.city}</div></div>
       <Ring v={s} size={32}/></div>
     {/* Ontario Bill 149: an interviewed applicant has to be told the outcome within 45 days. */}
     {notice&&!notice.decided&&(notice.overdue||notice.daysLeft<=14)&&
       <div className={`flex gap-1.5 items-center rounded-lg py-1.5 px-2 mb-2 text-xs font-semibold ${notice.overdue?"bg-red-bg text-red":"bg-warn-bg text-warn"}`}>
         <I n="clock" s={12}/>
         <span>{notice.overdue
-          ? `Decision notice ${Math.abs(notice.daysLeft)}d overdue`
-          : `Decision notice due in ${notice.daysLeft}d`}</span></div>}
+          ? t("employer.pipeline.decisionNoticeOverdue",{n:Math.abs(notice.daysLeft)})
+          : t("employer.pipeline.decisionNoticeDue",{n:notice.daysLeft})}</span></div>}
     <div data-nc className="flex gap-1.5" onClick={e=>e.stopPropagation()}>
-      {idx>0&&<Btn kind="ghost" size="xs" icon="arrowL" title="Move back" onClick={()=>A.moveApp(a.id,stages[idx-1])} style={{flex:1}}/>}
-      {idx<stages.length-1&&<Btn kind="outline" size="xs" iconR="arrowR" onClick={()=>A.moveApp(a.id,stages[idx+1])} style={{flex:2}}>Advance</Btn>}</div>
+      {idx>0&&<Btn kind="ghost" size="xs" icon="arrowL" title={t("employer.pipeline.moveBack")} onClick={()=>A.moveApp(a.id,stages[idx-1])} style={{flex:1}}/>}
+      {idx<stages.length-1&&<Btn kind="outline" size="xs" iconR="arrowR" onClick={()=>A.moveApp(a.id,stages[idx+1])} style={{flex:2}}>{t("employer.pipeline.advance")}</Btn>}</div>
   </div>;
 }
-function _PipelineColumn({stage,items,job,sel,tog,selectStage,A,mob,stages}){
+function _PipelineColumn({stage,items,job,sel,tog,selectStage,A,mob,stages,t}){
   const {setNodeRef,isOver}=useDroppable({id:stage});
   const allSelected=items.length>0&&items.every(a=>sel.has(a.id));
   return <div ref={setNodeRef} className={`${mob?"w-59":"w-63"} flex flex-col gap-2.5 rounded-2xl transition-colors duration-150`}
@@ -505,19 +505,19 @@ function _PipelineColumn({stage,items,job,sel,tog,selectStage,A,mob,stages}){
             board ever explained that selecting candidates is a paid feature - and the upgrade copy
             written for it was unreachable. It now shows locked and opens that prompt. */}
         {items.length>0&&(A.can("bulkActions")
-          ? <button onClick={()=>selectStage(stage)} className="bg-transparent border-0 text-xs font-semibold cursor-pointer" style={{color:allSelected?C.brand:C.text3}}>{allSelected?"clear":"all"}</button>
+          ? <button onClick={()=>selectStage(stage)} className="bg-transparent border-0 text-xs font-semibold cursor-pointer" style={{color:allSelected?C.brand:C.text3}}>{allSelected?t("employer.pipeline.selectClear"):t("employer.pipeline.selectAll")}</button>
           : <button onClick={()=>A.requestUpgrade("bulkActions","Bulk actions on candidates","users")}
-              title="Selecting several candidates at once is available on Growth and Enterprise"
+              title={t("employer.pipeline.selectUpgradeTitle")}
               className="bg-transparent border-0 text-xs font-semibold cursor-pointer flex items-center gap-1" style={{color:C.text3}}>
-              <I n="lock" s={11}/>all</button>)}
+              <I n="lock" s={11}/>{t("employer.pipeline.selectAll")}</button>)}
         <span className="bg-wash text-brand border border-line-2 text-xs font-bold rounded-full flex items-center justify-center px-1.5" style={{minWidth:22,height:22}}>{items.length}</span></div></div>
     {items.map(a=>{const u=A.person(a.user); const s=A.scoreCandidate(u,job); const idx=stages.indexOf(stage);
       const notice=applicationDecisionNotice(a,postingRules({prov:job?.prov,employerSize:A.company?.size}));
-      return <_PipelineCard key={a.id} a={a} u={u} s={s} idx={idx} selected={sel.has(a.id)} tog={tog} A={A} notice={notice} stages={stages}/>;})}
-    {items.length===0&&<div className="rounded-2xl text-center text-xs text-text-3 py-6 px-3" style={{border:`1.5px dashed ${C.line}`}}>Empty</div>}
+      return <_PipelineCard key={a.id} a={a} u={u} s={s} idx={idx} selected={sel.has(a.id)} tog={tog} A={A} notice={notice} stages={stages} t={t}/>;})}
+    {items.length===0&&<div className="rounded-2xl text-center text-xs text-text-3 py-6 px-3" style={{border:`1.5px dashed ${C.line}`}}>{t("employer.pipeline.emptyColumn")}</div>}
   </div>;
 }
-function _PipelineBoard({apps,job,sel,tog,selectStage,A,mob,stages}){
+function _PipelineBoard({apps,job,sel,tog,selectStage,A,mob,stages,t}){
   const sensors=useSensors(useSensor(PointerSensor,{activationConstraint:{distance:8}}));
   const onDragEnd=({active,over})=>{
     if(!over)return;
@@ -528,7 +528,7 @@ function _PipelineBoard({apps,job,sel,tog,selectStage,A,mob,stages}){
     <DndContext sensors={sensors} onDragEnd={onDragEnd}>
       <div className="flex gap-3 items-start" style={{minWidth:"max-content"}}>
         {stages.map(stage=><_PipelineColumn key={stage} stage={stage} items={apps.filter(a=>a.stage===stage)}
-          job={job} sel={sel} tog={tog} selectStage={selectStage} A={A} mob={mob} stages={stages}/>)}
+          job={job} sel={sel} tog={tog} selectStage={selectStage} A={A} mob={mob} stages={stages} t={t}/>)}
       </div>
     </DndContext>
   </div>;
@@ -538,7 +538,7 @@ function _PipelineBoard({apps,job,sel,tog,selectStage,A,mob,stages}){
    certifications, a coordinator role weights experience far more — and until now one fixed
    formula was applied to every posting. Weights are normalised rather than required to total
    100, so moving one slider doesn't force rebalancing the other three by hand. */
-function _JobScoring({A,job,mob}){
+function _JobScoring({A,job,mob,t}){
   const [open,setOpen]=useState(false);
   const [w,setW]=useState(()=>job?.scoreWeights||A.DEFAULT_SCORE_WEIGHTS);
   const [busy,setBusy]=useState(false); const [err,setErr]=useState("");
@@ -546,17 +546,17 @@ function _JobScoring({A,job,mob}){
   if(!job)return null;
 
   const total=Object.values(w).reduce((s,v)=>s+(Number(v)||0),0)||1;
-  const rows=[["skills","Skills match"],["experience","Experience"],["location","Location fit"],["category","Category fit"]];
+  const rows=[["skills",t("employer.pipeline.skillsMatch")],["experience",t("employer.pipeline.experience")],["location",t("employer.pipeline.locationFit")],["category",t("employer.pipeline.categoryFit")]];
   const dirty=JSON.stringify(w)!==JSON.stringify(job.scoreWeights||A.DEFAULT_SCORE_WEIGHTS);
 
   return <Card style={{padding:mob?20:24,borderRadius:16,marginBottom:16}}>
     <div className="flex justify-between items-center gap-3 flex-wrap">
       <div>
-        <Lbl style={{marginBottom:2}}>How this job is scored</Lbl>
+        <Lbl style={{marginBottom:2}}>{t("employer.pipeline.howJobIsScored")}</Lbl>
         <div className="text-xs text-text-2">
-          {job.scoreWeights?"Custom weighting for this posting.":"Using the platform default weighting."}</div>
+          {job.scoreWeights?t("employer.pipeline.customWeighting"):t("employer.pipeline.defaultWeighting")}</div>
       </div>
-      <Btn kind="ghost" size="sm" onClick={()=>setOpen(o=>!o)}>{open?"Hide":"Adjust"}</Btn>
+      <Btn kind="ghost" size="sm" onClick={()=>setOpen(o=>!o)}>{open?t("employer.pipeline.hide"):t("employer.pipeline.adjust")}</Btn>
     </div>
     {open&&<div className="mt-4 pt-4 border-t border-line-soft">
       {err&&<Banner tone="danger" icon="alert" style={{marginBottom:12}}>{err}</Banner>}
@@ -565,30 +565,29 @@ function _JobScoring({A,job,mob}){
           <div key={k} className="flex items-center gap-3 flex-wrap">
             <span className="text-sm text-text w-32 shrink-0">{label}</span>
             <input type="range" min="0" max="100" value={w[k]} className="flex-1 min-w-40 cursor-pointer"
-              aria-label={`${label} weight`}
+              aria-label={t("employer.pipeline.weightLabel",{label})}
               onChange={e=>setW(p=>({...p,[k]:Number(e.target.value)}))}/>
             <span className="text-sm font-semibold text-text tabular-nums w-14 text-right">
               {Math.round((Number(w[k])||0)/total*100)}%</span>
           </div>)}
       </div>
       <div className="text-xs text-text-3 mt-3 leading-relaxed">
-        Shown as a share of the total, so these always add to 100% however you set them. Changing
-        this re-scores existing applicants too — the score is computed, not stored.
+        {t("employer.pipeline.scoringExplanation")}
       </div>
       <div className="flex gap-2.5 justify-end mt-4 flex-wrap">
         {job.scoreWeights&&<Btn kind="ghost" size="sm" onClick={async()=>{
           setBusy(true);const r=await A.saveScoreWeights(job.id,null);setBusy(false);if(!r.ok)setErr(r.msg);
-        }} disabled={busy}>Reset to default</Btn>}
+        }} disabled={busy}>{t("employer.pipeline.resetToDefault")}</Btn>}
         <Btn kind="primary" size="sm" disabled={busy||!dirty} onClick={async()=>{
           setErr("");setBusy(true);const r=await A.saveScoreWeights(job.id,w);setBusy(false);if(!r.ok)setErr(r.msg);
-        }}>{busy?"Saving…":"Save scoring"}</Btn>
+        }}>{busy?t("employer.pipeline.savingScore"):t("employer.pipeline.saveScoring")}</Btn>
       </div>
     </div>}
   </Card>;
 }
 
 export function EmpPipeline(){
-  const A=use(); const mob=useMedia("(max-width: 900px)");
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const myJobs=A.jobs.filter(j=>j.e===A.company.id);
   const jobId=A.pipelineJob||myJobs[0]?.id;
   const job=A.job(jobId);
@@ -609,8 +608,8 @@ export function EmpPipeline(){
     return ()=>{document.removeEventListener("mousedown",onDocClick); document.removeEventListener("keydown",onKey);};
   },[bulkMenu]);
 
-  if(!job) return <Page><Empty icon="users" title="No listings to review" body="Post a job and applicants land here automatically."
-    action={<Btn kind="primary" icon="plus" onClick={()=>A.go("empPost")}>Post a job</Btn>}/></Page>;
+  if(!job) return <Page><Empty icon="users" title={t("employer.pipeline.noListingsReview")} body={t("employer.pipeline.noListingsReviewBody")}
+    action={<Btn kind="primary" icon="plus" onClick={()=>A.go("empPost")}>{t("employer.jobs.postAJob")}</Btn>}/></Page>;
 
   /* Full-text across name/title/city/skills, multi-word AND matching in any order - same
      matchesQuery() helper the rest of the app's search boxes already use, replacing the old
@@ -648,52 +647,52 @@ export function EmpPipeline(){
     <div className={`bg-white border-b border-line ${mob?"py-3.5 px-4":"py-4 px-7"}`}>
       <div className="max-w-site mx-auto flex gap-3.5 items-end flex-wrap">
         <div className="grow shrink basis-60 min-w-0">
-          <Lbl style={{marginBottom:6}}>Pipeline for</Lbl>
+          <Lbl style={{marginBottom:6}}>{t("employer.pipeline.pipelineFor")}</Lbl>
           <Sel value={jobId} onChange={e=>{A.setPipelineJob(e.target.value);clear();setF({minScore:0,prov:"",q:""});}} style={{fontWeight:640}}>
             {myJobs.map(j=><option key={j.id} value={j.id}>{j.t} ({A.applications.filter(a=>a.job===j.id).length})</option>)}</Sel></div>
-        <Btn kind="outline" size="sm" icon="download" onClick={()=>A.exportApplicants(jobId)}>Export CSV</Btn></div>
+        <Btn kind="outline" size="sm" icon="download" onClick={()=>A.exportApplicants(jobId)}>{t("employer.pipeline.exportCsv")}</Btn></div>
       <div className="max-w-site mx-auto mt-3.5">
-        <Tabs items={[{k:"pipeline",label:`Pipeline (${apps.length})`},{k:"filters",label:"Filters"},
-          {k:"talent",label:`Talent pool (${reverseCandidates.length})`}]} value={tab} onChange={setTab}/></div>
+        <Tabs items={[{k:"pipeline",label:t("employer.pipeline.pipelineTab",{n:apps.length})},{k:"filters",label:t("employer.pipeline.filtersTab")},
+          {k:"talent",label:t("employer.pipeline.talentPoolTab",{n:reverseCandidates.length})}]} value={tab} onChange={setTab}/></div>
     </div>
 
     {tab==="filters"&&<div className={`${mob?"p-4":"p-6"} max-w-site mx-auto w-full`}>
-      <_JobScoring A={A} job={job} mob={mob}/>
+      <_JobScoring A={A} job={job} mob={mob} t={t}/>
       <Card style={{padding:mob?20:24,borderRadius:16}}>
-        <Lbl>Filter this pipeline</Lbl>
+        <Lbl>{t("employer.pipeline.filterThisPipeline")}</Lbl>
         <div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-3"}`}>
-          <Field label="Minimum match score">
+          <Field label={t("employer.pipeline.minimumMatchScore")}>
             <Sel value={f.minScore} onChange={e=>setF({...f,minScore:Number(e.target.value)})}>
-              {[0,50,60,70,75,80,85].map(v=><option key={v} value={v}>{v?`${v}+`:"Any"}</option>)}</Sel></Field>
-          <Field label="Province"><Sel value={f.prov} onChange={e=>setF({...f,prov:e.target.value})}>
-            <option value="">All provinces</option>{PROVS.map(p=><option key={p}>{p}</option>)}</Sel></Field>
-          <Field label="Search" hint={`Supports AND, OR, NOT, "quoted phrases" and brackets — e.g. (welding OR fabrication) NOT apprentice`}>
-            <Input icon="search" value={f.q} onChange={e=>setF({...f,q:e.target.value})} placeholder='e.g. "red seal" AND calgary'/></Field>
+              {[0,50,60,70,75,80,85].map(v=><option key={v} value={v}>{v?`${v}+`:t("employer.pipeline.any")}</option>)}</Sel></Field>
+          <Field label={t("employer.pipeline.province")}><Sel value={f.prov} onChange={e=>setF({...f,prov:e.target.value})}>
+            <option value="">{t("employer.pipeline.allProvinces")}</option>{PROVS.map(p=><option key={p}>{p}</option>)}</Sel></Field>
+          <Field label={t("employer.pipeline.search")} hint={t("employer.pipeline.searchHint")}>
+            <Input icon="search" value={f.q} onChange={e=>setF({...f,q:e.target.value})} placeholder={t("employer.pipeline.searchPlaceholder")}/></Field>
         </div>
         <div className="mt-4 flex gap-2.5 items-center flex-wrap">
-          <Btn kind="primary" onClick={()=>setTab("pipeline")}>Show {apps.length} candidate{apps.length===1?"":"s"}</Btn>
-          <Btn kind="ghost" onClick={()=>setF({minScore:0,prov:"",q:""})}>Reset</Btn></div>
+          <Btn kind="primary" onClick={()=>setTab("pipeline")}>{t(apps.length===1?"employer.pipeline.showCandidates":"employer.pipeline.showCandidatesPlural",{n:apps.length})}</Btn>
+          <Btn kind="ghost" onClick={()=>setF({minScore:0,prov:"",q:""})}>{t("employer.pipeline.reset")}</Btn></div>
       </Card>
     </div>}
 
     {tab==="talent"&&<div className={`${mob?"p-4":"p-6"} max-w-site mx-auto w-full`}>
       {!A.can("talentPool")?<Card style={{padding:mob?26:36,borderRadius:20,textAlign:"center",background:"linear-gradient(135deg,#F5F9FF 0%,#EAF2FF 100%)",border:`1px solid ${C.line2}`}}>
         <div className="w-16 h-16 rounded-2xl bg-brand text-white flex items-center justify-center mx-auto mb-5"><I n="target" s={30}/></div>
-        <div className={`font-bold text-text tracking-tight mb-2.5 ${mob?"text-xl":"text-2xl"}`}>Talent pool is a Growth feature</div>
-        <p className="text-sm text-text-2 leading-relaxed mx-auto mb-6 max-w-110"><br/>See top-matched candidates across NorthHire who haven't applied yet, and invite them directly. Available on the Growth and Enterprise plans.</p>
-        <Btn kind="primary" onClick={()=>A.go("pricing")}>Upgrade to Growth</Btn>
+        <div className={`font-bold text-text tracking-tight mb-2.5 ${mob?"text-xl":"text-2xl"}`}>{t("employer.pipeline.talentPoolTitle")}</div>
+        <p className="text-sm text-text-2 leading-relaxed mx-auto mb-6 max-w-110"><br/>{t("employer.pipeline.talentPoolBody")}</p>
+        <Btn kind="primary" onClick={()=>A.go("pricing")}>{t("employer.pipeline.upgradeToGrowth")}</Btn>
       </Card>:<><Card style={{padding:mob?20:26,borderRadius:16,marginBottom:16}}>
         <div className="flex gap-3 items-center mb-3 flex-wrap">
           <div className="w-11 h-11 rounded-xl bg-wash text-brand flex items-center justify-center shrink-0"><I n="target" s={22}/></div>
-          <div className="flex-1 min-w-45"><div className="text-base font-semibold text-text">Talent pool matches</div>
-            <div className="text-sm text-text-2 mt-0.5">Candidates on NorthHire who match this posting but haven't applied yet.</div></div>
-          <div style={{width:220}}><Input icon="search" value={talentQ} onChange={e=>setTalentQ(e.target.value)} placeholder="Name, title, city or skill"/></div>
+          <div className="flex-1 min-w-45"><div className="text-base font-semibold text-text">{t("employer.pipeline.talentPoolMatches")}</div>
+            <div className="text-sm text-text-2 mt-0.5">{t("employer.pipeline.talentPoolDesc")}</div></div>
+          <div style={{width:220}}><Input icon="search" value={talentQ} onChange={e=>setTalentQ(e.target.value)} placeholder={t("employer.pipeline.talentPoolSearch")}/></div>
           <Sel value={talentMinScore} onChange={e=>setTalentMinScore(Number(e.target.value))} style={{width:170}}>
-            {[50,60,65,70,80,90].map(v=><option key={v} value={v}>{v}+ match score</option>)}</Sel>
+            {[50,60,65,70,80,90].map(v=><option key={v} value={v}>{t("employer.pipeline.talentScoreOption",{n:v})}</option>)}</Sel>
         </div>
       </Card>
       {reverseCandidates.length===0
-        ? <Empty icon="target" title="No talent pool matches yet" body="Try lowering the match-score threshold, or check back as more candidates sign up in this trade."/>
+        ? <Empty icon="target" title={t("employer.pipeline.talentNoMatches")} body={t("employer.pipeline.talentNoMatchesBody")}/>
         : <><div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
             {talentPg.pageItems.map(({p,score})=>{const invited=A.invitedCandidates.has(`${jobId}:${p.id}`);
               const cn=A.candidateNotes[p.id];
@@ -702,20 +701,20 @@ export function EmpPipeline(){
                 <SmartPortrait seed={p.seed} size={52}/>
                 <div className="flex-1 min-w-0">
                   <div className="text-base font-semibold text-text">{p.name}</div>
-                  <div className="text-sm text-text-2 mt-1">{p.title} • {p.years}y • {p.city}</div></div>
+                  <div className="text-sm text-text-2 mt-1">{p.title} • {p.years}{p.years===1?t("employer.pipeline.yearSingular"):t("employer.pipeline.yearPlural")} • {p.city}</div></div>
                 <Ring v={score} size={44}/></div>
               <div className="flex flex-wrap gap-1.5 mt-3.5">
                 {(p.skills||[]).slice(0,4).map(s=><Tag key={s} sm>{s}</Tag>)}
                 {(p.skills||[]).length>4&&<Tag sm>+{p.skills.length-4}</Tag>}</div>
               {cn?.tags?.length>0&&<div className="flex flex-wrap gap-1.5 mt-2">
-                {cn.tags.map(t=><Tag key={t} tone="violet" sm>{t}</Tag>)}</div>}
+                {cn.tags.map(tag=><Tag key={tag} tone="violet" sm>{tag}</Tag>)}</div>}
               {cn?.note&&<div className="text-xs text-text-2 mt-2.5 p-2.5 bg-bg rounded-lg italic leading-snug">{cn.note}</div>}
               <div className="flex gap-2 mt-3.5">
                 {invited
-                  ?<Btn kind="soft" size="sm" full icon="check" disabled>Invited</Btn>
-                  :<Btn kind="outline" size="sm" full icon="send" onClick={()=>A.inviteToApply(p.id,jobId)}>Invite to apply</Btn>}
-                <Btn kind="ghost" size="sm" icon="edit" onClick={()=>{setNoting(p);setNoteText(cn?.note||"");setNoteTags((cn?.tags||[]).join(", "));}}>{cn?"Edit note":"Note"}</Btn>
-                <Btn kind="ghost" size="sm" icon="clock" onClick={()=>viewOutreach(p)}>History</Btn>
+                  ?<Btn kind="soft" size="sm" full icon="check" disabled>{t("employer.pipeline.invited")}</Btn>
+                  :<Btn kind="outline" size="sm" full icon="send" onClick={()=>A.inviteToApply(p.id,jobId)}>{t("employer.pipeline.inviteToApply")}</Btn>}
+                <Btn kind="ghost" size="sm" icon="edit" onClick={()=>{setNoting(p);setNoteText(cn?.note||"");setNoteTags((cn?.tags||[]).join(", "));}}>{ cn?t("employer.pipeline.editNote"):t("employer.pipeline.addNote")}</Btn>
+                <Btn kind="ghost" size="sm" icon="clock" onClick={()=>viewOutreach(p)}>{t("employer.pipeline.viewHistory")}</Btn>
               </div>
             </Card>;})}</div>
           <Pagination {...talentPg}/></>}
@@ -724,7 +723,7 @@ export function EmpPipeline(){
 
     {tab==="pipeline"&&<>
       {sel.size>0&&A.can("bulkActions")&&<div className={`bg-brand text-white flex gap-3 items-center flex-wrap ${mob?"py-3 px-4":"py-3 px-7"}`}>
-        <span className="text-sm font-semibold">{sel.size} selected</span>
+        <span className="text-sm font-semibold">{t("employer.pipeline.selectedCount",{n:sel.size})}</span>
         <div className="flex-1"/>
         <div className="relative" ref={bulkMenuRef}>
           <Btn kind="onDark" size="sm" iconR="chevD" aria-expanded={bulkMenu} onClick={()=>setBulkMenu(!bulkMenu)}>Move to…</Btn>
@@ -733,7 +732,7 @@ export function EmpPipeline(){
         </div>
         <Btn kind="onDark" size="sm" icon="x" onClick={()=>setConfirmRejectAll(true)}>Reject all</Btn>
         <Btn kind="onDark" size="sm" onClick={clear}>Clear</Btn></div>}
-      <_PipelineBoard apps={apps} job={job} sel={sel} tog={tog} selectStage={selectStage} A={A} mob={mob} stages={pipelineStages}/>
+      <_PipelineBoard apps={apps} job={job} sel={sel} tog={tog} selectStage={selectStage} A={A} mob={mob} stages={pipelineStages} t={t}/>
     </>}
     <ConfirmDialog open={confirmRejectAll} onClose={()=>setConfirmRejectAll(false)} confirmLabel="Reject all"
       title={`Reject ${sel.size} candidate${sel.size===1?"":"s"}?`} onConfirm={()=>runBulk("reject")}>
