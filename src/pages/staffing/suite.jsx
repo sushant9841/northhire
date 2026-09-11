@@ -1606,29 +1606,29 @@ export function AgencyMargins(){
 
   return <div>
     <div className="mb-3.5">
-      <div className="text-lg font-bold text-text">Margins & run rate</div>
-      <div className="text-sm text-text-3 mt-0.5">Real-time margin per active assignment (weekly figures use each assignment's actual recent average hours, falling back to 40 when there's no timesheet history yet).</div>
+      <div className="text-lg font-bold text-text">{t("staffing.margins.subtitle")}</div>
+      <div className="text-sm text-text-3 mt-0.5">{t("staffing.margins.desc")}</div>
     </div>
 
     <div className={`grid gap-3 mb-4 ${mob?"grid-cols-2":"grid-cols-4"}`}>
-      {[["Weekly bill",`$${(totalWeeklyBill/1000).toFixed(1)}k`,C.brand],
-        ["Weekly wage",`$${(totalWeeklyPay/1000).toFixed(1)}k`,C.text2],
-        ["Weekly margin",`$${(totalWeeklyMargin/1000).toFixed(2)}k`,C.ok],
-        ["Avg markup",`${avgMarkup.toFixed(1)}%`,avgMarkup>=A.STAFFING_AGENCY.markupTarget?C.ok:C.warn]].map(([l,v,t])=>
+      {[[t("staffing.margins.weeklyBill"),`$${(totalWeeklyBill/1000).toFixed(1)}k`,C.brand],
+        [t("staffing.margins.weeklyWage"),`$${(totalWeeklyPay/1000).toFixed(1)}k`,C.text2],
+        [t("staffing.margins.weeklyMargin"),`$${(totalWeeklyMargin/1000).toFixed(2)}k`,C.ok],
+        [t("staffing.margins.avgMarkup"),`${avgMarkup.toFixed(1)}%`,avgMarkup>=A.STAFFING_AGENCY.markupTarget?C.ok:C.warn]].map(([l,v,tone])=>
         <Card key={l} pad={mob?16:20} style={{borderRadius:14}}>
-          <div className={`font-bold tracking-tight ${mob?"text-xl":"text-2xl"}`} style={{color:t}}>{v}</div>
+          <div className={`font-bold tracking-tight ${mob?"text-xl":"text-2xl"}`} style={{color:tone}}>{v}</div>
           <div className="text-xs text-text-3 mt-1.5">{l}</div>
         </Card>)}
     </div>
 
-    {belowFloor.length>0&&<Banner tone="warn" icon="alert" title={`${belowFloor.length} assignments below markup floor`} style={{marginBottom:16}}>
-      These are losing money after employer burden. Rebalance rates or end the assignment.
+    {belowFloor.length>0&&<Banner tone="warn" icon="alert" title={t("staffing.margins.belowFloor",{n:belowFloor.length})} style={{marginBottom:16}}>
+      {t("staffing.margins.belowFloorBody")}
     </Banner>}
 
     <Card pad={0} style={{borderRadius:14,overflow:"hidden"}}>
       <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:800}}>
         <thead><tr className="border-b-2 border-line text-left">
-          {["Worker","Client","Pay","Burden","True cost","Bill","Margin/hr","Markup %"].map(h=>
+          {[t("staffing.margins.worker"),t("staffing.margins.client"),t("staffing.margins.pay"),t("staffing.margins.burden"),t("staffing.margins.trueCost"),t("staffing.margins.bill"),t("staffing.margins.marginHr"),t("staffing.margins.markupPct")].map(h=>
             <th key={h} className={TH_CLS}>{h}</th>)}
         </tr></thead>
         <tbody>{pg.pageItems.map(m=>{

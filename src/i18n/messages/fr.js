@@ -545,7 +545,13 @@ export const fr = {
     placements: { title: "Placements", successful: "Placements réussis", onGoing: "En cours", completed: "Complétés" },
     clients: { title: "Client·e·s", name: "Nom du client", contact: "Personne-ressource", location: "Emplacement", active: "Actif·ve" },
     workers: { title: "Travailleur·euse·s", name: "Nom du travailleur", status: "Statut", rate: "Taux", available: "Disponible" },
-    margins: { title: "Marges", profit: "Marge bénéficiaire", revenue: "Revenu", cost: "Coût" },
+    margins: {
+      title: "Marges", profit: "Marge bénéficiaire", revenue: "Revenu", cost: "Coût",
+      subtitle: "Marges et taux de dépense", desc: "Marge en temps réel par assignation active (les chiffres hebdomadaires utilisent la moyenne d'heures réelle récente de chaque assignation, avec un dé faut à 40 quand il n'y a pas d'historique de feuille de temps).",
+      weeklyBill: "Facturation hebdomadaire", weeklyWage: "Salaire hebdomadaire", weeklyMargin: "Marge hebdomadaire", avgMarkup: "Majoration moyenne",
+      belowFloor: "{n} assignations sous le plancher de majoration", belowFloorBody: "Celles-ci perdent de l'argent après la charge patronale. Rééquilibrez les taux ou terminez l'assignation.",
+      worker: "Travailleur·euse", client: "Client·e", pay: "Paie", burden: "Charge", trueCost: "Coût réel", bill: "Facturation", marginHr: "Marge/hr", markupPct: "Majoration %"
+    },
     branches: {
       title: "Succursales", location: "Emplacement", manager: "Gestionnaire", workers: "Travailleur·euse·s",
       countBranches: "{n} succursales", desc: "Assignez les client·e·s et recruteur·euse·s à une succursale/bureau au lieu d'un seul livre partagé.",
