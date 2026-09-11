@@ -537,7 +537,19 @@ export const fr = {
     login: { title: "Connexion agence", email: "Courriel de l'agence", password: "Mot de passe", signIn: "Se connecter" },
     dashboard: { title: "Tableau de bord agence", overview: "Aperçu", active: "Actif·ve", pending: "En attente" },
     jobOrders: { title: "Commandes de travail", create: "Créer une commande", active: "Actif·ve", filled: "Remplie", closed: "Fermée" },
-    bench: { title: "Banc", unassigned: "Non assigné·e", assigned: "Assigné·e", onLeave: "En congé" },
+    bench: {
+      title: "Banc", unassigned: "Non assigné·e", assigned: "Assigné·e", onLeave: "En congé",
+      subtitle: "Rechercher par nom, ville ou permis. Filtrer par province et disponibilité.",
+      searchPlaceholder: "Rechercher nom, ville ou permis",
+      allProvinces: "Toutes les provinces", anyAvailability: "Toute disponibilité",
+      availableNow: "Disponible maintenant", onAssignment: "En assignation", unavailable: "Indisponible",
+      anyTicket: "Tout permis", rate: "Taux", min: "min", max: "max",
+      tableHeaders: ["Travailleur·euse", "Emplacement", "Disponibilité", "Taux cible", "Permis", "Vac accumulée", ""],
+      since: "Depuis {date}",
+      place: "Placer", viewAssignment: "Voir l'assignation",
+      emptyTitle: "Aucun travailleur·euse ne correspond", emptyBody: "Essayez un filtre différent ou une recherche de permis.",
+      placementCreated: "Assignation créée"
+    },
     assignments: { title: "Assignations", worker: "Travailleur·euse", client: "Client·e", startDate: "Date de début", endDate: "Date de fin" },
     timesheets: {
       title: "Feuilles de temps", pending: "En attente d'approbation", approved: "Approuvée", rejected: "Rejetée",

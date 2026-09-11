@@ -719,32 +719,32 @@ export function AgencyBench(){
   useEffect(()=>{pg.setPage(1);},[q,prov,avail,ticketFilter,rateMin,rateMax]);
   return <div>
     <div className="mb-3.5">
-      <div className="text-lg font-bold text-text">{list.length} workers on bench</div>
-      <div className="text-sm text-text-3 mt-0.5">Search by name, city, or ticket. Filter by province and availability.</div>
+      <div className="text-lg font-bold text-text">{list.length} {t("staffing.bench.title")}</div>
+      <div className="text-sm text-text-3 mt-0.5">{t("staffing.bench.subtitle")}</div>
     </div>
 
     <Card pad={mob?14:18} style={{marginBottom:14,borderRadius:12}}>
       <div className="flex gap-2.5 flex-wrap items-center">
         <div className="grow shrink basis-60 min-w-0">
-          <Input icon="search" value={q} onChange={e=>setQ(e.target.value)} placeholder="Search name, city, or ticket"/></div>
+          <Input icon="search" value={q} onChange={e=>setQ(e.target.value)} placeholder={t("staffing.bench.searchPlaceholder")}/></div>
         <Sel value={prov} onChange={e=>setProv(e.target.value)} style={{maxWidth:160}}>
-          <option value="all">All provinces</option>
+          <option value="all">{t("staffing.bench.allProvinces")}</option>
           {Object.keys(A.STAFFING_RATES).map(p=><option key={p} value={p}>{p}</option>)}</Sel>
         <Sel value={avail} onChange={e=>setAvail(e.target.value)} style={{maxWidth:180}}>
-          <option value="all">Any availability</option>
-          <option value="available">Available now</option>
-          <option value="on-assignment">On assignment</option>
-          <option value="unavailable">Unavailable</option></Sel>
+          <option value="all">{t("staffing.bench.anyAvailability")}</option>
+          <option value="available">{t("staffing.bench.availableNow")}</option>
+          <option value="on-assignment">{t("staffing.bench.onAssignment")}</option>
+          <option value="unavailable">{t("staffing.bench.unavailable")}</option></Sel>
         {/* Ticket filter is the recruiter's most common query ("who has WHMIS", "any Red Seal
             electricians") - the earlier filter row only offered province and availability. */}
         <Sel value={ticketFilter} onChange={e=>setTicketFilter(e.target.value)} style={{maxWidth:200}}>
-          <option value="all">Any ticket</option>
-          {allTickets.map(t=><option key={t} value={t}>{t}</option>)}</Sel>
+          <option value="all">{t("staffing.bench.anyTicket")}</option>
+          {allTickets.map(ti=><option key={ti} value={ti}>{ti}</option>)}</Sel>
         <div className="flex items-center gap-1.5">
-          <span className="text-xs text-text-3">Rate</span>
-          <Input type="number" min="0" placeholder="min" value={rateMin} onChange={e=>setRateMin(e.target.value)} style={{width:80}}/>
+          <span className="text-xs text-text-3">{t("staffing.bench.rate")}</span>
+          <Input type="number" min="0" placeholder={t("staffing.bench.min")} value={rateMin} onChange={e=>setRateMin(e.target.value)} style={{width:80}}/>
           <span className="text-xs text-text-3">–</span>
-          <Input type="number" min="0" placeholder="max" value={rateMax} onChange={e=>setRateMax(e.target.value)} style={{width:80}}/>
+          <Input type="number" min="0" placeholder={t("staffing.bench.max")} value={rateMax} onChange={e=>setRateMax(e.target.value)} style={{width:80}}/>
         </div>
       </div>
     </Card>
@@ -752,7 +752,7 @@ export function AgencyBench(){
     <Card pad={0} style={{borderRadius:14,overflow:"hidden"}}>
       <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:720}}>
         <thead><tr className="border-b-2 border-line text-left">
-          {["Worker","Location","Availability","Rate target","Tickets","Vac accrued",""].map(h=>
+          {t("staffing.bench.tableHeaders").map(h=>
             <th key={h} className={TH_CLS}>{h}</th>)}
         </tr></thead>
         <tbody>{pg.pageItems.map(w=>{const person=(A.people||[]).find(p=>p.id===w.personId);
@@ -762,7 +762,7 @@ export function AgencyBench(){
                 <SmartPortrait seed={person?.seed||0} size={30} radius={8}/>
                 <div className="min-w-0">
                   <div className="text-sm font-semibold text-text">{person?.name||"—"}</div>
-                  <div className="text-xs text-text-3 mt-0.5">Since {w.onboarded}</div>
+                  <div className="text-xs text-text-3 mt-0.5">{t("staffing.bench.since").replace("{date}",w.onboarded)}</div>
                 </div>
               </div>
             </td>
@@ -783,18 +783,18 @@ export function AgencyBench(){
                   clicking through couldn't jump to their current assignment without navigating
                   away and hunting. Now every row has a real action. */}
               {w.availability==="available"
-                ? <Btn kind="outline" size="xs" onClick={e=>{e.stopPropagation();setPlacing(w);}}>Place</Btn>
+                ? <Btn kind="outline" size="xs" onClick={e=>{e.stopPropagation();setPlacing(w);}}>{t("staffing.bench.place")}</Btn>
                 : w.availability==="on-assignment"
-                ? <Btn kind="ghost" size="xs" onClick={e=>{e.stopPropagation();A.go("agencyAssignments");}}>View assignment</Btn>
+                ? <Btn kind="ghost" size="xs" onClick={e=>{e.stopPropagation();A.go("agencyAssignments");}}>{t("staffing.bench.viewAssignment")}</Btn>
                 : <span className="text-xs text-text-3">—</span>}
             </td>
           </tr>;})}
-          {list.length===0&&<tr><td colSpan={7} className="p-5"><Empty icon="users" title="No matching workers" body="Try a different filter or ticket search."/></td></tr>}
+          {list.length===0&&<tr><td colSpan={7} className="p-5"><Empty icon="users" title={t("staffing.bench.emptyTitle")} body={t("staffing.bench.emptyBody")}/></td></tr>}
         </tbody>
       </table></div>
     </Card>
     <Pagination {...pg}/>
-    {placing&&<_PlaceFromBenchModal worker={placing} onClose={()=>setPlacing(null)} onPlace={()=>{A.toast(`Placement created`,"ok");setPlacing(null);}}/>}
+    {placing&&<_PlaceFromBenchModal worker={placing} onClose={()=>setPlacing(null)} onPlace={()=>{A.toast(t("staffing.bench.placementCreated"),"ok");setPlacing(null);}}/>}
   </div>;
 }
 
