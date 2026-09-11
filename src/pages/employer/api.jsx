@@ -66,7 +66,7 @@ function _SsoConfig({mob,isOwner}){
       <div>
         <div className="text-sm font-semibold text-text">Enable single sign-on</div>
         <div className="text-xs text-text-2 mt-0.5">
-          Anyone signing in with an {form.emailDomain||"your-domain"} address is sent to your provider.
+          Anyone signing in with a{form.emailDomain?"":"n"} {form.emailDomain||"your-domain"} address is sent to your provider.
           New people are added as teammates, never as the account owner.</div>
       </div>
       <Switch on={form.enabled} onChange={v=>setForm(f=>({...f,enabled:v}))} disabled={!isOwner}/>

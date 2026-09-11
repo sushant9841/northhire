@@ -35,9 +35,14 @@ app.set("json replacer", infinityReplacer);
 // Real ops-health signal (AdmHome "System health" card) - logs every 5xx response. Registered
 // before any other middleware so res.on("finish") is attached even for a request that errors out
 // inside CORS/cookie/body-parsing itself, not just ones that make it into an actual route handler.
+// CORS-preflight (OPTIONS) rejections are not logged: a browser probing a disallowed origin is a
+// policy signal, not a service error, and floods the metric with lookups that are supposed to be
+// silently blocked. The CORS middleware is also switched to a graceful (non-throwing) rejection
+// below so those preflights complete with 200 (missing CORS headers means the browser blocks the
+// real call, which is the correct outcome) instead of a spurious 500 in the first place.
 app.use((req, res, next) => {
   res.on("finish", () => {
-    if (res.statusCode >= 500) {
+    if (res.statusCode >= 500 && req.method !== "OPTIONS") {
       db.prepare("INSERT INTO server_errors (id, method, path, status, message) VALUES (?,?,?,?,?)")
         .run(nextId("errlog", "server_errors"), req.method, req.path, res.statusCode, res.locals._errMessage || null);
     }
@@ -59,8 +64,12 @@ app.use(cors({
   origin: (origin, cb) => {
     // No Origin header at all means a same-origin or non-browser caller (curl, server-to-server) -
     // only cross-origin browser requests carry one, and those are the ones this allowlist gates.
+    // A disallowed origin gets `cb(null, false)` (graceful reject: response omits the CORS headers,
+    // so the browser refuses the real call and the preflight still returns 2xx) instead of
+    // `cb(new Error(...))` which would trigger a spurious 500 that both misleads the browser and
+    // pollutes the ops-health metric with what is really a policy decision, not a service error.
     if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
-    cb(new Error("Not allowed by CORS"));
+    cb(null, false);
   },
   credentials: true,
 }));

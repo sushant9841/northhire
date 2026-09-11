@@ -214,7 +214,11 @@ export default function NorthHire(){
             {showTabs&&<TabBar/>}
             {hireOnboarding&&<HireOnboardingModal payload={hireOnboarding} onClose={()=>setHireOnboarding(null)}/>}
             <ToastHost toasts={A.toasts} dismiss={A.dismissToast}/>
-            {!cookieAck&&<div style={{position:"fixed",bottom:mob?76:20,left:mob?12:20,right:mob?12:20,maxWidth:560,margin:mob?"0":"0",
+            {/* Cookie banner hides on dashboard-shell pages: a signed-in user is on a page whose
+                left rail carries the "Sign out" and bottom-of-nav controls, and the fixed
+                bottom-left banner was overlapping and hiding them. Signed-in users have
+                obviously consented to session cookies to be signed in at all. */}
+            {!cookieAck&&!_isBare&&<div style={{position:"fixed",bottom:mob?76:20,left:mob?12:20,right:mob?12:20,maxWidth:560,margin:mob?"0":"0",
               background:C.ink,color:"#fff",borderRadius:14,padding:mob?"14px 16px":"16px 20px",boxShadow:SH.xl,
               display:"flex",gap:14,alignItems:"center",flexWrap:"wrap",zIndex:600}} data-cookie-accepted="false">
               <div style={{color:"#6AACFF",display:"flex",flexShrink:0}}><I n="shield" s={20}/></div>
