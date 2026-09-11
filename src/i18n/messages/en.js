@@ -18,7 +18,7 @@ export const en = {
     resources: "Resources", forEmployers: "For employers", bySector: "By sector",
     byLocation: "By location", byEmployer: "By employer", browseAllCompanies: "Browse all companies",
     verifiedOnly: "Verified employers only", notifications: "Notifications", account: "Account",
-    back: "Back",
+    back: "Back", notificationsAria: "Notifications", accountAria: "Account",
   },
   account: {
     myAccount: "My account", editProfile: "Edit profile", myCvs: "My CVs",

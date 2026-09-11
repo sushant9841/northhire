@@ -52,11 +52,11 @@ export function Header(){
   return <header className="h-15 bg-white border-b border-line sticky top-0 z-400 shrink-0">
   <div className={`h-full max-w-site mx-auto flex items-center gap-3.5 ${mob?"px-3.5":"px-6"}`}>
     {showBackMob ? <>
-      <button onClick={A.back} aria-label="Back" className="bg-bg border-0 w-10 h-10 rounded-xl cursor-pointer flex items-center justify-center text-text shrink-0 transition duration-150 active:scale-95"><I n="chevL" s={19} w={2.2}/></button>
+      <button onClick={A.back} aria-label={t("nav.back")} className="bg-bg border-0 w-10 h-10 rounded-xl cursor-pointer flex items-center justify-center text-text shrink-0 transition duration-150 active:scale-95"><I n="chevL" s={19} w={2.2}/></button>
       <div className="text-lg font-bold tracking-tight text-text overflow-hidden text-ellipsis whitespace-nowrap flex-1 min-w-0 text-center">{A.pageTitle||r.title}</div>
     </> : <>
-      {showBackDt&&<button onClick={A.back} aria-label="Back" className="bg-transparent border border-line h-9 pr-3 pl-2 rounded-lg cursor-pointer flex items-center gap-1 text-text-2 shrink-0 text-sm font-medium transition duration-150 hover:bg-bg hover:text-text">
-        <I n="chevL" s={17} w={2}/>Back</button>}
+      {showBackDt&&<button onClick={A.back} aria-label={t("nav.back")} className="bg-transparent border border-line h-9 pr-3 pl-2 rounded-lg cursor-pointer flex items-center gap-1 text-text-2 shrink-0 text-sm font-medium transition duration-150 hover:bg-bg hover:text-text">
+        <I n="chevL" s={17} w={2}/>{t("nav.back")}</button>}
       <Wordmark onClick={()=>A.go(A.homePg)} size={mob?18:20}/>
       {!mob&&<nav className="flex gap-0.5 ml-3 items-center">
         {(role==="employer"||role==="admin"
@@ -86,12 +86,12 @@ export function Header(){
       {!mob&&!A.user&&<><Btn kind="ghost" size="sm" onClick={()=>A.go("login")}>{t("common.signIn")}</Btn>
         <Btn kind="primary" size="sm" onClick={()=>A.go("signup")}>{t("common.createAccount")}</Btn></>}
       {/* Guest mobile: single sign-in pill only. Desktop already shows the two buttons above. */}
-      {A.user&&<button onClick={()=>A.go("alerts")} aria-label="Notifications" className="relative bg-bg border-0 w-10 h-10 rounded-xl cursor-pointer flex items-center justify-center text-text">
+      {A.user&&<button onClick={()=>A.go("alerts")} aria-label={t("nav.notificationsAria")} className="relative bg-bg border-0 w-10 h-10 rounded-xl cursor-pointer flex items-center justify-center text-text">
         <I n="bell" s={19}/>
         {unread>0&&<span className="absolute top-1.5 right-1.5 min-w-4 h-4 px-1 rounded-full bg-brand text-white text-xs font-bold flex items-center justify-center border-2 border-white" style={{animation:"pop .3s ease"}}>{unread}</span>}</button>}
       <div className="relative">
         {A.user
-          ? <button onClick={()=>setMenu(v=>!v)} aria-label="Account" aria-haspopup="menu" aria-expanded={menu}
+          ? <button onClick={()=>setMenu(v=>!v)} aria-label={t("nav.accountAria")} aria-haspopup="menu" aria-expanded={menu}
               className="bg-transparent border-0 p-0 cursor-pointer flex rounded-xl transition duration-200 hover:scale-105">
               {A.user.role==="employer"
                 ? <SmartLogo e={A.company||{mark:"hex",a:C.brand,b:"#fff",name:"",site:""}} size={38} radius={11}/>

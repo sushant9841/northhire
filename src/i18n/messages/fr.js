@@ -19,7 +19,7 @@ export const fr = {
     resources: "Ressources", forEmployers: "Pour les employeurs", bySector: "Par secteur",
     byLocation: "Par emplacement", byEmployer: "Par employeur", browseAllCompanies: "Parcourir toutes les entreprises",
     verifiedOnly: "Employeurs vérifiés seulement", notifications: "Notifications", account: "Compte",
-    back: "Retour",
+    back: "Retour", notificationsAria: "Notifications", accountAria: "Compte",
   },
   account: {
     myAccount: "Ma session", editProfile: "Modifier mon profil", myCvs: "Mes CV",
