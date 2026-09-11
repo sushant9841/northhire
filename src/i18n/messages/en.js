@@ -954,6 +954,8 @@ export const en = {
       sentToEveryEmployee: "Sent to every active employee for sign-off.",
       publishBtn: "Publish",
       signaturesModal: "Signatures — {title}",
+      noOneSignedYet: "No one has signed yet.",
+      removed: "Removed",
     },
     profile: { title: "Employee profile", name: "Name", email: "Email", phone: "Phone", department: "Department" },
     attendance: { title: "Attendance", present: "Present", absent: "Absent", late: "Late", pending: "Pending" },

@@ -1074,6 +1074,8 @@ export const fr = {
       sentToEveryEmployee: "Envoyé à tous les employé·e·s actif·ve·s pour signature.",
       publishBtn: "Publier",
       signaturesModal: "Signatures — {title}",
+      noOneSignedYet: "Personne n'a signé pour l'instant.",
+      removed: "Supprimé·e",
     },
     profile: { title: "Profil d'employé·e", name: "Nom", email: "Courriel", phone: "Téléphone", department: "Département" },
     attendance: { title: "Présence", present: "Présent·e", absent: "Absent·e", late: "En retard", pending: "En attente" },

@@ -18,6 +18,7 @@ import { HR_DEPARTMENTS } from "../../store/seed/hrDepartments.js";
 import { InlineList } from "../shared/formControls.jsx";
 import { TrainingCard } from "../shared/cards.jsx";
 import { useTranslation } from "../../i18n/i18n.jsx";
+import { formatDate, formatDateTime } from "../../i18n/format.js";
 
 /* Small pill-style tab bar reused across most HR Suite modules (attendance view,
    leave/tasks/calendar/invoices scope switches). Not string-interpolated into a
@@ -2166,42 +2167,42 @@ export function HrPolicies(){
   const signed=A.hrSignDocs.filter(d=>d.signed);
 
   return <div>
-    {pending.length>0&&<Banner tone="warn" icon="alert" style={{marginBottom:16}}>{pending.length} document{pending.length===1?"":"s"} need your signature.</Banner>}
+    {pending.length>0&&<Banner tone="warn" icon="alert" style={{marginBottom:16}}>{t(pending.length===1?"hr.policies.pendingDocumentsSingle":"hr.policies.pendingDocumentsPlural",{count:pending.length})}</Banner>}
     <div className="flex justify-between items-center mb-4">
-      <div className="text-base font-semibold text-text">Documents for you to review and sign</div>
-      {isPriv&&<Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowNew(true)}>Publish a new policy</Btn>}
+      <div className="text-base font-semibold text-text">{t("hr.policies.documentsForReviewAndSign")}</div>
+      {isPriv&&<Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowNew(true)}>{t("hr.policies.publishNewPolicy")}</Btn>}
     </div>
     <div className="flex flex-col gap-2.5 mb-6">
       {pending.map(d=><Card key={d.id} pad={16} style={{borderRadius:12}}>
         <div className="flex justify-between items-center gap-3 flex-wrap">
           <div><div className="text-sm font-semibold text-text">{d.title}</div>
-            <div className="text-xs text-text-3 mt-0.5">Published {new Date(d.createdAt).toLocaleDateString("en-CA")}</div></div>
-          <Btn kind="primary" size="sm" onClick={()=>startSign(d)}>Review & sign</Btn>
+            <div className="text-xs text-text-3 mt-0.5">{t("hr.policies.published")} {formatDate(d.createdAt,locale)}</div></div>
+          <Btn kind="primary" size="sm" onClick={()=>startSign(d)}>{t("hr.policies.reviewAndSign")}</Btn>
         </div>
       </Card>)}
-      {pending.length===0&&<div className="text-sm text-text-3">Nothing pending — you're all caught up.</div>}
+      {pending.length===0&&<div className="text-sm text-text-3">{t("hr.policies.nothingPending")}</div>}
     </div>
 
     {signed.length>0&&<>
-      <div className="text-base font-semibold text-text mb-2.5">Already signed</div>
+      <div className="text-base font-semibold text-text mb-2.5">{t("hr.policies.alreadySigned")}</div>
       <div className="flex flex-col gap-2 mb-6">
         {signed.map(d=><div key={d.id} className="flex justify-between items-center py-2.5 px-3.5 bg-bg rounded-lg">
-          <div className="text-sm text-text">{d.title}</div><Tag tone="ok" sm icon="check">Signed</Tag></div>)}
+          <div className="text-sm text-text">{d.title}</div><Tag tone="ok" sm icon="check">{t("hr.policies.signedTag")}</Tag></div>)}
       </div>
     </>}
 
     {isPriv&&A.hrSignDocsAll&&<>
-      <div className="text-base font-semibold text-text mb-2.5 pt-4 border-t border-line-soft">Company-wide completion</div>
+      <div className="text-base font-semibold text-text mb-2.5 pt-4 border-t border-line-soft">{t("hr.policies.companyWideCompletion")}</div>
       <div className="flex flex-col gap-2">
         {A.hrSignDocsAll.map(d=><div key={d.id} className="flex justify-between items-center gap-3 py-2.5 px-3.5 bg-bg rounded-lg flex-wrap">
           <div className="min-w-0"><div className="text-sm font-semibold text-text">{d.title}</div>
-            <div className="text-xs text-text-3 mt-0.5">{d.signedCount} of {d.targetCount} signed</div></div>
+            <div className="text-xs text-text-3 mt-0.5">{t("hr.policies.signedOf",{signed:d.signedCount,target:d.targetCount})}</div></div>
           <div className="flex gap-2">
-            <Btn kind="ghost" size="xs" onClick={()=>openSigs(d)}>View signatures</Btn>
-            <Btn kind="ghost" size="xs" icon="trash" onClick={async()=>{const r=await A.removeSignDocument(d.id);if(r.ok)A.toast("Removed","ok");}}/>
+            <Btn kind="ghost" size="xs" onClick={()=>openSigs(d)}>{t("hr.policies.viewSignatures")}</Btn>
+            <Btn kind="ghost" size="xs" icon="trash" onClick={async()=>{const r=await A.removeSignDocument(d.id);if(r.ok)A.toast(t("hr.policies.removed"),"ok");}}/>
           </div>
         </div>)}
-        {A.hrSignDocsAll.length===0&&<div className="text-sm text-text-3">No policies published yet.</div>}
+        {A.hrSignDocsAll.length===0&&<div className="text-sm text-text-3">{t("hr.policies.noPoliciesPublished")}</div>}
       </div>
     </>}
 
@@ -2210,34 +2211,34 @@ export function HrPolicies(){
         <div className="p-4 bg-bg rounded-xl border border-line text-sm text-text-2 leading-relaxed whitespace-pre-wrap" style={{maxHeight:320,overflowY:"auto"}}>{signing.body}</div>
         <label className="flex items-start gap-2.5 cursor-pointer">
           <input type="checkbox" checked={agreed} onChange={e=>setAgreed(e.target.checked)} style={{marginTop:3}}/>
-          <span className="text-sm text-text-2">I have read and understood this document and agree to be bound by it.</span>
+          <span className="text-sm text-text-2">{t("hr.policies.agreeToDocument")}</span>
         </label>
-        <Field label="Type your full legal name to sign" required><Input value={signedName} onChange={e=>setSignedName(e.target.value)}/></Field>
+        <Field label={t("hr.policies.typeFullName")} required><Input value={signedName} onChange={e=>setSignedName(e.target.value)}/></Field>
         <div className="flex gap-2.5 justify-end">
-          <Btn kind="ghost" onClick={()=>setSigning(null)}>Cancel</Btn>
-          <Btn kind="primary" disabled={!agreed||signedName.trim().length<2} onClick={submitSign}>Sign document</Btn>
+          <Btn kind="ghost" onClick={()=>setSigning(null)}>{t("hr.policies.cancelBtn")}</Btn>
+          <Btn kind="primary" disabled={!agreed||signedName.trim().length<2} onClick={submitSign}>{t("hr.policies.signDocumentBtn")}</Btn>
         </div>
       </div>
     </Modal>}
 
-    {showNew&&<Modal onClose={()=>setShowNew(false)} title="Publish a new policy" wide>
+    {showNew&&<Modal onClose={()=>setShowNew(false)} title={t("hr.policies.publishNewPolicyModal")} wide>
       <div className="flex flex-col gap-3.5">
-        <Field label="Title" required><Input value={draft.title} onChange={e=>setDraft({...draft,title:e.target.value})} placeholder="e.g. Employee Handbook 2026"/></Field>
-        <Field label="Document text" required><Area rows={10} value={draft.body} onChange={e=>setDraft({...draft,body:e.target.value})} placeholder="Paste the full policy text employees will read before signing…"/></Field>
-        <div className="text-xs text-text-3">Sent to every active employee for sign-off.</div>
+        <Field label={t("hr.policies.titleLabel")} required><Input value={draft.title} onChange={e=>setDraft({...draft,title:e.target.value})} placeholder={t("hr.policies.titlePlaceholder")}/></Field>
+        <Field label={t("hr.policies.documentTextLabel")} required><Area rows={10} value={draft.body} onChange={e=>setDraft({...draft,body:e.target.value})} placeholder={t("hr.policies.documentTextPlaceholder")}/></Field>
+        <div className="text-xs text-text-3">{t("hr.policies.sentToEveryEmployee")}</div>
         <div className="flex gap-2.5 justify-end">
-          <Btn kind="ghost" onClick={()=>setShowNew(false)}>Cancel</Btn>
-          <Btn kind="primary" disabled={!draft.title.trim()||!draft.body.trim()} onClick={publish}>Publish</Btn>
+          <Btn kind="ghost" onClick={()=>setShowNew(false)}>{t("hr.policies.cancelBtn")}</Btn>
+          <Btn kind="primary" disabled={!draft.title.trim()||!draft.body.trim()} onClick={publish}>{t("hr.policies.publishBtn")}</Btn>
         </div>
       </div>
     </Modal>}
 
-    {viewingSigs&&<Modal onClose={()=>setViewingSigs(null)} title={`Signatures — ${viewingSigs.title}`}>
+    {viewingSigs&&<Modal onClose={()=>setViewingSigs(null)} title={t("hr.policies.signaturesModal",{title:viewingSigs.title})}>
       <div className="flex flex-col gap-2">
         {sigList.map(s=>{const e=A.hrEmp(s.employee);return <div key={s.id} className="flex justify-between items-center py-2 px-3 bg-bg rounded-lg">
           <div className="text-sm text-text">{e?.name||s.signedName}</div>
-          <div className="text-xs text-text-3">{new Date(s.signedAt).toLocaleString("en-CA")}</div></div>;})}
-        {sigList.length===0&&<div className="text-sm text-text-3">No one has signed yet.</div>}
+          <div className="text-xs text-text-3">{formatDateTime(s.signedAt,locale)}</div></div>;})}
+        {sigList.length===0&&<div className="text-sm text-text-3">{t("hr.policies.noOneSignedYet")}</div>}
       </div>
     </Modal>}
   </div>;
