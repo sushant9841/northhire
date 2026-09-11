@@ -150,6 +150,10 @@ export function serializeBlog(row) {
     mins: row.mins, author: row.author, authorSeed: row.author_seed,
     date: sqlTime(row.created_at).toLocaleDateString("en-CA", { day: "numeric", month: "short", year: "numeric" }),
     excerpt: row.excerpt, body: JSON.parse(row.body_json || "[]"),
+    // Bill 96: optional French version, edited from the Content Manager's language tab. `null`
+    // fields mean nothing French has been written yet - callers fall back to the English column.
+    titleFr: row.title_fr || null, excerptFr: row.excerpt_fr || null,
+    bodyFr: row.body_json_fr ? JSON.parse(row.body_json_fr) : null,
     owner: row.owner_employer_id || "admin",
     status: row.status, scheduledAt: row.scheduled_at, views: row.views, featured: !!row.featured,
   };
@@ -161,6 +165,7 @@ export function serializeTraining(row) {
     provider: row.provider, providerSeed: row.provider_seed, level: row.level,
     hours: row.hours, price: row.price, rating: row.rating, enrolled: row.enrolled,
     mods: JSON.parse(row.mods_json || "[]"), outcomes: JSON.parse(row.outcomes_json || "[]"), about: row.about,
+    titleFr: row.title_fr || null, aboutFr: row.about_fr || null,
     owner: row.owner_employer_id || "admin",
     status: row.status, scheduledAt: row.scheduled_at, featured: !!row.featured,
   };

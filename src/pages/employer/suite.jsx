@@ -1142,11 +1142,17 @@ export function BlogEditor(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const isNew=A.editId==="new";
   const existing=A.blogs.find(b=>b.id===A.editId);
-  const [d,setD]=useState(()=>existing?{...existing,bodyText:existing.body.map(([h,p])=>`${h}\n${p}`).join("\n\n")}
+  const [d,setD]=useState(()=>existing?{...existing,bodyText:existing.body.map(([h,p])=>`${h}\n${p}`).join("\n\n"),
+      bodyTextFr:(existing.bodyFr||[]).map(([h,p])=>`${h}\n${p}`).join("\n\n")}
     :{id:uid("b"),title:"",cat:"Career Advice",scene:"office",tone:C.brand,mins:5,
       author:A.user?.role==="admin"?"NorthHire Editorial":A.company?.name||"",authorSeed:A.user?.seed??0,
-      date:"Today",excerpt:"",bodyText:"",owner:A.user?.role==="admin"?"admin":A.company?.id,status:"draft",views:0,featured:false});
+      date:"Today",excerpt:"",bodyText:"",titleFr:"",excerptFr:"",bodyTextFr:"",
+      owner:A.user?.role==="admin"?"admin":A.company?.id,status:"draft",views:0,featured:false});
   const [err,setErr]=useState({});
+  // Bill 96: employer/admin content can carry an optional French version alongside the English
+  // original - a language tab switches which set of fields the form below is editing, rather
+  // than doubling every field on screen at once.
+  const [lang,setLang]=useState("en"); const isFrTab=lang==="fr";
   const [scheduleAt,setScheduleAt]=useState(existing?.scheduledAt?new Date(existing.scheduledAt).toISOString().slice(0,16):"");
   const set=(k,v)=>{setD(p=>({...p,[k]:v}));setErr(e=>({...e,[k]:undefined}));};
   const save=(status,scheduledAt)=>{const e={};
@@ -1155,26 +1161,34 @@ export function BlogEditor(){
     if((d.bodyText||"").replace(/<[^>]+>/g,"").trim().length<80)e.bodyText="The article body is too short";
     setErr(e); if(Object.keys(e).length)return;
     const body=[["", d.bodyText]]; /* single HTML chunk; renderers will inject with dangerouslySetInnerHTML */
-    A.saveBlog({...d,body,status,scheduledAt:scheduledAt||null},isNew);};
+    // The French version is entirely optional - only sent (and only overwrites what's already
+    // stored) once there's actually French text in at least one of the three fields.
+    const hasFr=!!(d.titleFr?.trim()||d.excerptFr?.trim()||(d.bodyTextFr||"").replace(/<[^>]+>/g,"").trim());
+    const bodyFr=hasFr?[["", d.bodyTextFr||""]]:null;
+    A.saveBlog({...d,body,bodyFr,titleFr:hasFr?(d.titleFr||""):null,excerptFr:hasFr?(d.excerptFr||""):null,status,scheduledAt:scheduledAt||null},isNew);};
   return <Page narrow>
     <H1 sub={isNew?"Published articles appear on the home page and in Career resources":"Editing a published article"}
       action={<Btn kind="ghost" onClick={()=>A.go(A.user.role==="admin"?"admBlogs":"empContent")}>Cancel</Btn>}>
       {isNew?"New article":"Edit article"}</H1>
     <div className="grid gap-5 items-start" style={{gridTemplateColumns:mob?"1fr":"1fr 300px"}}>
       <Card pad={mob?20:26}>
+        <Tabs items={[{k:"en",label:"English"},{k:"fr",label:"Français"}]} value={lang} onChange={setLang} style={{marginBottom:16}}/>
+        {isFrTab&&<Banner tone="brand" icon="globe" style={{marginBottom:16}} title="Version française (facultative)">
+          Laisser ces champs vides affiche la version anglaise aux lecteurs francophones. Bill 96 / Loi 96 : un employeur enregistré au Québec est tenu de pouvoir publier ce contenu en français.</Banner>}
         <div className="flex flex-col gap-4">
-          <Field label="Title" required error={err.title}><Input value={d.title} onChange={e=>set("title",e.target.value)}
-            placeholder="How to write a Canadian resume" invalid={!!err.title}/></Field>
-          <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
+          <Field label={isFrTab?"Titre":"Title"} required={!isFrTab} error={err.title}>
+            <Input value={isFrTab?(d.titleFr||""):d.title} onChange={e=>set(isFrTab?"titleFr":"title",e.target.value)}
+              placeholder={isFrTab?"Comment rédiger un CV canadien":"How to write a Canadian resume"} invalid={!isFrTab&&!!err.title}/></Field>
+          {!isFrTab&&<div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
             <Field label="Category" required><Sel value={d.cat} onChange={e=>set("cat",e.target.value)}>
               {["Career Advice","Trades","Healthcare","Transport","Resume","Salary","Industry News","Safety"].map(o=><option key={o}>{o}</option>)}</Sel></Field>
-            <Field label="Reading time (minutes)"><Input type="number" value={d.mins} onChange={e=>set("mins",Math.max(1,Number(e.target.value)||1))}/></Field></div>
-          <Field label="Summary" required error={err.excerpt} hint="One or two sentences shown on the card and at the top of the article.">
-            <Area rows={3} value={d.excerpt} onChange={e=>set("excerpt",e.target.value)} invalid={!!err.excerpt}/></Field>
-          <Field label="Article body" required error={err.bodyText}
-            hint="Each section: heading on the first line, the paragraph underneath, then a blank line before the next section.">
-            <RichText value={d.bodyText} onChange={v=>set("bodyText",v)} rows={14} placeholder="Start writing. Use the toolbar for bold, italics, bullet lists, links..."/></Field>
-          <Field label="Author name"><Input value={d.author} onChange={e=>set("author",e.target.value)}/></Field></div>
+            <Field label="Reading time (minutes)"><Input type="number" value={d.mins} onChange={e=>set("mins",Math.max(1,Number(e.target.value)||1))}/></Field></div>}
+          <Field label={isFrTab?"Résumé":"Summary"} required={!isFrTab} error={err.excerpt} hint={isFrTab?"":"One or two sentences shown on the card and at the top of the article."}>
+            <Area rows={3} value={isFrTab?(d.excerptFr||""):d.excerpt} onChange={e=>set(isFrTab?"excerptFr":"excerpt",e.target.value)} invalid={!isFrTab&&!!err.excerpt}/></Field>
+          <Field label={isFrTab?"Corps de l'article":"Article body"} required={!isFrTab} error={err.bodyText}
+            hint={isFrTab?"":"Each section: heading on the first line, the paragraph underneath, then a blank line before the next section."}>
+            <RichText value={isFrTab?(d.bodyTextFr||""):d.bodyText} onChange={v=>set(isFrTab?"bodyTextFr":"bodyText",v)} rows={14} placeholder="Start writing. Use the toolbar for bold, italics, bullet lists, links..."/></Field>
+          {!isFrTab&&<Field label="Author name"><Input value={d.author} onChange={e=>set("author",e.target.value)}/></Field>}</div>
         <div className="flex gap-2.5 items-end mt-6 pt-5 border-t border-line-soft flex-wrap">
           <Field label="Schedule for later (optional)" style={{flex:"1 1 220px",margin:0}}>
             <Input type="datetime-local" value={scheduleAt} onChange={e=>setScheduleAt(e.target.value)}/></Field>
@@ -1213,9 +1227,10 @@ export function TrainingEditor(){
   const existing=A.trainings.find(t=>t.id===A.editId);
   const [d,setD]=useState(()=>existing?{...existing,modsText:existing.mods.join("\n"),outText:existing.outcomes.join("\n")}
     :{id:uid("t"),title:"",cat:"Safety",scene:"learn",tone:C.brand,provider:A.user?.role==="admin"?"NorthHire Learning":A.company?.name||"",
-      providerSeed:A.user?.seed??0,level:"Beginner",hours:4,price:0,rating:4.5,enrolled:0,modsText:"",outText:"",about:"",
+      providerSeed:A.user?.seed??0,level:"Beginner",hours:4,price:0,rating:4.5,enrolled:0,modsText:"",outText:"",about:"",titleFr:"",aboutFr:"",
       owner:A.user?.role==="admin"?"admin":A.company?.id,status:"draft",featured:false});
   const [err,setErr]=useState({});
+  const [showFr,setShowFr]=useState(!!(existing?.titleFr||existing?.aboutFr));
   const [scheduleAt,setScheduleAt]=useState(existing?.scheduledAt?new Date(existing.scheduledAt).toISOString().slice(0,16):"");
   const set=(k,v)=>{setD(p=>({...p,[k]:v}));setErr(e=>({...e,[k]:undefined}));};
   const save=(status,scheduledAt)=>{const e={};
@@ -1257,6 +1272,20 @@ export function TrainingEditor(){
           <Field label="About this course" required error={err.about}>
             <RichText value={d.aboutRich||d.about} onChange={v=>set("aboutRich",v)}
               placeholder="Who the course is for and what certificate it leads to." rows={5}/></Field>
+
+          {/* Bill 96: optional French version of the title/description, same as the blog editor's
+              language tab but kept inline here since the rest of this form (modules, tests,
+              trainer bio) isn't part of Bill 96's scope. */}
+          {showFr
+            ? <Card pad={16} style={{background:C.bg}}>
+                <div className="flex justify-between items-center mb-3">
+                  <Lbl style={{margin:0}}>Version française (facultative)</Lbl>
+                  <Btn kind="ghost" size="xs" onClick={()=>{setShowFr(false);set("titleFr","");set("aboutFr","");}}>Remove</Btn></div>
+                <div className="flex flex-col gap-3">
+                  <Field label="Titre"><Input value={d.titleFr||""} onChange={e=>set("titleFr",e.target.value)}/></Field>
+                  <Field label="Description"><Area rows={4} value={d.aboutFr||""} onChange={e=>set("aboutFr",e.target.value)}/></Field></div>
+              </Card>
+            : <Btn kind="outline" size="sm" icon="globe" onClick={()=>setShowFr(true)}>Add French version</Btn>}
 
           <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
             <Field label="Provider name"><Input value={d.provider} onChange={e=>set("provider",e.target.value)}

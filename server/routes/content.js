@@ -136,10 +136,12 @@ contentRouter.post("/blogs", requireAuth, requireRole("employer", "admin"), (req
   }
   const id = nextId("bl", "blogs");
   db.prepare(
-    `INSERT INTO blogs (id, title, cat, scene, tone, mins, author, author_seed, excerpt, body_json, owner_employer_id, status, scheduled_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`
+    `INSERT INTO blogs (id, title, cat, scene, tone, mins, author, author_seed, excerpt, body_json, title_fr, excerpt_fr, body_json_fr, owner_employer_id, status, scheduled_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
   ).run(id, b.title, b.cat || null, b.scene || "office", b.tone || "#005CCC", b.mins || 5, b.author || "", b.authorSeed || 0,
-    b.excerpt || "", JSON.stringify(b.body || []), isAdmin ? null : req.user.employer_id, b.scheduledAt ? "draft" : (b.status || "draft"), b.scheduledAt || null);
+    b.excerpt || "", JSON.stringify(b.body || []),
+    b.titleFr || null, b.excerptFr || null, b.bodyFr ? JSON.stringify(b.bodyFr) : null,
+    isAdmin ? null : req.user.employer_id, b.scheduledAt ? "draft" : (b.status || "draft"), b.scheduledAt || null);
   res.status(201).json({ blog: serializeBlog(db.prepare("SELECT * FROM blogs WHERE id = ?").get(id)) });
 });
 contentRouter.get("/blogs/:id/revisions", requireAuth, requireRole("employer", "admin"), (req, res) => {
@@ -160,10 +162,11 @@ contentRouter.patch("/blogs/:id", requireAuth, requireRole("employer", "admin"),
   saveRevision("blog", row);
   const b = req.body || {};
   const fields = { title: "title", cat: "cat", scene: "scene", tone: "tone", mins: "mins", author: "author",
-    excerpt: "excerpt", status: "status" };
+    excerpt: "excerpt", status: "status", titleFr: "title_fr", excerptFr: "excerpt_fr" };
   const setCols = []; const params = [];
   for (const [key, col] of Object.entries(fields)) if (b[key] !== undefined) { setCols.push(`${col} = ?`); params.push(b[key]); }
   if (b.body !== undefined) { setCols.push("body_json = ?"); params.push(JSON.stringify(b.body)); }
+  if (b.bodyFr !== undefined) { setCols.push("body_json_fr = ?"); params.push(b.bodyFr ? JSON.stringify(b.bodyFr) : null); }
   if (b.scheduledAt !== undefined) {
     setCols.push("scheduled_at = ?"); params.push(b.scheduledAt || null);
     if (b.scheduledAt && b.status === undefined) { setCols.push("status = 'draft'"); }
@@ -222,11 +225,11 @@ contentRouter.post("/trainings", requireAuth, requireRole("employer", "admin"), 
   }
   const id = nextId("tr", "trainings");
   db.prepare(
-    `INSERT INTO trainings (id, title, cat, scene, tone, provider, provider_seed, level, hours, price, mods_json, outcomes_json, about, owner_employer_id, status, scheduled_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+    `INSERT INTO trainings (id, title, cat, scene, tone, provider, provider_seed, level, hours, price, mods_json, outcomes_json, about, title_fr, about_fr, owner_employer_id, status, scheduled_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
   ).run(id, b.title, b.cat || null, b.scene || "learn", b.tone || "#005CCC", b.provider || "NorthHire Learning", b.providerSeed || 0,
     b.level || "Beginner", b.hours || 1, b.price || 0, JSON.stringify(b.mods || []), JSON.stringify(b.outcomes || []),
-    b.about || "", isAdmin ? null : req.user.employer_id, b.scheduledAt ? "draft" : (b.status || "draft"), b.scheduledAt || null);
+    b.about || "", b.titleFr || null, b.aboutFr || null, isAdmin ? null : req.user.employer_id, b.scheduledAt ? "draft" : (b.status || "draft"), b.scheduledAt || null);
   res.status(201).json({ training: serializeTraining(db.prepare("SELECT * FROM trainings WHERE id = ?").get(id)) });
 });
 contentRouter.get("/trainings/:id/revisions", requireAuth, requireRole("employer", "admin"), (req, res) => {
@@ -247,7 +250,7 @@ contentRouter.patch("/trainings/:id", requireAuth, requireRole("employer", "admi
   saveRevision("training", row);
   const b = req.body || {};
   const fields = { title: "title", cat: "cat", scene: "scene", tone: "tone", provider: "provider", level: "level",
-    hours: "hours", price: "price", about: "about", status: "status" };
+    hours: "hours", price: "price", about: "about", status: "status", titleFr: "title_fr", aboutFr: "about_fr" };
   const setCols = []; const params = [];
   for (const [key, col] of Object.entries(fields)) if (b[key] !== undefined) { setCols.push(`${col} = ?`); params.push(b[key]); }
   if (b.mods !== undefined) { setCols.push("mods_json = ?"); params.push(JSON.stringify(b.mods)); }
