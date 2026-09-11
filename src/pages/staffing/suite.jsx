@@ -809,20 +809,20 @@ export function AgencyAssignments(){
   const startEditRate=a=>{setEditingRate(a);setRateDraft({payRate:a.payRate,billRate:a.billRate});};
   const saveRate=async()=>{
     await A.updateAssignment(editingRate.id,{payRate:Number(rateDraft.payRate),billRate:Number(rateDraft.billRate)});
-    A.toast("Rate updated — logged to the audit trail","ok"); setEditingRate(null);
+    A.toast(t("staffing.assignments.rateUpdated"),"ok"); setEditingRate(null);
   };
   return <div>
     <div className="mb-3.5">
-      <div className="text-lg font-bold text-text">{list.length} assignments</div>
-      <div className="text-sm text-text-3 mt-0.5">Every worker deployed across every client.</div>
+      <div className="text-lg font-bold text-text">{list.length} {t("staffing.assignments.title")}</div>
+      <div className="text-sm text-text-3 mt-0.5">{t("staffing.assignments.subtitle")}</div>
     </div>
 
-    <div className="mb-3.5"><_PillTabs items={[["active","Active"],["completed","Completed"],["all","All"]]} value={tab} onChange={setTab}/></div>
+    <div className="mb-3.5"><_PillTabs items={[["active",t("staffing.assignments.tabActive")],["completed",t("staffing.assignments.tabCompleted")],["all",t("staffing.assignments.tabAll")]]} value={tab} onChange={setTab}/></div>
 
     <Card pad={0} style={{borderRadius:14,overflow:"hidden"}}>
       <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:720}}>
         <thead><tr className="border-b-2 border-line text-left">
-          {["Worker","Client","Site","Rates","Duration","Margin","Status","Actions"].map(h=>
+          {t("staffing.assignments.tableHeaders").map(h=>
             <th key={h} className={TH_CLS}>{h}</th>)}
         </tr></thead>
         <tbody>{pg.pageItems.map(a=>{const w=A.worker(a.worker); const person=w?(A.people||[]).find(p=>p.id===w.personId):null;
@@ -839,29 +839,29 @@ export function AgencyAssignments(){
             <td className={`${TD_CLS} text-sm text-text-2`}>{emp?.name||"—"}</td>
             <td className={`${TD_CLS} text-xs text-text-3 overflow-hidden text-ellipsis whitespace-nowrap`} style={{maxWidth:200}}>{a.site.split(" — ").pop()}</td>
             <td className={`${TD_CLS} text-xs text-text`}>${a.payRate}/${a.billRate}</td>
-            <td className={`${TD_CLS} text-xs text-text-3`}>{a.startDate} → {a.endDate||"ongoing"}</td>
+            <td className={`${TD_CLS} text-xs text-text-3`}>{a.startDate} → {a.endDate||t("staffing.assignments.ongoing")}</td>
             <td className={`${TD_CLS} text-xs font-semibold`} style={{color:econ?.margin>0?C.ok:C.danger}}>
               {econ?<>${econ.margin}/hr <span className="text-text-3 font-medium">({econ.markupPct}%)</span></>:"—"}
             </td>
             <td className={TD_CLS}><Tag tone={a.status==="active"?"ok":"neutral"} sm>{a.status}</Tag></td>
             <td className={TD_CLS}><div className="flex gap-1">
-              {a.status==="active"&&<Btn kind="ghost" size="xs" onClick={()=>startEditRate(a)}>Edit rate</Btn>}
-              {a.status==="active"&&<Btn kind="ghost" size="xs" onClick={()=>A.endAssignment(a.id)}>Complete</Btn>}</div></td>
+              {a.status==="active"&&<Btn kind="ghost" size="xs" onClick={()=>startEditRate(a)}>{t("staffing.assignments.editRate")}</Btn>}
+              {a.status==="active"&&<Btn kind="ghost" size="xs" onClick={()=>A.endAssignment(a.id)}>{t("staffing.assignments.complete")}</Btn>}</div></td>
           </tr>;})}
         </tbody>
       </table></div>
     </Card>
     <Pagination {...pg}/>
-    {editingRate&&<Modal onClose={()=>setEditingRate(null)} title="Edit assignment rate">
+    {editingRate&&<Modal onClose={()=>setEditingRate(null)} title={t("staffing.assignments.editModal")}>
       <div className="flex flex-col gap-3.5">
-        <Banner tone="neutral" icon="file">Rate changes on active assignments are recorded to the staffing audit log (visible on the Compliance page).</Banner>
+        <Banner tone="neutral" icon="file">{t("staffing.assignments.editBanner")}</Banner>
         <div className="grid grid-cols-2 gap-2.5">
-          <Field label="Pay rate ($/hr)"><Input type="number" min="0" step="0.5" value={rateDraft.payRate} onChange={e=>setRateDraft({...rateDraft,payRate:e.target.value})}/></Field>
-          <Field label="Bill rate ($/hr)"><Input type="number" min="0" step="0.5" value={rateDraft.billRate} onChange={e=>setRateDraft({...rateDraft,billRate:e.target.value})}/></Field>
+          <Field label={t("staffing.assignments.payRateLabel")}><Input type="number" min="0" step="0.5" value={rateDraft.payRate} onChange={e=>setRateDraft({...rateDraft,payRate:e.target.value})}/></Field>
+          <Field label={t("staffing.assignments.billRateLabel")}><Input type="number" min="0" step="0.5" value={rateDraft.billRate} onChange={e=>setRateDraft({...rateDraft,billRate:e.target.value})}/></Field>
         </div>
         <div className="flex gap-2.5 justify-end">
-          <Btn kind="ghost" onClick={()=>setEditingRate(null)}>Cancel</Btn>
-          <Btn kind="primary" onClick={saveRate}>Save</Btn>
+          <Btn kind="ghost" onClick={()=>setEditingRate(null)}>{t("staffing.assignments.cancel")}</Btn>
+          <Btn kind="primary" onClick={saveRate}>{t("staffing.assignments.save")}</Btn>
         </div>
       </div>
     </Modal>}

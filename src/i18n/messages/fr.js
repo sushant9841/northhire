@@ -550,7 +550,19 @@ export const fr = {
       emptyTitle: "Aucun travailleur·euse ne correspond", emptyBody: "Essayez un filtre différent ou une recherche de permis.",
       placementCreated: "Assignation créée"
     },
-    assignments: { title: "Assignations", worker: "Travailleur·euse", client: "Client·e", startDate: "Date de début", endDate: "Date de fin" },
+    assignments: {
+      title: "Assignations", worker: "Travailleur·euse", client: "Client·e", startDate: "Date de début", endDate: "Date de fin",
+      subtitle: "Chaque travailleur·euse déployé·e chez chaque client·e.",
+      tabActive: "Actif·ve", tabCompleted: "Complété·e", tabAll: "Tout",
+      tableHeaders: ["Travailleur·euse", "Client·e", "Site", "Taux", "Durée", "Marge", "Statut", "Actions"],
+      ongoing: "en cours",
+      editRate: "Modifier le taux", complete: "Complété·e",
+      editModal: "Modifier le taux d'assignation",
+      editBanner: "Les changements de taux sur les assignations actives sont enregistrés dans le journal d'audit du personnel (visible sur la page Conformité).",
+      payRateLabel: "Taux de paie ($/h)", billRateLabel: "Taux de facturation ($/h)",
+      cancel: "Annuler", save: "Enregistrer",
+      rateUpdated: "Taux mis à jour — enregistré dans la trace d'audit"
+    },
     timesheets: {
       title: "Feuilles de temps", pending: "En attente d'approbation", approved: "Approuvée", rejected: "Rejetée",
       subtitle: "Feuilles de temps", desc: "Heures hebdomadaires soumises par les travailleur·euse·s, approuvées par les superviseur·euse·s du client·e.",
