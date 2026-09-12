@@ -9,6 +9,7 @@ import {
   serializeNotification, serializeReference, serializePaymentMethod, serializeApplication,
 } from "../serialize.js";
 import { emit as liveEmit } from "../lib/liveBroker.js";
+import { pushNotification } from "../lib/notify.js";
 
 export const seekerMiscRouter = Router();
 
@@ -131,6 +132,12 @@ seekerMiscRouter.post("/messages", requireAuth, (req, res) => {
   // Live-sync: both sides of the conversation see the new message immediately.
   liveEmit(toUserId, "message:new", message);
   liveEmit(req.user.id, "message:new", message);
+  // Persisted notification for the recipient - survives a refresh/new device, unlike the old
+  // client-only notify() call this replaces (see notify.js for why that never actually worked
+  // cross-user).
+  const sender = db.prepare("SELECT name FROM users WHERE id = ?").get(req.user.id);
+  pushNotification({ for: toUserId, icon: "mail", title: `New message from ${sender?.name || "someone"}`,
+    body: text.trim().slice(0, 120), link: "messages" });
 });
 seekerMiscRouter.patch("/messages/:id/read", requireAuth, (req, res) => {
   db.prepare("UPDATE messages SET read = 1 WHERE id = ? AND to_user_id = ?").run(req.params.id, req.user.id);
@@ -169,6 +176,9 @@ seekerMiscRouter.post("/interviews", requireAuth, requireRole("employer"), (req,
     liveEmit(app.user_id, "application:updated", appPayload);
     for (const t of teammates) liveEmit(t, "application:updated", appPayload);
   }
+  const employer = db.prepare("SELECT name FROM employers WHERE id = ?").get(req.user.employer_id);
+  pushNotification({ for: app.user_id, icon: "calendar", title: `Interview scheduled — ${employer?.name || "an employer"}`,
+    body: `${mode === "video" ? "Video call" : "On-site interview"} on ${when}.`, link: "interviews" });
 });
 seekerMiscRouter.patch("/interviews/:id/cancel", requireAuth, requireRole("employer"), (req, res) => {
   const row = db.prepare("SELECT * FROM interviews WHERE id = ?").get(req.params.id);
@@ -179,6 +189,8 @@ seekerMiscRouter.patch("/interviews/:id/cancel", requireAuth, requireRole("emplo
   liveEmit(row.candidate_id, "interview:cancelled", iv);
   const teammates = db.prepare("SELECT id FROM users WHERE employer_id = ?").all(row.employer_id).map(r => r.id);
   for (const t of teammates) liveEmit(t, "interview:cancelled", iv);
+  pushNotification({ for: row.candidate_id, icon: "x", title: "Interview cancelled",
+    body: "An upcoming interview was cancelled.", link: "interviews" });
 });
 
 /* ─── Reviews ─── */

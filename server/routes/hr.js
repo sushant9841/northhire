@@ -11,6 +11,7 @@ import {
   serializeHrInvoice, serializeHrDepartment, serializeHrExpense, serializeHrPayrun, serializeHrChat, serializeHrChatMessage,
   serializeHrAuditEntry, serializeHrSignDocument, serializeHrSignature, serializeHrShift,
 } from "../serialize.js";
+import { pushNotification } from "../lib/notify.js";
 
 export const hrRouter = Router();
 
@@ -159,6 +160,19 @@ hrRouter.post("/employees", requireHrAuth, requireHrPriv, (req, res) => {
     d.salary, d.birthDate, d.manager || null, JSON.stringify(d.skills || []), JSON.stringify(d.badges || []),
     d.payType === "hourly" ? "hourly" : "salary", d.hourlyRate || null);
   res.status(201).json({ employee: serializeHrEmployee(db.prepare("SELECT * FROM hr_employees WHERE id = ?").get(id)) });
+
+  // If this new HR employee's email matches an existing NorthHire seeker account (the normal
+  // case - they were just hired through the pipeline, not added by hand), let them know their
+  // profile now lives in the company's HR Suite too, live and persisted. requireHrAuth sessions
+  // authenticate an hr_employee, not a platform `users` row, so there's no req.user here to
+  // notify the employer side - they already see the result synchronously from their own click.
+  if (d.email) {
+    const seekerUser = db.prepare("SELECT id FROM users WHERE email = ? AND role = 'seeker'").get(d.email.toLowerCase().trim());
+    if (seekerUser) {
+      pushNotification({ for: seekerUser.id, icon: "sparkle", title: "You're set up in HR Suite",
+        body: `Your employer added you to their HR Suite for attendance, leave and payroll.`, link: "workerDashboard" });
+    }
+  }
 });
 hrRouter.patch("/employees/:id", requireHrAuth, requireHrPriv, (req, res) => {
   const row = db.prepare("SELECT * FROM hr_employees WHERE id = ? AND company_id = ?").get(req.params.id, req.hrEmployee.company_id);

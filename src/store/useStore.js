@@ -118,6 +118,11 @@ export function useStore(){
      ever actually reached the destination page. */
   const [employersPrefill,setEmployersPrefill]=useState(null);
   const [pageTitle,setPageTitle]=useState(null);
+  /* Docked employer chat drawer's open/active-thread state, lifted here (rather than kept purely
+     local to DockedChat) so the message:new live-sync handler below can suppress the "new
+     message" toast when the recipient is already looking straight at that conversation in the
+     drawer - same reasoning as checking `pg==="messages"` for the full MessagesPage. */
+  const [chatDock,setChatDock]=useState({open:false,thread:null});
 
   /* --- real backend sync: every domain in this store is now API-backed, nothing persists to
      localStorage. Jobs/employers are global, so they're fetched once here; a network failure
@@ -379,10 +384,10 @@ export function useStore(){
         if (!payload) return;
         const mapped = mapApiApplication(payload);
         setApplications(l => l.some(a => a.id === mapped.id) ? l : [mapped, ...l]);
-        // Employer-side toast so the recruiter sees "a candidate just applied" without opening pipeline.
-        if (user?.role === "employer") {
-          notify({ icon: "target", title: "New application", body: "Someone just applied to one of your listings.", for: user.id, link: "empPipeline" });
-        }
+        // The in-app notification itself is now a persisted server row pushed via the
+        // "notification:new" event below (applications.js pushNotification call) - it used to
+        // be synthesized here as a client-only notify(), which only ever touched this browser's
+        // own state and vanished on refresh.
       },
       "application:updated": (payload) => {
         if (!payload) return;
@@ -393,16 +398,23 @@ export function useStore(){
         if (!payload) return;
         // Server sends `serializeMessage` shape already used by /seeker/messages GET.
         setMessages(l => l.some(m => m.id === payload.id) ? l : [payload, ...l]);
+        // Notification for the recipient is a persisted server row (see "notification:new"
+        // below), not synthesized here. This handler's only remaining job for "elsewhere in
+        // the app" delivery is the in-context toast: skip it when the recipient is already
+        // looking at the conversation (MessagesPage, or - for an employer - the docked chat
+        // drawer open on that exact thread), since the message already visibly appeared there.
         if (payload.to === user?.id) {
-          notify({ icon: "mail", title: "New message", body: (payload.text || "").slice(0, 80), for: user.id, link: "messages" });
+          const onMessagesPage = pg === "messages";
+          const dockedOnThread = chatDock.open && chatDock.thread === payload.from;
+          if (!onMessagesPage && !dockedOnThread) {
+            const sender = people.find(p => p.id === payload.from);
+            toast(`${sender?.name || "New message"}: ${(payload.text || "").slice(0, 60)}`, "brand", () => go("messages"), "top-right");
+          }
         }
       },
       "interview:scheduled": (payload) => {
         if (!payload) return;
         setInterviews(l => l.some(iv => iv.id === payload.id) ? l.map(iv => iv.id === payload.id ? payload : iv) : [payload, ...l]);
-        if (user?.role === "seeker") {
-          notify({ icon: "calendar", title: "Interview scheduled", body: `An interview was scheduled: ${payload.when||""}`.trim(), for: user.id, link: "interviews" });
-        }
       },
       "interview:updated": (payload) => {
         if (!payload) return;
@@ -411,9 +423,6 @@ export function useStore(){
       "interview:cancelled": (payload) => {
         if (!payload) return;
         setInterviews(l => l.map(iv => iv.id === payload.id ? { ...iv, status: "cancelled" } : iv));
-        if (user?.role === "seeker") {
-          notify({ icon: "x", title: "Interview cancelled", body: "An upcoming interview was cancelled.", for: user.id, link: "interviews" });
-        }
       },
       "notification:new": (payload) => {
         if (payload) setNotifications(l => [payload, ...l]);
@@ -425,9 +434,9 @@ export function useStore(){
      why so many actions across the app reached for alert() instead. Rendered by <ToastHost/>,
      mounted once at the app root. */
   const [toasts,setToasts]=useState([]);
-  const toast=(message,tone="brand")=>{
+  const toast=(message,tone="brand",onClick,pos="bottom")=>{
     const id=uid("toast");
-    setToasts(l=>[...l,{id,message,tone}]);
+    setToasts(l=>[...l,{id,message,tone,onClick,pos}]);
     setTimeout(()=>setToasts(l=>l.filter(t=>t.id!==id)),3500);
   };
   const dismissToast=id=>setToasts(l=>l.filter(t=>t.id!==id));
@@ -1070,8 +1079,10 @@ export function useStore(){
       const {message}=await api.post("/seeker/messages",{toUserId,jobId,text});
       setMessages(l=>[message,...l]);
       log("message.send","Sent a message","send");
-      const recipUser=people.find(p=>p.id===toUserId);
-      if(recipUser)notify({icon:"mail",title:"New message",body:text.slice(0,80),for:toUserId,link:"messages"});
+      // The recipient's in-app notification is created server-side (persisted + pushed live) -
+      // see server/lib/notify.js. Calling notify({for:toUserId,...}) here was a pre-existing bug:
+      // it only ever wrote into the SENDER's own local notifications state, under a `for` that
+      // never matched the sender's own id, so it was invisible and never reached the recipient.
       return {ok:true};
     }catch(err){toast(err.message,"danger");return {ok:false,msg:err.message};}
   };
@@ -1086,13 +1097,13 @@ export function useStore(){
       return {ok:false,msg:"Interview scheduling is a Growth+ feature."};
     }
     const app=applications.find(a=>a.id===candidateAppId); if(!app)return;
-    const j=job(app.job); const e=emp(j.e);
     try{
       const {interview:iv}=await api.post("/seeker/interviews",{applicationId:candidateAppId,when,mode,notes:notes||""});
       setInterviews(l=>[iv,...l]);
       setApplications(l=>l.map(a=>a.id===candidateAppId?{...a,stage:"Interview",note:`Interview ${mode==="video"?"video call":"in-person"} scheduled for ${when}`}:a));
-      notify({icon:"calendar",title:`Interview scheduled — ${e.name}`,
-        body:`${mode==="video"?"Video call":"On-site interview"} on ${when} for ${j.t}.`,for:app.user,link:"status"});
+      // Same as sendMessage above: the candidate's notification is now a persisted server row
+      // (server/routes/seekerMisc.js POST /interviews), not a client-only notify() that never
+      // reached their browser.
       log("interview.schedule",`Scheduled interview with ${person(app.user).name}`,"calendar");
       return iv.id;
     }catch(err){toast(err.message,"danger");}
@@ -2007,7 +2018,7 @@ export function useStore(){
     addReview,deleteReview,loadEmployerReviews,loadCandidateContact,candidateNotes,saveCandidateNote,loadScorecards,submitScorecard,
     submitContact,loadContactInbox,resolveContactMessage,listAdmins,setAdminScope,updatePlatformConfig,geocode,
     saved,following,enrolled,trainingProgress,suspended,suspensionInfo,invitedCandidates,notifications,activity,securitySignals,opsHealth,settings,userSettings,search,setSearch,
-    toasts,toast,dismissToast,
+    toasts,toast,dismissToast,chatDock,setChatDock,
     jobId,empId,blogId,trainingId,cvId,editId,candidateId,pipelineJob,applyDraft,setApplyDraft,
     contactPrefill,setContactPrefill,pendingPlan,setPendingPlan,employersPrefill,setEmployersPrefill,
     blogAuthorFilter,setBlogAuthorFilter,filterBlogsByAuthor,

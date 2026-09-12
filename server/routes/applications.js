@@ -5,6 +5,7 @@ import { serializeApplication } from "../serialize.js";
 import { emitWebhook } from "../webhooks.js";
 import { sendAndLogMail } from "../mail.js";
 import { emit as liveEmit, emitMany as liveEmitMany } from "../lib/liveBroker.js";
+import { pushNotification } from "../lib/notify.js";
 
 /* Every user attached to a given employer_id — the employer account owner plus any teammates.
    Used so a stage move made by one team member instantly refreshes the pipeline on their
@@ -138,6 +139,10 @@ applicationsRouter.post("/", requireAuth, requireRole("seeker"), (req, res) => {
     emitWebhook(ownerJob.employer_id, "application.created", serializeApplication(row));
     // Live-sync: every employer teammate's Pipeline / Jobs tab picks this up without a refresh.
     liveEmitMany(employerUserIds(ownerJob.employer_id), "application:new", serializeApplication(row));
+    for (const uid of employerUserIds(ownerJob.employer_id)) {
+      pushNotification({ for: uid, icon: "target", title: "New application",
+        body: `${job.title} just got a new applicant.`, link: "empPipeline" });
+    }
   }
 });
 
@@ -205,6 +210,13 @@ applicationsRouter.patch("/:id/stage", requireAuth, requireRole("employer"), (re
      but it does respect their in-app notification preference, and it is sent after the response
      so the employer's drag never waits on delivery. */
   notifyStageChange(app.user_id, row, stage, note).catch(() => {});
+
+  // Persisted in-app notification (separate from the email above, and from the local-only
+  // client notify() this deliberately does NOT rely on) so the candidate's bell badge is real
+  // and survives a refresh / different device / being offline when it happened.
+  const stageEmployer = db.prepare("SELECT name FROM employers WHERE id = ?").get(req.user.employer_id);
+  pushNotification({ for: app.user_id, icon: stage === "Hired" || stage === "Offer" ? "award" : "activity",
+    title: `${stage} — ${stageEmployer?.name || "an employer"}`, body: note, link: "status" });
 
   /* Run the employer's stage-change automation, if any: send the linked message template to the
      candidate as an in-app message. Merge-field substitution mirrors what the template picker

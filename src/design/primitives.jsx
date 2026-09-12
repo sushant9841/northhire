@@ -410,14 +410,26 @@ export function Banner({tone="brand",icon,title,children,action,onClose,style}){
 export function ToastHost({toasts,dismiss}){
  if(!toasts?.length)return null;
  const T={brand:"bg-ink text-white",ok:"bg-ok text-white",warn:"bg-warn text-white",danger:"bg-red text-white"};
- return <div className="fixed left-1/2 z-[900] flex flex-col gap-2.5 items-center" style={{bottom:24,transform:"translateX(-50%)",width:"min(92vw,420px)"}}>
-  {toasts.map(t=><div key={t.id} role="status"
-    className={`w-full rounded-xl py-3 px-4 flex gap-3 items-center shadow-lg ${T[t.tone]||T.brand}`}
+ /* Most toasts stack bottom-center (the original, still-default behavior). A few - "new message
+    while you were elsewhere" - explicitly want a top-right anchor, closer to where an inbox
+    notification would land and away from any bottom-docked chat rail, so `pos` splits them into
+    a second independent stack rather than changing the shared one's position for everyone. */
+ const bottom=toasts.filter(t=>t.pos!=="top-right"), topRight=toasts.filter(t=>t.pos==="top-right");
+ const row=t=><div key={t.id} role="status"
+    onClick={t.onClick?()=>{t.onClick();dismiss(t.id);}:undefined}
+    className={`w-full rounded-xl py-3 px-4 flex gap-3 items-center shadow-lg ${T[t.tone]||T.brand} ${t.onClick?"cursor-pointer":""}`}
     style={{animation:"up .22s cubic-bezier(.22,.68,.35,1) both"}}>
    <span className="text-sm font-medium flex-1 min-w-0">{t.message}</span>
-   <button onClick={()=>dismiss(t.id)} className="border-0 bg-transparent p-0 cursor-pointer flex shrink-0 opacity-70"><I n="x" s={15} c="#fff"/></button>
-  </div>)}
- </div>;
+   <button onClick={e=>{e.stopPropagation();dismiss(t.id);}} className="border-0 bg-transparent p-0 cursor-pointer flex shrink-0 opacity-70"><I n="x" s={15} c="#fff"/></button>
+  </div>;
+ return <>
+  {bottom.length>0&&<div className="fixed left-1/2 z-[900] flex flex-col gap-2.5 items-center" style={{bottom:24,transform:"translateX(-50%)",width:"min(92vw,420px)"}}>
+   {bottom.map(row)}
+  </div>}
+  {topRight.length>0&&<div className="fixed right-4 z-[900] flex flex-col gap-2.5 items-end" style={{top:76,width:"min(92vw,380px)"}}>
+   {topRight.map(row)}
+  </div>}
+ </>;
 }
 
 export function H1({children,sub,action,style}){
