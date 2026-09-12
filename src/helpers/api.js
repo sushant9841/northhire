@@ -2,7 +2,21 @@
    httpOnly cookie the browser manages itself - nothing here reads or writes localStorage. */
 import { infinityReviver } from "./jsonInfinity.js";
 
-export const API_BASE = "http://localhost:8787/api";
+/* API base follows the page's own hostname so the browser treats the API as same-site as the
+   frontend. Otherwise a page loaded from the machine's LAN IP (a phone/tablet on the same wifi,
+   or the dev machine's own LAN IP that Vite prints) fetches to `localhost:8787` which is a
+   different site - the SameSite=Lax session cookie won't be sent, and the browser sees the
+   signed-in user as anonymous on refresh. VITE_API_BASE overrides this entirely for a real
+   deployment where the API lives on a fixed URL. */
+function resolveApiBase() {
+  const override = import.meta.env?.VITE_API_BASE;
+  if (override) return override.replace(/\/$/, "");
+  if (typeof window === "undefined") return "http://localhost:8787/api";
+  const { protocol, hostname } = window.location;
+  return `${protocol}//${hostname}:8787/api`;
+}
+
+export const API_BASE = resolveApiBase();
 
 /* A network failure (server not running) is distinguished from a real API error response
    so callers can fall back to local-only behavior instead of showing a confusing message. */
