@@ -236,8 +236,16 @@ export function useHrStore(){
   };
   const addEmployee=async(data)=>{
     /* Reachable from the employer console right after a hire, before the employer has ever
-       opened HR Suite in this session - bridge into an HR session first if one isn't active yet. */
-    if(!hrEmployee)await hrAutoLogin();
+       opened HR Suite in this session - bridge into an HR session first if one isn't active yet.
+       Previously we ignored hrAutoLogin's return value: a silent {ok:false} from the bridge
+       (e.g. an employer whose plan doesn't include HR Suite, or a session that expired) then
+       let the /hr/employees call go out anyway, which 401'd with a generic "Not signed in to
+       HR Suite." error and the caller had no signal to surface. Now we escalate the bridge
+       failure with the real reason so the modal can show it inline. */
+    if(!hrEmployee){
+      const r=await hrAutoLogin();
+      if(!r?.ok)throw new Error(r?.msg||"Couldn't open HR Suite for this account.");
+    }
     const {employee}=await api.post("/hr/employees",data);
     setHrEmployees(l=>[...l,employee]);
     return employee;

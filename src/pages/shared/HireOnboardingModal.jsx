@@ -23,19 +23,42 @@ export function HireOnboardingModal({payload,onClose}){
   const [salary,setSalary]=useState(job.salaryHigh||job.salaryLow||60000);
   const [startDate,setStartDate]=useState(_fmtDate(new Date(Date.now()+14*864e5)));
   const [addToHr,setAddToHr]=useState(true);
+  /* Local UX state: without this the button did nothing visible even when the request was
+     in flight — the user's exact complaint. `busy` disables the button + gives the
+     operator a spinner while addEmployee runs; `err` renders an inline banner if the API
+     rejects the create instead of silently swallowing the error and closing the modal
+     (previous behavior: onClose ran unconditionally so a failure looked like nothing
+     happened, and any local state the operator filled in was gone). */
+  const [busy,setBusy]=useState(false);
+  const [err,setErr]=useState("");
 
   const activeEmps=A.hrEmpsAtCompany?.(company.id).filter(e=>e.status==="active")||[];
 
   const finish=async()=>{
-    if(addToHr){
-      await A.addEmployee({
+    if(busy)return;
+    setErr("");
+    if(!addToHr){onClose(); return;}
+    setBusy(true);
+    try{
+      const employee=await A.addEmployee({
         companyId:company.id,
         name:person.name, email:person.email, role, dept,
         title, manager:manager||null, city:person.city||"", prov:person.prov||"ON",
         phone:person.phone||"", salary, hired:startDate,
       });
-    }
-    onClose();
+      // Toast + navigate to the new HR record so the employer sees the follow-through.
+      A.toast?.(t("hireOnboarding.createdToast",{name:person.name}),"ok");
+      onClose();
+      // Land on the HR People page (the "someone was just added" surface) if we can't jump
+      // straight to the profile — the router keys profile views by employee id in a query
+      // shape that's HrShell-specific, so the safer default is the directory landing.
+      if(employee?.id)A.go?.("hrPeople"); else A.go?.("hrDashboard");
+    }catch(e){
+      // Two common failure modes: hrAutoLogin's silent {ok:false} left no HR session so
+      // the create 401'd, or a validation problem (duplicate email). Either way, surface
+      // it in-modal and let the operator retry rather than closing on them.
+      setErr(e?.message||t("hireOnboarding.createFailed"));
+    }finally{setBusy(false);}
   };
 
   return <div onClick={onClose} className={`fixed inset-0 bg-[rgba(15,23,42,0.72)] z-9998 flex items-center justify-center backdrop-blur-sm ${mob?"p-4":"p-6"}`}>
@@ -89,10 +112,18 @@ export function HireOnboardingModal({payload,onClose}){
         </Banner>
       </div>}
 
+      {err&&<div className={mob?"px-6 pb-3":"px-8 pb-3"}>
+        <Banner tone="danger" icon="alert" title={t("hireOnboarding.createFailed")}>
+          {err}
+        </Banner>
+      </div>}
+
       {/* Footer */}
       <div className={`border-t border-line bg-bg flex gap-2.5 justify-end flex-wrap ${mob?"pt-4 px-6 pb-5":"pt-5 px-8 pb-6"}`}>
-        <Btn kind="ghost" onClick={onClose}>{addToHr?t("hireOnboarding.skipForNow"):t("hireOnboarding.closeLabel")}</Btn>
-        {addToHr&&<Btn kind="primary" icon="check" onClick={finish}>{t("hireOnboarding.createHrRecord")}</Btn>}
+        <Btn kind="ghost" onClick={onClose} disabled={busy}>{addToHr?t("hireOnboarding.skipForNow"):t("hireOnboarding.closeLabel")}</Btn>
+        {addToHr&&<Btn kind="primary" icon={busy?"clock":"check"} onClick={finish} disabled={busy}>
+          {busy?t("hireOnboarding.creating"):t("hireOnboarding.createHrRecord")}
+        </Btn>}
       </div>
     </div>
   </div>;

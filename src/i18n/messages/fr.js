@@ -475,6 +475,8 @@ export const fr = {
     dataLinkedTitle: "Données liées entre les produits",
     dataLinkedBody: "Le profil de chercheur·euse d'emploi NorthHire reste lié à ce dossier RH. Lorsqu'il·elle met à jour ses compétences ou certifications sur NorthHire, cela se synchronise automatiquement avec la Suite RH. Vous pouvez ajuster la confidentialité des liens dans Paramètres RH.",
     skipForNow: "Ignorer pour maintenant", createHrRecord: "Créer le dossier RH",
+    creating: "Création…", createdToast: "{name} a été ajouté·e à la Suite RH.",
+    createFailed: "Impossible de créer le dossier RH",
   },
   interviews: {
     signInTitle: "Se connecter", signInBody: "L'horaire des entrevues est sur votre compte.",

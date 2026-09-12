@@ -474,6 +474,8 @@ export const en = {
     dataLinkedTitle: "Data linked between products",
     dataLinkedBody: "Their NorthHire seeker profile stays linked to this HR record. When they update their skills or certifications on NorthHire, it syncs to HR Suite automatically. You can adjust link privacy in HR Settings.",
     skipForNow: "Skip for now", createHrRecord: "Create HR record",
+    creating: "Creating…", createdToast: "{name} added to HR Suite.",
+    createFailed: "Couldn't create the HR record",
   },
   interviews: {
     signInTitle: "Sign in", signInBody: "Interview schedule lives on your account.",
