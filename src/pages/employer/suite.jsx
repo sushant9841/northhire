@@ -11,7 +11,7 @@ import {
 } from "../../design/primitives.jsx";
 import { hiringSummary } from "../../helpers/hiringAnalytics.js";
 import { postingRules, checkPayRange, findCanadianExperience, applicationDecisionNotice, AI_DISCLOSURE_TEXT } from "../../helpers/jobPostingLaw.js";
-import { pay, payShort, dlText, money, uid, matchesQuery, matchesBooleanQuery } from "../../helpers/utils.js";
+import { pay, payShort, dlText, money, uid, matchesQuery, matchesBooleanQuery, focusFirstError } from "../../helpers/utils.js";
 import { sanitizeHtml } from "../../helpers/sanitize.js";
 import { PROVS, PCODE, CATS, CATM } from "../../store/seed/constants.js";
 import { jobTone, jobStatusLabel } from "../../helpers/statusTone.js";
@@ -132,9 +132,10 @@ const _defaultJobPostData=()=>({t:"",cat:"trades",type:"Full Time",mode:"On-site
     payType:"range",  /* range | fixed */
     payPeriod:"hr",   /* hr | yr | contract */
     lo:"",hi:"",fixed:"",contractAmt:"",
-    vac:1,exp:"Entry level welcome",yearsExp:0,edu:"No formal education required",
+    vac:1,exp:"",yearsExp:0,edu:"",
     dlDate:"", /* absolute date, replaces days */
     perks:[],duties:"",reqs:"",how:"",urgent:false,featured:false,
+    aiSeed:0, /* incremented each Regenerate click so identical inputs still produce a fresh draft */
     /* Ontario Bill 149 disclosures. aiScreening starts true because this platform really does
        auto-score every applicant - turning it off is the claim that needs a deliberate act. */
     aiScreening:true,vacancyConfirmed:false,
@@ -156,11 +157,36 @@ export function EmpPost(){
   const setLocation=loc=>{const parts=loc.split(",").map(s=>s.trim());
     setF(p=>({...p,location:loc,city:parts[0]||"",prov:PROVS.find(pr=>PCODE[pr]===parts[1])||p.prov}));};
 
-  const applyAI=()=>{const s=aiSuggestJD(f.t,f.cat);
+  /* Merge new items into a list without dropping anything the user already added or edited. */
+  const _mergeList=(existing,fresh)=>{
+    const seen=new Set((existing||[]).map(x=>String(x).trim().toLowerCase()));
+    const out=[...(existing||[])];
+    (fresh||[]).forEach(x=>{const k=String(x).trim().toLowerCase(); if(k&&!seen.has(k)){out.push(x);seen.add(k);}});
+    return out;
+  };
+  /* Regenerate always bumps aiSeed so the same inputs still produce a materially different
+     output; a first-time Generate keeps the seed at 0 for a stable initial suggestion. */
+  const applyAI=(regenerate=false)=>{
+    const seed=regenerate?(f.aiSeed||0)+1:(f.aiSeed||0);
+    const s=aiSuggestJD({title:f.t,cat:f.cat,type:f.type,mode:f.mode,exp:f.exp,edu:f.edu,seed,
+      adminBenefits:A.platformConfig?.jobAiBenefitsBySector,
+      adminQuestions:A.platformConfig?.jobAiQuestionsBySector});
     setF(p=>({...p,
-      desc:p.desc||s.desc,
-      duties:p.duties||s.duties.join("\n"),
-      reqs:p.reqs||s.reqs.join("\n")}));};
+      aiSeed:seed,
+      desc:regenerate?s.desc:(p.desc?.trim()?p.desc:s.desc),
+      duties:regenerate?s.duties.map(x=>`• ${x}`).join("\n"):(p.duties?.trim()?p.duties:s.duties.map(x=>`• ${x}`).join("\n")),
+      reqs:regenerate?s.reqs.map(x=>`• ${x}`).join("\n"):(p.reqs?.trim()?p.reqs:s.reqs.map(x=>`• ${x}`).join("\n")),
+      mustHave:regenerate?s.mustHave:_mergeList(p.mustHave,s.mustHave),
+      skills:regenerate?s.niceToHave:_mergeList(p.skills,s.niceToHave),
+      perks:regenerate?s.benefits:_mergeList(p.perks,s.benefits),
+      questions:regenerate?s.questions.map((q,i)=>({id:`ai${seed}_${i}`,type:q.type,prompt:q.prompt,required:q.required,options:[]})):p.questions,
+    }));
+  };
+  /* AI-generate button gates on ALL five upstream fields being explicitly chosen. Defaults are
+     empty for exp/edu so the employer must make a real selection before the AI runs; without
+     that gate the AI output ignored these dimensions and every listing looked the same. */
+  const aiReady=!!(f.t.trim()&&f.cat&&f.type&&f.mode&&f.exp&&f.edu);
+  const aiUsed=(f.aiSeed||0)>0||!!(f.mustHave.length||f.perks.length||f.questions.length);
 
   /* Which posting laws bind this listing, decided by where the WORK is (that's what "advertised
      in Ontario/BC" turns on), falling back to the company's own province before a location is
@@ -170,6 +196,8 @@ export function EmpPost(){
   const validate=()=>{const e={};
     if(step===1){
       if(!f.t.trim())e.t=t("employer.post.titleRequired");
+      if(!f.exp)e.exp=t("employer.post.expRequired")||"Pick an experience level";
+      if(!f.edu)e.edu=t("employer.post.eduRequired")||"Pick an education level";
       const descTxt=(f.desc||"").replace(/<[^>]+>/g,"").trim();
       if(descTxt.length<40)e.desc=t("employer.post.descTooShort");
       if(f.mustHave.length===0)e.mustHave=t("employer.post.mustHaveRequired");
@@ -207,7 +235,7 @@ export function EmpPost(){
         if(hit)e.how=t("employer.post.billNoCanExpHow",{hit});
       }
     }
-    setErr(e); return !Object.keys(e).length;};
+    setErr(e); if(Object.keys(e).length){focusFirstError(e); return false;} return true;};
 
   const featuredUsed=A.jobs.filter(j=>j.e===A.company.id&&j.featured&&j.status==="live").length;
   const featuredLimit=A.limitOf("featured");
@@ -263,10 +291,15 @@ export function EmpPost(){
       {step===1&&<div className="flex flex-col gap-5">
         <H2 sub={t("employer.post.roleDetailsSub")}>{t("employer.post.stepRoleDetails")}</H2>
 
-        <Field label={t("employer.post.jobTitle")} required error={err.t}>
+        <Field label={t("employer.post.jobTitle")} required error={err.t} name="t">
           <Input value={f.t} onChange={e=>set("t",e.target.value)}
             placeholder={t("employer.post.jobTitlePlaceholder")} invalid={!!err.t}/></Field>
 
+        {/* Ordering: sector → type → mode → experience → education → description. The AI helper
+            depends on every one of these five, so the wizard now surfaces them BEFORE the Auto
+            Fill button, and the button stays disabled until they're all set. Previously the
+            wizard buried experience+education below the description, so the AI never saw them
+            and every listing came out identical. */}
         <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-3"}`}>
           <Field label={t("employer.post.sector")} required><Sel value={f.cat} onChange={e=>set("cat",e.target.value)}>
             {CATS.map(c=><option key={c.id} value={c.id}>{c.label}</option>)}</Sel></Field>
@@ -276,16 +309,34 @@ export function EmpPost(){
             {["On-site","Hybrid","Remote"].map(o=><option key={o}>{o}</option>)}</Sel></Field>
         </div>
 
-        <div className="rounded-xl border border-line-2 p-3.5 flex gap-3 items-center" style={{background:`linear-gradient(135deg,${C.tint} 0%,#F0F7FF 100%)`}}>
-          <div className="w-10 h-10 rounded-xl bg-brand text-white flex items-center justify-center shrink-0"><I n="sparkle" s={19}/></div>
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-semibold text-text">{t("employer.post.autoFillTitle")}</div>
-            <div className="text-xs text-text-2 mt-0.5">{t("employer.post.autoFillBody")}</div>
-          </div>
-          <Btn kind="primary" size="sm" onClick={applyAI} disabled={!f.t.trim()}>{f.t.trim()?t("employer.post.suggest"):t("employer.post.enterTitleFirst")}</Btn>
+        <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
+          <Field label={t("employer.post.experienceRequired")} required error={err.exp} name="exp">
+            <Sel value={f.exp} onChange={e=>set("exp",e.target.value)} invalid={!!err.exp}>
+              <option value="">{t("employer.post.selectPlaceholder")||"Select…"}</option>
+              {["No experience required","Entry level welcome","1+ years","2+ years","3+ years","4+ years","5+ years","10+ years"].map(o=><option key={o}>{o}</option>)}</Sel></Field>
+          <Field label={t("employer.post.educationRequired")} required error={err.edu} name="edu">
+            <Sel value={f.edu} onChange={e=>set("edu",e.target.value)} invalid={!!err.edu}>
+              <option value="">{t("employer.post.selectPlaceholder")||"Select…"}</option>
+              {["No formal education required","High School Diploma","Apprenticeship / trade certificate","College Diploma","Bachelor's Degree or equivalent","Red Seal Certificate","Professional registration","Master's Degree","Doctorate"].map(o=><option key={o}>{o}</option>)}</Sel></Field>
         </div>
 
-        <Field label={t("employer.post.jobDescription")} required error={err.desc} hint={t("employer.post.jobDescriptionHint")}>
+        <div className="rounded-xl border border-line-2 p-3.5 flex gap-3 items-center flex-wrap" style={{background:`linear-gradient(135deg,${C.tint} 0%,#F0F7FF 100%)`}}>
+          <div className="w-10 h-10 rounded-xl bg-brand text-white flex items-center justify-center shrink-0"><I n="sparkle" s={19}/></div>
+          <div className="flex-1 min-w-0" style={{minWidth:200}}>
+            <div className="text-sm font-semibold text-text">{t("employer.post.autoFillTitle")}</div>
+            <div className="text-xs text-text-2 mt-0.5">
+              {aiReady?t("employer.post.autoFillBody"):(t("employer.post.autoFillNeedFields")||"Pick sector, employment type, work setting, experience and education first.")}
+            </div>
+          </div>
+          <div className="flex gap-2">
+            {aiUsed&&<Btn kind="outline" size="sm" icon="refresh" onClick={()=>applyAI(true)} disabled={!aiReady}>{t("employer.post.regenerate")||"Regenerate"}</Btn>}
+            <Btn kind="primary" size="sm" icon="sparkle" onClick={()=>applyAI(false)} disabled={!aiReady}>
+              {aiReady?(t("employer.post.suggest")):(t("employer.post.autoFillNeedFieldsShort")||"Fill fields above")}
+            </Btn>
+          </div>
+        </div>
+
+        <Field label={t("employer.post.jobDescription")} required error={err.desc} name="desc" hint={t("employer.post.jobDescriptionHint")}>
           <RichText value={f.desc} onChange={v=>set("desc",v)}
             placeholder={t("employer.post.jobDescriptionPlaceholder")} rows={6}/></Field>
 
@@ -297,7 +348,7 @@ export function EmpPost(){
           <RichText value={f.reqs} onChange={v=>set("reqs",v)}
             placeholder={t("employer.post.requirementsPlaceholder")} rows={5}/></Field>
 
-        <Field label={t("employer.post.mustHaveSkills")} required error={err.mustHave}
+        <Field label={t("employer.post.mustHaveSkills")} required error={err.mustHave} name="mustHave"
           hint={t("employer.post.mustHaveHint")}>
           <InlineList value={f.mustHave} onChange={v=>set("mustHave",v)} icon="check"
             placeholder={t("employer.post.mustHavePlaceholder")}/></Field>
@@ -305,13 +356,6 @@ export function EmpPost(){
         <Field label={t("employer.post.niceToHaveSkills")} hint={t("employer.post.niceToHaveHint")}>
           <InlineList value={f.skills} onChange={v=>set("skills",v)} icon="sparkle"
             placeholder={t("employer.post.niceToHavePlaceholder")}/></Field>
-
-        <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
-          <Field label={t("employer.post.experienceRequired")}><Sel value={f.exp} onChange={e=>set("exp",e.target.value)}>
-            {["No experience required","Entry level welcome","1+ years","2+ years","3+ years","4+ years","5+ years","10+ years"].map(o=><option key={o}>{o}</option>)}</Sel></Field>
-          <Field label={t("employer.post.educationRequired")}><Sel value={f.edu} onChange={e=>set("edu",e.target.value)}>
-            {["No formal education required","High School Diploma","Apprenticeship / trade certificate","College Diploma","Bachelor's Degree or equivalent","Red Seal Certificate","Professional registration","Master's Degree","Doctorate"].map(o=><option key={o}>{o}</option>)}</Sel></Field>
-        </div>
       </div>}
 
       {step===2&&<div className="flex flex-col gap-5">

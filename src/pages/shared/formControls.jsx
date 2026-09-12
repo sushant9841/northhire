@@ -215,12 +215,20 @@ export function QuestionBuilder({value=[],onChange}){
   </div>;
 }
 
-/* AI-autofill suggestion helper — deterministic templates by category */
+/* AI-autofill suggestion helper — deterministic templates by category with per-input rotation.
+   Output depends on title + sector + employment type + work setting + experience + education +
+   a rotation seed the caller increments on regenerate. Same inputs → same output; a different
+   experience level, education level, employment type, work setting or seed all produce
+   materially different copy. Returns { desc (HTML with Overview/Duties/Requirements headings +
+   bullets), duties[], reqs[], mustHave[], niceToHave[], questions[], benefits[] } so the wizard
+   can present each item for accept/edit/reject. Benefits and common questions pools are
+   overridable at runtime via optional adminBenefits{sector→[]} + adminQuestions{sector→[]} args,
+   read from platform_settings so the admin UI can extend them per sector. */
 const _AI_JD_TEMPLATES={
   trades:{desc:"We're looking for a skilled tradesperson to join our team on active project sites across the region. You'll work alongside experienced Red Seal journeypersons on commercial, industrial and infrastructure builds. Safety is our first priority — every crew member goes home the way they came in.",
     duties:["Perform installation, maintenance and repair work per code and site specifications","Interpret blueprints, drawings and technical documentation accurately","Coordinate with site supervisors and other trades to keep schedules on track","Maintain a clean, safe work site and follow all OHS regulations","Complete daily reports and time sheets","Participate in safety toolbox talks and mentor apprentices"],
     reqs:["Red Seal or provincial trade certification","Valid safety tickets (WHMIS, Working at Heights, First Aid)","Minimum 3 years site experience on commercial or industrial projects","Own hand tools and reliable transportation to site","Ability to lift 50 lbs and work in all weather conditions","Clear communication in English (French an asset in Quebec)"]},
-  healthcare:{desc:"We're hiring a compassionate healthcare professional to join our care team. You'll work with a supportive interdisciplinary group serving patients across acute, complex and community settings. This is a role for someone who prioritizes patient dignity and evidence-based practice.",
+  health:{desc:"We're hiring a compassionate healthcare professional to join our care team. You'll work with a supportive interdisciplinary group serving patients across acute, complex and community settings. This is a role for someone who prioritizes patient dignity and evidence-based practice.",
     duties:["Deliver direct patient care in line with regulatory standards and best practice","Document assessments, interventions and outcomes accurately in the EMR","Collaborate with physicians, allied health and family members","Advocate for patients and their families through their care journey","Participate in quality improvement initiatives and peer education","Respond to changing patient conditions with clinical judgment"],
     reqs:["Current registration with the appropriate provincial regulatory college","Minimum 2 years relevant clinical experience","Current BLS certification (ACLS an asset)","Strong interpersonal and communication skills","Ability to work rotating shifts including nights and weekends","Vulnerable Sector Check on file"]},
   transport:{desc:"We're seeking a professional driver to join our fleet operations team. You'll be responsible for the safe, timely delivery of freight across regional and long-haul routes. We invest in modern equipment, competitive pay and driver-first scheduling.",
@@ -277,11 +285,159 @@ const _AI_JD_KEYWORDS={
   agri:["farm","agricultur","fishing","harvest","greenhouse"],
   security:["security guard","security officer","guard","janitor","custodian","clean"],
 };
-export function aiSuggestJD(title,cat){
+/* Per-sector skill / question / benefit pools. The AI helper rotates through each pool using
+   an input-derived seed so the same inputs always produce the same picks but different inputs
+   (or a different regenerate seed) produce materially different picks. Admin can extend the
+   `benefits` and `questions` pools per sector via platform_settings.job_ai_benefits_by_sector
+   and job_ai_questions_by_sector — these arrays are merged on top of the base pool at runtime. */
+const _AI_JD_POOLS={
+  trades:{must:["Red Seal certification","Safety tickets (WHMIS)","Blueprint reading","Own hand tools","Reliable transportation","Physical stamina"],
+    nice:["Working at Heights ticket","Confined space training","Second language","Class 5 or higher licence","Fall arrest certification","Trade math"],
+    questions:["Do you hold a valid Red Seal or provincial trade certification?","Which safety tickets do you currently hold?","Are you comfortable working at heights or in confined spaces?","Do you have your own hand tools?","How many years of on-site experience do you have?"],
+    benefits:["Extended health benefits","Dental coverage","Tool allowance","Boot allowance","RRSP matching","Overtime pay","Paid safety training","Life insurance"]},
+  health:{must:["Provincial college registration","BLS certification","Vulnerable Sector Check","Clear communication","Charting/EMR literacy","Patient-first mindset"],
+    nice:["ACLS certification","Bilingual (English/French)","Palliative or geriatric experience","IV therapy","Wound care","Mental Health First Aid"],
+    questions:["Are you currently registered with the relevant provincial regulatory college?","Are you available for rotating shifts including nights and weekends?","Do you have a current Vulnerable Sector Check?","Are you comfortable using electronic medical records?","How many years of direct patient care experience do you have?"],
+    benefits:["Extended health & dental","Pension plan","Paid vacation","Sick days","Continuing education budget","Uniform allowance","Employee assistance program","Shift premiums"]},
+  transport:{must:["Class 1 (AZ) commercial licence","Clean 5-year abstract","CVOR compliance","Ability to cross US border","Clean criminal record","Hours-of-service compliance"],
+    nice:["Air-brake endorsement","TDG certification","Cross-border experience","Bilingual","Reefer experience","Manual transmission"],
+    questions:["Do you hold a valid Class 1 (AZ) commercial licence?","Can you provide a clean 5-year driver's abstract?","Are you eligible to cross the Canada-US border?","How many years of verifiable OTR experience do you have?","Are you comfortable with rotating dispatch and long-haul routes?"],
+    benefits:["Per-mile bonuses","Layover pay","Health & dental","Home time guaranteed","Fuel bonuses","Modern equipment","RRSP matching","Paid orientation"]},
+  retail:{must:["Customer service","POS operation","Cash handling","Team collaboration","Attention to detail","Standing/lifting stamina"],
+    nice:["Second language","Visual merchandising","Inventory management","Loss prevention awareness","Upselling experience","Social media literacy"],
+    questions:["Do you have previous retail or customer service experience?","Are you available for evenings and weekends?","Are you comfortable lifting up to 25 lbs?","How do you handle a difficult customer?","Are you legally eligible to work in Canada?"],
+    benefits:["Employee discount","Flexible scheduling","Health benefits after probation","Sales commission or bonuses","Referral bonuses","Growth into supervisor roles","Paid training","Uniform provided"]},
+  hosp:{must:["Food Handler certification","Guest service","Speed under pressure","Cleanliness","Teamwork","Physical stamina"],
+    nice:["Smart Serve","Second language","Allergen training","Barista skills","POS experience","Wine/beer knowledge"],
+    questions:["Do you have a current Food Handler certification (or are willing to obtain)?","Are you comfortable working evenings, weekends and holidays?","Can you stand and walk for a full shift?","Do you have previous experience in hospitality or food service?","Are you legally eligible to work in Canada?"],
+    benefits:["Free shift meals","Tip pooling","Flexible scheduling","Health benefits after probation","Uniform provided","Career pathway","Employee discount","Paid training"]},
+  factory:{must:["Warehouse or production experience","PPE compliance","Physical stamina","Attention to detail","Team collaboration","Steel-toe boots"],
+    nice:["Forklift/order-picker ticket","Lift-truck certification","Basic mechanical aptitude","Second language","Quality control experience","Continuous improvement (5S/Lean)"],
+    questions:["Do you have previous warehouse or production experience?","Do you hold a valid forklift/order-picker certification?","Are you able to lift up to 50 lbs repetitively?","Are you comfortable with rotating shifts including weekends?","Do you have steel-toe safety boots?"],
+    benefits:["Health & dental","RRSP matching","Shift premiums","Attendance bonuses","Safety boot allowance","Overtime pay","Employee assistance program","Paid training"]},
+  admin:{must:["Microsoft Office / Google Workspace","Written communication","Verbal communication","Organizational skills","Attention to detail","Discretion with confidential info"],
+    nice:["Second language","CRM/database experience","Bookkeeping basics","Event coordination","Design tools (Canva)","Advanced Excel"],
+    questions:["How many years of administrative or office-support experience do you have?","Which office productivity tools are you most comfortable with?","How do you prioritize competing deadlines?","Are you comfortable handling confidential information?","Are you legally eligible to work in Canada?"],
+    benefits:["Extended health & dental","Paid vacation","Flexible hours","Professional development budget","RRSP matching","Employee assistance program","Hybrid work options","Wellness perks"]},
+  edu:{must:["ECE diploma or teaching certification","First Aid / CPR","Vulnerable Sector Check","Patience","Communication with parents","Age-appropriate lesson design"],
+    nice:["Second language","Special-needs experience","Music/art integration","Outdoor education","Bilingual French","Behaviour management training"],
+    questions:["Do you hold an ECE diploma or equivalent teaching certification?","Do you have a current Vulnerable Sector Check?","Do you have First Aid and CPR certification?","How many years of experience working with children or students do you have?","Are you comfortable communicating regularly with parents?"],
+    benefits:["Extended health & dental","Paid PA days","Pension plan","Continuing education","Employee assistance program","Discounted childcare","Paid sick days","Uniform allowance"]},
+  finance:{must:["Accounting principles","Excel proficiency","Attention to detail","Bookkeeping software (QuickBooks / Sage)","Discretion","Deadline discipline"],
+    nice:["CPA in progress","Payroll experience","Second language","Audit exposure","Financial modelling","ERP experience (NetSuite / SAP)"],
+    questions:["What accounting or bookkeeping software are you most experienced with?","How many years of relevant accounting experience do you have?","Are you comfortable working under month-end/year-end deadlines?","Do you have any professional accounting designations or progress toward one?","Are you legally eligible to work in Canada?"],
+    benefits:["Extended health & dental","RRSP matching","CPA support / dues covered","Bonus program","Hybrid or remote options","Paid vacation","Wellness stipend","Continuing education"]},
+  tech:{must:["Git version control","Relevant language/stack proficiency","Debugging skills","Written communication","Ability to work independently","Collaboration tools (Slack/Jira)"],
+    nice:["Cloud (AWS/GCP/Azure)","CI/CD pipelines","Testing frameworks","Open-source contributions","Second language","Docker/Kubernetes"],
+    questions:["Which languages and frameworks are you most experienced with?","Can you describe a recent project you shipped end-to-end?","How do you approach testing your own code?","Are you comfortable participating in on-call rotations?","Are you legally eligible to work in Canada?"],
+    benefits:["Extended health & dental","Stock options / equity","Remote-friendly / hybrid","Learning budget","Home office stipend","RRSP matching","Unlimited or flexible PTO","Wellness stipend"]},
+  agri:{must:["Physical stamina","Comfort outdoors","Reliability","Teamwork","Attention to detail","Ability to work early / long hours seasonally"],
+    nice:["Farm equipment operation","Class 5 licence","Second language","Food-safety training","Pesticide applicator licence","Livestock handling"],
+    questions:["Do you have previous agriculture, fishing or outdoor labour experience?","Are you comfortable working outdoors in all weather conditions?","Are you able to lift up to 50 lbs repetitively?","Do you hold a valid driver's licence?","Are you legally eligible to work in Canada?"],
+    benefits:["Housing or housing subsidy","Meals during peak season","Overtime pay","End-of-season bonuses","Health benefits (year-round roles)","Transportation to worksite","Paid safety training","PPE provided"]},
+  security:{must:["Provincial security licence (or willing to obtain)","Clean criminal record","Reliability","Observation skills","Report writing","Standing/walking stamina"],
+    nice:["First Aid / CPR","Use of Force certification","Second language","Fire-warden training","Customer service","CCTV monitoring"],
+    questions:["Do you hold a valid provincial security licence?","Can you provide a clean criminal record check?","Are you comfortable working overnight or rotating shifts?","Do you have previous security or cleaning experience?","How would you handle an unauthorized person on site?"],
+    benefits:["Health & dental after probation","Shift premiums","Uniform provided","Paid training","Referral bonuses","Career advancement paths","Life insurance","Employee assistance program"]},
+  default:{must:["Reliability","Written communication","Verbal communication","Team collaboration","Attention to detail","Ability to legally work in Canada"],
+    nice:["Second language","Bilingual French","Adaptability","Previous industry exposure","Time management","Basic office software"],
+    questions:["What relevant experience do you bring to this role?","Why are you interested in this position?","Describe a challenge you've overcome at work.","What are you looking for in your next role?","Are you legally eligible to work in Canada?"],
+    benefits:["Health benefits","Paid vacation","Flexible scheduling","Professional development","Employee assistance program","RRSP matching","Referral bonus","Employee discount"]},
+};
+
+/* Hash inputs → integer seed used to rotate template pools. Small, order-preserving; not for
+   security, just to make same-inputs → same-outputs while different-inputs → different-outputs. */
+const _hashInputs=(...parts)=>{
+  const s=parts.filter(x=>x!=null&&x!=="").map(x=>String(x)).join("|");
+  let h=2166136261>>>0;
+  for(let i=0;i<s.length;i++){h=(h^s.charCodeAt(i))>>>0; h=Math.imul(h,16777619)>>>0;}
+  return h;
+};
+const _rotate=(arr,by,take)=>{
+  if(!arr||!arr.length)return [];
+  const n=arr.length,off=((by%n)+n)%n;
+  const out=[];
+  for(let i=0;i<Math.min(take,n);i++)out.push(arr[(off+i)%n]);
+  return out;
+};
+
+/* Experience/education-adjusted preface. Returns a short sentence tacked onto the Overview so
+   generated copy reflects the seniority the employer picked. */
+const _experiencePreface=(exp)=>{
+  const e=(exp||"").toLowerCase();
+  if(e.includes("no experience"))return " This is an entry-level role — no prior experience is required, and we'll train you on the specifics of the job.";
+  if(e.includes("entry level"))return " We welcome entry-level candidates and recent graduates; a positive attitude counts for more than a long résumé here.";
+  const m=e.match(/(\d+)\+/);
+  if(m){const n=parseInt(m[1],10);
+    if(n>=5)return ` This is a senior role — we're looking for ${n}+ years of proven experience and the judgement that comes with it.`;
+    if(n>=3)return ` We're looking for ${n}+ years of hands-on experience and someone ready to work independently from day one.`;
+    return ` We're looking for at least ${n} year${n===1?"":"s"} of relevant experience.`;
+  }
+  return "";
+};
+const _educationLine=(edu)=>{
+  if(!edu||edu.toLowerCase().includes("no formal"))return null;
+  return edu;
+};
+/* Employment type + work setting shift the framing of duties/reqs slightly. */
+const _typeContext=(type,mode)=>{
+  const bits=[];
+  const t=(type||"").toLowerCase(); const m=(mode||"").toLowerCase();
+  if(t==="contract")bits.push("This is a defined-scope contract role with clear deliverables and end date.");
+  else if(t==="seasonal")bits.push("This is a seasonal role tied to our peak-demand months.");
+  else if(t==="part time")bits.push("This is a part-time role — flexible hours, ideal alongside studies or another commitment.");
+  else if(t==="casual")bits.push("This is a casual role called in as demand requires — no guaranteed hours.");
+  else if(t==="apprenticeship")bits.push("This is a registered apprenticeship — you'll earn while you learn under a certified journeyperson.");
+  if(m==="remote")bits.push("The role is fully remote across Canada — we've built async collaboration into how we work.");
+  else if(m==="hybrid")bits.push("The role is hybrid — a mix of office/site days and remote work weekly.");
+  return bits.join(" ");
+};
+
+/* Merge admin-editable overrides on top of base pool. */
+const _mergePool=(base,extra)=>{
+  if(!Array.isArray(extra)||!extra.length)return base;
+  const set=new Set(base||[]);
+  const merged=[...(base||[])];
+  extra.forEach(x=>{if(typeof x==="string"&&x.trim()&&!set.has(x.trim())){merged.push(x.trim());set.add(x.trim());}});
+  return merged;
+};
+
+const _resolveCategory=(title,cat)=>{
   const t=(title||"").toLowerCase();
   for(const [key,words] of Object.entries(_AI_JD_KEYWORDS)){
-    if(words.some(w=>t.includes(w)))return _AI_JD_TEMPLATES[key];
+    if(words.some(w=>t.includes(w)))return key;
   }
-  if(cat&&_AI_JD_TEMPLATES[cat])return _AI_JD_TEMPLATES[cat];
-  return _AI_JD_TEMPLATES.default;
+  if(cat&&_AI_JD_TEMPLATES[cat])return cat;
+  return "default";
+};
+
+/* Main entry point. Accepts either the old positional signature (title, cat) — kept for any
+   external caller still on the two-arg form — or the new object signature with full context. */
+export function aiSuggestJD(a,b){
+  const opts=(a&&typeof a==="object"&&!Array.isArray(a))?a:{title:a,cat:b};
+  const {title="",cat,type="Full Time",mode="On-site",exp="",edu="",seed=0,
+    adminBenefits,adminQuestions}=opts;
+  const key=_resolveCategory(title,cat);
+  const tpl=_AI_JD_TEMPLATES[key]||_AI_JD_TEMPLATES.default;
+  const pool=_AI_JD_POOLS[key]||_AI_JD_POOLS.default;
+  const base=_hashInputs(title,key,type,mode,exp,edu);
+  const rot=(base+(seed>>>0))>>>0;
+  const duties=_rotate(tpl.duties,rot%tpl.duties.length,5);
+  const reqs=_rotate(tpl.reqs,(rot>>>2)%tpl.reqs.length,5);
+  const mustHave=_rotate(pool.must,(rot>>>3)%pool.must.length,4);
+  const niceToHave=_rotate(pool.nice,(rot>>>5)%pool.nice.length,4);
+  const eduLine=_educationLine(edu);
+  if(eduLine&&!mustHave.includes(eduLine))mustHave.unshift(eduLine);
+  const benefitsPool=_mergePool(pool.benefits,adminBenefits&&adminBenefits[key]);
+  const benefits=_rotate(benefitsPool,(rot>>>7)%Math.max(1,benefitsPool.length),4);
+  const questionsPool=_mergePool(pool.questions,adminQuestions&&adminQuestions[key]);
+  const questions=_rotate(questionsPool,(rot>>>9)%Math.max(1,questionsPool.length),4)
+    .map(prompt=>({prompt,type:/legally eligible|certification|licence|check|vulnerable/i.test(prompt)?"yesno":"short",required:false}));
+  const typeCtx=_typeContext(type,mode);
+  const preface=_experiencePreface(exp);
+  const overview=tpl.desc+preface+(typeCtx?" "+typeCtx:"");
+  const desc=`<h3>Overview</h3><p>${overview}</p>`
+    +`<h3>Duties</h3><ul>${duties.map(d=>`<li>${d}</li>`).join("")}</ul>`
+    +`<h3>Requirements</h3><ul>${reqs.map(r=>`<li>${r}</li>`).join("")}</ul>`;
+  return {desc,duties,reqs,mustHave,niceToHave,questions,benefits,overview,category:key};
 }
