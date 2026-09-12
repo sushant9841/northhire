@@ -571,9 +571,18 @@ export function Tooltip({show,top,left,align="right",children}){
 
 export function DatePicker({value,onChange,min,max}){
   /* Native <input type="date"> ignores the placeholder attribute in every major browser —
-     don't forward one, it silently does nothing. */
+     don't forward one, it silently does nothing. Also: min/max as attributes are enforced by
+     the browser's picker UI but NOT by manual typing in every browser — Chromium accepts a
+     typed value below min silently. So we also validate here in onChange and drop out-of-range
+     values before they reach the caller, matching what the picker itself would let through. */
+  const handle=(next)=>{
+    if(!next){ onChange(""); return; }
+    if(min && next < min){ onChange(min); return; }
+    if(max && next > max){ onChange(max); return; }
+    onChange(next);
+  };
   return <Input type="date" value={value||""} min={min} max={max}
-    onChange={e=>onChange(e.target.value)} icon="calendar"/>;
+    onChange={e=>handle(e.target.value)} icon="calendar"/>;
 }
 
 /* Common ranges people actually pick, so the frequent cases are one click rather than two date
