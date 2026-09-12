@@ -6,6 +6,7 @@ import { I } from "../design/icons.jsx";
 import { SmartPortrait } from "../design/primitives.jsx";
 import { AGENCY_MODULES, SEED_AGENCY_LICENSE } from "../store/seed/agency.js";
 import { ROUTES } from "../routes.js";
+import { useStickyNavScroll } from "../helpers/scrollRegion.js";
 import { useTranslation } from "../i18n/i18n.jsx";
 
 /* AGENCY_MODULES labels are canonical English in store/seed/agency.js (a static module with no
@@ -17,6 +18,8 @@ const AGENCY_MODULE_LABEL_KEY={agencyDashboard:"agencyShell.modDashboard",agency
   agencyCompliance:"agencyShell.modCompliance",agencyBranches:"agencyShell.modBranches"};
 
 export function AgencyShell({children}){
+  /* Left nav keeps its scroll position across navigations and remounts. */
+  const navScrollRef=useStickyNavScroll("agency");
   const A=use(); const mob=useMedia("(max-width: 900px)"); const {t}=useTranslation();
   const [navOpen,setNavOpen]=useState(!mob);
   const staff=A.agencyCurrentStaff();
@@ -65,7 +68,7 @@ export function AgencyShell({children}){
         </div>
       </div>
     </div>
-    <nav className="flex-1 overflow-y-auto py-2.5 px-2">
+    <nav ref={navScrollRef} className="flex-1 overflow-y-auto py-2.5 px-2">
       {sections.map(sec=>{const items=AGENCY_MODULES.filter(m=>m.section===sec.k);
         return <div key={sec.k} className="mb-1.5">
           <div className="text-xs font-bold text-white/40 tracking-widest uppercase pt-3 px-3.5 pb-1.5">{sec.label}</div>
@@ -111,7 +114,7 @@ export function AgencyShell({children}){
     {sidebar}
     <div className="flex-1 min-w-0 flex flex-col">
       {topbar}
-      <main className={`flex-1 min-w-0 overflow-auto w-full max-w-wide mx-auto ${mob?"pt-5 px-4 pb-10":"pt-8 px-8 pb-15"}`}>{children}</main>
+      <main data-scroll-region className={`flex-1 min-w-0 overflow-auto w-full max-w-wide mx-auto ${mob?"pt-5 px-4 pb-10":"pt-8 px-8 pb-15"}`}>{children}</main>
     </div>
   </div>;
 }

@@ -5,6 +5,7 @@ import { C, SH } from "../design/tokens.js";
 import { I } from "../design/icons.jsx";
 import { Btn, SmartLogo, SmartPortrait, Tooltip } from "../design/primitives.jsx";
 import { ROUTES } from "../routes.js";
+import { useStickyNavScroll } from "../helpers/scrollRegion.js";
 import { useTranslation } from "../i18n/i18n.jsx";
 import { NotificationBell } from "./NotificationBell.jsx";
 import { DockedChat } from "../pages/employer/components/DockedChat.jsx";
@@ -133,6 +134,8 @@ export function UpgradePromptModal({payload,onClose}){
 }
 
 export function DashShell({modules,children,brandKind}){
+  /* Left nav keeps its scroll position across navigations and remounts. */
+  const navScrollRef=useStickyNavScroll("dash");
   const A=use(); const mob=useMedia("(max-width: 900px)"); const {t}=useTranslation();
   const [navOpen,setNavOpen]=useState(!mob);
   const {upgradeModal,setUpgradeModal}=A; /* lifted to the store so pages nested under this shell can also trigger it */
@@ -210,7 +213,7 @@ export function DashShell({modules,children,brandKind}){
         <span className="text-xs font-bold">{empStats.plan}</span></button>}
     </div>
 
-    <nav className="flex-1 overflow-y-auto py-2.5 px-2">
+    <nav ref={navScrollRef} className="flex-1 overflow-y-auto py-2.5 px-2">
       {sections.map(sec=>{const items=visibleModules.filter(m=>m.section===sec);
         return <div key={sec} className="mb-2.5">
           <div className="text-xs font-bold text-white/35 tracking-widest uppercase pt-2 px-3 pb-1.5">{t(SECTION_LABELS[sec])}</div>
@@ -299,7 +302,7 @@ export function DashShell({modules,children,brandKind}){
     {sidebar}
     <div className="flex-1 min-w-0 flex flex-col">
       {topbar}
-      <main className="flex-1 w-full max-w-wide mx-auto">{children}</main>
+      <main data-scroll-region className="flex-1 w-full max-w-wide mx-auto">{children}</main>
     </div>
     <DockedChat/>
   </div>;

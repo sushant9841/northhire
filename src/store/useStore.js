@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { ROUTES } from "../routes.js";
 import { uid, money, pay, payUnit, payShort, annual, nowStamp, _fmtDate } from "../helpers/utils.js";
 import { sanitizeHtml } from "../helpers/sanitize.js";
+import { resetContentScroll, isSamePath } from "../helpers/scrollRegion.js";
 import { CATM, PCODE, STAGES, PLANS as DEFAULT_PLANS, PLAN_REQUIRES, PLAN_ORDER } from "./seed/constants.js";
 import { DEFAULT_PAYROLL_TAX_CONFIG } from "../helpers/payrollTax.js";
 import { SEED_EMPLOYERS } from "./seed/employers.js";
@@ -481,12 +482,17 @@ export function useStore(){
       const id=idOverride!==undefined?idOverride:(idKey?_idStateValues[idKey]:null);
       const path=buildPath(ROUTES,p,id)||"/";
       const depth=(window.history.state?.depth||0)+1;
+      const samePath=isSamePath(window.location.pathname,path);
       window.history.pushState({depth,pg:p,id},"",path);
       currentDepthRef.current=depth;
+      /* A brand-new page starts at the top of its content region. A navigation that only rewrote
+         the query string (facet/filter/pagination changes routed through go()) is NOT a new page -
+         resetting scroll there yanks the reader away from the list they were reading. The left nav
+         is never touched either way: it is its own scroll container, and useStickyNavScroll in the
+         shells restores its position even across a remount. */
+      if(!samePath)resetContentScroll();
     }
     setStack(s=>[...s,pg]); setPg(p); setPageTitle(title||null);
-    /* Always a brand-new page in the stack (never a revisit), so it always starts at top. */
-    if(typeof window!=="undefined")window.scrollTo?.(0,0);
   };
   /* Browser-native back/forward is now the source of truth (see the popstate effect below) -
      this in-app Back button just asks the browser to go back one real entry when we've pushed
@@ -495,7 +501,7 @@ export function useStore(){
   const back=()=>{
     if(typeof window!=="undefined"&&(window.history.state?.depth||0)>0){window.history.back();return;}
     setStack(s=>{const c=[...s];const prev=c.pop();setPg(prev||homePg);setPageTitle(null);return c;});
-    if(typeof window!=="undefined")window.scrollTo?.(0,0);
+    if(typeof window!=="undefined")resetContentScroll();
   };
   useEffect(()=>{
     if(typeof window==="undefined")return;

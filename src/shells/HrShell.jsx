@@ -6,6 +6,7 @@ import { I } from "../design/icons.jsx";
 import { SmartPortrait, Tag, Input } from "../design/primitives.jsx";
 import { HR_COMPANY_SETTINGS_DEFAULT, HR_MODULES } from "../store/seed/hrCompanySettings.js";
 import { ROUTES } from "../routes.js";
+import { useStickyNavScroll } from "../helpers/scrollRegion.js";
 import { matchesQuery } from "../helpers/utils.js";
 import { useTranslation } from "../i18n/i18n.jsx";
 
@@ -81,6 +82,8 @@ function HrGlobalSearch(){
 }
 
 export function HrShell({children}){
+  /* Left nav keeps its scroll position across navigations and remounts. */
+  const navScrollRef=useStickyNavScroll("hr");
   const A=use(); const mob=useMedia("(max-width: 900px)"); const {t}=useTranslation();
   const [navOpen,setNavOpen]=useState(!mob);
   const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
@@ -129,7 +132,7 @@ export function HrShell({children}){
           <div className="text-xs text-white/55 mt-px">{t("hrShell.enterprisePlan")}</div>
         </div></div>
     </div>
-    <nav className="flex-1 overflow-y-auto py-2.5 px-2">
+    <nav ref={navScrollRef} className="flex-1 overflow-y-auto py-2.5 px-2">
       {visibleModules.map(m=>{const active=A.pg===m.k;
         return <button key={m.k} onClick={()=>{A.go(m.k); if(mob)setNavOpen(false);}}
           className={`w-full flex gap-3 items-center py-2.5 px-3.5 border-0 cursor-pointer text-left rounded-xl my-px text-sm transition duration-150
@@ -164,7 +167,7 @@ export function HrShell({children}){
     {sidebar}
     <div className="flex-1 min-w-0 flex flex-col">
       {topbar}
-      <main className={`w-full max-w-wide mx-auto ${mob?"pt-5 px-4 pb-10":"pt-8 px-8 pb-15"}`}>{moduleBlocked?null:children}</main>
+      <main data-scroll-region className={`w-full max-w-wide mx-auto ${mob?"pt-5 px-4 pb-10":"pt-8 px-8 pb-15"}`}>{moduleBlocked?null:children}</main>
     </div>
   </div>;
 }
