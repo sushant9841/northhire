@@ -83,7 +83,7 @@ function HrGlobalSearch(){
 
 export function HrShell({children}){
   /* Left nav keeps its scroll position across navigations and remounts. */
-  const navScrollRef=useStickyNavScroll("hr");
+  const navScrollRef=useStickyNavScroll("hr",A.pg);
   const A=use(); const mob=useMedia("(max-width: 900px)"); const {t}=useTranslation();
   const [navOpen,setNavOpen]=useState(!mob);
   const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
@@ -134,7 +134,7 @@ export function HrShell({children}){
     </div>
     <nav ref={navScrollRef} className="flex-1 overflow-y-auto py-2.5 px-2">
       {visibleModules.map(m=>{const active=A.pg===m.k;
-        return <button key={m.k} onClick={()=>{A.go(m.k); if(mob)setNavOpen(false);}}
+        return <button key={m.k} data-nav-key={m.k} onClick={()=>{A.go(m.k); if(mob)setNavOpen(false);}}
           className={`w-full flex gap-3 items-center py-2.5 px-3.5 border-0 cursor-pointer text-left rounded-xl my-px text-sm transition duration-150
            ${active?"bg-accent/15 text-accent font-semibold":"text-white/75 font-medium hover:bg-white/5"}`}>
           <I n={m.icon} s={17}/>{t(HR_MODULE_LABEL_KEY[m.k]||m.label)}</button>;})}

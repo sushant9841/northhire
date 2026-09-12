@@ -38,7 +38,18 @@ export function isSamePath(a, b) {
 
 const navScrollMemory = new Map();
 
-export function useStickyNavScroll(key) {
+/* Keeps the sidebar nav scrolled such that the active item is always visible. Two behaviours
+   in one hook:
+
+   1. Remount preservation: sets scrollTop from the memory Map on mount, saves on scroll,
+      re-saves on unmount - so a shell remount doesn't drop the reader's place.
+   2. Active-item follow: whenever `activeKey` changes, if the active `<button data-nav-key={key}>`
+      is not currently in the visible area of the nav, scroll it into view. This is what fixes
+      the "I navigated to Post a job and now the sidebar is showing Dashboard at the top — I
+      have to scroll down to see where I am" case, which reads as "the sidebar didn't remember
+      my scroll" even though technically it did. Uses nearest-block scroll so it never overshoots
+      and never scrolls the outer document. */
+export function useStickyNavScroll(key, activeKey) {
   const ref = useRef(null);
   useEffect(() => {
     const el = ref.current;
@@ -48,10 +59,22 @@ export function useStickyNavScroll(key) {
     const onScroll = () => navScrollMemory.set(key, el.scrollTop);
     el.addEventListener("scroll", onScroll, { passive: true });
     return () => {
-      /* Capture one last time on unmount - the final scroll event may not have fired. */
       navScrollMemory.set(key, el.scrollTop);
       el.removeEventListener("scroll", onScroll);
     };
   }, [key]);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !activeKey) return;
+    const btn = el.querySelector(`[data-nav-key="${CSS.escape(String(activeKey))}"]`);
+    if (!btn) return;
+    const br = btn.getBoundingClientRect();
+    const nr = el.getBoundingClientRect();
+    /* Only scroll if the active button is outside the visible viewport of the nav — avoids
+       fighting the user who may have deliberately scrolled elsewhere on the same page. */
+    if (br.top < nr.top || br.bottom > nr.bottom) {
+      btn.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  }, [activeKey]);
   return ref;
 }

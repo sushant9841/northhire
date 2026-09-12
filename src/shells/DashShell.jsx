@@ -135,7 +135,7 @@ export function UpgradePromptModal({payload,onClose}){
 
 export function DashShell({modules,children,brandKind}){
   /* Left nav keeps its scroll position across navigations and remounts. */
-  const navScrollRef=useStickyNavScroll("dash");
+  const navScrollRef=useStickyNavScroll("dash",A.pg);
   const A=use(); const mob=useMedia("(max-width: 900px)"); const {t}=useTranslation();
   const [navOpen,setNavOpen]=useState(!mob);
   const {upgradeModal,setUpgradeModal}=A; /* lifted to the store so pages nested under this shell can also trigger it */
@@ -227,7 +227,7 @@ export function DashShell({modules,children,brandKind}){
               onMouseEnter={locked?e=>{const r=e.currentTarget.getBoundingClientRect();
                 setLockHover({key:m.k,top:r.top+r.height/2,left:r.right+12});}:undefined}
               onMouseLeave={locked?()=>setLockHover(h=>h?.key===m.k?null:h):undefined}>
-              <button onClick={()=>{
+              <button data-nav-key={m.k} onClick={()=>{
                 if(locked){setUpgradeModal({feature:m.feature,requiredPlan,label:moduleLabel,icon:m.icon}); return;}
                 if(m.section==="hrsuite"){if(typeof window!=="undefined")window.open("#hr","_blank"); return;}
                 A.go(m.k); if(mob)setNavOpen(false);

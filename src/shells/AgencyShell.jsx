@@ -19,7 +19,7 @@ const AGENCY_MODULE_LABEL_KEY={agencyDashboard:"agencyShell.modDashboard",agency
 
 export function AgencyShell({children}){
   /* Left nav keeps its scroll position across navigations and remounts. */
-  const navScrollRef=useStickyNavScroll("agency");
+  const navScrollRef=useStickyNavScroll("agency",A.pg);
   const A=use(); const mob=useMedia("(max-width: 900px)"); const {t}=useTranslation();
   const [navOpen,setNavOpen]=useState(!mob);
   const staff=A.agencyCurrentStaff();
@@ -73,7 +73,7 @@ export function AgencyShell({children}){
         return <div key={sec.k} className="mb-1.5">
           <div className="text-xs font-bold text-white/40 tracking-widest uppercase pt-3 px-3.5 pb-1.5">{sec.label}</div>
           {items.map(m=>{const active=A.pg===m.k; const badge=m.badge?badges[m.badge]:0;
-            return <button key={m.k} onClick={()=>{A.go(m.k); if(mob)setNavOpen(false);}}
+            return <button key={m.k} data-nav-key={m.k} onClick={()=>{A.go(m.k); if(mob)setNavOpen(false);}}
               className={`w-full flex gap-3 items-center py-2.5 px-3.5 border-0 cursor-pointer text-left rounded-xl my-px text-sm transition duration-150
                ${active?"bg-amber/15 text-amber font-semibold":"text-white/75 font-medium hover:bg-white/5"}`}>
               <I n={m.icon} s={16.5}/>
