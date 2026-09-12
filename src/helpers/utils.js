@@ -1,3 +1,24 @@
+/* Scrolls to and focuses the first invalid field on a form after a failed submit, so a validation
+   error above the fold (or off-screen on a long form) doesn't leave the visitor staring at a
+   button that silently refused to submit. Wire it into a submit handler right after the errors
+   object is computed: `const errs=validate(); if(Object.keys(errs).length){setErrors(errs);
+   focusFirstError(errs); return;}`. Relies on each error-bearing field carrying
+   `data-field-error="<key>"` on the input/select/textarea itself (or its wrapper, in which case
+   the first focusable descendant is used) - errObj's key order (JS preserves insertion order for
+   string keys) decides which field counts as "first" when a form defines errors out of visual
+   order. */
+export const focusFirstError=errObj=>{
+  if(typeof document==="undefined"||!errObj)return;
+  const keys=Object.keys(errObj).filter(k=>errObj[k]);
+  for(const key of keys){
+    const el=document.querySelector(`[data-field-error="${key}"]`);
+    if(!el)continue;
+    el.scrollIntoView({behavior:"smooth",block:"center"});
+    const focusable=(el.matches("input,select,textarea,button")?el:el.querySelector("input,select,textarea,button"))||el;
+    focusable.focus?.({preventScroll:true});
+    return;
+  }
+};
 export const uid=p=>p+Math.random().toString(36).slice(2,9);
 export const money=n=>"$"+n.toLocaleString();
 export const pay=j=>j.unit==="yr"?`$${Math.round(j.lo/1000)}k – $${Math.round(j.hi/1000)}k`:j.unit==="mi"?`$${j.lo.toFixed(2)} – $${j.hi.toFixed(2)}`:`$${j.lo} – $${j.hi}`;

@@ -1,4 +1,6 @@
-export const SEED_PEOPLE=[
+import { EXTRA_PEOPLE } from "./peopleExtra.js";
+
+const FLAGSHIP_PEOPLE=[
  {id:"u1",name:"Sarah Chen",seed:1,title:"Senior Software Engineer",cat:"tech",city:"Toronto",prov:"ON",years:6,email:"sarah.chen@example.ca",phone:"416 555 0100",
   skills:["TypeScript","React","Node.js","PostgreSQL","REST APIs","Git"],complete:82,edu:"Bachelor's degree",eligible:"citizen",payMin:105000,payUnit:"yr",types:["Full Time"],modes:["Remote","Hybrid"]},
  {id:"u2",name:"Marcus Bediako",seed:3,title:"Journeyperson Electrician",cat:"trades",city:"Calgary",prov:"AB",years:8,email:"marcus.b@example.ca",phone:"403 555 0142",
@@ -16,3 +18,5 @@ export const SEED_PEOPLE=[
  {id:"u8",name:"Omar Haddad",seed:7,title:"Warehouse Associate",cat:"factory",city:"Surrey",prov:"BC",years:1,email:"omar.h@example.ca",phone:"778 555 0190",
   skills:["Order Picking","RF Scanner","Pallet Jack","Lifting 50 lb","Team Work"],complete:58,edu:"High school diploma",eligible:"permit",payMin:22,payUnit:"hr",types:["Full Time"],modes:["On-site"]},
 ];
+
+export const SEED_PEOPLE=[...FLAGSHIP_PEOPLE, ...EXTRA_PEOPLE];

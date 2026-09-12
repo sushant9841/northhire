@@ -382,8 +382,12 @@ export function Sel({children,style,invalid,...r}){
    backgroundImage:"linear-gradient(45deg,transparent 50%,#8493A9 50%),linear-gradient(135deg,#8493A9 50%,transparent 50%)",
    backgroundPosition:"calc(100% - 18px) center, calc(100% - 13px) center",backgroundSize:"5px 5px,5px 5px",
    backgroundRepeat:"no-repeat",...style}}>{children}</select>;}
-export function Field({label,hint,error,required,children,style}){
- return <div style={style}>
+export function Field({label,hint,error,required,children,style,name}){
+ /* data-field-error only appears while this field is actually invalid, keyed by `name` (the
+    same key the form's errors object uses) - focusFirstError() in helpers/utils.js queries for
+    it after a failed submit to scroll/focus the first bad field instead of leaving a silent
+    no-op button. */
+ return <div style={style} {...(error&&name?{"data-field-error":name}:{})}>
   {label&&<label className="block text-sm font-semibold text-text mb-2">
    {label}{required&&<span className="text-red ml-1">*</span>}</label>}
   {children}

@@ -1,4 +1,6 @@
-export const SEED_APPS=[
+import { EXTRA_APPS } from "./applicationsExtra.js";
+
+const FLAGSHIP_APPS=[
  {id:"a1",job:"j1",user:"u2",stage:"Interview",at:"2 days ago",note:"Site interview booked for Thursday 9am",avail:"Within 2 weeks",expect:"",letter:""},
  {id:"a2",job:"j1",user:"u6",stage:"Reviewed",at:"3 days ago",note:"Employer opened your profile",avail:"Immediately",expect:"",letter:""},
  {id:"a3",job:"j1",user:"u8",stage:"Applied",at:"1 day ago",note:"Waiting for employer review",avail:"Immediately",expect:"",letter:""},
@@ -10,3 +12,5 @@ export const SEED_APPS=[
  {id:"a9",job:"j23",user:"u6",stage:"Applied",at:"2 days ago",note:"Waiting for employer review",avail:"Within 2 weeks",expect:"",letter:""},
  {id:"a10",job:"j11",user:"u2",stage:"Applied",at:"6 days ago",note:"Waiting for employer review",avail:"Within 1 month",expect:"",letter:""},
 ];
+
+export const SEED_APPS=[...FLAGSHIP_APPS, ...EXTRA_APPS];

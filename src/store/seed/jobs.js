@@ -1,7 +1,11 @@
+import { EXTRA_JOBS } from "./jobsExtra.js";
+
 const J=(id,t,e,cat,city,prov,type,mode,lo,hi,unit,vac,exp,edu,dl,posted,views,urgent,featured,skills,perks,desc,duties,reqs,how)=>
   ({id,t,e,cat,city,prov,type,mode,lo,hi,unit,vac,exp,edu,dl,posted,views,urgent,featured,skills,perks,desc,duties,reqs,how,status:"live",flagged:false});
 
-export const SEED_JOBS=[
+/* The thirty hand-written flagship postings. EXTRA_JOBS appends the generated volume that brings
+   the published board to 120 listings — see jobsExtra.js. */
+const FLAGSHIP_JOBS=[
  J("j1","Red Seal Journeyperson Electrician","e1","trades","Calgary","AB","Full Time","On-site",44,52,"hr",6,"3+ years","Red Seal Certificate",9,"1 day ago",1840,true,true,
   ["Red Seal","Commercial Wiring","Blueprint Reading","CSA Code","Conduit Bending"],
   ["Overtime after 8 hours daily","RRSP matching to 5%","Full health, dental and vision","$1,200 annual tool allowance","Employer-paid safety training"],
@@ -213,3 +217,5 @@ export const SEED_JOBS=[
   ["1+ years IT support experience","Familiarity with Windows and Microsoft 365","CompTIA A+ or equivalent an asset","Strong communication with non-technical users","Valid driver's licence for site visits"],
   "Apply with your resume and certifications. Interviews include a short troubleshooting scenario."),
 ];
+
+export const SEED_JOBS=[...FLAGSHIP_JOBS, ...EXTRA_JOBS];

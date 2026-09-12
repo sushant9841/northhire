@@ -1,0 +1,385 @@
+/* Additional published listings so the board, search facets and the employer pipeline are exercised
+   at realistic volume instead of the 30 hand-written flagship postings. Each row is a real Canadian
+   role with a wage band that is plausible for its province and occupation (all hourly floors sit
+   above the relevant 2026 provincial minimum). The narrative fields are composed from sector-aware
+   template pools rather than repeated verbatim, so no two postings read identically. */
+
+/* city -> province, drawn from the same gazetteer the location autocomplete uses, so seeding
+   geocodes a small repeated set of cities and the Nominatim cache absorbs nearly every lookup. */
+const CITY_PROV = {
+  Calgary: "AB", Edmonton: "AB", "Red Deer": "AB", "Fort McMurray": "AB", Lethbridge: "AB",
+  Vancouver: "BC", Surrey: "BC", Burnaby: "BC", Victoria: "BC", Kelowna: "BC", Kamloops: "BC",
+  Toronto: "ON", Mississauga: "ON", Brampton: "ON", Ottawa: "ON", Hamilton: "ON", London: "ON",
+  Guelph: "ON", Kitchener: "ON", Windsor: "ON", Markham: "ON", Oshawa: "ON", Barrie: "ON",
+  Montreal: "QC", Laval: "QC", Gatineau: "QC", "Quebec City": "QC", Sherbrooke: "QC",
+  Winnipeg: "MB", Saskatoon: "SK", Regina: "SK", Halifax: "NS", Moncton: "NB", "Saint John": "NB",
+  Fredericton: "NB", Charlottetown: "PE", "St. John's": "NL", Whitehorse: "YT", Yellowknife: "NT",
+};
+
+/* R(employer, title, category, city, type, mode, payLo, payHi, unit, experience, education, skills, duties) */
+const R = (e, t, cat, city, type, mode, lo, hi, unit, exp, edu, skills, duties) =>
+  ({ e, t, cat, city, prov: CITY_PROV[city], type, mode, lo, hi, unit, exp, edu, skills, duties });
+
+const ROLES = [
+  /* ── e1 PCL Construction — 19 postings, so the demo employer's pipeline board carries real load ── */
+  R("e1","Construction Project Manager","trades","Calgary","Full Time","On-site",110000,145000,"yr","7+ years","Bachelor's degree in Engineering or Construction Management",
+    ["Project Scheduling","Primavera P6","Budget Control","Subcontractor Management","Change Orders"],
+    ["Own schedule, budget and scope on a $40M+ institutional build","Lead weekly owner and consultant coordination meetings","Review and approve subcontractor progress claims","Drive the project safety plan with the site superintendent"]),
+  R("e1","Site Superintendent","trades","Edmonton","Full Time","On-site",95000,125000,"yr","5+ years","Gold Seal Certification or equivalent experience",
+    ["Site Supervision","Scheduling","COR Safety","Quality Control","Trade Coordination"],
+    ["Run day-to-day site operations across all trades","Enforce the site-specific safety plan and lead toolbox talks","Sequence trade work against the three-week lookahead","Document field progress, delays and deficiencies daily"]),
+  R("e1","Journeyperson Carpenter","trades","Calgary","Full Time","On-site",36,44,"hr","3+ years","Red Seal Certificate",
+    ["Formwork","Blueprint Reading","Framing","Concrete Finishing","Power Tools"],
+    ["Build and strip formwork for cast-in-place concrete","Frame interior partitions and install door hardware","Interpret shop drawings and lay out work accurately","Mentor apprentices on safe tool and fall-protection practice"]),
+  R("e1","Construction Estimator","trades","Calgary","Full Time","Hybrid",85000,110000,"yr","4+ years","College Diploma in Construction Estimating",
+    ["Quantity Takeoff","Bluebeam","Bid Preparation","Cost Analysis","Subcontractor Bids"],
+    ["Produce quantity takeoffs from tender drawings and specifications","Solicit, level and analyse subcontractor and supplier pricing","Assemble bid submissions against hard tender deadlines","Maintain historical unit-cost data for future estimates"]),
+  R("e1","Heavy Equipment Operator","trades","Fort McMurray","Full Time","On-site",38,46,"hr","3+ years","Heavy Equipment Operator Certificate",
+    ["Excavator","Dozer","Grade Control","Pre-shift Inspection","Ground Disturbance"],
+    ["Operate excavators, dozers and rock trucks on earthworks packages","Complete pre-shift circle checks and log defects","Work to grade stakes and GPS machine-control targets","Follow ground-disturbance and spotter procedures without exception"]),
+  R("e1","Construction Safety Officer (NCSO)","trades","Edmonton","Full Time","On-site",78000,98000,"yr","3+ years","NCSO Designation",
+    ["NCSO","Hazard Assessment","Incident Investigation","COR Audits","WHMIS"],
+    ["Run daily site inspections and close out hazard findings","Facilitate orientations, toolbox talks and JHA reviews","Investigate incidents and near misses to root cause","Maintain COR audit documentation and training records"]),
+  R("e1","Journeyperson Plumber","trades","Calgary","Full Time","On-site",40,48,"hr","3+ years","Red Seal Certificate",
+    ["Rough-in","Pipe Fitting","Backflow Prevention","Code Compliance","Pressure Testing"],
+    ["Install domestic water, sanitary and storm systems to code","Rough in and set fixtures on multi-storey institutional work","Pressure test and commission installed systems","Coordinate sleeving and penetrations with other trades"]),
+  R("e1","Crane Operator — Tower","trades","Calgary","Full Time","On-site",45,55,"hr","5+ years","Crane Operator Certificate (Class A)",
+    ["Tower Crane","Load Charts","Rigging","Hand Signals","Daily Inspections"],
+    ["Operate a tower crane on a downtown high-rise project","Verify load charts and rigging before every pick","Complete daily crane inspections and maintain logbooks","Coordinate lifts with riggers and the site superintendent"]),
+  R("e1","Construction Labourer","trades","Edmonton","Full Time","On-site",24,29,"hr","No experience required","No formal education required",
+    ["Site Cleanup","Material Handling","Hand Tools","Fall Protection","Team Work"],
+    ["Support trades with material handling and site housekeeping","Assist with concrete placement, stripping and shoring","Operate small tools and equipment safely","Maintain clear access routes and waste segregation"]),
+  R("e1","Quantity Surveyor","trades","Calgary","Full Time","Hybrid",80000,102000,"yr","3+ years","Bachelor's degree in Quantity Surveying",
+    ["Cost Reporting","Progress Claims","Contract Administration","CCDC Contracts","Forecasting"],
+    ["Prepare monthly cost reports and forecasts for project leadership","Value work in place and issue progress claims","Administer CCDC contract provisions and change valuations","Track commitments against budget and flag variances early"]),
+  R("e1","Junior Project Coordinator","trades","Calgary","Full Time","On-site",60000,74000,"yr","1+ years","College Diploma in Civil Engineering Technology",
+    ["RFIs","Submittals","Document Control","MS Project","Site Reporting"],
+    ["Log and track RFIs, submittals and shop drawings","Maintain the project document-control system","Prepare meeting minutes and distribute action logs","Support the superintendent with daily field reporting"]),
+  R("e1","Concrete Finisher","trades","Calgary","Full Time","On-site",32,39,"hr","2+ years","Apprenticeship / trade certificate",
+    ["Power Trowel","Screeding","Curing","Slab Flatness","Formwork"],
+    ["Place, screed and finish structural and slab-on-grade concrete","Operate power trowels and screeds to flatness tolerances","Apply curing compounds and protect fresh placements","Patch and repair defects identified at stripping"]),
+  R("e1","Welder — Structural (CWB)","trades","Edmonton","Full Time","On-site",38,46,"hr","3+ years","CWB Certification",
+    ["CWB Ticket","FCAW","Blueprint Reading","Fit-up","Visual Inspection"],
+    ["Weld structural steel connections to CWB-qualified procedures","Fit up members from erection and shop drawings","Perform visual inspection and correct rejected welds","Maintain equipment and consumables for the crew"]),
+  R("e1","Document Control Specialist","admin","Calgary","Full Time","Hybrid",58000,72000,"yr","2+ years","College Diploma",
+    ["Document Control","Aconex","Version Management","Transmittals","Records Retention"],
+    ["Own the project document register and revision history","Issue and track transmittals to consultants and trades","Enforce naming, filing and retention standards","Prepare turnover documentation at project close"]),
+  R("e1","Field Surveyor","trades","Calgary","Full Time","On-site",33,41,"hr","2+ years","College Diploma in Survey Technology",
+    ["Total Station","GPS Layout","As-builts","AutoCAD","Grade Checks"],
+    ["Lay out building lines, elevations and control points","Verify grades and tolerances ahead of concrete placements","Record and compile as-built survey data","Maintain and calibrate survey instruments"]),
+  R("e1","Payroll Administrator — Construction","admin","Calgary","Full Time","Hybrid",62000,76000,"yr","3+ years","Payroll Compliance Practitioner (PCP)",
+    ["Payroll","Union Remittances","ROEs","Timesheet Audit","Provincial Employment Standards"],
+    ["Process weekly payroll for salaried and union field staff","Calculate overtime, travel and living-out allowances","File union remittances and issue Records of Employment","Reconcile timesheets against approved field hours"]),
+  R("e1","Equipment Mechanic — Heavy Duty","trades","Fort McMurray","Full Time","On-site",42,50,"hr","4+ years","Red Seal Certificate",
+    ["Heavy Duty Mechanic","Hydraulics","Diesel Engines","Preventive Maintenance","Diagnostics"],
+    ["Service and repair excavators, loaders and haul trucks","Diagnose hydraulic, electrical and driveline faults","Complete scheduled preventive maintenance on the fleet","Document repairs and parts usage in the maintenance system"]),
+  R("e1","Site Administrator","admin","Edmonton","Full Time","On-site",52000,64000,"yr","1+ years","High School Diploma",
+    ["Reception","Site Orientation","Purchase Orders","Scheduling","MS Office"],
+    ["Run site orientation intake and maintain worker records","Raise purchase orders and reconcile delivery tickets","Coordinate site meetings, travel and accommodation","Keep first-aid, training and certification logs current"]),
+  R("e1","BIM / VDC Coordinator","tech","Calgary","Full Time","Hybrid",82000,105000,"yr","3+ years","College Diploma in Architectural Technology",
+    ["Revit","Navisworks","Clash Detection","4D Sequencing","Point Clouds"],
+    ["Federate trade models and run weekly clash-detection cycles","Produce coordinated shop-drawing backgrounds for field crews","Build 4D sequencing animations for schedule reviews","Register laser scans against the design model for QA"]),
+
+  /* ── e2 Sinai Health ── */
+  R("e2","Personal Support Worker","health","Toronto","Full Time","On-site",24,29,"hr","1+ years","PSW Certificate",
+    ["Personal Care","Transfers and Lifts","Documentation","Infection Control","Compassionate Care"],
+    ["Assist patients with bathing, dressing, mobility and meals","Perform safe transfers using mechanical lifts","Report changes in condition to the nursing team","Maintain infection-prevention practices on every interaction"]),
+  R("e2","Registered Practical Nurse","health","Toronto","Part Time","On-site",32,40,"hr","1+ years","RPN Diploma + CNO Registration",
+    ["CNO Registration","Medication Administration","Wound Care","Vital Signs","Charting"],
+    ["Deliver nursing care to stable patients within RPN scope","Administer medications and monitor for adverse effects","Perform wound assessment and dressing changes","Escalate deteriorating patients to the RN or physician"]),
+  R("e2","Medical Laboratory Technologist","health","Toronto","Full Time","On-site",36,48,"hr","2+ years","MLT Diploma + CMLTO Registration",
+    ["CMLTO Registration","Hematology","Clinical Chemistry","Quality Control","LIS Systems"],
+    ["Perform and validate diagnostic testing across core lab benches","Run daily quality control and troubleshoot analyser flags","Maintain instrument calibration and maintenance records","Support accreditation readiness and proficiency testing"]),
+  R("e2","Pharmacy Technician","health","Toronto","Full Time","On-site",29,36,"hr","1+ years","Pharmacy Technician Diploma",
+    ["Sterile Compounding","Medication Reconciliation","Inventory Control","Narcotics Handling","Attention to Detail"],
+    ["Prepare and check unit-dose and sterile compounded products","Reconcile inpatient medication orders with the pharmacist","Manage narcotics counts and controlled-substance records","Maintain ward stock and automated dispensing cabinets"]),
+  R("e2","Medical Office Administrator","admin","Toronto","Full Time","On-site",25,31,"hr","1+ years","Medical Office Administration Certificate",
+    ["Scheduling","Medical Terminology","EMR","OHIP Billing","Patient Communication"],
+    ["Book and confirm clinic appointments and procedures","Maintain patient charts in the electronic medical record","Submit and reconcile OHIP billing claims","Greet patients and manage clinic waiting-room flow"]),
+  R("e2","Physiotherapist","health","Toronto","Full Time","On-site",42,55,"hr","2+ years","Master's degree in Physical Therapy",
+    ["College Registration","Musculoskeletal Assessment","Rehab Planning","Gait Training","Patient Education"],
+    ["Assess and treat inpatients recovering from surgery and injury","Build and progress individualised rehabilitation plans","Prescribe mobility aids and train safe transfer technique","Document outcome measures and discharge readiness"]),
+  R("e2","Unit Clerk","admin","Toronto","Part Time","On-site",24,29,"hr","No experience required","High School Diploma",
+    ["Order Entry","Medical Terminology","Telephone Triage","Records Management","Team Support"],
+    ["Transcribe and enter physician orders into the health record","Manage unit telephone traffic and visitor enquiries","Coordinate patient transfers, tests and appointments","Maintain unit supplies and chart assembly"]),
+  R("e2","Diagnostic Imaging Technologist (MRI)","health","Toronto","Full Time","On-site",40,52,"hr","2+ years","MRT Diploma + CMRITO Registration",
+    ["CMRITO Registration","MRI Safety","Patient Positioning","PACS","Contrast Administration"],
+    ["Perform MRI examinations to protocol across body regions","Screen patients thoroughly for MRI safety contraindications","Administer contrast under medical directive","Transfer and verify studies in PACS"]),
+  R("e2","Environmental Services Attendant","health","Toronto","Full Time","On-site",23,27,"hr","No experience required","No formal education required",
+    ["Hospital Cleaning","Infection Control","WHMIS","Waste Segregation","Reliability"],
+    ["Clean patient rooms and clinical areas to hospital standards","Perform terminal cleans between patient admissions","Segregate biomedical, sharps and general waste correctly","Restock hand-hygiene and PPE stations"]),
+
+  /* ── e3 Day & Ross ── */
+  R("e3","DZ Local Delivery Driver","transport","Moncton","Full Time","On-site",26,31,"hr","1+ years","Class 3 / DZ Licence",
+    ["Class 3 Licence","Route Planning","Customer Service","Load Securement","Hand Bomb"],
+    ["Run a fixed local delivery route with 15-25 stops per day","Load, secure and verify freight before departure","Complete electronic proof of delivery at each stop","Perform pre-trip and post-trip inspections"]),
+  R("e3","Dispatcher — Linehaul","transport","Moncton","Full Time","On-site",58000,72000,"yr","2+ years","College Diploma",
+    ["Dispatch","Hours of Service","TMS Software","Problem Solving","Driver Communication"],
+    ["Plan and assign linehaul runs against service commitments","Monitor hours-of-service compliance in real time","Reroute around weather, breakdowns and border delays","Communicate delays proactively to customer service"]),
+  R("e3","Freight Handler / Dock Worker","factory","Moncton","Full Time","On-site",22,27,"hr","No experience required","High School Diploma",
+    ["Forklift","Load Securement","Scanning","Lifting 50 lb","Dock Safety"],
+    ["Load and unload trailers to cube and weight targets","Scan and sort freight to the correct outbound door","Operate forklifts and electric pallet jacks safely","Report damaged freight before it leaves the dock"]),
+  R("e3","Fleet Maintenance Technician (310T)","trades","Saint John","Full Time","On-site",34,42,"hr","3+ years","310T Truck and Coach Licence",
+    ["310T Licence","Air Brakes","Diesel Diagnostics","Preventive Maintenance","CVIP"],
+    ["Diagnose and repair tractors and trailers in the shop","Perform CVIP safety inspections and annual certifications","Complete preventive maintenance on schedule","Record repairs and parts usage in the maintenance system"]),
+  R("e3","Logistics Coordinator","transport","Moncton","Full Time","Hybrid",55000,68000,"yr","2+ years","College Diploma in Supply Chain",
+    ["Load Planning","Carrier Management","Excel","Rate Quoting","Exception Handling"],
+    ["Build and optimise loads against cost and service targets","Tender freight to carriers and confirm pickup windows","Track shipments and resolve in-transit exceptions","Maintain accurate rate and accessorial records"]),
+  R("e3","Customs Compliance Clerk","admin","Moncton","Full Time","Hybrid",52000,64000,"yr","1+ years","College Diploma",
+    ["Customs Documentation","PARS/PAPS","CBSA Requirements","Data Entry","Accuracy"],
+    ["Prepare and transmit customs documentation for cross-border loads","Track PARS and PAPS clearances ahead of border arrival","Resolve documentation discrepancies with brokers","Maintain compliance records for CBSA audit"]),
+  R("e3","Terminal Manager","transport","Halifax","Full Time","On-site",85000,105000,"yr","5+ years","Bachelor's degree",
+    ["Operations Management","P&L","Safety Leadership","Labour Relations","KPI Reporting"],
+    ["Own terminal P&L, service performance and safety results","Lead dock, dispatch and driver teams across shifts","Drive on-time performance and cost-per-shipment targets","Partner with HR on staffing, coaching and labour relations"]),
+
+  /* ── e4 Loblaw ── */
+  R("e4","Pharmacy Assistant","retail","Brampton","Part Time","On-site",19,23,"hr","No experience required","High School Diploma",
+    ["Prescription Intake","Inventory","Customer Service","Confidentiality","POS"],
+    ["Receive prescriptions and enter patient information accurately","Prepare and package dispensed medications for pharmacist check","Manage stock rotation and expiry checks","Handle patient enquiries with discretion and courtesy"]),
+  R("e4","Bakery Clerk","retail","Mississauga","Part Time","On-site",18,22,"hr","No experience required","No formal education required",
+    ["Food Handling","Merchandising","Bakery Production","Freshness Standards","Customer Service"],
+    ["Bake, finish and package in-store bakery products","Merchandise displays to planogram and freshness standards","Rotate stock and record shrink accurately","Serve customers at the bakery counter"]),
+  R("e4","Meat Cutter","retail","Brampton","Full Time","On-site",24,30,"hr","2+ years","Apprenticeship / trade certificate",
+    ["Butchery","Knife Skills","Food Safety","Portion Control","Merchandising"],
+    ["Break primals and cut retail portions to specification","Maintain case presentation and freshness rotation","Follow HACCP and food-safety procedures at every step","Advise customers on cuts, preparation and quantities"]),
+  R("e4","Grocery Night Crew Stocker","retail","Toronto","Part Time","On-site",18,22,"hr","No experience required","No formal education required",
+    ["Stocking","Pallet Jack","Planogram","Lifting 40 lb","Night Shift"],
+    ["Stock shelves overnight to planogram and facing standards","Break down pallets and manage backroom overstock","Record damages and date-sensitive product","Prepare the floor for open with full, faced shelves"]),
+  R("e4","Store Loss Prevention Officer","security","Mississauga","Full Time","On-site",23,28,"hr","1+ years","High School Diploma",
+    ["Surveillance","Incident Reporting","De-escalation","CCTV","Report Writing"],
+    ["Monitor floor and CCTV for theft and safety incidents","Apply approved apprehension and de-escalation procedures","Write clear, factual incident reports","Partner with store leadership on shrink reduction"]),
+  R("e4","Distribution Centre Order Picker","factory","Brampton","Full Time","On-site",21,26,"hr","No experience required","High School Diploma",
+    ["Order Picking","RF Scanner","Pallet Jack","Lifting 50 lb","Productivity Standards"],
+    ["Pick and build store orders to productivity and accuracy targets","Operate electric pallet jacks safely in aisles","Wrap, label and stage completed pallets","Report damaged or mis-slotted product immediately"]),
+  R("e4","Front End Supervisor","retail","Toronto","Full Time","On-site",21,26,"hr","1+ years","High School Diploma",
+    ["Cash Management","Scheduling","Coaching","Conflict Resolution","POS"],
+    ["Supervise cashiers and self-checkout through peak periods","Balance tills, approve voids and manage cash office tasks","Coach new hires on service and accuracy standards","Resolve escalated customer concerns at the front end"]),
+  R("e4","Category Analyst","retail","Brampton","Full Time","Hybrid",68000,84000,"yr","2+ years","Bachelor's degree",
+    ["Excel","Nielsen Data","Assortment Planning","Pricing Analysis","Reporting"],
+    ["Analyse category performance and recommend assortment changes","Model pricing and promotion scenarios","Build recurring reporting for category managers","Track competitive activity and market share shifts"]),
+
+  /* ── e5 Cactus Restaurants ── */
+  R("e5","Restaurant Server","hosp","Vancouver","Part Time","On-site",17.85,20,"hr","No experience required","No formal education required",
+    ["Serving It Right","POS Systems","Upselling","Menu Knowledge","Guest Service"],
+    ["Take orders and deliver food and beverage to standard","Describe menu items, features and pairings confidently","Manage a section through high-volume service periods","Handle payments and close cheques accurately"]),
+  R("e5","Sous Chef","hosp","Vancouver","Full Time","On-site",58000,72000,"yr","3+ years","Culinary Diploma",
+    ["Kitchen Leadership","Food Cost","Scheduling","FOODSAFE Level 2","Menu Execution"],
+    ["Run the line in the chef's absence and hold quality standards","Manage prep lists, ordering and food cost targets","Schedule and coach kitchen staff across shifts","Maintain sanitation and food-safety compliance"]),
+  R("e5","Bartender","hosp","Victoria","Part Time","On-site",18,22,"hr","1+ years","Serving It Right Certificate",
+    ["Serving It Right","Cocktail Preparation","Cash Handling","Speed of Service","Guest Engagement"],
+    ["Prepare cocktails and pour beverages to recipe and spec","Maintain bar stock, garnish and cleanliness standards","Monitor guest intoxication and apply responsible service","Reconcile bar sales and cash at close"]),
+  R("e5","Dishwasher / Kitchen Helper","hosp","Vancouver","Part Time","On-site",17.85,19.5,"hr","No experience required","No formal education required",
+    ["Dish Pit","Sanitation","Basic Prep","Reliability","Team Work"],
+    ["Run the dish pit through service and keep ware flowing","Support prep tasks such as washing, peeling and portioning","Maintain kitchen sanitation and waste handling","Assist with receiving and putting away deliveries"]),
+  R("e5","Restaurant General Manager","hosp","Burnaby","Full Time","On-site",75000,95000,"yr","5+ years","College Diploma",
+    ["P&L Management","Labour Cost","Guest Experience","Hiring","Health Regulations"],
+    ["Own restaurant P&L, labour cost and guest-satisfaction results","Lead and develop the management and hourly teams","Ensure health, liquor and employment compliance","Drive local marketing and community engagement"]),
+  R("e5","Host / Hostess","hosp","Vancouver","Part Time","On-site",17.85,19,"hr","No experience required","No formal education required",
+    ["Reservations","Seating Flow","Guest Service","Phone Etiquette","Composure"],
+    ["Greet and seat guests while managing the reservation book","Balance seating flow across server sections","Manage waitlists and communicate accurate wait times","Handle phone enquiries and takeout coordination"]),
+
+  /* ── e6 Linamar ── */
+  R("e6","Quality Control Inspector","factory","Guelph","Full Time","On-site",26,33,"hr","2+ years","College Diploma",
+    ["CMM","GD&T","Calipers and Micrometers","PPAP","Nonconformance Reporting"],
+    ["Inspect first-article and in-process parts against drawings","Operate CMM programs and interpret dimensional reports","Document nonconformances and support containment","Maintain gauge calibration records"]),
+  R("e6","Tool and Die Maker","trades","Guelph","Full Time","On-site",36,44,"hr","4+ years","Red Seal Certificate",
+    ["Die Repair","Surface Grinding","EDM","Blueprint Reading","Tight Tolerances"],
+    ["Build, repair and maintain progressive dies and fixtures","Machine components to tight tolerance using grinders and EDM","Troubleshoot die issues causing scrap on the press floor","Document die history and maintenance intervals"]),
+  R("e6","Production Supervisor","factory","Guelph","Full Time","On-site",75000,92000,"yr","3+ years","College Diploma",
+    ["Lean Manufacturing","5S","Team Leadership","OEE","Root Cause Analysis"],
+    ["Lead a production cell across a full shift to safety and OEE targets","Run daily tiered meetings and escalate constraints","Coach operators on standard work and 5S","Drive corrective actions on quality and downtime events"]),
+  R("e6","Industrial Electrician","trades","Guelph","Full Time","On-site",40,48,"hr","3+ years","Red Seal Certificate (442A)",
+    ["442A Licence","PLC Troubleshooting","Motor Controls","VFDs","Lockout Tagout"],
+    ["Troubleshoot and repair plant electrical and control systems","Support PLC and VFD faults on automated equipment","Perform preventive electrical maintenance on schedule","Apply lockout-tagout rigorously on every intervention"]),
+  R("e6","Manufacturing Engineer","factory","Guelph","Full Time","On-site",82000,105000,"yr","3+ years","Bachelor's degree in Mechanical Engineering",
+    ["Process Improvement","CAD","Time Studies","Capital Projects","APQP"],
+    ["Improve cycle time, scrap and ergonomics on existing lines","Specify and commission tooling and automation","Lead APQP deliverables for new product launches","Run time studies and update standard work"]),
+  R("e6","Assembly Line Operator","factory","Guelph","Full Time","On-site",22,27,"hr","No experience required","High School Diploma",
+    ["Assembly","Visual Inspection","Standard Work","Hand Tools","Shift Work"],
+    ["Assemble components to standard work on a paced line","Perform visual and gauge checks at each station","Record production counts and quality flags","Maintain 5S standards in the work cell"]),
+  R("e6","Maintenance Millwright","trades","Guelph","Full Time","On-site",38,46,"hr","3+ years","Red Seal Certificate (433A)",
+    ["433A Licence","Hydraulics","Pneumatics","Alignment","Preventive Maintenance"],
+    ["Maintain and repair production machinery and conveyors","Perform precision alignment and bearing replacement","Diagnose hydraulic and pneumatic faults","Complete PM routes and record findings"]),
+  R("e6","Shipping and Receiving Clerk","factory","Kitchener","Full Time","On-site",22,27,"hr","1+ years","High School Diploma",
+    ["Shipping Documentation","Forklift","ERP Entry","Cycle Counts","Accuracy"],
+    ["Receive, verify and put away inbound material","Prepare shipping documentation and bills of lading","Operate a forklift to load outbound trailers","Perform cycle counts and reconcile ERP inventory"]),
+
+  /* ── e7 Sun Life ── */
+  R("e7","Bilingual Customer Service Representative","finance","Montreal","Full Time","Hybrid",48000,58000,"yr","1+ years","College Diploma",
+    ["Bilingual FR/EN","Call Handling","CRM","Problem Solving","Empathy"],
+    ["Handle inbound member enquiries in French and English","Resolve benefit, claim and policy questions at first contact","Document interactions accurately in the CRM","Escalate complex cases with complete context"]),
+  R("e7","Claims Adjudicator — Group Benefits","finance","Toronto","Full Time","Hybrid",52000,64000,"yr","1+ years","College Diploma",
+    ["Claims Adjudication","Policy Interpretation","Attention to Detail","Data Entry","Confidentiality"],
+    ["Adjudicate health and dental claims against plan provisions","Identify and refer potential fraud or duplicate claims","Meet accuracy and turnaround service standards","Respond to plan-member enquiries on adjudication decisions"]),
+  R("e7","Financial Analyst","finance","Toronto","Full Time","Hybrid",78000,95000,"yr","3+ years","Bachelor's degree in Finance or Accounting",
+    ["Financial Modelling","Excel","Variance Analysis","IFRS","Reporting"],
+    ["Build and maintain forecasting and budget models","Prepare monthly variance analysis and management reporting","Support quarterly close and audit requests","Partner with business leaders on cost and revenue drivers"]),
+  R("e7","Underwriting Assistant","finance","Toronto","Full Time","Hybrid",50000,60000,"yr","1+ years","College Diploma",
+    ["Risk Review","Documentation","Medical Terminology","Workflow Systems","Accuracy"],
+    ["Assemble and review underwriting files for completeness","Order and track medical and financial requirements","Maintain case pipelines and follow up on outstanding items","Support underwriters with data and correspondence"]),
+  R("e7","Compliance Officer","finance","Toronto","Full Time","Hybrid",88000,110000,"yr","4+ years","Bachelor's degree",
+    ["Regulatory Compliance","AML","Privacy (PIPEDA)","Policy Writing","Audit Support"],
+    ["Monitor regulatory obligations and maintain the compliance register","Run AML and privacy monitoring and reporting","Draft and update internal policies and procedures","Support regulator examinations and internal audits"]),
+  R("e7","Data Analyst — Insurance","tech","Toronto","Full Time","Remote",80000,100000,"yr","2+ years","Bachelor's degree",
+    ["SQL","Python","Power BI","Data Modelling","Stakeholder Communication"],
+    ["Build dashboards and self-serve reporting for business teams","Write and optimise SQL against the enterprise warehouse","Investigate data-quality issues to root cause","Translate business questions into analytical deliverables"]),
+
+  /* ── e8 Toronto DSB ── */
+  R("e8","Early Childhood Educator (RECE)","edu","Toronto","Full Time","On-site",25,32,"hr","1+ years","ECE Diploma + College of ECE Registration",
+    ["RECE Registration","Play-Based Learning","Child Development","Documentation","Parent Communication"],
+    ["Plan and deliver play-based programming for before and after school care","Observe and document children's learning and development","Maintain a safe, inclusive and welcoming classroom","Communicate daily with families about progress and needs"]),
+  R("e8","Educational Assistant","edu","Toronto","Full Time","On-site",26,33,"hr","1+ years","Educational Assistant Certificate",
+    ["Behaviour Support","IEP Implementation","Personal Care","Patience","Team Collaboration"],
+    ["Support students with special education needs in class","Implement strategies from individual education plans","Assist with personal care and mobility where required","Collaborate with teachers and support staff on student goals"]),
+  R("e8","School Custodian","security","Toronto","Full Time","On-site",25,30,"hr","No experience required","High School Diploma",
+    ["Cleaning","Minor Repairs","WHMIS","Snow Removal","Building Security"],
+    ["Clean classrooms, washrooms and common areas daily","Complete minor building repairs and report larger issues","Manage snow and ice clearing on school grounds","Secure the building at end of day"]),
+  R("e8","Occasional Teacher — Elementary","edu","Toronto","Contract","On-site",280,320,"day","No experience required","Bachelor of Education + OCT Certification",
+    ["OCT Certification","Classroom Management","Lesson Delivery","Differentiation","Adaptability"],
+    ["Deliver prepared lesson plans across elementary grades","Maintain classroom routines and positive behaviour management","Leave accurate notes for the returning teacher","Supervise recess, transitions and school-wide activities"]),
+  R("e8","School Bus Driver","transport","Toronto","Part Time","On-site",24,29,"hr","No experience required","Class B / BZ Licence",
+    ["Class B Licence","Student Safety","Route Adherence","Pre-trip Inspection","Patience"],
+    ["Transport students safely on assigned morning and afternoon routes","Complete pre-trip and post-trip inspections every run","Manage student conduct and report incidents","Adapt to weather and route changes safely"]),
+
+  /* ── e9 Northbyte Systems ── */
+  R("e9","Frontend Developer","tech","Ottawa","Full Time","Remote",90000,120000,"yr","3+ years","Bachelor's degree in Computer Science",
+    ["React","TypeScript","CSS","Accessibility","Testing"],
+    ["Build and maintain customer-facing React interfaces","Own accessibility and performance on the surfaces you ship","Write unit and integration tests alongside features","Review peers' pull requests with substantive feedback"]),
+  R("e9","Backend Developer — Node.js","tech","Ottawa","Full Time","Remote",95000,130000,"yr","3+ years","Bachelor's degree in Computer Science",
+    ["Node.js","PostgreSQL","REST APIs","Docker","System Design"],
+    ["Design and ship backend services and APIs","Model and evolve relational schemas safely","Instrument services for observability and alerting","Participate in on-call rotation with a documented runbook"]),
+  R("e9","QA Automation Engineer","tech","Ottawa","Full Time","Hybrid",85000,105000,"yr","2+ years","College Diploma in Computer Programming",
+    ["Playwright","Test Strategy","CI/CD","Bug Triage","Regression Suites"],
+    ["Build and maintain end-to-end automated test suites","Triage and reproduce defects with clear repro steps","Integrate test runs into the CI pipeline","Own release regression sign-off"]),
+  R("e9","DevOps Engineer","tech","Ottawa","Full Time","Remote",100000,135000,"yr","4+ years","Bachelor's degree",
+    ["Terraform","Kubernetes","CI/CD","Monitoring","Incident Response"],
+    ["Own infrastructure as code across environments","Operate container platforms and deployment pipelines","Build monitoring, alerting and incident tooling","Drive post-incident reviews to durable fixes"]),
+  R("e9","Technical Support Specialist","tech","Ottawa","Full Time","Hybrid",58000,72000,"yr","1+ years","College Diploma",
+    ["Troubleshooting","Ticketing Systems","Customer Communication","SQL Basics","Documentation"],
+    ["Resolve customer technical issues across web and API products","Reproduce and escalate defects with complete diagnostics","Maintain help-centre articles and internal runbooks","Meet response and resolution service targets"]),
+  R("e9","Product Designer","tech","Ottawa","Full Time","Remote",88000,112000,"yr","3+ years","Bachelor's degree in Design",
+    ["Figma","Design Systems","User Research","Prototyping","Accessibility"],
+    ["Design end-to-end flows from research through to shipped UI","Maintain and extend the product design system","Run usability sessions and synthesise findings","Partner closely with engineering through implementation"]),
+  R("e9","Implementation Consultant","tech","Toronto","Full Time","Hybrid",78000,96000,"yr","2+ years","Bachelor's degree",
+    ["Onboarding","Data Migration","Client Training","Project Management","Requirements Gathering"],
+    ["Lead new-customer onboarding from kickoff to go-live","Map and migrate customer data into the platform","Train client teams and build enablement material","Track implementation milestones and risks"]),
+
+  /* ── e10 Cavendish Farms ── */
+  R("e10","Food Production Worker","agri","Charlottetown","Full Time","On-site",19,24,"hr","No experience required","No formal education required",
+    ["Food Safety","Line Work","GMP","Sanitation","Shift Work"],
+    ["Operate and monitor processing line equipment","Perform quality checks on product moving through the line","Follow GMP and food-safety procedures without deviation","Support sanitation during changeovers and shutdowns"]),
+  R("e10","Agricultural Field Technician","agri","Charlottetown","Seasonal","On-site",24,29,"hr","1+ years","College Diploma in Agriculture",
+    ["Crop Scouting","Soil Sampling","Data Recording","Grower Relations","Farm Equipment"],
+    ["Scout partner fields for disease, pest and nutrient issues","Collect soil and tissue samples on schedule","Record and report field data to agronomy staff","Support growers with agronomic recommendations"]),
+  R("e10","Quality Assurance Technician — Food","agri","Charlottetown","Full Time","On-site",24,30,"hr","1+ years","College Diploma",
+    ["HACCP","Sampling","Lab Testing","Documentation","CFIA Requirements"],
+    ["Sample and test product against specification throughout the run","Verify HACCP critical control points and record results","Investigate out-of-spec results and support holds","Maintain records for CFIA and customer audits"]),
+  R("e10","Industrial Refrigeration Technician","trades","Charlottetown","Full Time","On-site",36,44,"hr","3+ years","Refrigeration Mechanic Certificate",
+    ["Ammonia Refrigeration","Controls","Preventive Maintenance","Troubleshooting","Safety Systems"],
+    ["Maintain and repair industrial ammonia refrigeration systems","Respond to plant refrigeration alarms and faults","Complete preventive maintenance and compliance checks","Maintain process-safety documentation"]),
+  R("e10","Warehouse Forklift Operator","factory","Moncton","Full Time","On-site",21,26,"hr","1+ years","Forklift Certification",
+    ["Forklift","Cold Storage","Inventory Systems","Load Building","Safety"],
+    ["Move finished product between production and cold storage","Build and stage outbound loads accurately","Maintain inventory accuracy in the warehouse system","Perform daily equipment inspections"]),
+
+  /* ── e11 GardaWorld ── */
+  R("e11","Security Guard — Corporate Site","security","Montreal","Full Time","On-site",21,26,"hr","No experience required","BSP Licence (Quebec)",
+    ["Security Licence","Access Control","Patrols","Report Writing","Bilingual FR/EN"],
+    ["Control access at reception and monitor CCTV","Conduct interior and exterior patrols on schedule","Write clear incident and daily activity reports","Respond to alarms and coordinate with first responders"]),
+  R("e11","Mobile Patrol Officer","security","Laval","Full Time","On-site",22,27,"hr","1+ years","BSP Licence (Quebec)",
+    ["Security Licence","Driver's Licence","Alarm Response","Patrols","Documentation"],
+    ["Patrol multiple client sites on a scheduled route","Respond to alarm activations and secure premises","Complete site-condition reports each visit","Maintain the patrol vehicle and equipment"]),
+  R("e11","Commercial Cleaner","security","Montreal","Part Time","On-site",18,22,"hr","No experience required","No formal education required",
+    ["Commercial Cleaning","Floor Care","WHMIS","Reliability","Evening Shift"],
+    ["Clean offices, washrooms and common areas after hours","Operate floor-care equipment safely","Restock consumables and manage waste removal","Report building issues to the site supervisor"]),
+  R("e11","Security Site Supervisor","security","Gatineau","Full Time","On-site",26,32,"hr","2+ years","BSP Licence (Quebec)",
+    ["Security Licence","Team Supervision","Scheduling","Client Relations","Emergency Procedures"],
+    ["Supervise the guard team across shifts at a client site","Build schedules and manage coverage and overtime","Own the client relationship on day-to-day service","Lead emergency drills and post-order training"]),
+  R("e11","Armoured Car Crew Member","security","Quebec City","Full Time","On-site",24,29,"hr","No experience required","Class 5 Licence + BSP Licence",
+    ["Security Licence","Cash Handling","Route Security","Firearms Training","Situational Awareness"],
+    ["Transport and service cash and valuables on assigned routes","Follow strict route-security and custody procedures","Service ATMs and complete accurate custody documentation","Maintain situational awareness at every stop"]),
+  R("e11","Alarm Monitoring Operator","security","Montreal","Full Time","On-site",21,26,"hr","No experience required","High School Diploma",
+    ["Alarm Monitoring","Dispatch","Bilingual FR/EN","Composure","Documentation"],
+    ["Monitor alarm signals and dispatch the correct response","Verify events with clients following documented protocols","Log every signal, call and outcome accurately","Maintain composure through high-volume alarm periods"]),
+
+  /* ── e12 Bird Construction ── */
+  R("e12","Site Safety Coordinator","trades","Mississauga","Full Time","On-site",70000,88000,"yr","2+ years","OHS Certificate",
+    ["Hazard Assessment","Orientations","Inspections","Incident Reporting","WHMIS"],
+    ["Deliver site orientations and daily safety inspections","Track and close corrective actions to completion","Support incident investigation and reporting","Maintain training and certification records for site workers"]),
+  R("e12","Scaffolder","trades","Hamilton","Full Time","On-site",34,42,"hr","2+ years","Apprenticeship / trade certificate",
+    ["Scaffold Erection","Fall Protection","Load Ratings","Tagging","Teamwork"],
+    ["Erect, modify and dismantle scaffold systems safely","Verify load ratings, tagging and inspection status","Work at height under fall-protection procedures","Coordinate access requirements with other trades"]),
+  R("e12","Ironworker — Reinforcing","trades","Mississauga","Full Time","On-site",36,44,"hr","2+ years","Apprenticeship / trade certificate",
+    ["Rebar Placement","Blueprint Reading","Tying","Rigging","Fall Protection"],
+    ["Place and tie reinforcing steel to placing drawings","Rig and land rebar bundles safely","Verify cover, spacing and lap lengths before inspection","Work to schedule ahead of concrete placements"]),
+  R("e12","Construction Accountant","admin","Mississauga","Full Time","Hybrid",75000,92000,"yr","3+ years","CPA designation or in progress",
+    ["Job Costing","WIP Schedules","Holdbacks","Month-End Close","ERP"],
+    ["Maintain job-cost records and WIP schedules by project","Administer construction holdbacks and lien requirements","Support month-end close and project cost reviews","Reconcile subcontractor payments and accruals"]),
+];
+
+/* Narrative template pools — indexed by a per-row hash so each posting draws a different opener,
+   closing and application instruction instead of the same sentence ninety times over. */
+const OPENERS = [
+  (r) => `Join our ${r.city} team in a ${r.type.toLowerCase()} ${r.t.toLowerCase()} role with steady, year-round work and a crew that trains from within.`,
+  (r) => `We are hiring a ${r.t.toLowerCase()} in ${r.city} to work alongside an experienced team on work that matters to the people we serve.`,
+  (r) => `This ${r.mode.toLowerCase()} ${r.t.toLowerCase()} position in ${r.city} suits someone with ${r.exp.toLowerCase()} who wants scope to grow rather than a holding pattern.`,
+  (r) => `Our ${r.city} operation is adding a ${r.t.toLowerCase()}. You will join a stable team with clear standards, real training budget and a defined path forward.`,
+  (r) => `We need a dependable ${r.t.toLowerCase()} in ${r.city}. The work is consistent, the expectations are clear, and good performance is recognised in pay and responsibility.`,
+];
+const CLOSERS = [
+  "We review every application ourselves — no automated rejections without a human read.",
+  "Training is paid, scheduled in advance and not something you fit around a full workload.",
+  "Schedules are posted two weeks ahead so you can plan life around work.",
+  "New hires are paired with an experienced team member through their first month.",
+  "We promote from within wherever we can, and we tell you honestly what the next step requires.",
+];
+const HOW_TO_APPLY = [
+  "Apply through NorthHire with your resume. Shortlisted candidates are contacted within 3 business days.",
+  "Submit your application online. A recruiter calls within 48 hours to walk through the role, pay and start date.",
+  "Apply with your resume and any relevant certificates. Interviews run weekly and offers follow within a week.",
+  "Send your application through NorthHire. The hiring manager reviews applications personally every Monday.",
+  "Apply online. The process is a short screening call, one interview with the team, and a reference check.",
+];
+const EXTRA_REQS = [
+  "Legally entitled to work in Canada",
+  "Reliable attendance and punctuality",
+  "Strong written and verbal communication",
+  "Comfortable working as part of a team",
+  "Willingness to learn our systems and standards",
+];
+
+/* Sector- and seniority-aware perks, so a first-job posting does not advertise stock options. */
+const PERKS_JUNIOR = ["Paid training from day one","Transit pass subsidy","Uniform and equipment provided","Free parking on site","Employee discount program","Flexible scheduling around school"];
+const PERKS_MID = ["Extended health and dental after 90 days","RRSP matching","Paid sick days above the statutory minimum","Annual safety boot and tool allowance","Employee and family assistance program","Three weeks vacation to start"];
+const PERKS_SENIOR = ["RRSP matching to 6%","Full health, dental and vision from day one","Annual performance bonus","Four weeks vacation","Professional dues and licence fees paid","Employee share purchase plan","Paid professional development budget"];
+
+const hash = (s) => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h); };
+/* Rotate the pool by the row's seed and take a consecutive run, so every row gets a distinct
+   starting point and n genuinely distinct entries (a fixed stride would collapse on pool lengths
+   that share a factor with it). */
+const pick = (pool, n, seed) => {
+  const start = seed % pool.length;
+  return Array.from({ length: Math.min(n, pool.length) }, (_, i) => pool[(start + i) % pool.length]);
+};
+const seniorityPool = (exp) => (exp.startsWith("No") || exp.startsWith("1+") ? PERKS_JUNIOR : exp.startsWith("2+") || exp.startsWith("3+") ? PERKS_MID : PERKS_SENIOR);
+
+export const EXTRA_JOBS = ROLES.map((r, i) => {
+  const id = `j${31 + i}`;
+  const h = hash(id + r.t);
+  const perks = pick(seniorityPool(r.exp), 5, h);
+  const desc = `${OPENERS[h % OPENERS.length](r)} ${CLOSERS[(h >> 3) % CLOSERS.length]}`;
+  const reqs = [
+    `${r.exp === "No experience required" ? "No prior experience required — we train" : `${r.exp} of relevant experience`}`,
+    r.edu === "No formal education required" ? "No formal education required" : r.edu,
+    ...pick(EXTRA_REQS, 3, h >> 2),
+  ];
+  return {
+    id, t: r.t, e: r.e, cat: r.cat, city: r.city, prov: r.prov, type: r.type, mode: r.mode,
+    lo: r.lo, hi: r.hi, unit: r.unit, vac: 1 + (h % 6), exp: r.exp, edu: r.edu,
+    dl: 7 + (h % 45), posted: `${1 + (h % 21)} days ago`, views: 120 + (h % 2400),
+    urgent: h % 7 === 0, featured: h % 11 === 0,
+    skills: r.skills, perks,
+    desc, duties: r.duties, reqs,
+    how: HOW_TO_APPLY[(h >> 5) % HOW_TO_APPLY.length],
+    status: "live", flagged: false,
+  };
+});
