@@ -153,8 +153,14 @@ export default function NorthHire(){
 };
 
   const r=ROUTES[pg]||ROUTES.home;
+  /* Role guard: while the /auth/me check is still in flight, `user` is null but that is NOT
+     evidence of a signed-out session. Rendering DeniedPage there flashed "You need to sign in
+     to open this page" on every hard refresh of any role-guarded route (empJobs, hrDashboard,
+     the post-job wizard's step 3 on re-mount) — the exact symptom the user reported. Render a
+     small placeholder until authChecked flips, then apply the real guard. */
+  const authPending=!A.authChecked&&!user;
   const guarded=r.roles&&(!user||!r.roles.includes(user.role));
-  const view=guarded?<DeniedPage/>:(PAGES[pg]||<HomePage/>);
+  const view=authPending&&r.roles?<div style={{minHeight:"40vh"}} aria-busy="true"/>:(guarded?<DeniedPage/>:(PAGES[pg]||<HomePage/>));
   /* Shared routes (messages, interviews, settings, blog/training editors) are wrapped in a shell
      for employers/admins — so treat them as `bare` at the root layout level so we don't stack
      the site header/footer on top of the shell chrome. */

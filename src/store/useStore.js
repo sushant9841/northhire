@@ -37,6 +37,13 @@ export function useStore(){
      manages itself - there's no client-readable token to gate on, so the app always starts
      signed-out and the /auth/me effect below fills in `user` once the cookie is checked. */
   const [user,setUser]=useState(null);
+  /* Distinguishes "we haven't finished checking /auth/me yet" from "there's no session".
+     Without this flag, the very first render of any role-guarded page (empJobs, hrDashboard,
+     the multi-step post-job wizard's step 3 on re-render, etc.) hit the DeniedPage's "You need
+     to sign in" body because `user` is null-until-resolved. On LAN clients (pre-d7decdf) this
+     also compounded with the session cookie never being sent - fixed there, but the race was
+     visible on any hard refresh regardless of network setup. */
+  const [authChecked,setAuthChecked]=useState(false);
   /* Demo-account passwords for the dev sign-in shortcuts. `import.meta.env.DEV` is statically
      replaced at build time, so a production bundle ships an empty object and the plaintext
      credentials - including the administrator's - are not present in the shipped JS at all.
@@ -138,6 +145,8 @@ export function useStore(){
         if(!cancelled)setUser(mapApiUser(apiUser));
       }catch{
         /* No cookie, an expired one, or the server's unreachable - either way there's no session. */
+      }finally{
+        if(!cancelled)setAuthChecked(true);
       }
     })();
     return ()=>{cancelled=true;};
@@ -1929,7 +1938,7 @@ export function useStore(){
     try{await api.patch("/seeker/notifications/read-all");}catch{/* best-effort */}
   };
 
-  const A={pg,go,back,pageTitle,homePg,history:stack,user,company,employers,jobs,people,applications,blogs,trainings,cvs,passwords,outbox,savedSearches,messages,interviews,reviews,impersonating,setImpersonating,hireOnboarding,setHireOnboarding,
+  const A={pg,go,back,pageTitle,homePg,history:stack,user,authChecked,company,employers,jobs,people,applications,blogs,trainings,cvs,passwords,outbox,savedSearches,messages,interviews,reviews,impersonating,setImpersonating,hireOnboarding,setHireOnboarding,
     offerToken,sendOfferForSignature,
     hasAccount,upsertPassword,loginWithPassword,verifyLogin2FA,resetPasswordRequest,resetPasswordConfirm,completeEmployerSignup,
     saveSearch,deleteSavedSearch,toggleSearchAlert,updateSavedSearch,editingSavedSearchId,setEditingSavedSearchId,
