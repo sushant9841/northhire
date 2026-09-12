@@ -188,6 +188,14 @@ export function JobDetailPage(){
       </div>}
     </section>
 
+    {A.noCvGateJobId===job.id&&<Modal onClose={A.closeNoCvGate} title={t("shared.jobDetail.noCvGateTitle")}>
+      <p className="text-sm text-text-2 leading-relaxed mb-4">{t("shared.jobDetail.noCvGateBody")}</p>
+      <div className="flex gap-2.5 justify-end flex-wrap">
+        <Btn kind="ghost" onClick={A.closeNoCvGate}>{t("shared.jobDetail.noCvGateNotNow")}</Btn>
+        <Btn kind="primary" icon="plus" onClick={()=>{A.closeNoCvGate();A.go("cvs");}}>{t("shared.jobDetail.noCvGateCreate")}</Btn>
+      </div>
+    </Modal>}
+
     {reporting&&<Modal onClose={()=>setReporting(false)} title={t("shared.jobDetail.reportTitle")}>
       {reportSent?<div className="text-center py-4">
         <div className="text-2xl mb-2">✓</div>

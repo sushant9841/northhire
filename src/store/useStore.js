@@ -1338,10 +1338,20 @@ export function useStore(){
      invitedCandidates is the real record of an employer having reached out, so an application from
      someone who was invited is attributed to the invite rather than to wherever they happened to
      click from. */
+  const [noCvGateJobId,setNoCvGateJobId]=useState(null);
+  const closeNoCvGate=()=>setNoCvGateJobId(null);
   const beginApply=(id,source)=>{
     const invited=[...invitedCandidates].some(k=>k.startsWith(`${id}:`)&&k.endsWith(`:${user?.id}`));
     const src=invited?"invite":(source||(pg==="matched"?"matched":pg==="search"?"search":"direct"));
-    setApplyDraft({job:id,avail:"Within 2 weeks",expect:"",letter:"",meets:"",screeningAnswers:{},source:src});
+    /* Pre-flight: seeker with zero CVs never lands on Apply1 with a dead-end banner. A modal
+       here asks whether to build one before proceeding; the apply flow is only entered when
+       they have at least one CV to actually send. */
+    const myCvs=(cvs||[]).filter(c=>c.user===user?.id);
+    if(myCvs.length===0){ setNoCvGateJobId(id); return; }
+    /* Seed applyDraft.cv from the user's default CV (or most-recently-edited) so submitApply
+       actually attaches something server-side even if the seeker never opens the picker. */
+    const defaultCvId=user?.defaultCv&&myCvs.some(c=>c.id===user.defaultCv)?user.defaultCv:myCvs[0].id;
+    setApplyDraft({job:id,cv:defaultCvId,avail:"Within 2 weeks",expect:"",letter:"",meets:"",screeningAnswers:{},source:src});
     go("apply1");
   };
   const submitApply=async()=>{
@@ -1353,7 +1363,7 @@ export function useStore(){
       return go("status");
     }
     try{
-      const {application}=await api.post("/applications",{jobId:j.id,availability:applyDraft.avail,payExpectation:applyDraft.expect,coverLetter:applyDraft.letter,screeningAnswers:applyDraft.screeningAnswers||{},source:applyDraft.source||"direct"});
+      const {application}=await api.post("/applications",{jobId:j.id,cvId:applyDraft.cv||null,availability:applyDraft.avail,payExpectation:applyDraft.expect,coverLetter:applyDraft.letter,screeningAnswers:applyDraft.screeningAnswers||{},source:applyDraft.source||"direct"});
       setApplications(l=>[...l,mapApiApplication(application)]);
       notify({icon:"send",title:`Application sent to ${e.name}`,body:`Your application for ${j.t} is now in their pipeline.`,for:user.id,link:"status"});
       log("application.create",`Applied to ${j.t} at ${e.name}`,"send");
@@ -2029,7 +2039,7 @@ export function useStore(){
     completeness,completenessHint,tabBadges,unreadMessages,
     logout,completeSignup,saveProfile,deleteAccount,exportData,setUserSetting,setUserLocale,marketingConsent,setMarketingConsent,
     toggleSave,followEmployer,openJob,openEmployer,openBlog,openTraining,openCandidate,
-    beginApply,submitApply,withdraw,acceptOffer,moveApp,rejectApp,
+    beginApply,submitApply,withdraw,acceptOffer,moveApp,rejectApp,noCvGateJobId,closeNoCvGate,
     publishJob,approveJob,toggleJobStatus,flagJob,reportJob,jobReports,loadJobReports,decideJobReport,setPipelineJob:setPipelineJobFn,saveCompany,verifyEmployer,holdEmployer,toggleSuspend,eraseUser,
     team,loadTeam,loadTeamAudit,inviteTeammate,revokeInvite,removeTeammate,getInvite,acceptInvite,inviteToken,
     messageTemplates,saveMessageTemplate,deleteMessageTemplate,

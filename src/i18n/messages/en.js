@@ -635,6 +635,9 @@ export const en = {
       reportPlaceholder: "e.g. This looks like a scam / the pay doesn't match what's advertised / discriminatory requirements",
       cancel: "Cancel", submitReport: "Submit report",
       similarRoles: "Similar roles", applied: "Applied", applyNow: "Apply now",
+      noCvGateTitle: "You don't have a CV yet",
+      noCvGateBody: "Applications go a lot further with a CV attached. Create one first — it'll take a couple of minutes — and come back to apply.",
+      noCvGateNotNow: "Not now", noCvGateCreate: "Create CV",
     },
     employers: {
       pageTag: "Employers", notFound: "Employer not found", notFoundBody: "This company profile is unavailable.",

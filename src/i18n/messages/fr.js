@@ -636,6 +636,9 @@ export const fr = {
       reportPlaceholder: "p. ex. Cela ressemble à une arnaque / le salaire ne correspond pas à ce qui est annoncé / exigences discriminatoires",
       cancel: "Annuler", submitReport: "Soumettre le rapport",
       similarRoles: "Rôles similaires", applied: "Envoyé", applyNow: "Postuler maintenant",
+      noCvGateTitle: "Vous n'avez pas encore de CV",
+      noCvGateBody: "Les candidatures ont beaucoup plus de poids avec un CV joint. Créez-en un d'abord — quelques minutes suffisent — puis revenez postuler.",
+      noCvGateNotNow: "Plus tard", noCvGateCreate: "Créer un CV",
     },
     employers: {
       pageTag: "Employeurs", notFound: "Employeur non trouvé", notFoundBody: "Ce profil d'entreprise n'est pas disponible.",

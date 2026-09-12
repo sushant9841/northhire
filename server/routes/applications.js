@@ -99,9 +99,26 @@ applicationsRouter.get("/job/:jobId", requireAuth, requireRole("employer"), (req
 });
 
 applicationsRouter.post("/", requireAuth, requireRole("seeker"), (req, res) => {
-  const { jobId, availability, payExpectation, coverLetter, coverLetterUploadId, screeningAnswers, source } = req.body || {};
+  const { jobId, availability, payExpectation, coverLetter, coverLetterUploadId, cvId, screeningAnswers, source } = req.body || {};
   const job = db.prepare("SELECT * FROM jobs WHERE id = ? AND status = 'live'").get(jobId);
   if (!job) return res.status(404).json({ error: "This listing is no longer accepting applications." });
+
+  // Attach the CV the seeker picked at apply time. Falls back to their default CV so an
+  // application never lands with cv_id = null when the seeker has any CV at all - the picker
+  // could regress or a caller could omit the field and we'd still send the employer something.
+  // A caller-supplied cvId that isn't this seeker's own CV is discarded rather than trusted.
+  let attachedCvId = null;
+  if (cvId && db.prepare("SELECT 1 FROM cvs WHERE id = ? AND user_id = ?").get(cvId, req.user.id)) {
+    attachedCvId = cvId;
+  } else {
+    const me = db.prepare("SELECT default_cv FROM users WHERE id = ?").get(req.user.id);
+    if (me?.default_cv && db.prepare("SELECT 1 FROM cvs WHERE id = ? AND user_id = ?").get(me.default_cv, req.user.id)) {
+      attachedCvId = me.default_cv;
+    } else {
+      const anyCv = db.prepare("SELECT id FROM cvs WHERE user_id = ? ORDER BY updated_at DESC LIMIT 1").get(req.user.id);
+      if (anyCv) attachedCvId = anyCv.id;
+    }
+  }
 
   const already = db.prepare("SELECT id FROM applications WHERE job_id = ? AND user_id = ? AND stage != 'Withdrawn'").get(jobId, req.user.id);
   if (already) return res.status(409).json({ error: "You've already applied to this job." });
@@ -121,11 +138,12 @@ applicationsRouter.post("/", requireAuth, requireRole("seeker"), (req, res) => {
   const id = nextId("a", "applications");
   const historyJson = JSON.stringify([{ stage: "Applied", note: "Waiting for employer review", at: new Date().toISOString() }]);
   db.prepare(
-    `INSERT INTO applications (id, job_id, user_id, stage, note, availability, pay_expectation, cover_letter, cover_letter_upload_id, source, screening_answers_json, history_json)
-     VALUES (?, ?, ?, 'Applied', 'Waiting for employer review', ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO applications (id, job_id, user_id, stage, note, availability, pay_expectation, cover_letter, cover_letter_upload_id, cv_id, source, screening_answers_json, history_json)
+     VALUES (?, ?, ?, 'Applied', 'Waiting for employer review', ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(id, jobId, req.user.id, availability || null, payExpectation || null, coverLetter || null,
     // Only accept an upload id this seeker actually owns - otherwise any document id would do.
     (coverLetterUploadId && db.prepare("SELECT 1 FROM uploads WHERE id = ? AND owner_type = 'user' AND owner_id = ?").get(coverLetterUploadId, req.user.id)) ? coverLetterUploadId : null,
+    attachedCvId,
     // A caller-supplied source is a hint for analytics, not a security boundary - but it is still
     // constrained to known values so it can never become an injection of arbitrary text.
     ["search","matched","invite","alert","direct","api"].includes(source) ? source : "direct",

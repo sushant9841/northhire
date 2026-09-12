@@ -88,7 +88,7 @@ function _CvPicker(){
           <div className="text-sm font-semibold text-text">{t("seeker.apply.needDifferentCvTitle")}</div>
           <div className="text-xs text-text-3 mt-0.5">{t("seeker.apply.needDifferentCvBody")}</div>
         </div>
-        <Btn kind="outline" size="sm" icon="plus" onClick={()=>{setOpen(false); A.editCv("new");}}>{t("seeker.apply.createNewCvBtn")}</Btn>
+        <Btn kind="outline" size="sm" icon="plus" onClick={()=>{setOpen(false); A.newCv();}}>{t("seeker.apply.createNewCvBtn")}</Btn>
       </div>
     </Modal>}
   </>;
