@@ -497,8 +497,8 @@ function _PipelineCard({a,u,s,idx,selected,tog,A,notice,stages,t}){
 function _PipelineColumn({stage,items,job,sel,tog,selectStage,A,mob,stages,t}){
   const {setNodeRef,isOver}=useDroppable({id:stage});
   const allSelected=items.length>0&&items.every(a=>sel.has(a.id));
-  return <div ref={setNodeRef} className={`${mob?"w-59":"w-63"} flex flex-col gap-2.5 rounded-2xl transition-colors duration-150`}
-    style={{background:isOver?C.tint:"transparent",padding:isOver?6:0}}>
+  return <div ref={setNodeRef} className={`${mob?"w-44":"w-46"} flex flex-col gap-2 rounded-2xl transition-colors duration-150`}
+    style={{background:isOver?C.tint:"transparent",padding:isOver?5:0}}>
     <div className="flex items-center justify-between px-1">
       <span className="text-xs font-bold text-text-2 uppercase tracking-wide">{applicationStageLabel(stage,t)}</span>
       <div className="flex gap-1.5 items-center">
@@ -525,9 +525,9 @@ function _PipelineBoard({apps,job,sel,tog,selectStage,A,mob,stages,t}){
     const app=apps.find(a=>a.id===active.id);
     if(app&&app.stage!==over.id)A.moveApp(active.id,over.id);
   };
-  return <div className={`flex-1 overflow-x-auto ${mob?"p-3.5":"p-5"}`}>
+  return <div className={`flex-1 overflow-x-auto ${mob?"p-2.5":"p-3"}`}>
     <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-      <div className="flex gap-3 items-start" style={{minWidth:"max-content"}}>
+      <div className="flex gap-2 items-start" style={{minWidth:"max-content"}}>
         {stages.map(stage=><_PipelineColumn key={stage} stage={stage} items={apps.filter(a=>a.stage===stage)}
           job={job} sel={sel} tog={tog} selectStage={selectStage} A={A} mob={mob} stages={stages} t={t}/>)}
       </div>
