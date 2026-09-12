@@ -251,13 +251,13 @@ export function SmartScene({ kind = "office", tone = C.brand, w = "100%", h = 18
   return <Scene kind={kind} tone={tone} w={w} h={h} radius={radius} style={style} seed={seed}/>;
 }
 
-/* --- Company logo URLs via Clearbit's free logo API. Falls back to Mark SVG on error
-   (also covers ad blockers, which commonly block logo.clearbit.com). --- */
+/* --- Company logo. Uses the employer's own uploaded logo if present, else a locally-rendered
+   initials avatar (no third-party CDN). Clearbit was tried previously but is blocked by every
+   adblocker (uBlock, AdBlock+, Brave shields default-on) - which produced console spam and no
+   visible logo for a large fraction of real visitors. The initials avatar is deterministic,
+   theme-consistent, and never fails. --- */
 export function SmartLogo({ e, size = 46, radius = 12 }) {
-  const domain = (e.site || "").replace(/^www\./, "").trim();
-  const url = domain
-    ? `https://logo.clearbit.com/${domain}?size=${size * 2}`
-    : `https://ui-avatars.com/api/?name=${encodeURIComponent(e.name || "?")}&size=${size * 2}&background=E8F1FF&color=005CCC&bold=true&format=png`;
+  const url = e.logo || null;
   return (
     <SmartImg src={url} alt={e.name || ""}
       className="bg-white border border-line shrink-0 p-1"
