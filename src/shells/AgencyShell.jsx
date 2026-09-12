@@ -18,9 +18,10 @@ const AGENCY_MODULE_LABEL_KEY={agencyDashboard:"agencyShell.modDashboard",agency
   agencyCompliance:"agencyShell.modCompliance",agencyBranches:"agencyShell.modBranches"};
 
 export function AgencyShell({children}){
-  /* Left nav keeps its scroll position across navigations and remounts. */
-  const navScrollRef=useStickyNavScroll("agency",A.pg);
   const A=use(); const mob=useMedia("(max-width: 900px)"); const {t}=useTranslation();
+  /* Left nav keeps its scroll position + auto-scrolls the active item into view. Must come
+     after A is defined. */
+  const navScrollRef=useStickyNavScroll("agency",A.pg);
   const [navOpen,setNavOpen]=useState(!mob);
   const staff=A.agencyCurrentStaff();
   useEffect(()=>{setNavOpen(!mob);},[mob]);

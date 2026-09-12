@@ -134,9 +134,10 @@ export function UpgradePromptModal({payload,onClose}){
 }
 
 export function DashShell({modules,children,brandKind}){
-  /* Left nav keeps its scroll position across navigations and remounts. */
-  const navScrollRef=useStickyNavScroll("dash",A.pg);
   const A=use(); const mob=useMedia("(max-width: 900px)"); const {t}=useTranslation();
+  /* Left nav keeps its scroll position across navigations and remounts, and auto-scrolls the
+     active item into view on every navigation. Must come after A is defined. */
+  const navScrollRef=useStickyNavScroll("dash",A.pg);
   const [navOpen,setNavOpen]=useState(!mob);
   const {upgradeModal,setUpgradeModal}=A; /* lifted to the store so pages nested under this shell can also trigger it */
   const [accountMenu,setAccountMenu]=useState(false);

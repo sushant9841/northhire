@@ -82,9 +82,10 @@ function HrGlobalSearch(){
 }
 
 export function HrShell({children}){
-  /* Left nav keeps its scroll position across navigations and remounts. */
-  const navScrollRef=useStickyNavScroll("hr",A.pg);
   const A=use(); const mob=useMedia("(max-width: 900px)"); const {t}=useTranslation();
+  /* Left nav keeps its scroll position + auto-scrolls the active item into view. Must come
+     after A is defined. */
+  const navScrollRef=useStickyNavScroll("hr",A.pg);
   const [navOpen,setNavOpen]=useState(!mob);
   const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
   const settings=A.hrCompanySettings[company?.id]||HR_COMPANY_SETTINGS_DEFAULT;
