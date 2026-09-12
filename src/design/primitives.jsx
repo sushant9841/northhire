@@ -173,12 +173,13 @@ export const EMPLOYER_LOGOS = {
 };
 export const empLogoUrl = name => EMPLOYER_LOGOS[name] || null;
 
-/* Portraits: randomuser.me hosts real portrait photos, no API key */
-export const portraitUrl = seed => {
-  const gender = seed % 2 ? "men" : "women";
-  const n = ((seed * 7) % 99) + 1;
-  return `https://randomuser.me/api/portraits/${gender}/${n}.jpg`;
-};
+/* Portraits: locally-rendered PortraitSvg only. randomuser.me was previously wired in as a
+   real-photo path via SmartImg's onError fallback, but the third-party CDN is blocked in many
+   corporate networks and by common privacy extensions, and hitting an unrelated service to draw
+   a decorative avatar is not something a production HR product should ship. Kept exported so the
+   old identifier still resolves (returns null now, which SmartImg treats as "no src -> fallback"),
+   and every call site now goes straight to PortraitSvg. */
+export const portraitUrl = () => null;
 
 /* --- SmartImg: shows real image, swaps in the SVG fallback on error --- */
 export function SmartImg({ src, alt, fallback, className, style, imgStyle }) {
@@ -208,11 +209,10 @@ export function Mark({ kind="hex", a="#005CCC", b="#FFFFFF", size=48, radius, na
     imgStyle={{ objectFit:"contain", padding:"14%" }}
     fallback={<MarkSvg kind={kind} a={a} b={b} size={size} radius={radius}/>}/>;
 }
-export function Portrait({ seed=0, size=48, radius=999, bg, usePhoto=true }) {
-  const url = usePhoto ? portraitUrl(seed) : null;
-  const fb = <PortraitSvg seed={seed} size={size} radius={radius} bg={bg}/>;
-  if (!url) return fb;
-  return <SmartImg src={url} alt="" className="shrink-0" style={{ width:size, height:size, borderRadius:radius }} fallback={fb}/>;
+export function Portrait({ seed=0, size=48, radius=999, bg }) {
+  /* Third-party portrait CDN was removed - always renders the local SVG portrait. usePhoto
+     prop still accepted (ignored) so old call sites don't need to change. */
+  return <PortraitSvg seed={seed} size={size} radius={radius} bg={bg}/>;
 }
 export function Scene({ kind="office", tone="#005CCC", w="100%", h=180, radius=0, style, seed=0, usePhoto=true }) {
   const url = usePhoto ? sceneUrl(kind, seed, h > 220 ? 1000 : 640) : null;
@@ -267,24 +267,10 @@ export function SmartLogo({ e, size = 46, radius = 12 }) {
   );
 }
 
-/* --- Real person portraits via randomuser.me. Falls back to SVG Portrait on error. --- */
-export const PORTRAIT_SEEDS = {
-  1: "https://randomuser.me/api/portraits/women/44.jpg",
-  2: "https://randomuser.me/api/portraits/women/68.jpg",
-  3: "https://randomuser.me/api/portraits/men/32.jpg",
-  4: "https://randomuser.me/api/portraits/women/79.jpg",
-  5: "https://randomuser.me/api/portraits/men/45.jpg",
-  6: "https://randomuser.me/api/portraits/men/22.jpg",
-  7: "https://randomuser.me/api/portraits/men/76.jpg",
-  8: "https://randomuser.me/api/portraits/women/12.jpg",
-  9: "https://randomuser.me/api/portraits/men/60.jpg",
-  11:"https://randomuser.me/api/portraits/women/33.jpg",
-  0: "https://randomuser.me/api/portraits/men/1.jpg",
-};
+/* --- SmartPortrait: locally-rendered SVG only. Third-party portrait CDN (randomuser.me) was
+   removed - blocked in many networks + wrong shape for a production HR product. --- */
+export const PORTRAIT_SEEDS = {}; /* kept for legacy imports; empty */
 export function SmartPortrait({ seed = 0, size = 48, radius = 999, bg }) {
-  /* Was a bare <img> with no onError handler — silently broken (no fallback) despite this
-     file's own comment claiming one. Delegates to Portrait, which actually has one via
-     SmartImg, instead of maintaining a second parallel (and broken) image path. */
   return <Portrait seed={seed} size={size} radius={radius} bg={bg}/>;
 }
 

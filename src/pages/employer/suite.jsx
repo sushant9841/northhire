@@ -373,7 +373,7 @@ export function EmpPost(){
       {step===2&&<div className="flex flex-col gap-5">
         <H2 sub={t("employer.post.payLocationSub")}>{t("employer.post.stepPayLocation")}</H2>
 
-        <Field label={t("employer.post.location")} required error={err.location}
+        <Field label={t("employer.post.location")} required error={err.location} name="location"
           hint={t("employer.post.locationHint")}>
           <LocationInput value={f.location} onChange={setLocation}
             placeholder={t("employer.post.locationPlaceholder")}/></Field>
@@ -408,7 +408,7 @@ export function EmpPost(){
 
         <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
           <Field label={t("employer.post.numVacancies")}><Input type="number" min="1" value={f.vac} onChange={e=>set("vac",Math.max(1,Number(e.target.value)||1))}/></Field>
-          <Field label={t("employer.post.applicationCloses")} required error={err.dlDate}>
+          <Field label={t("employer.post.applicationCloses")} required error={err.dlDate} name="dlDate">
             <DatePicker value={f.dlDate} onChange={v=>set("dlDate",v)} min={today} max={maxDate}/></Field>
         </div>
 
@@ -1231,7 +1231,7 @@ export function BlogEditor(){
     if(!d.title.trim())e.title="Title is required";
     if(d.excerpt.trim().length<20)e.excerpt="Write a short summary, at least a sentence";
     if((d.bodyText||"").replace(/<[^>]+>/g,"").trim().length<80)e.bodyText="The article body is too short";
-    setErr(e); if(Object.keys(e).length)return;
+    setErr(e); if(Object.keys(e).length){focusFirstError(e); return;}
     const body=[["", d.bodyText]]; /* single HTML chunk; renderers will inject with dangerouslySetInnerHTML */
     // The French version is entirely optional - only sent (and only overwrites what's already
     // stored) once there's actually French text in at least one of the three fields.
@@ -1248,16 +1248,16 @@ export function BlogEditor(){
         {isFrTab&&<Banner tone="brand" icon="globe" style={{marginBottom:16}} title="Version française (facultative)">
           Laisser ces champs vides affiche la version anglaise aux lecteurs francophones. Bill 96 / Loi 96 : un employeur enregistré au Québec est tenu de pouvoir publier ce contenu en français.</Banner>}
         <div className="flex flex-col gap-4">
-          <Field label={isFrTab?"Titre":"Title"} required={!isFrTab} error={err.title}>
+          <Field label={isFrTab?"Titre":"Title"} required={!isFrTab} error={err.title} name="title">
             <Input value={isFrTab?(d.titleFr||""):d.title} onChange={e=>set(isFrTab?"titleFr":"title",e.target.value)}
               placeholder={isFrTab?"Comment rédiger un CV canadien":"How to write a Canadian resume"} invalid={!isFrTab&&!!err.title}/></Field>
           {!isFrTab&&<div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
             <Field label="Category" required><Sel value={d.cat} onChange={e=>set("cat",e.target.value)}>
               {["Career Advice","Trades","Healthcare","Transport","Resume","Salary","Industry News","Safety"].map(o=><option key={o}>{o}</option>)}</Sel></Field>
             <Field label="Reading time (minutes)"><Input type="number" value={d.mins} onChange={e=>set("mins",Math.max(1,Number(e.target.value)||1))}/></Field></div>}
-          <Field label={isFrTab?"Résumé":"Summary"} required={!isFrTab} error={err.excerpt} hint={isFrTab?"":"One or two sentences shown on the card and at the top of the article."}>
+          <Field label={isFrTab?"Résumé":"Summary"} required={!isFrTab} error={err.excerpt} name="excerpt" hint={isFrTab?"":"One or two sentences shown on the card and at the top of the article."}>
             <Area rows={3} value={isFrTab?(d.excerptFr||""):d.excerpt} onChange={e=>set(isFrTab?"excerptFr":"excerpt",e.target.value)} invalid={!isFrTab&&!!err.excerpt}/></Field>
-          <Field label={isFrTab?"Corps de l'article":"Article body"} required={!isFrTab} error={err.bodyText}
+          <Field label={isFrTab?"Corps de l'article":"Article body"} required={!isFrTab} error={err.bodyText} name="bodyText"
             hint={isFrTab?"":"Each section: heading on the first line, the paragraph underneath, then a blank line before the next section."}>
             <RichText value={isFrTab?(d.bodyTextFr||""):d.bodyText} onChange={v=>set(isFrTab?"bodyTextFr":"bodyText",v)} rows={14} placeholder="Start writing. Use the toolbar for bold, italics, bullet lists, links..."/></Field>
           {!isFrTab&&<Field label="Author name"><Input value={d.author} onChange={e=>set("author",e.target.value)}/></Field>}</div>
@@ -1311,7 +1311,7 @@ export function TrainingEditor(){
     if(aboutTxt.length<30)e.about="Describe the course in a sentence or two";
     if((d.mods||[]).length<2)e.mods="Add at least two modules";
     if((d.outcomes||[]).length<2)e.outcomes="Add at least two learning outcomes";
-    setErr(e); if(Object.keys(e).length)return;
+    setErr(e); if(Object.keys(e).length){focusFirstError(e); return;}
     A.saveTraining({...d,about:aboutTxt,mods:(d.mods||[]).map(m=>m.title||m).filter(Boolean),outcomes:d.outcomes,status,scheduledAt:scheduledAt||null},isNew);};
 
   const addMod=()=>set("mods",[...(d.mods||[]),{id:uid("m"),title:"New module",body:"",videoUrl:""}]);
@@ -1332,7 +1332,7 @@ export function TrainingEditor(){
     <div className="grid gap-5 items-start" style={{gridTemplateColumns:mob?"1fr":"1fr 300px"}}>
       <Card pad={mob?20:26}>
         <div className="flex flex-col gap-4">
-          <Field label="Course title" required error={err.title}><Input value={d.title} onChange={e=>set("title",e.target.value)}
+          <Field label="Course title" required error={err.title} name="title"><Input value={d.title} onChange={e=>set("title",e.target.value)}
             placeholder="WHMIS 2015 and Workplace Safety" invalid={!!err.title}/></Field>
           <div className={`grid gap-3 ${mob?"grid-cols-2":"grid-cols-4"}`}>
             <Field label="Category"><Sel value={d.cat} onChange={e=>set("cat",e.target.value)}>
@@ -1341,7 +1341,7 @@ export function TrainingEditor(){
               {["Beginner","Intermediate","Advanced"].map(o=><option key={o}>{o}</option>)}</Sel></Field>
             <Field label="Hours"><Input type="number" value={d.hours} onChange={e=>set("hours",Math.max(1,Number(e.target.value)||1))}/></Field>
             <Field label="Price (CAD)"><Input type="number" value={d.price} onChange={e=>set("price",Math.max(0,Number(e.target.value)||0))} suffix={d.price===0?"Free":""}/></Field></div>
-          <Field label="About this course" required error={err.about}>
+          <Field label="About this course" required error={err.about} name="about">
             <RichText value={d.aboutRich||d.about} onChange={v=>set("aboutRich",v)}
               placeholder="Who the course is for and what certificate it leads to." rows={5}/></Field>
 
@@ -1400,7 +1400,7 @@ export function TrainingEditor(){
                 </div>}
           </div>
 
-          <Field label="Learning outcomes" required error={err.outcomes} hint="What learners will be able to do after finishing the course.">
+          <Field label="Learning outcomes" required error={err.outcomes} name="outcomes" hint="What learners will be able to do after finishing the course.">
             <InlineList value={d.outcomes||[]} onChange={v=>set("outcomes",v)} icon="check"
               placeholder="Add an outcome and press Enter"/></Field>
 

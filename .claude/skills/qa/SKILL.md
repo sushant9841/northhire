@@ -11,7 +11,7 @@ A repeatable, cheap way to catch regressions and surface issues without re-readi
 
 ## The loop
 
-1. **Build** — `npm run build`. A build failure is an instant stop; report it before anything else.
+1. **Build** — `npm run build`. A build failure is an instant stop; report it before anything else. **A build success is NOT proof the app runs** — TDZ, hook-order, undefined-ref, wrong-element-type all crash at render time. Any change that touches a shell, a top-level route wrapper, hook order, or a component rendered on load MUST be exercised via a live page-load (Playwright pageerror listener OR the fast targeted grep-and-mentally-simulate check) before commit. See [feedback-verify-before-commit](../../memory/feedback_verify_before_commit.md).
 2. **Pick a small, targeted surface** — either the pages/flows the user just asked about, or (for a periodic sweep) rotate through domains (marketing, seeker, employer, admin, staffing, HR) a few pages at a time rather than the whole app every run.
 3. **Playwright pass** — launch headless, navigate the target flows, screenshot key states, and always attach a `page.on("pageerror", ...)` listener. Zero `pageerror`s is necessary but not sufficient — actually look at the screenshots (Read tool) before declaring success. This mirrors the exact discipline used throughout the Tailwind-conversion pass — see [project_tailwind_conversion](../../memory/project_tailwind_conversion.md).
 4. **Score against the checklist below** — only the categories relevant to what changed; don't run a full accessibility audit because someone tweaked a button color.

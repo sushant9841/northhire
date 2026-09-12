@@ -45,7 +45,7 @@ import { HrPeoplePage, HrExpensesPage } from "./pages/hr/people.jsx";
 import { KioskPage } from "./pages/hr/KioskPage.jsx";
 import { EmpApiPage, EmpSsoPage } from "./pages/employer/api.jsx";
 import { HireOnboardingModal } from "./pages/shared/HireOnboardingModal.jsx";
-import { ToastHost } from "./design/primitives.jsx";
+import { ToastHost, Modal, Btn } from "./design/primitives.jsx";
 import {
   AgencyLoginPage, AgencyDashboard, AgencyJobOrders, AgencyBench, AgencyAssignments,
   AgencyTimesheets, AgencyPayroll, AgencyInvoicing, AgencyPlacements, AgencyClients,
@@ -242,6 +242,16 @@ export default function NorthHire(){
             {showFooter&&<Footer/>}
             {showTabs&&<TabBar/>}
             {hireOnboarding&&<HireOnboardingModal payload={hireOnboarding} onClose={()=>setHireOnboarding(null)}/>}
+            {/* Zero-CV pre-flight is a global concern - every apply entry point (job detail, search
+                cards, matched-jobs list, invited-candidate CTA) routes through A.beginApply() and
+                fires this modal when the signed-in seeker has no CV attached yet. */}
+            {A.noCvGateJobId&&<Modal onClose={A.closeNoCvGate} title={t("shared.jobDetail.noCvGateTitle")}>
+              <p className="text-sm text-text-2 leading-relaxed mb-4">{t("shared.jobDetail.noCvGateBody")}</p>
+              <div className="flex gap-2.5 justify-end flex-wrap">
+                <Btn kind="ghost" onClick={A.closeNoCvGate}>{t("shared.jobDetail.noCvGateNotNow")}</Btn>
+                <Btn kind="primary" icon="plus" onClick={()=>{A.closeNoCvGate();A.go("cvs");}}>{t("shared.jobDetail.noCvGateCreate")}</Btn>
+              </div>
+            </Modal>}
             <ToastHost toasts={A.toasts} dismiss={A.dismissToast}/>
             {/* Cookie banner hides on dashboard-shell pages: a signed-in user is on a page whose
                 left rail carries the "Sign out" and bottom-of-nav controls, and the fixed
