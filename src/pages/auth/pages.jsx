@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { api } from "../../helpers/api.js";
+import { focusFirstError } from "../../helpers/utils.js";
 import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
 import { Page, Card, Btn, Bar, Field, Input, Banner, Sel, Area, CheckRow, Lbl, Ring, Tag, SmartScene, SmartPortrait, HERO_QUIET } from "../../design/primitives.jsx";
@@ -86,7 +87,7 @@ export function SignupPage(){
     if(step.k==="company"){if(!d.company.trim())e.company=t("auth.companyNameRequired");
       if(!d.name.trim())e.name=t("auth.yourNameRequired");
       if(d.businessNumber.trim()&&!/^\d{9}$/.test(d.businessNumber.replace(/\s/g,"")))e.businessNumber=t("auth.enterBusinessNumber");}
-    setErr(e); return !Object.keys(e).length;};
+    setErr(e); if(Object.keys(e).length)focusFirstError(e); return !Object.keys(e).length;};
 
   const [submitting,setSubmitting]=useState(false);
   const submit=async()=>{
@@ -154,19 +155,19 @@ export function SignupPage(){
             </div>}</div>}
 
           {step.k==="account"&&<div className="flex flex-col gap-4">
-            <Field label={t("auth.emailAddress")} required error={err.email}>
+            <Field label={t("auth.emailAddress")} required error={err.email} name="email">
               <Input icon="mail" type="email" value={d.email} onChange={e=>set("email",e.target.value)}
                 placeholder={d.role==="employer"?"you@yourcompany.ca":"you@example.ca"} invalid={!!err.email}/></Field>
-            {d.role==="seeker"&&<Field label={t("auth.mobileNumber")} required error={err.phone} hint={t("auth.mobileHint")}>
+            {d.role==="seeker"&&<Field label={t("auth.mobileNumber")} required error={err.phone} hint={t("auth.mobileHint")} name="phone">
               <Input icon="phone" value={d.phone} onChange={e=>set("phone",e.target.value)} placeholder="416 555 0100" invalid={!!err.phone}/></Field>}
-            <Field label={t("auth.createPassword")} required error={err.password} hint={t("auth.createPasswordHint")}>
+            <Field label={t("auth.createPassword")} required error={err.password} hint={t("auth.createPasswordHint")} name="password">
               <Input icon="lock" type="password" value={d.password} onChange={e=>set("password",e.target.value)} placeholder={t("auth.passwordHint")} invalid={!!err.password}/></Field>
             <Banner tone="neutral" icon="shield" title={t("auth.detailsStayYours")}>
               {t("auth.detailsStayYoursBody")}</Banner></div>}
 
           {step.k==="company"&&<div className="flex flex-col gap-4">
-            <Field label={t("auth.yourName")} required error={err.name}><Input icon="user" value={d.name} onChange={e=>set("name",e.target.value)} placeholder={t("auth.exampleName")} invalid={!!err.name}/></Field>
-            <Field label={t("auth.companyName")} required error={err.company}><Input icon="building" value={d.company} onChange={e=>set("company",e.target.value)} placeholder={t("auth.exampleCompany")} invalid={!!err.company}/></Field>
+            <Field label={t("auth.yourName")} required error={err.name} name="name"><Input icon="user" value={d.name} onChange={e=>set("name",e.target.value)} placeholder={t("auth.exampleName")} invalid={!!err.name}/></Field>
+            <Field label={t("auth.companyName")} required error={err.company} name="company"><Input icon="building" value={d.company} onChange={e=>set("company",e.target.value)} placeholder={t("auth.exampleCompany")} invalid={!!err.company}/></Field>
             <div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
               <Field label={t("auth.industry")}><Sel value={d.industry} onChange={e=>set("industry",e.target.value)}>
                 <option value="">{t("auth.selectOption")}</option>{["Construction","Healthcare","Transport","Retail","Hospitality","Manufacturing","Professional Services","Education","Finance","Technology","Agriculture","Security"].map(o=><option key={o}>{o}</option>)}</Sel></Field>
@@ -177,7 +178,7 @@ export function SignupPage(){
               <Field label={t("auth.province")}><Sel value={d.prov} onChange={e=>set("prov",e.target.value)}>{PROVS.map(p=><option key={p}>{p}</option>)}</Sel></Field></div>
             <Field label={t("auth.about")} hint={t("auth.aboutHint")}>
               <Area rows={3} value={d.about} onChange={e=>set("about",e.target.value)} placeholder={t("auth.aboutPlaceholder")}/></Field>
-            <Field label={t("auth.businessNumber")} error={err.businessNumber} hint={t("auth.businessNumberHint")}>
+            <Field label={t("auth.businessNumber")} error={err.businessNumber} hint={t("auth.businessNumberHint")} name="businessNumber">
               <Input icon="file" value={d.businessNumber} onChange={e=>set("businessNumber",e.target.value)} placeholder="123456789" invalid={!!err.businessNumber}/></Field>
             <Field label={t("auth.referralCode")} hint={t("auth.referralCodeHint")}>
               <Input icon="gift" value={d.referralCode} onChange={e=>set("referralCode",e.target.value.toUpperCase())} placeholder="NH-XXXXXX"/></Field>
@@ -186,28 +187,28 @@ export function SignupPage(){
 
           {step.k==="about"&&<div className="flex flex-col gap-4">
             <div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
-              <Field label={t("auth.firstName")} required error={err.first}><Input value={d.first} onChange={e=>set("first",e.target.value)} placeholder="Jean" invalid={!!err.first}/></Field>
-              <Field label={t("auth.lastName")} required error={err.last}><Input value={d.last} onChange={e=>set("last",e.target.value)} placeholder="Tremblay" invalid={!!err.last}/></Field>
-              <Field label={t("auth.city")} required error={err.city}><Input icon="pin" value={d.city} onChange={e=>set("city",e.target.value)} placeholder={t("auth.exampleCityAlt")} invalid={!!err.city}/></Field>
+              <Field label={t("auth.firstName")} required error={err.first} name="first"><Input value={d.first} onChange={e=>set("first",e.target.value)} placeholder="Jean" invalid={!!err.first}/></Field>
+              <Field label={t("auth.lastName")} required error={err.last} name="last"><Input value={d.last} onChange={e=>set("last",e.target.value)} placeholder="Tremblay" invalid={!!err.last}/></Field>
+              <Field label={t("auth.city")} required error={err.city} name="city"><Input icon="pin" value={d.city} onChange={e=>set("city",e.target.value)} placeholder={t("auth.exampleCityAlt")} invalid={!!err.city}/></Field>
               <Field label={t("auth.province")} required><Sel value={d.prov} onChange={e=>set("prov",e.target.value)}>{PROVS.map(p=><option key={p}>{p}</option>)}</Sel></Field></div>
-            <Field label={t("auth.workPermit")} required error={err.eligible}>
+            <Field label={t("auth.workPermit")} required error={err.eligible} name="eligible">
               <div className="flex flex-col gap-2.5">
                 {[["citizen",t("auth.citizenOrPR")],["permit",t("auth.validWorkPermit")],
                   ["student",t("auth.studentPermit")],["need",t("auth.needSponsorship")]].map(([v,l])=>
                   <CheckRow key={v} on={d.eligible===v} onChange={()=>set("eligible",v)} label={l}/>)}</div></Field></div>}
 
           {step.k==="work"&&<div className="flex flex-col gap-5">
-            <Field label={t("auth.whichSector")} required error={err.cat}>
+            <Field label={t("auth.whichSector")} required error={err.cat} name="cat">
               <div className="grid gap-2.5" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?140:160}px,1fr))`}}>
                 {CATS.map(c=>{const on=d.cat===c.id;
                   return <button key={c.id} onClick={()=>set("cat",c.id)}
                     className={`flex items-center gap-2.5 py-3 px-3.5 rounded-xl cursor-pointer text-left border-2 transition duration-150 ${on?"border-brand bg-tint":"border-line bg-white"}`}>
                     <span className={`flex shrink-0 ${on?"text-brand":"text-text-3"}`}><I n={c.icon} s={19}/></span>
                     <span className={`text-sm leading-tight ${on?"font-semibold text-brand":"font-medium text-text"}`}>{c.label}</span></button>;})}</div></Field>
-            <Field label={t("auth.jobTitle")} required error={err.title} hint={t("auth.jobTitleHint")}>
+            <Field label={t("auth.jobTitle")} required error={err.title} hint={t("auth.jobTitleHint")} name="title">
               <Input icon="briefcase" value={d.title} onChange={e=>set("title",e.target.value)} placeholder={t("auth.exampleJobTitle")} invalid={!!err.title}/></Field>
             <div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
-              <Field label={t("auth.yearsExperience")} required error={err.years}>
+              <Field label={t("auth.yearsExperience")} required error={err.years} name="years">
                 <Sel value={d.years} onChange={e=>set("years",e.target.value)} invalid={!!err.years}>
                   <option value="">{t("auth.selectOption")}</option>
                   {[t("auth.noExperience"),t("auth.lessThanYear"),"1-2 years","3-5 years","6-10 years","More than 10 years"].map(o=><option key={o}>{o}</option>)}</Sel></Field>
@@ -217,7 +218,7 @@ export function SignupPage(){
 
           {step.k==="skills"&&<div>
             <Field label={t("auth.skillsLabel")} required error={err.skills}
-              hint={t("auth.skillsHint")}>
+              hint={t("auth.skillsHint")} name="skills">
               <div className="flex gap-2.5">
                 <Input value={d.draft} onChange={e=>set("draft",e.target.value)} placeholder={t("auth.typeSkill")}
                   onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();add(d.draft);}}} invalid={!!err.skills}/>
@@ -233,7 +234,7 @@ export function SignupPage(){
                   <I n="plus" s={13} c={C.brand} w={2.4}/>{s}</button>)}</div></div>}</div>}
 
           {step.k==="prefs"&&<div className="flex flex-col gap-5">
-            <Field label={t("auth.minimumPayLabel")} required error={err.payMin}>
+            <Field label={t("auth.minimumPayLabel")} required error={err.payMin} name="payMin">
               <div className="flex gap-2.5">
                 <Input icon="wallet" value={d.payMin} onChange={e=>set("payMin",e.target.value.replace(/[^\d.]/g,""))}
                   placeholder={d.payUnit==="hr"?"28.00":"60,000"} invalid={!!err.payMin}/>
