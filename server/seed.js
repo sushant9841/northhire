@@ -27,14 +27,19 @@ import {
   SEED_STAFFING_PAYRUNS, SEED_STAFFING_INVOICES, SEED_PLACEMENTS, AGENCY_PERM_JOB_IDS,
 } from "../src/store/seed/agency.js";
 
+/* Additive top-up: every INSERT in this script uses INSERT OR IGNORE, so re-running the seed on
+   an already-populated database SKIPS every row that already exists (matched by primary key or
+   unique index) and inserts only the new ones. That way, when the seed file grows a new
+   employer / job / seeker / application, running the script from a live dev DB actually lands
+   the new records instead of silently exiting on the "already seeded" gate. Delete
+   server/data/northhire.sqlite to reseed from scratch. */
 const already = db.prepare("SELECT COUNT(*) AS n FROM employers").get();
 if (already.n > 0) {
-  console.log(`Already seeded (${already.n} employers exist) - skipping. Delete server/data/northhire.sqlite to reseed from scratch.`);
-  process.exit(0);
+  console.log(`Existing DB detected (${already.n} employers). Running as an additive top-up: existing rows will be kept, only new rows will be inserted.`);
 }
 
 const insertEmployer = db.prepare(
-  `INSERT INTO employers (id, name, mark, a, b, industry, city, prov, size, rating, verified, about, founded, site, plan)
+  `INSERT OR IGNORE INTO employers (id, name, mark, a, b, industry, city, prov, size, rating, verified, about, founded, site, plan)
    VALUES (@id,@name,@mark,@a,@b,@industry,@city,@prov,@size,@rating,@verified,@about,@founded,@site,@plan)`
 );
 for (const e of SEED_EMPLOYERS) {
@@ -48,7 +53,7 @@ for (const e of SEED_EMPLOYERS) {
 console.log(`Seeded ${SEED_EMPLOYERS.length} employers.`);
 
 const insertEmployerUser = db.prepare(
-  `INSERT INTO users (id, role, name, email, password_hash, password_salt, employer_id)
+  `INSERT OR IGNORE INTO users (id, role, name, email, password_hash, password_salt, employer_id)
    VALUES (@id,'employer',@name,@email,@password_hash,@password_salt,@employer_id)`
 );
 const DEMO_PASSWORD_EMPLOYER = "Employer123"; // matches the demo credentials LoginPage already advertises
@@ -72,7 +77,7 @@ const parseDaysAgo = s => {
   return m ? Number(m[1]) : 0;
 };
 const insertJob = db.prepare(
-  `INSERT INTO jobs (id, employer_id, title, cat, city, prov, lat, lng, type, mode, pay_lo, pay_hi, pay_unit,
+  `INSERT OR IGNORE INTO jobs (id, employer_id, title, cat, city, prov, lat, lng, type, mode, pay_lo, pay_hi, pay_unit,
      vacancies, experience, education, deadline_date, views, urgent, featured, skills_json, perks_json,
      description, duties_json, requirements_json, how_to_apply, status, flagged, created_at)
    VALUES (@id,@employer_id,@title,@cat,@city,@prov,@lat,@lng,@type,@mode,@pay_lo,@pay_hi,@pay_unit,
@@ -102,7 +107,7 @@ console.log(`Geocoded ${SEED_JOBS.length} jobs via OpenStreetMap Nominatim.`);
 console.log(`Seeded ${SEED_JOBS.length} jobs.`);
 
 const insertUser = db.prepare(
-  `INSERT INTO users (id, role, name, email, password_hash, password_salt, seed, title, cat, city, prov, years,
+  `INSERT OR IGNORE INTO users (id, role, name, email, password_hash, password_salt, seed, title, cat, city, prov, years,
      phone, skills_json, edu, eligible, pay_min, pay_unit, types_json, modes_json, complete)
    VALUES (@id,'seeker',@name,@email,@password_hash,@password_salt,@seed,@title,@cat,@city,@prov,@years,
      @phone,@skills_json,@edu,@eligible,@pay_min,@pay_unit,@types_json,@modes_json,@complete)`
@@ -121,7 +126,7 @@ for (const p of SEED_PEOPLE) {
 console.log(`Seeded ${SEED_PEOPLE.length} seeker accounts (demo password for all: "${DEMO_PASSWORD}").`);
 
 const insertApp = db.prepare(
-  `INSERT INTO applications (id, job_id, user_id, stage, note, availability, pay_expectation, cover_letter, history_json, created_at)
+  `INSERT OR IGNORE INTO applications (id, job_id, user_id, stage, note, availability, pay_expectation, cover_letter, history_json, created_at)
    VALUES (@id,@job_id,@user_id,@stage,@note,@availability,@pay_expectation,@cover_letter,@history_json,@created_at)`
 );
 for (const a of SEED_APPS) {
@@ -138,7 +143,7 @@ console.log(`Seeded ${SEED_APPS.length} applications.`);
 const ADMIN_PASSWORD = "Admin1234";
 const { hash: adminHash, salt: adminSalt } = hashPassword(ADMIN_PASSWORD);
 db.prepare(
-  `INSERT INTO users (id, role, name, email, password_hash, password_salt, admin_scope) VALUES ('adm1','admin','Platform Admin','admin@northhire.ca',?,?,'full')`
+  `INSERT OR IGNORE INTO users (id, role, name, email, password_hash, password_salt, admin_scope) VALUES ('adm1','admin','Platform Admin','admin@northhire.ca',?,?,'full')`
 ).run(adminHash, adminSalt);
 // Scoped admin demo accounts - one per named scope, so a reviewer can log in as each and see the
 // admin panel actually shrink to that scope's sections instead of taking the flat-role claim on faith.
@@ -149,7 +154,7 @@ const SCOPED_ADMINS = [
   { id: "adm5", name: "Read-Only Admin", email: "readonly-admin@northhire.ca", scope: "readonly" },
 ];
 const insertScopedAdmin = db.prepare(
-  `INSERT INTO users (id, role, name, email, password_hash, password_salt, admin_scope) VALUES (?, 'admin', ?, ?, ?, ?, ?)`
+  `INSERT OR IGNORE INTO users (id, role, name, email, password_hash, password_salt, admin_scope) VALUES (?, 'admin', ?, ?, ?, ?, ?)`
 );
 for (const a of SCOPED_ADMINS) insertScopedAdmin.run(a.id, a.name, a.email, adminHash, adminSalt, a.scope);
 console.log(`Seeded 1 full admin + ${SCOPED_ADMINS.length} scoped admin accounts (all password "${ADMIN_PASSWORD}").`);
@@ -161,7 +166,7 @@ for (const jobId of AGENCY_PERM_JOB_IDS) setHiringType.run(jobId);
 
 /* ═══════════════ CONTENT: blogs, trainings ═══════════════ */
 const insertBlog = db.prepare(
-  `INSERT INTO blogs (id, title, cat, scene, tone, mins, author, author_seed, excerpt, body_json, owner_employer_id, status, views, featured, created_at)
+  `INSERT OR IGNORE INTO blogs (id, title, cat, scene, tone, mins, author, author_seed, excerpt, body_json, owner_employer_id, status, views, featured, created_at)
    VALUES (@id,@title,@cat,@scene,@tone,@mins,@author,@author_seed,@excerpt,@body_json,@owner_employer_id,@status,@views,@featured,@created_at)`
 );
 for (const b of SEED_BLOGS) {
@@ -175,7 +180,7 @@ for (const b of SEED_BLOGS) {
 console.log(`Seeded ${SEED_BLOGS.length} blog articles.`);
 
 const insertTraining = db.prepare(
-  `INSERT INTO trainings (id, title, cat, scene, tone, provider, provider_seed, level, hours, price, rating, enrolled, mods_json, outcomes_json, about, owner_employer_id, status, featured)
+  `INSERT OR IGNORE INTO trainings (id, title, cat, scene, tone, provider, provider_seed, level, hours, price, rating, enrolled, mods_json, outcomes_json, about, owner_employer_id, status, featured)
    VALUES (@id,@title,@cat,@scene,@tone,@provider,@provider_seed,@level,@hours,@price,@rating,@enrolled,@mods_json,@outcomes_json,@about,@owner_employer_id,@status,@featured)`
 );
 for (const t of SEED_TRAININGS) {
@@ -190,11 +195,11 @@ for (const t of SEED_TRAININGS) {
 console.log(`Seeded ${SEED_TRAININGS.length} trainings.`);
 
 /* ═══════════════ PLATFORM SETTINGS ═══════════════ */
-db.prepare("INSERT INTO platform_settings (id) VALUES (1)").run();
+db.prepare("INSERT OR IGNORE INTO platform_settings (id) VALUES (1)").run();
 
 /* ═══════════════ HR SUITE (PCL Construction, employer e1) ═══════════════ */
 const insertHrDept = db.prepare(
-  `INSERT INTO hr_departments (id, company_id, name, lead, color, about) VALUES (@id,@company_id,@name,@lead,@color,@about)`
+  `INSERT OR IGNORE INTO hr_departments (id, company_id, name, lead, color, about) VALUES (@id,@company_id,@name,@lead,@color,@about)`
 );
 for (const d of HR_DEPARTMENTS_SEED) {
   insertHrDept.run({ id: d.id, company_id: d.companyId, name: d.name, lead: d.lead || null, color: d.color, about: d.about || "" });
@@ -202,7 +207,7 @@ for (const d of HR_DEPARTMENTS_SEED) {
 console.log(`Seeded ${HR_DEPARTMENTS_SEED.length} HR departments.`);
 
 const insertHrEmployee = db.prepare(
-  `INSERT INTO hr_employees (id, company_id, name, email, password_hash, password_salt, role, dept, title, hired, seed,
+  `INSERT OR IGNORE INTO hr_employees (id, company_id, name, email, password_hash, password_salt, role, dept, title, hired, seed,
      phone, city, prov, salary, birth_date, manager, skills_json, badges_json, status, td1_on_file, benefits_per_pay, benefits_plan, visibility_json)
    VALUES (@id,@company_id,@name,@email,@password_hash,@password_salt,@role,@dept,@title,@hired,@seed,
      @phone,@city,@prov,@salary,@birth_date,@manager,@skills_json,@badges_json,'active',@td1_on_file,@benefits_per_pay,@benefits_plan,@visibility_json)`
@@ -235,7 +240,7 @@ for (const [i, e] of HR_EMPLOYEES.entries()) {
 console.log(`Seeded ${HR_EMPLOYEES.length} HR employees (demo password for all: "${HR_DEMO_PASSWORD}").`);
 
 const insertHrAttendance = db.prepare(
-  `INSERT INTO hr_attendance (id, employee_id, date, clock_in, clock_out, source, hours, site, late)
+  `INSERT OR IGNORE INTO hr_attendance (id, employee_id, date, clock_in, clock_out, source, hours, site, late)
    VALUES (@id,@employee_id,@date,@clock_in,@clock_out,@source,@hours,@site,0)`
 );
 for (const a of HR_ATTENDANCE) {
@@ -247,7 +252,7 @@ for (const a of HR_ATTENDANCE) {
 console.log(`Seeded ${HR_ATTENDANCE.length} HR attendance records.`);
 
 const insertHrLeave = db.prepare(
-  `INSERT INTO hr_leave (id, employee_id, type, from_date, to_date, days, status, reason, approved_by, requested_at)
+  `INSERT OR IGNORE INTO hr_leave (id, employee_id, type, from_date, to_date, days, status, reason, approved_by, requested_at)
    VALUES (@id,@employee_id,@type,@from_date,@to_date,@days,@status,@reason,@approved_by,@requested_at)`
 );
 for (const l of HR_LEAVE_REQUESTS) {
@@ -259,7 +264,7 @@ for (const l of HR_LEAVE_REQUESTS) {
 console.log(`Seeded ${HR_LEAVE_REQUESTS.length} HR leave requests.`);
 
 const insertHrTask = db.prepare(
-  `INSERT INTO hr_tasks (id, company_id, title, assignee, assigned_by, due, priority, status, tags_json, created_at, completed_at)
+  `INSERT OR IGNORE INTO hr_tasks (id, company_id, title, assignee, assigned_by, due, priority, status, tags_json, created_at, completed_at)
    VALUES (@id,'e1',@title,@assignee,@assigned_by,@due,@priority,@status,@tags_json,@created_at,@completed_at)`
 );
 for (const t of HR_TASKS) {
@@ -272,7 +277,7 @@ for (const t of HR_TASKS) {
 console.log(`Seeded ${HR_TASKS.length} HR tasks.`);
 
 const insertHrEvent = db.prepare(
-  `INSERT INTO hr_events (id, company_id, title, event_date, time, duration, type, location, invitees, organiser, description)
+  `INSERT OR IGNORE INTO hr_events (id, company_id, title, event_date, time, duration, type, location, invitees, organiser, description)
    VALUES (@id,'e1',@title,@event_date,@time,@duration,@type,@location,@invitees,@organiser,@description)`
 );
 for (const e of HR_EVENTS) {
@@ -284,7 +289,7 @@ for (const e of HR_EVENTS) {
 console.log(`Seeded ${HR_EVENTS.length} HR calendar events.`);
 
 const insertHrInvoice = db.prepare(
-  `INSERT INTO hr_invoices (id, company_id, number, client, amount, status, issued, due, paid, created_by, po)
+  `INSERT OR IGNORE INTO hr_invoices (id, company_id, number, client, amount, status, issued, due, paid, created_by, po)
    VALUES (@id,'e1',@number,@client,@amount,@status,@issued,@due,@paid,@created_by,@po)`
 );
 for (const i of HR_INVOICES) {
@@ -296,7 +301,7 @@ for (const i of HR_INVOICES) {
 console.log(`Seeded ${HR_INVOICES.length} HR invoices.`);
 
 const insertHrExpense = db.prepare(
-  `INSERT INTO hr_expenses (id, employee_id, category, merchant, amount, currency, description, receipt_url, date,
+  `INSERT OR IGNORE INTO hr_expenses (id, employee_id, category, merchant, amount, currency, description, receipt_url, date,
      status, submitted_at, approved_by, approved_at, paid_at, reject_reason, reimburse_via)
    VALUES (@id,@employee_id,@category,@merchant,@amount,@currency,@description,@receipt_url,@date,
      @status,@submitted_at,@approved_by,@approved_at,@paid_at,@reject_reason,@reimburse_via)`
@@ -322,7 +327,7 @@ console.log(`Seeded ${HR_EXPENSES_SEED.length} HR expense claims.`);
    figures (which weren't derived from any actual employee data to begin with). */
 const activeHrEmpsForSeed = db.prepare("SELECT * FROM hr_employees WHERE company_id = 'e1' AND status = 'active'").all();
 const insertHrPayrun = db.prepare(
-  `INSERT INTO hr_payruns (id, company_id, period_start, period_end, run_date, status, employees, total_gross, total_net, total_reimb, lines_json)
+  `INSERT OR IGNORE INTO hr_payruns (id, company_id, period_start, period_end, run_date, status, employees, total_gross, total_net, total_reimb, lines_json)
    VALUES (@id,'e1',@period_start,@period_end,@run_date,@status,@employees,@total_gross,@total_net,0,@lines_json)`
 );
 for (const p of HR_PAYRUNS) {
@@ -342,7 +347,7 @@ for (const p of HR_PAYRUNS) {
 console.log(`Seeded ${HR_PAYRUNS.length} HR payroll runs.`);
 
 const insertHrChat = db.prepare(
-  `INSERT INTO hr_chats (id, company_id, kind, name, members, about, created_by, created_at)
+  `INSERT OR IGNORE INTO hr_chats (id, company_id, kind, name, members, about, created_by, created_at)
    VALUES (@id,'e1',@kind,@name,@members,@about,@created_by,@created_at)`
 );
 for (const c of HR_CHATS) {
@@ -352,14 +357,14 @@ for (const c of HR_CHATS) {
   });
 }
 const insertHrChatMessage = db.prepare(
-  `INSERT INTO hr_chat_messages (id, chat_id, from_employee, text, created_at) VALUES (@id,@chat_id,@from_employee,@text,@created_at)`
+  `INSERT OR IGNORE INTO hr_chat_messages (id, chat_id, from_employee, text, created_at) VALUES (@id,@chat_id,@from_employee,@text,@created_at)`
 );
 for (const m of HR_CHAT_MESSAGES) {
   insertHrChatMessage.run({ id: m.id, chat_id: m.chat, from_employee: m.from, text: m.text, created_at: new Date(m.at).toISOString() });
 }
 console.log(`Seeded ${HR_CHATS.length} HR chats with ${HR_CHAT_MESSAGES.length} messages.`);
 
-db.prepare("INSERT INTO hr_company_settings (company_id, settings_json) VALUES ('e1', ?)").run(JSON.stringify(HR_COMPANY_SETTINGS_DEFAULT));
+db.prepare("INSERT OR IGNORE INTO hr_company_settings (company_id, settings_json) VALUES ('e1', ?)").run(JSON.stringify(HR_COMPANY_SETTINGS_DEFAULT));
 console.log("Seeded HR company settings for e1 (PCL Construction).");
 
 /* ═══════════════ STAFFING AGENCY (NorthHire Staffing) ═══════════════ */
@@ -370,7 +375,7 @@ const AGENCY_STAFF_SEED = [
 ];
 const AGENCY_DEMO_PASSWORD = "staff2026"; // matches the demo password the old client-only agency login advertised
 const insertAgencyStaff = db.prepare(
-  `INSERT INTO agency_staff (id, login_id, name, role, title, seed, email, password_hash, password_salt)
+  `INSERT OR IGNORE INTO agency_staff (id, login_id, name, role, title, seed, email, password_hash, password_salt)
    VALUES (@id,@login_id,@name,@role,@title,@seed,@email,@password_hash,@password_salt)`
 );
 for (const s of AGENCY_STAFF_SEED) {
@@ -380,7 +385,7 @@ for (const s of AGENCY_STAFF_SEED) {
 console.log(`Seeded ${AGENCY_STAFF_SEED.length} agency staff accounts (demo password for all: "${AGENCY_DEMO_PASSWORD}").`);
 
 const insertWorker = db.prepare(
-  `INSERT INTO staffing_workers (id, person_id, status, availability, onboarded, province, city, pay_rate_floor, pay_rate_target,
+  `INSERT OR IGNORE INTO staffing_workers (id, person_id, status, availability, onboarded, province, city, pay_rate_floor, pay_rate_target,
      sin_last3, td_on_file, direct_deposit_on_file, work_eligibility, we_expiry, emergency_contact_json, documents_json, tickets_json, notes, vac_balance, default_benefits_per_hr)
    VALUES (@id,@person_id,@status,@availability,@onboarded,@province,@city,@pay_rate_floor,@pay_rate_target,
      @sin_last3,@td_on_file,@direct_deposit_on_file,@work_eligibility,@we_expiry,@emergency_contact_json,@documents_json,@tickets_json,@notes,@vac_balance,@default_benefits_per_hr)`
@@ -403,7 +408,7 @@ for (const [i, w] of SEED_WORKERS.entries()) {
 console.log(`Seeded ${SEED_WORKERS.length} staffing workers.`);
 
 const insertStaffingClient = db.prepare(
-  `INSERT INTO staffing_clients (id, employer_id, status, signed_msa, bill_to_address, payment_terms_days, po_required,
+  `INSERT OR IGNORE INTO staffing_clients (id, employer_id, status, signed_msa, bill_to_address, payment_terms_days, po_required,
      default_supervisor_email, conversion_fee_pct, credit_limit, current_ar, industry, markup, notes)
    VALUES (@id,@employer_id,@status,@signed_msa,@bill_to_address,@payment_terms_days,@po_required,
      @default_supervisor_email,@conversion_fee_pct,@credit_limit,@current_ar,@industry,@markup,@notes)`
@@ -419,7 +424,7 @@ for (const c of SEED_STAFFING_CLIENTS) {
 console.log(`Seeded ${SEED_STAFFING_CLIENTS.length} staffing clients.`);
 
 const insertJobOrder = db.prepare(
-  `INSERT INTO staffing_job_orders (id, client_id, created_at, status, urgency, title, positions, filled, location, province,
+  `INSERT OR IGNORE INTO staffing_job_orders (id, client_id, created_at, status, urgency, title, positions, filled, location, province,
      start_date, end_date, ongoing, shift_pattern, overtime_available, pay_rate, bill_rate, must_have_json, nice_to_have_json,
      supervisor, supervisor_email, supervisor_phone, ppe, notes)
    VALUES (@id,@client_id,@created_at,@status,@urgency,@title,@positions,@filled,@location,@province,
@@ -440,7 +445,7 @@ for (const j of SEED_JOB_ORDERS) {
 console.log(`Seeded ${SEED_JOB_ORDERS.length} staffing job orders.`);
 
 const insertAssignment = db.prepare(
-  `INSERT INTO staffing_assignments (id, worker_id, client_id, job_order_id, status, start_date, end_date, ongoing,
+  `INSERT OR IGNORE INTO staffing_assignments (id, worker_id, client_id, job_order_id, status, start_date, end_date, ongoing,
      pay_rate, bill_rate, benefits_per_hr, supervisor, supervisor_email, site, shift_pattern, notes)
    VALUES (@id,@worker_id,@client_id,@job_order_id,@status,@start_date,@end_date,@ongoing,
      @pay_rate,@bill_rate,@benefits_per_hr,@supervisor,@supervisor_email,@site,@shift_pattern,@notes)`
@@ -457,7 +462,7 @@ for (const a of SEED_ASSIGNMENTS) {
 console.log(`Seeded ${SEED_ASSIGNMENTS.length} staffing assignments.`);
 
 const insertTimesheet = db.prepare(
-  `INSERT INTO staffing_timesheets (id, assignment_id, worker_id, week_start, status, hours_json, ot_hours, submitted_at, approved_at, approved_by, notes)
+  `INSERT OR IGNORE INTO staffing_timesheets (id, assignment_id, worker_id, week_start, status, hours_json, ot_hours, submitted_at, approved_at, approved_by, notes)
    VALUES (@id,@assignment_id,@worker_id,@week_start,@status,@hours_json,@ot_hours,@submitted_at,@approved_at,@approved_by,@notes)`
 );
 for (const t of SEED_TIMESHEETS) {
@@ -472,7 +477,7 @@ for (const t of SEED_TIMESHEETS) {
 console.log(`Seeded ${SEED_TIMESHEETS.length} staffing timesheets.`);
 
 const insertStaffingPayrun = db.prepare(
-  `INSERT INTO staffing_payruns (id, period_start, period_end, run_date, status, workers, total_hours, total_gross, total_net, lines_json)
+  `INSERT OR IGNORE INTO staffing_payruns (id, period_start, period_end, run_date, status, workers, total_hours, total_gross, total_net, lines_json)
    VALUES (@id,@period_start,@period_end,@run_date,@status,@workers,@total_hours,@total_gross,@total_net,@lines_json)`
 );
 for (const p of SEED_STAFFING_PAYRUNS) {
@@ -485,7 +490,7 @@ for (const p of SEED_STAFFING_PAYRUNS) {
 console.log(`Seeded ${SEED_STAFFING_PAYRUNS.length} staffing payroll runs.`);
 
 const insertStaffingInvoice = db.prepare(
-  `INSERT INTO staffing_invoices (id, number, client_id, week_start, issued, due, status, paid_on, lines_json, subtotal, gst, hst, total, po)
+  `INSERT OR IGNORE INTO staffing_invoices (id, number, client_id, week_start, issued, due, status, paid_on, lines_json, subtotal, gst, hst, total, po)
    VALUES (@id,@number,@client_id,@week_start,@issued,@due,@status,@paid_on,@lines_json,@subtotal,@gst,@hst,@total,@po)`
 );
 for (const i of SEED_STAFFING_INVOICES) {
@@ -498,7 +503,7 @@ for (const i of SEED_STAFFING_INVOICES) {
 console.log(`Seeded ${SEED_STAFFING_INVOICES.length} staffing invoices.`);
 
 const insertPlacement = db.prepare(
-  `INSERT INTO staffing_placements (id, client_id, candidate_id, role, offered_at, start_date, status, salary, fee_pct, fee,
+  `INSERT OR IGNORE INTO staffing_placements (id, client_id, candidate_id, role, offered_at, start_date, status, salary, fee_pct, fee,
      guarantee_ends, invoiced_on, paid_on, clawback_reason, replacement_due, notes)
    VALUES (@id,@client_id,@candidate_id,@role,@offered_at,@start_date,@status,@salary,@fee_pct,@fee,
      @guarantee_ends,@invoiced_on,@paid_on,@clawback_reason,@replacement_due,@notes)`
