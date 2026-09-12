@@ -10,5 +10,6 @@ export const timesheetTone = (status) =>
 export const jobTone = (status) =>
   status === "live" ? "ok" : status === "paused" ? "warn" : status === "review" ? "violet" : "neutral";
 
-export const jobStatusLabel = (status) =>
-  status === "live" ? "Live" : status === "paused" ? "Paused" : status === "review" ? "Pending review" : "Closed";
+/* Takes the i18n t() function so the label follows the viewer's locale — this helper has no
+   component scope of its own to read the current locale from. */
+export const jobStatusLabel = (status, t) => t("enums.jobStatus." + (["live", "paused", "review"].includes(status) ? status : "closed"));

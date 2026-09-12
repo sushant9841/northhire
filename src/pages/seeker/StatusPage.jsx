@@ -7,6 +7,7 @@ import { pay, payShort } from "../../helpers/utils.js";
 import { STAGES } from "../../store/seed/constants.js";
 import { EmpMark } from "../shared/cards.jsx";
 import { useTranslation } from "../../i18n/i18n.jsx";
+import { applicationStageLabel } from "../../helpers/enumLabels.js";
 
 function AnswersModal({app:a,job:j,onClose}){
   const {t}=useTranslation();
@@ -64,7 +65,7 @@ export function StatusPage(){
   const stageUnion=[];
   for(const a of mine) for(const st of A.stagesForApp(a)) if(!stageUnion.includes(st)) stageUnion.push(st);
   const allStages=stageUnion.length?stageUnion:STAGES;
-  const items=[{k:"all",label:t("seeker.status.allTab"),n:mine.length},...allStages.map(s=>({k:s,label:s,n:counts[s]||0})),
+  const items=[{k:"all",label:t("seeker.status.allTab"),n:mine.length},...allStages.map(s=>({k:s,label:applicationStageLabel(s,t),n:counts[s]||0})),
     {k:"Withdrawn",label:t("seeker.status.withdrawnTab"),n:counts.Withdrawn||0}];
   return <Page>
     <H1 sub={t("seeker.status.pageSub")}
@@ -88,7 +89,7 @@ export function StatusPage(){
       <Stat icon="calendar" label={t("seeker.status.statInterviews")} value={counts.Interview||0} tone={C.warn}/>
       <Stat icon="award" label={t("seeker.status.statOffers")} value={counts.Offer||0} tone={C.ok}/></div>
     <Tabs items={items} value={tab} onChange={setTab} style={{marginBottom:18}}/>
-    {list.length===0?<Empty icon="activity" title={tab==="all"?t("seeker.status.noAppsYetTitle"):t("seeker.status.noAppsAtStageTitle",{stage:tab})}
+    {list.length===0?<Empty icon="activity" title={tab==="all"?t("seeker.status.noAppsYetTitle"):t("seeker.status.noAppsAtStageTitle",{stage:applicationStageLabel(tab,t)})}
       body={tab==="all"?t("seeker.status.noAppsYetBody"):t("seeker.status.noAppsAtStageBody")}
       action={<Btn kind="primary" onClick={()=>A.go("search")}>{t("seeker.status.browseJobsBtn")}</Btn>}/>
       :<div className="flex flex-col gap-3">
@@ -102,7 +103,7 @@ export function StatusPage(){
                 <button onClick={()=>A.openJob(j.id)} className="bg-transparent border-0 p-0 cursor-pointer text-left text-base font-bold text-text tracking-tight">{j.t}</button>
                 <div className="text-sm text-text-2 mt-1">{e.name} • {j.city}, {j.prov} • {pay(j)}{payShort(j)}</div>
                 <div className="flex gap-2.5 items-center mt-2.5 flex-wrap">
-                  <Tag tone={a.stage==="Offer"?"ok":a.stage==="Interview"?"warn":a.stage==="Withdrawn"?"neutral":"brand"} sm>{a.stage}</Tag>
+                  <Tag tone={a.stage==="Offer"?"ok":a.stage==="Interview"?"warn":a.stage==="Withdrawn"?"neutral":"brand"} sm>{applicationStageLabel(a.stage,t)}</Tag>
                   <span className={`text-sm ${a.stage==="Withdrawn"?"text-text-3":"text-text-2"}`}>{a.note}</span></div></div>
               {!mob&&<div className="text-right shrink-0">
                 <div className="text-xs text-text-3">{t("seeker.status.appliedLabel")}</div>
@@ -112,7 +113,7 @@ export function StatusPage(){
               <div className="flex justify-between mt-2.5">
                 {cardStages.map((s,k)=><div key={s} className="text-center flex-1">
                   <div className={`w-2 h-2 rounded-full mx-auto mb-1 transition-colors duration-500 ${k<=idx?(a.stage==="Offer"?"bg-ok":"bg-brand"):"bg-line"}`}/>
-                  <div className={`text-xs ${k<=idx?"text-text-2":"text-text-3"} ${k===idx?"font-bold":"font-normal"}`}>{s}</div></div>)}</div></div>}
+                  <div className={`text-xs ${k<=idx?"text-text-2":"text-text-3"} ${k===idx?"font-bold":"font-normal"}`}>{applicationStageLabel(s,t)}</div></div>)}</div></div>}
             <div className="py-3 px-5 border-t border-line-soft flex gap-2.5 flex-wrap">
               <Btn kind="outline" size="sm" iconR="chevR" onClick={()=>A.openJob(j.id)}>{t("seeker.status.viewJobBtn")}</Btn>
               <Btn kind="ghost" size="sm" icon="file" onClick={()=>setViewingAnswers({app:a,job:j})}>{t("seeker.status.yourAnswersBtn")}</Btn>

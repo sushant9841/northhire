@@ -1152,7 +1152,7 @@ export function HrInvoices(){
           <td className={`${TD_CLS} text-sm text-text font-semibold`}>${inv.amount.toLocaleString()}</td>
           <td className={`${TD_CLS} text-xs text-text-3`}>{inv.issued}</td>
           <td className={`${TD_CLS} text-xs text-text-3`}>{inv.due}</td>
-          <td className={TD_CLS}><Tag tone={invoiceTone(inv.status)} sm>{inv.status}</Tag></td>
+          <td className={TD_CLS}><Tag tone={invoiceTone(inv.status)} sm>{t("enums.invoiceStatus."+inv.status)}</Tag></td>
           <td className={TD_CLS} onClick={e=>e.stopPropagation()}><div className="flex gap-1">
             <Btn kind="ghost" size="xs" onClick={()=>setDetail(inv)}>{t("hr.invoices.viewBtn")}</Btn>
             {canManage&&inv.status==="pending"&&<Btn kind="primary" size="xs" onClick={()=>A.markInvoicePaid(inv.id)}>{t("hr.invoices.markPaidBtn")}</Btn>}

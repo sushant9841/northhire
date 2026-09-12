@@ -15,6 +15,7 @@ import { pay, payShort, dlText, money, uid, matchesQuery, matchesBooleanQuery } 
 import { sanitizeHtml } from "../../helpers/sanitize.js";
 import { PROVS, PCODE, CATS, CATM } from "../../store/seed/constants.js";
 import { jobTone, jobStatusLabel } from "../../helpers/statusTone.js";
+import { applicationStageLabel } from "../../helpers/enumLabels.js";
 import { LocationInput, InlineList, QuestionBuilder, aiSuggestJD } from "../shared/formControls.jsx";
 import { useTranslation } from "../../i18n/i18n.jsx";
 import { formatNumber, formatDate, formatDateTime } from "../../i18n/format.js";
@@ -57,7 +58,7 @@ export function EmpHome(){
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap">{j.t}</div>
                 <div className="text-xs text-text-3 mt-1">{t(n===1?"employer.home.applicantOne":"employer.home.applicantOther",{n})} • {t("employer.home.viewsCount",{n:formatNumber(j.views,locale)})} • {j.posted}</div></div>
-              <Tag tone={jobTone(j.status)} sm>{jobStatusLabel(j.status)}</Tag></div>;})}</Card>
+              <Tag tone={jobTone(j.status)} sm>{jobStatusLabel(j.status,t)}</Tag></div>;})}</Card>
       <div className="flex flex-col gap-4">
         <Card><H2>{t("employer.home.pipeline")}</H2>
           {stages.map(s=>{const n=byStage[s]||0;
@@ -107,7 +108,7 @@ export function EmpJobs(){
               <div className="grow shrink basis-60 min-w-0">
                 <div className="flex items-center gap-2.5 flex-wrap">
                   <span className="font-bold text-text tracking-tight" style={{fontSize:16.5}}>{j.t}</span>
-                  <Tag tone={jobTone(j.status)} sm>{jobStatusLabel(j.status)}</Tag>
+                  <Tag tone={jobTone(j.status)} sm>{jobStatusLabel(j.status,t)}</Tag>
                   {j.flagged&&<Tag tone="danger" sm icon="alert">{t("employer.jobs.flaggedByAdmin")}</Tag>}
                   {j.pendingOwnerApproval&&<Tag tone="warn" sm icon="shield">{t("employer.jobs.needsOwnerApproval")}</Tag>}</div>
                 <div className="text-sm text-text-2 mt-1.5">{j.city}, {j.prov} • {j.mode} • {j.type} • {pay(j)}{payShort(j)}</div>
@@ -499,7 +500,7 @@ function _PipelineColumn({stage,items,job,sel,tog,selectStage,A,mob,stages,t}){
   return <div ref={setNodeRef} className={`${mob?"w-59":"w-63"} flex flex-col gap-2.5 rounded-2xl transition-colors duration-150`}
     style={{background:isOver?C.tint:"transparent",padding:isOver?6:0}}>
     <div className="flex items-center justify-between px-1">
-      <span className="text-xs font-bold text-text-2 uppercase tracking-wide">{stage}</span>
+      <span className="text-xs font-bold text-text-2 uppercase tracking-wide">{applicationStageLabel(stage,t)}</span>
       <div className="flex gap-1.5 items-center">
         {/* On a plan without bulk actions this control was hidden entirely, so nothing on the
             board ever explained that selecting candidates is a paid feature - and the upgrade copy
@@ -728,7 +729,7 @@ export function EmpPipeline(){
         <div className="relative" ref={bulkMenuRef}>
           <Btn kind="onDark" size="sm" iconR="chevD" aria-expanded={bulkMenu} onClick={()=>setBulkMenu(!bulkMenu)}>Move to…</Btn>
           {bulkMenu&&<div role="menu" className="absolute top-full right-0 mt-1.5 bg-white border border-line rounded-xl shadow-lg p-1.5 z-20" style={{minWidth:180}}>
-            {pipelineStages.map(s=><button key={s} role="menuitem" onClick={()=>runBulk("move",s)} className="block w-full text-left py-2.5 px-3 bg-transparent border-0 cursor-pointer text-sm text-text rounded-lg hover:bg-bg transition-colors duration-150">{s}</button>)}</div>}
+            {pipelineStages.map(s=><button key={s} role="menuitem" onClick={()=>runBulk("move",s)} className="block w-full text-left py-2.5 px-3 bg-transparent border-0 cursor-pointer text-sm text-text rounded-lg hover:bg-bg transition-colors duration-150">{applicationStageLabel(s,t)}</button>)}</div>}
         </div>
         <Btn kind="onDark" size="sm" icon="x" onClick={()=>setConfirmRejectAll(true)}>Reject all</Btn>
         <Btn kind="onDark" size="sm" onClick={clear}>Clear</Btn></div>}
@@ -803,7 +804,7 @@ export function EmpCandidate(){
           <div className="text-sm text-text-3 mt-0.5">
             {contact===undefined?t("employer.candidate.applicationNotes"):
               [contact?.email,contact?.phone].filter(Boolean).join(" • ")||t("employer.candidate.applicationNotes")}</div>
-          <div className="mt-2.5"><Tag tone={a.stage==="Offer"?"ok":a.stage==="Interview"?"warn":"brand"} sm>{a.stage}</Tag></div></div>
+          <div className="mt-2.5"><Tag tone={a.stage==="Offer"?"ok":a.stage==="Interview"?"warn":"brand"} sm>{applicationStageLabel(a.stage,t)}</Tag></div></div>
         <Ring v={s} size={62} label={t("employer.pipeline.selectedCount",{n:1})}/></div></Card>
     <Card style={{marginBottom:16}}>
       <div className="flex justify-between items-center mb-3">
@@ -1517,6 +1518,7 @@ function _PipelineStageEditor({A,mob}){
    editor - the template already exists as its own object, and duplicating its body inline here
    would silently drift the moment the underlying template is edited. */
 function _StageAutomationsEditor({A,mob}){
+  const {t}=useTranslation();
   const stages=A.stagesFor(A.company.id);
   const templates=A.messageTemplates;
   useEffect(()=>{A.loadStageAutomations();/* eslint-disable-next-line react-hooks/exhaustive-deps */},[]);
@@ -1534,7 +1536,7 @@ function _StageAutomationsEditor({A,mob}){
       : <div className="flex flex-col gap-2.5">{stages.map(stage=>{
           const cur=byStage[stage]?.templateId||"";
           return <div key={stage} className="flex gap-2.5 items-center flex-wrap">
-            <div className="text-sm font-semibold text-text w-30 shrink-0">{stage}</div>
+            <div className="text-sm font-semibold text-text w-30 shrink-0">{applicationStageLabel(stage,t)}</div>
             <div className="flex-1 min-w-50">
               <Sel value={cur} onChange={e=>save(stage,e.target.value)}>
                 <option value="">— No automation —</option>
@@ -1744,6 +1746,7 @@ export function EmpBilling(){
    attribution, which now exists. Applications from before that field report as "Not recorded"
    rather than being folded into Direct, which would overstate that channel permanently. */
 function _HiringVelocity({A,mob}){
+  const {t}=useTranslation();
   const myJobs=A.jobs.filter(j=>j.e===A.company.id).map(j=>j.id);
   const apps=A.applications.filter(a=>myJobs.includes(a.job));
   const s=hiringSummary(apps);
@@ -1793,7 +1796,7 @@ function _HiringVelocity({A,mob}){
             const u=A.person(app.user);
             return <button key={app.id} onClick={()=>A.openCandidate(app.id)}
               className="flex justify-between items-center gap-3 bg-transparent border-0 p-0 cursor-pointer text-left">
-              <span className="text-sm text-text truncate">{u?.name||"Candidate"} · {app.stage}</span>
+              <span className="text-sm text-text truncate">{u?.name||"Candidate"} · {applicationStageLabel(app.stage,t)}</span>
               <span className="text-sm text-warn font-semibold tabular-nums shrink-0">{days}d</span></button>;})}
           {s.stalled.length>4&&<div className="text-xs text-text-3 mt-1">and {s.stalled.length-4} more</div>}
         </div>
@@ -1882,7 +1885,7 @@ export function EmpAnalyticsPage(){
               const pct=Math.round((count/max)*100);
               return <div key={stage} className="mb-3.5">
                 <div className="flex justify-between text-sm mb-1.5">
-                  <span className="text-text">{stage}</span><span className="font-semibold text-text-2">{count}</span></div>
+                  <span className="text-text">{applicationStageLabel(stage,t)}</span><span className="font-semibold text-text-2">{count}</span></div>
                 <div className="h-2 bg-bg rounded-full overflow-hidden">
                   <div className="h-full transition-[width] duration-300" style={{width:`${pct}%`,background:stage==="Offer"?C.ok:stage==="Interview"?C.warn:C.brand}}/></div></div>;})}</Card>
           <div className="flex flex-col gap-3.5">
@@ -1922,7 +1925,7 @@ export function EmpAnalyticsPage(){
               <tr key={j.id} className="border-b border-line-soft hover:bg-bg cursor-pointer" onClick={()=>{A.setPipelineJob(j.id); A.go("empPipeline");}}
                 title="Open pipeline for this job">
                 <td className="py-2.5 px-4 text-sm font-semibold text-text">{j.title}</td>
-                <td className="py-2.5 px-4"><Tag tone={jobTone(j.status)} sm>{jobStatusLabel(j.status)}</Tag></td>
+                <td className="py-2.5 px-4"><Tag tone={jobTone(j.status)} sm>{jobStatusLabel(j.status,t)}</Tag></td>
                 <td className="py-2.5 px-4 text-sm text-text-2 tabular-nums">{j.views.toLocaleString()}</td>
                 <td className="py-2.5 px-4 text-sm text-text-2 tabular-nums">{j.applications}</td>
                 <td className="py-2.5 px-4 text-sm text-text-2 tabular-nums">{j.conversion}%</td>

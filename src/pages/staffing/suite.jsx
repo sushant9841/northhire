@@ -948,7 +948,7 @@ export function AgencyTimesheets(){
             <td className={`${TD_CLS} text-sm text-text font-semibold`}>{totalHrs}h{ts.otHours>0?` (${ts.otHours} OT)`:""}</td>
             <td className={`${TD_CLS} text-sm text-text`}>${gross.toFixed(2)}</td>
             <td className={`${TD_CLS} text-sm text-brand font-semibold`}>${bill.toFixed(2)}</td>
-            <td className={TD_CLS}><Tag tone={timesheetTone(ts.status)} sm>{ts.status}</Tag></td>
+            <td className={TD_CLS}><Tag tone={timesheetTone(ts.status)} sm>{t("enums.timesheetStatus."+ts.status)}</Tag></td>
             <td className={TD_CLS}>
               {ts.status==="submitted"&&<div className="flex gap-1">
                 <Btn kind="dangerSoft" size="xs" onClick={()=>{setReturning(ts.id);setReason("");}}>{t("staffing.timesheets.return")}</Btn>
@@ -1130,7 +1130,7 @@ export function AgencyInvoicing(){
             <td className={`${TD_CLS} text-xs text-text-3`}>{inv.weekStart}</td>
             <td className={`${TD_CLS} text-sm text-text font-semibold`}>${inv.total.toLocaleString()}</td>
             <td className={TD_CLS} style={{fontSize:12.5,color:daysOverdue>0?C.danger:C.text3}}>{inv.due}{daysOverdue>0?` (+${daysOverdue}d)`:""}</td>
-            <td className={TD_CLS}><Tag tone={invoiceTone(inv.status)} sm>{inv.status}</Tag></td>
+            <td className={TD_CLS}><Tag tone={invoiceTone(inv.status)} sm>{t("enums.invoiceStatus."+inv.status)}</Tag></td>
             <td className={TD_CLS}>
               {inv.status!=="paid"&&<Btn kind="ghost" size="xs" onClick={()=>A.markStaffingInvoicePaid(inv.id)}>{t("staffing.invoicing.markPaid")}</Btn>}
             </td>

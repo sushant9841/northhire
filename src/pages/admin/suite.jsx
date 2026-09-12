@@ -7,6 +7,7 @@ import { Page, Btn, Banner, Stat, Card, Switch, Input, Sel, SmartPortrait, Tag, 
 import { pay, payShort } from "../../helpers/utils.js";
 import { CATS, STAGES } from "../../store/seed/constants.js";
 import { jobTone, jobStatusLabel } from "../../helpers/statusTone.js";
+import { applicationStageLabel } from "../../helpers/enumLabels.js";
 import { EmpMark } from "../shared/cards.jsx";
 import { useTranslation } from "../../i18n/i18n.jsx";
 import { formatNumber, formatDateTime } from "../../i18n/format.js";
@@ -197,7 +198,7 @@ export function AdmUsers(){
               <div className="text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap">{j?.t||"—"}</div>
               <div className="text-xs text-text-3">{e?.name||"—"} · {a.at}</div>
             </div>
-            <Tag tone={a.stage==="Hired"?"ok":a.stage==="Withdrawn"?"neutral":"brand"} sm>{a.stage}</Tag>
+            <Tag tone={a.stage==="Hired"?"ok":a.stage==="Withdrawn"?"neutral":"brand"} sm>{applicationStageLabel(a.stage,t)}</Tag>
           </div>;})}
         {A.applications.filter(a=>a.user===viewing.id).length===0&&<div className="text-sm text-text-3 py-3">{t("admin.users.noApplicationsOnFile")}</div>}
       </div>
@@ -285,7 +286,7 @@ export function AdmEmployers(){
               <div className="text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap">{j.t}</div>
               <div className="text-xs text-text-3">{j.city}, {j.prov} · {t("admin.employers.viewsN",{n:j.views})} · {t(n===1?"admin.employers.applicantN":"admin.employers.applicantsN",{n})}</div>
             </div>
-            <Tag tone={jobTone(j.status)} sm>{jobStatusLabel(j.status)}</Tag>
+            <Tag tone={jobTone(j.status)} sm>{jobStatusLabel(j.status,t)}</Tag>
           </div>;})}
         {A.jobs.filter(j=>j.e===viewing.id).length===0&&<div className="text-sm text-text-3 py-3">{t("admin.employers.noListingsYet")}</div>}
       </div>
@@ -345,7 +346,7 @@ export function AdmJobs(){
             <div className="text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap">{j.t}</div>
             <div className="text-xs text-text-3 mt-0.5">{e.name} • {j.city}, {j.prov} • {pay(j)}{payShort(j)}</div></div>
           {!mob&&<div className="w-22 text-sm text-text-2">{t(n===1?"admin.jobs.applicantOne":"admin.jobs.applicantOther",{n})}</div>}
-          <Tag tone={jobTone(j.status)} sm>{jobStatusLabel(j.status)}</Tag>
+          <Tag tone={jobTone(j.status)} sm>{jobStatusLabel(j.status,t)}</Tag>
           <div className="flex gap-2 flex-wrap">
             <Btn kind="ghost" size="xs" icon="eye" title={t("admin.jobs.preview")} onClick={()=>A.openJob(j.id,{preview:true})}/>
             <Btn kind="outline" size="xs" onClick={()=>{const label=j.status==="live"?t("admin.jobs.statusPaused"):j.status==="review"?t("admin.jobs.statusApproved"):t("admin.jobs.statusRestored");A.toggleJobStatus(j.id);A.toast(t("admin.jobs.toastStatusChanged",{title:j.t,label}),j.status==="live"?"warn":"ok");}}>{j.status==="live"?t("admin.jobs.actionPause"):j.status==="review"?t("admin.jobs.actionApprove"):t("admin.jobs.actionRestore")}</Btn>
@@ -365,7 +366,7 @@ export function AdmJobs(){
               <div className="text-sm font-semibold text-text">{r.jobTitle}</div>
               <div className="text-xs text-text-3 mt-0.5">{t("admin.jobs.reportedBy",{name:r.reporterName,reason:r.reason})}</div>
             </div>
-            <Tag tone={r.status==="open"?"warn":r.status==="actioned"?"danger":"neutral"} sm>{r.status}</Tag>
+            <Tag tone={r.status==="open"?"warn":r.status==="actioned"?"danger":"neutral"} sm>{t("enums.jobReport."+r.status)}</Tag>
             {r.status==="open"&&<div className="flex gap-1.5">
               <Btn kind="outline" size="xs" onClick={()=>A.decideJobReport(r.id,"dismissed")}>{t("admin.jobs.dismiss")}</Btn>
               <Btn kind="dangerSoft" size="xs" onClick={()=>{const j=A.jobs.find(x=>x.id===r.job); if(j&&!j.flagged){setFlagging(j);setFlagReason(r.reason);} A.decideJobReport(r.id,"actioned");}}>{t("admin.jobs.flagListing")}</Btn>

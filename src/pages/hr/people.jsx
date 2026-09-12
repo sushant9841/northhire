@@ -708,7 +708,7 @@ export function HrExpensesPage(){
             <td className={`${TD_CLASS} text-xs text-text-2`}>{x.category}</td>
             <td className={`${TD_CLASS} text-sm text-text`}>{x.merchant}</td>
             <td className={`${TD_CLASS} text-sm font-bold text-text`}>${x.amount.toFixed(2)}</td>
-            <td className={TD_CLASS}><Tag tone={x.status==="paid"?"brand":x.status==="approved"?"ok":x.status==="rejected"?"danger":"warn"} sm>{x.status}</Tag></td>
+            <td className={TD_CLASS}><Tag tone={x.status==="paid"?"brand":x.status==="approved"?"ok":x.status==="rejected"?"danger":"warn"} sm>{t("enums.expenseStatus."+x.status)}</Tag></td>
             <td className={TD_CLASS} onClick={e=>e.stopPropagation()}>
               {isApprover&&tab==="queue"&&<div className="flex gap-1">
                 <Btn kind="dangerSoft" size="xs" onClick={()=>setDetail(x)}>{t("hrPeople.expenses.reject")}</Btn>
@@ -775,7 +775,7 @@ function ExpenseDetailModal({expense:x,onClose,isApprover,isPriv,currentEmpId}){
             <div className="text-xs text-text-3">{e?.title}</div>
           </div>
         </div>
-        <Tag tone={x.status==="paid"?"brand":x.status==="approved"?"ok":x.status==="rejected"?"danger":"warn"}>{x.status}</Tag>
+        <Tag tone={x.status==="paid"?"brand":x.status==="approved"?"ok":x.status==="rejected"?"danger":"warn"}>{t("enums.expenseStatus."+x.status)}</Tag>
       </div>
 
       <div className={`grid gap-3 text-sm ${mob?"grid-cols-1":"grid-cols-2"}`}>
