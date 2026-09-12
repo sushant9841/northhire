@@ -6,6 +6,7 @@ import { emitWebhook } from "../webhooks.js";
 import { sendAndLogMail } from "../mail.js";
 import { emit as liveEmit, emitMany as liveEmitMany } from "../lib/liveBroker.js";
 import { pushNotification } from "../lib/notify.js";
+import { notifStringsForUser } from "../emailLocale.js";
 
 /* Every user attached to a given employer_id — the employer account owner plus any teammates.
    Used so a stage move made by one team member instantly refreshes the pipeline on their
@@ -158,8 +159,30 @@ applicationsRouter.post("/", requireAuth, requireRole("seeker"), (req, res) => {
     // Live-sync: every employer teammate's Pipeline / Jobs tab picks this up without a refresh.
     liveEmitMany(employerUserIds(ownerJob.employer_id), "application:new", serializeApplication(row));
     for (const uid of employerUserIds(ownerJob.employer_id)) {
-      pushNotification({ for: uid, icon: "target", title: "New application",
-        body: `${job.title} just got a new applicant.`, link: "empPipeline" });
+      const S = notifStringsForUser(uid);
+      pushNotification({ for: uid, icon: "target", title: S.newApplicationTitle,
+        body: S.newApplicationBody(job.title), link: "empPipeline" });
+    }
+    // Forward-email: if the employer set a copy-to address on this listing, send the
+    // application summary there too. Best-effort - a mail failure never blocks the application.
+    if (job.forward_email) {
+      const applicant = db.prepare("SELECT name, email, phone FROM users WHERE id = ?").get(req.user.id);
+      const body = [
+        `A new application arrived on NorthHire for ${job.title}.`,
+        "",
+        `Applicant: ${applicant?.name || "(name withheld)"}`,
+        `Email: ${applicant?.email || "-"}`,
+        `Phone: ${applicant?.phone || "-"}`,
+        "",
+        `Availability: ${availability || "-"}`,
+        `Pay expectation: ${payExpectation || "-"}`,
+        "",
+        coverLetter ? "Cover letter:" : "",
+        coverLetter || "",
+        "",
+        "View this application on NorthHire in your Pipeline.",
+      ].filter(Boolean).join("\n");
+      sendAndLogMail(job.forward_email, `New application: ${job.title}`, body).catch(() => {});
     }
   }
 });
@@ -233,8 +256,11 @@ applicationsRouter.patch("/:id/stage", requireAuth, requireRole("employer"), (re
   // client notify() this deliberately does NOT rely on) so the candidate's bell badge is real
   // and survives a refresh / different device / being offline when it happened.
   const stageEmployer = db.prepare("SELECT name FROM employers WHERE id = ?").get(req.user.employer_id);
-  pushNotification({ for: app.user_id, icon: stage === "Hired" || stage === "Offer" ? "award" : "activity",
-    title: `${stage} — ${stageEmployer?.name || "an employer"}`, body: note, link: "status" });
+  {
+    const S = notifStringsForUser(app.user_id);
+    pushNotification({ for: app.user_id, icon: stage === "Hired" || stage === "Offer" ? "award" : "activity",
+      title: S.stageTitle(stage, stageEmployer?.name), body: note, link: "status" });
+  }
 
   /* Run the employer's stage-change automation, if any: send the linked message template to the
      candidate as an in-app message. Merge-field substitution mirrors what the template picker

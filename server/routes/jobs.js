@@ -143,12 +143,18 @@ jobsRouter.post("/", requireAuth, requireRole("employer"), async (req, res) => {
   // Free OSM geocoding (server/geocode.js) so the listing carries real coordinates for radius
   // search/map view - best-effort, never blocks posting a job if the lookup fails or times out.
   const geo = (b.city && b.prov) ? await geocode(`${b.city}, ${b.prov}, Canada`) : null;
+  const distChannels = Array.isArray(b.distributionChannels)
+    ? b.distributionChannels.filter(c => typeof c === "string" && c.trim()).slice(0, 10)
+    : [];
+  const fwdEmail = (typeof b.forwardEmail === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.forwardEmail.trim()))
+    ? b.forwardEmail.trim().toLowerCase() : null;
   db.prepare(
     `INSERT INTO jobs (id, employer_id, title, cat, city, prov, lat, lng, type, mode, pay_lo, pay_hi, pay_unit,
        vacancies, experience, education, deadline_date, urgent, featured, skills_json, perks_json,
        description, duties_json, requirements_json, how_to_apply, screening_questions_json,
-       ai_screening, vacancy_confirmed, status, pending_owner_approval)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+       ai_screening, vacancy_confirmed, status, pending_owner_approval,
+       distribution_channels, forward_email)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
   ).run(
     id, req.user.employer_id, b.title, b.cat || null, b.city || null, b.prov || null, geo?.lat ?? null, geo?.lng ?? null,
     b.type || null, b.mode || null,
@@ -160,7 +166,8 @@ jobsRouter.post("/", requireAuth, requireRole("employer"), async (req, res) => {
     JSON.stringify((b.questions || []).filter(q => q && q.prompt && q.prompt.trim()).slice(0, 10)
       .map(q => ({ id: q.id, type: q.type, prompt: q.prompt.trim(), required: !!q.required, options: Array.isArray(q.options) ? q.options : [] }))),
     b.aiScreening === false ? 0 : 1, b.vacancyConfirmed ? 1 : 0,
-    initialStatus, needsOwnerApproval ? 1 : 0
+    initialStatus, needsOwnerApproval ? 1 : 0,
+    JSON.stringify(distChannels), fwdEmail
   );
   const row = db.prepare("SELECT * FROM jobs WHERE id = ?").get(id);
   res.status(201).json({ job: serializeJob(row) });
@@ -179,7 +186,23 @@ jobsRouter.patch("/:id", requireAuth, requireRole("employer", "admin"), (req, re
   const isAdmin = req.user.role === "admin";
   if (!isAdmin && job.employer_id !== req.user.employer_id) return res.status(403).json({ error: "Not your listing." });
 
-  const { status, flagged, approve, scoreWeights, recruitingCost } = req.body || {};
+  const { status, flagged, approve, scoreWeights, recruitingCost, distributionChannels, forwardEmail } = req.body || {};
+
+  // Distribution channels + forward email are the employer's to edit on their own listing;
+  // stored the same way as at create time.
+  if (distributionChannels !== undefined) {
+    if (isAdmin) return res.status(403).json({ error: "Distribution is the employer's to configure." });
+    const clean = Array.isArray(distributionChannels)
+      ? distributionChannels.filter(c => typeof c === "string" && c.trim()).slice(0, 10)
+      : [];
+    db.prepare("UPDATE jobs SET distribution_channels = ? WHERE id = ?").run(JSON.stringify(clean), req.params.id);
+  }
+  if (forwardEmail !== undefined) {
+    if (isAdmin) return res.status(403).json({ error: "Forward email is the employer's to set." });
+    const v = typeof forwardEmail === "string" ? forwardEmail.trim() : "";
+    if (v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return res.status(400).json({ error: "Forward email doesn't look like a valid address." });
+    db.prepare("UPDATE jobs SET forward_email = ? WHERE id = ?").run(v ? v.toLowerCase() : null, req.params.id);
+  }
 
   if (recruitingCost !== undefined) {
     if (isAdmin) return res.status(403).json({ error: "Recruiting cost is the employer's to track, not an administrator's." });
@@ -230,6 +253,33 @@ jobsRouter.patch("/:id", requireAuth, requireRole("employer", "admin"), (req, re
   }
   const row = db.prepare("SELECT * FROM jobs WHERE id = ?").get(req.params.id);
   res.json({ job: serializeJob(row) });
+});
+
+/* Multi-post distribution: build a per-channel shareable URL an employer can copy into their
+   own account on Indeed/LinkedIn/etc. Real programmatic posting requires per-aggregator OAuth
+   partnerships and is deferred, but a copy-and-paste URL is genuinely useful today and does
+   not require any external secret. Template shape is `<board search URL with our public listing
+   pre-filled>` where the board supports one, else the direct link to our listing page - a
+   recruiter pastes that into their board's own post flow. */
+const _publicJobUrl = (req, jobId) => {
+  const proto = (req.headers["x-forwarded-proto"] || req.protocol || "https").split(",")[0].trim();
+  const host = (req.headers["x-forwarded-host"] || req.headers.host || "").split(",")[0].trim();
+  return `${proto}://${host}/jobs/${encodeURIComponent(jobId)}`;
+};
+const DISTRIBUTION_CHANNELS = {
+  indeed:       { label: "Indeed",       url: u => `https://www.indeed.com/post-job?src=${encodeURIComponent(u)}` },
+  linkedin:     { label: "LinkedIn",     url: u => `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(u)}` },
+  jobbank:      { label: "Job Bank",     url: u => `https://www.jobbank.gc.ca/employer-job/post?src=${encodeURIComponent(u)}` },
+  ziprecruiter: { label: "ZipRecruiter", url: u => `https://www.ziprecruiter.com/post-job?src=${encodeURIComponent(u)}` },
+};
+jobsRouter.get("/:id/distribute/:channel", (req, res) => {
+  const job = db.prepare("SELECT * FROM jobs WHERE id = ?").get(req.params.id);
+  if (!job) return res.status(404).json({ error: "Job not found." });
+  if (job.status !== "live") return res.status(404).json({ error: "Distribution only available on live listings." });
+  const spec = DISTRIBUTION_CHANNELS[req.params.channel];
+  if (!spec) return res.status(404).json({ error: "Unknown distribution channel." });
+  const jobUrl = _publicJobUrl(req, req.params.id);
+  res.json({ channel: req.params.channel, label: spec.label, url: spec.url(jobUrl), jobUrl });
 });
 
 jobsRouter.post("/import-csv", requireAuth, requireRole("employer"), (req, res) => {

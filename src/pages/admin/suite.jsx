@@ -768,5 +768,65 @@ export function AdmConfig(){
     <JsonConfigEditor title={t("admin.config.overtimeTitle")} desc={t("admin.config.overtimeDesc")} configKey="overtimePolicy" value={cfg.overtimePolicy} onSave={A.updatePlatformConfig}/>
     <StaffingAgencyEditor value={cfg.staffingAgency} onSave={A.updatePlatformConfig}/>
     <JsonConfigEditor title={t("admin.config.alertsTitle")} desc={t("admin.config.alertsDesc")} configKey="adminAlerts" value={cfg.adminAlerts} onSave={A.updatePlatformConfig}/>
+    <MinWageEditor value={cfg.minWageByProvince||{}} onSave={A.updatePlatformConfig}/>
   </Page>;
+}
+
+/* Per-province minimum-wage editor. Row-per-province rather than raw JSON so a non-technical
+   admin can raise a rate the day a province publishes an increase without hand-editing a JSON
+   blob. Persisted through the same PATCH endpoint as every other platform_config key. */
+const _PROV_ORDER=[
+  ["AB","Alberta"],["BC","British Columbia"],["MB","Manitoba"],["NB","New Brunswick"],
+  ["NL","Newfoundland and Labrador"],["NS","Nova Scotia"],["NT","Northwest Territories"],
+  ["NU","Nunavut"],["ON","Ontario"],["PE","Prince Edward Island"],["QC","Quebec"],
+  ["SK","Saskatchewan"],["YT","Yukon"],
+];
+function MinWageEditor({value,onSave}){
+  const A=use(); const {t}=useTranslation();
+  const [editing,setEditing]=useState(false);
+  const [rows,setRows]=useState(()=>({...value}));
+  const [saving,setSaving]=useState(false); const [err,setErr]=useState("");
+  useEffect(()=>{ setRows({...value}); },[value]);
+  const dirty=JSON.stringify(rows)!==JSON.stringify(value);
+  const save=async()=>{
+    const clean={};
+    for(const [k,v] of Object.entries(rows)){
+      const n=Number(v);
+      if(!Number.isFinite(n)||n<=0){ setErr(t("admin.config.minWageInvalid",{prov:k})||`Invalid value for ${k}`); return; }
+      clean[k]=Math.round(n*100)/100;
+    }
+    setErr(""); setSaving(true);
+    const r=await onSave("minWageByProvince",clean);
+    setSaving(false);
+    if(!r.ok) setErr(r.msg||t("admin.config.saveFailed"));
+    else { A.toast(t("admin.config.configUpdatedToast",{title:t("admin.config.minWageTitle")||"Minimum wage by province"}),"ok"); setEditing(false); }
+  };
+  return <Card pad={20} style={{marginBottom:16}}>
+    <div className="flex justify-between items-start gap-3 mb-3">
+      <H2 sub={t("admin.config.minWageDesc")||"Legal hourly minimum by province. Post-job wizard warns employers when the pay they enter is below the province's floor."} style={{margin:0}}>
+        {t("admin.config.minWageTitle")||"Minimum wage by province"}
+      </H2>
+      {editing
+        ? <div className="flex gap-2">
+            <Btn kind="ghost" size="sm" onClick={()=>{setRows({...value});setEditing(false);setErr("");}}>{t("admin.config.cancel")}</Btn>
+            <Btn kind="primary" size="sm" disabled={!dirty||saving} onClick={save}>{saving?t("admin.config.saving"):t("admin.config.save")}</Btn>
+          </div>
+        : <Btn kind="outline" size="sm" icon="edit" onClick={()=>setEditing(true)}>{t("admin.config.edit")||t("admin.config.editAsJson")}</Btn>}
+    </div>
+    <div className="grid gap-2" style={{gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))"}}>
+      {_PROV_ORDER.map(([code,name])=>{
+        const v=rows[code];
+        return <div key={code} className="flex items-center gap-2 py-1.5 px-2 border border-line rounded-lg bg-bg">
+          <span className="text-xs font-bold text-text w-8 shrink-0">{code}</span>
+          <span className="text-xs text-text-2 flex-1 min-w-0 truncate">{name}</span>
+          {editing
+            ? <input type="number" step="0.01" min="0" value={v??""}
+                onChange={e=>setRows(r=>({...r,[code]:e.target.value}))}
+                className="w-20 text-sm text-right py-1 px-1.5 border border-line rounded bg-white"/>
+            : <span className="text-sm font-semibold text-text tabular-nums">${Number(v||0).toFixed(2)}</span>}
+        </div>;
+      })}
+    </div>
+    {err&&<Banner tone="danger" icon="alert" style={{marginTop:10}}>{err}</Banner>}
+  </Card>;
 }

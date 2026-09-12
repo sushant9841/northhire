@@ -865,6 +865,10 @@ export const en = {
       overtimeDesc: "Weekly overtime threshold/multiplier, statutory holiday dates and pay multiplier, and night-shift differential — applied to every HR Suite employee set to hourly pay.",
       alertsTitle: "Admin alerting thresholds",
       alertsDesc: "Once a queue crosses its 'high' number, the admin dashboard's warning banner escalates from yellow to red. Numbers apply platform-wide.",
+      minWageTitle: "Minimum wage by province",
+      minWageDesc: "Legal hourly minimum by province. Post-job wizard warns employers when the pay they enter is below the province's floor.",
+      minWageInvalid: "Invalid value for {prov}",
+      edit: "Edit",
     },
   },
   hrPeople: {

@@ -10,8 +10,48 @@ import {
 } from "../serialize.js";
 import { emit as liveEmit } from "../lib/liveBroker.js";
 import { pushNotification } from "../lib/notify.js";
+import { notifStringsForUser } from "../emailLocale.js";
 
 export const seekerMiscRouter = Router();
+
+/* Autofill from user history. Every user-touched form field is remembered so subsequent forms
+   can offer datalist suggestions ranked by use_count. GET returns the caller's top matches for
+   a field name (optionally filtered by a prefix); POST records a new value / bumps its count.
+   Server-owned (not localStorage) so the history follows a signed-in user across devices. */
+const AUTOFILL_FIELDS = new Set([
+  "city", "job_title", "skill", "cover_opener", "cover_closer",
+  "reference_title", "reference_company", "reference_relationship",
+  "expense_description", "profile_summary", "cv_title", "cv_summary",
+  "salary_expectation", "availability",
+]);
+seekerMiscRouter.get("/autofill", requireAuth, (req, res) => {
+  const field = String(req.query.field || "").trim();
+  if (!AUTOFILL_FIELDS.has(field)) return res.status(400).json({ error: "Unknown autofill field." });
+  const prefix = String(req.query.prefix || "").trim().toLowerCase();
+  const rows = prefix
+    ? db.prepare("SELECT value, use_count FROM user_field_history WHERE user_id = ? AND field = ? AND lower(value) LIKE ? ORDER BY use_count DESC, last_used DESC LIMIT 20")
+        .all(req.user.id, field, `${prefix}%`)
+    : db.prepare("SELECT value, use_count FROM user_field_history WHERE user_id = ? AND field = ? ORDER BY use_count DESC, last_used DESC LIMIT 20")
+        .all(req.user.id, field);
+  res.json({ suggestions: rows.map(r => r.value) });
+});
+seekerMiscRouter.post("/autofill/record", requireAuth, (req, res) => {
+  const items = Array.isArray(req.body?.items) ? req.body.items : [];
+  const insOrBump = db.prepare(
+    `INSERT INTO user_field_history (user_id, field, value, use_count, last_used)
+     VALUES (?, ?, ?, 1, datetime('now'))
+     ON CONFLICT(user_id, field, value) DO UPDATE SET use_count = use_count + 1, last_used = datetime('now')`
+  );
+  let n = 0;
+  for (const it of items.slice(0, 40)) {
+    if (!it || typeof it !== "object") continue;
+    const field = String(it.field || "").trim();
+    const value = String(it.value || "").trim();
+    if (!AUTOFILL_FIELDS.has(field) || !value || value.length > 200) continue;
+    try { insOrBump.run(req.user.id, field, value); n++; } catch {}
+  }
+  res.json({ recorded: n });
+});
 
 /* ─── CVs ─── */
 seekerMiscRouter.get("/cvs", requireAuth, (req, res) => {
@@ -136,8 +176,11 @@ seekerMiscRouter.post("/messages", requireAuth, (req, res) => {
   // client-only notify() call this replaces (see notify.js for why that never actually worked
   // cross-user).
   const sender = db.prepare("SELECT name FROM users WHERE id = ?").get(req.user.id);
-  pushNotification({ for: toUserId, icon: "mail", title: `New message from ${sender?.name || "someone"}`,
-    body: text.trim().slice(0, 120), link: "messages" });
+  {
+    const S = notifStringsForUser(toUserId);
+    pushNotification({ for: toUserId, icon: "mail", title: S.newMessageTitle(sender?.name),
+      body: text.trim().slice(0, 120), link: "messages" });
+  }
 });
 seekerMiscRouter.patch("/messages/:id/read", requireAuth, (req, res) => {
   db.prepare("UPDATE messages SET read = 1 WHERE id = ? AND to_user_id = ?").run(req.params.id, req.user.id);
@@ -177,8 +220,11 @@ seekerMiscRouter.post("/interviews", requireAuth, requireRole("employer"), (req,
     for (const t of teammates) liveEmit(t, "application:updated", appPayload);
   }
   const employer = db.prepare("SELECT name FROM employers WHERE id = ?").get(req.user.employer_id);
-  pushNotification({ for: app.user_id, icon: "calendar", title: `Interview scheduled — ${employer?.name || "an employer"}`,
-    body: `${mode === "video" ? "Video call" : "On-site interview"} on ${when}.`, link: "interviews" });
+  {
+    const S = notifStringsForUser(app.user_id);
+    pushNotification({ for: app.user_id, icon: "calendar", title: S.interviewScheduledTitle(employer?.name),
+      body: S.interviewScheduledBody(mode, when), link: "interviews" });
+  }
 });
 seekerMiscRouter.patch("/interviews/:id/cancel", requireAuth, requireRole("employer"), (req, res) => {
   const row = db.prepare("SELECT * FROM interviews WHERE id = ?").get(req.params.id);
@@ -189,8 +235,11 @@ seekerMiscRouter.patch("/interviews/:id/cancel", requireAuth, requireRole("emplo
   liveEmit(row.candidate_id, "interview:cancelled", iv);
   const teammates = db.prepare("SELECT id FROM users WHERE employer_id = ?").all(row.employer_id).map(r => r.id);
   for (const t of teammates) liveEmit(t, "interview:cancelled", iv);
-  pushNotification({ for: row.candidate_id, icon: "x", title: "Interview cancelled",
-    body: "An upcoming interview was cancelled.", link: "interviews" });
+  {
+    const S = notifStringsForUser(row.candidate_id);
+    pushNotification({ for: row.candidate_id, icon: "x", title: S.interviewCancelledTitle,
+      body: S.interviewCancelledBody, link: "interviews" });
+  }
 });
 
 /* ─── Reviews ─── */

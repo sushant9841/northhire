@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
@@ -16,6 +16,21 @@ const AVAIL_KEY={"Immediately":"auth.immediately","Within 2 weeks":"auth.withinW
 const EXP_KEY={"No experience required":"seeker.search.expNoneRequired","Entry level welcome":"seeker.search.expEntryLevel",
   "1+ years":"seeker.search.exp1Plus","2+ years":"seeker.search.exp2Plus","3+ years":"seeker.search.exp3Plus","4+ years":"seeker.search.exp4Plus"};
 const YESNO_KEY={"Yes":"common.yes","No":"common.no"};
+
+/* Datalist backed by the seeker's own autofill history. Renders as a <datalist> so a linked
+   <input list={id}> shows the user their previous entries as native suggestions without
+   claiming any of the input's visual real estate. Zero suggestions => zero DOM overhead. */
+export function AutofillDatalist({ id, field }){
+  const A=use();
+  const [options,setOptions]=useState([]);
+  useEffect(()=>{
+    let alive=true;
+    A.getAutofillSuggestions?.(field).then(list=>{ if(alive) setOptions(list||[]); });
+    return()=>{alive=false;};
+  },[field]);
+  if(!options.length) return null;
+  return <datalist id={id}>{options.map(v=><option key={v} value={v}/>)}</datalist>;
+}
 
 /* ---- Apply: three full pages + confirmation ---- */
 function ApplyShell({step,job,children,onNext,onBack,nextLabel,nextDisabled}){
@@ -180,7 +195,8 @@ export function Apply2(){
         <Field label={t("seeker.apply.yourExpectedPayLabel")}
           hint={t("seeker.apply.expectedPayHint",{pay:pay(job),unit:payUnit(job)})}>
           <Input placeholder={job.unit==="yr"?"62000":"32.00"} type="number" inputMode="decimal" min="0" value={d.expect} onChange={e=>set("expect",e.target.value.replace(/[^0-9.]/g,""))}
-            icon="wallet" suffix={payShort(job)}/></Field>
+            icon="wallet" suffix={payShort(job)} list="autofill-salary-expectation"/>
+          <AutofillDatalist id="autofill-salary-expectation" field="salary_expectation"/></Field>
         <Field label={t("seeker.apply.anythingElseLabel")} hint={t("seeker.apply.anythingElseHint")}>
           <Area rows={6} value={d.letter} onChange={e=>set("letter",e.target.value)}
             placeholder={t("seeker.apply.applyingForRolePlaceholder",{job:job.t})}/></Field>

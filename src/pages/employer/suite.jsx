@@ -139,7 +139,11 @@ const _defaultJobPostData=()=>({t:"",cat:"trades",type:"Full Time",mode:"On-site
     /* Ontario Bill 149 disclosures. aiScreening starts true because this platform really does
        auto-score every applicant - turning it off is the claim that needs a deliberate act. */
     aiScreening:true,vacancyConfirmed:false,
-    questions:[]});
+    questions:[],
+    /* Multi-post distribution. Which external aggregators the employer wants to cross-post
+       this listing on (shareable URLs for now - programmatic OAuth posting is deferred), plus
+       an optional address to copy every incoming application to. */
+    distributionChannels:[],forwardEmail:""});
 const _loadJobPostDraft=()=>{try{return JSON.parse(sessionStorage.getItem(JOBPOST_DRAFT_KEY)||"null");}catch{return null;}};
 
 export function EmpPost(){
@@ -255,6 +259,7 @@ export function EmpPost(){
 
   const [postErr,setPostErr]=useState("");
   const [posting,setPosting]=useState(false);
+  const [distributeLinks,setDistributeLinks]=useState(null); /* {jobId, channels:[{key,label,url}]} */
   const next=async()=>{if(!validate())return;
     if(step<3){setStep(step+1);return;}
     /* Backfill legacy fields the store expects */
@@ -266,12 +271,24 @@ export function EmpPost(){
       perks:(f.perks||[]).join(","),
       dl:f.dlDate?Math.max(1,Math.ceil((new Date(f.dlDate)-new Date())/(1000*60*60*24))):14,
       featured:f.featured,
-      aiScreening:f.aiScreening,vacancyConfirmed:f.vacancyConfirmed};
+      aiScreening:f.aiScreening,vacancyConfirmed:f.vacancyConfirmed,
+      distributionChannels:f.distributionChannels,forwardEmail:f.forwardEmail};
     setPosting(true);
-    const r=await A.publishJob(payload);
+    const r=await A.publishJob(payload,{keepPage:!!(f.distributionChannels||[]).length});
     setPosting(false);
-    if(r&&!r.ok)setPostErr(r.msg);
-    else try{sessionStorage.removeItem(JOBPOST_DRAFT_KEY);}catch{}
+    if(r&&!r.ok){setPostErr(r.msg); return;}
+    try{sessionStorage.removeItem(JOBPOST_DRAFT_KEY);}catch{}
+    /* Post-publish: if the employer selected any distribution channels, resolve their share
+       URLs via the distribute endpoint and show the copy-link confirmation modal before
+       returning to the jobs list. */
+    if(r?.job?.id&&(f.distributionChannels||[]).length){
+      const links=[];
+      for(const key of f.distributionChannels){
+        try{const linkRes=await A.getJobDistributeUrl(r.job.id,key); if(linkRes?.ok)links.push(linkRes.data);}
+        catch{}
+      }
+      if(links.length){setDistributeLinks({jobId:r.job.id,channels:links}); return;}
+    }
   };
 
   const steps=[t("employer.post.stepRoleDetails"),t("employer.post.stepPayLocation"),t("employer.post.stepApplication")];
@@ -512,6 +529,23 @@ export function EmpPost(){
         </div>
         <Banner tone="brand" icon="sparkle" title="Scoring is automatic">
           Every applicant is scored out of 100 against your must-have skills and experience. Your pipeline shows the best fit first, ranked by the system.</Banner>
+
+        {/* Multi-post distribution + forward-email. Sits at the end of the wizard because it
+           doesn't affect the listing itself - just where it's syndicated + where applications
+           are forwarded. The Copy-link buttons appear after publish, not here. */}
+        <div className="mt-5 p-4 border border-line rounded-xl bg-white">
+          <Lbl>Also list on (optional)</Lbl>
+          <div className="grid grid-cols-2 gap-2 mb-3" style={{gridTemplateColumns:mob?"1fr 1fr":"repeat(4,1fr)"}}>
+            {[["indeed","Indeed"],["linkedin","LinkedIn"],["jobbank","Job Bank"],["ziprecruiter","ZipRecruiter"]].map(([k,lbl])=>{
+              const on=(f.distributionChannels||[]).includes(k);
+              return <button key={k} type="button" onClick={()=>set("distributionChannels",on?f.distributionChannels.filter(x=>x!==k):[...(f.distributionChannels||[]),k])}
+                className={`py-2 px-3 rounded-lg cursor-pointer text-sm border-2 transition duration-150 ${on?"font-semibold border-brand bg-tint text-brand":"font-medium border-line bg-white text-text"}`}>{lbl}</button>;
+            })}</div>
+          <div className="text-xs text-text-3 mb-3">After publish you'll get a copy-and-paste share link for each selected board. Actual programmatic posting requires per-board OAuth partnerships and isn't wired yet.</div>
+          <Field label="Forward every application to (optional)" hint="A copy of each new application will be emailed here in addition to your NorthHire pipeline.">
+            <Input icon="mail" type="email" value={f.forwardEmail||""} onChange={e=>set("forwardEmail",e.target.value)} placeholder="applications@yourcompany.ca"/>
+          </Field>
+        </div>
       </div>}
 
       </div>
@@ -520,6 +554,21 @@ export function EmpPost(){
         <Btn kind={step===3?"ok":"primary"} size="lg" iconR={step===3?"check":"arrowR"} onClick={next} disabled={posting}>
           {posting?"Publishing…":step===3?"Publish listing":"Continue"}</Btn></div>
     </Card>
+    {distributeLinks&&<Modal onClose={()=>{setDistributeLinks(null);A.go("empJobs");}} title="Listing published — share it on your other boards">
+      <p className="text-sm text-text-2 leading-relaxed mb-3">
+        Copy each link and paste it into your account on that board. Actual programmatic posting
+        requires per-board OAuth partnerships and isn't wired yet, but the pre-filled share link
+        gets the listing in front of that board's audience with one paste.
+      </p>
+      <div className="flex flex-col gap-2.5">
+        {distributeLinks.channels.map(c=><div key={c.channel} className="flex gap-2 items-center border border-line rounded-lg p-2.5 bg-bg">
+          <span className="text-sm font-semibold text-text w-28 shrink-0">{c.label}</span>
+          <code className="text-xs bg-white border border-line rounded px-2 py-1 flex-1 min-w-0 truncate">{c.url}</code>
+          <Btn kind="outline" size="sm" icon="copy" onClick={async()=>{try{await navigator.clipboard.writeText(c.url); A.toast(`Copied ${c.label} link`,"ok");}catch{}}}>Copy</Btn>
+        </div>)}
+      </div>
+      <div className="flex gap-2 justify-end mt-4"><Btn kind="primary" onClick={()=>{setDistributeLinks(null);A.go("empJobs");}}>Done</Btn></div>
+    </Modal>}
   </Page>;
 }
 

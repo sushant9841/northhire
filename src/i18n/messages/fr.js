@@ -867,6 +867,10 @@ export const fr = {
       overtimeDesc: "Seuil et multiplicateur des heures supplémentaires hebdomadaires, dates des jours fériés et multiplicateur de paie, et prime de quart de nuit — appliqués à chaque employé·e de la Suite RH payé·e à l'heure.",
       alertsTitle: "Seuils d'alerte administrative",
       alertsDesc: "Une fois qu'une file dépasse son nombre « élevé », la bannière d'avertissement du tableau de bord admin passe du jaune au rouge. Les nombres s'appliquent à toute la plateforme.",
+      minWageTitle: "Salaire minimum par province",
+      minWageDesc: "Salaire horaire minimum légal par province. L'assistant de publication d'offre avertit l'employeur lorsque la paie saisie est inférieure au plancher de la province.",
+      minWageInvalid: "Valeur invalide pour {prov}",
+      edit: "Modifier",
     },
   },
   hrPeople: {

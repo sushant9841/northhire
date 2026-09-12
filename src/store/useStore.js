@@ -836,6 +836,13 @@ export function useStore(){
         skills:d.skills,edu:d.edu,eligible:d.eligible,payMin:d.payMin,payUnit:d.payUnit,types:d.types,modes:d.modes,summary:d.summary,
         visibility:d.visibility});
     }catch(err){toast(`Profile saved locally, but couldn't sync to the server: ${err.message}`,"warn");}
+    /* Record autofill history for the fields worth remembering across future forms. */
+    const items=[];
+    if(d.city)items.push({field:"city",value:d.city});
+    if(d.title)items.push({field:"job_title",value:d.title});
+    if(d.summary)items.push({field:"profile_summary",value:d.summary});
+    (d.skills||[]).forEach(s=>items.push({field:"skill",value:s}));
+    if(items.length)recordAutofill(items);
   };
   const deleteAccount=()=>{log("account.delete",`Deleted account ${user.name}`,"trash");setUser(null);setCvs([]);_hardNav("home");};
   const exportData=()=>downloadText(`northhire-data-${user.id}.json`,JSON.stringify({profile:user,cvs,applications:myApps,saved:[...saved]},null,2));
@@ -1402,6 +1409,13 @@ export function useStore(){
       setApplications(l=>[...l,mapApiApplication(application)]);
       notify({icon:"send",title:`Application sent to ${e.name}`,body:`Your application for ${j.t} is now in their pipeline.`,for:user.id,link:"status"});
       log("application.create",`Applied to ${j.t} at ${e.name}`,"send");
+      /* Autofill history: remember what this user typed so subsequent applications can offer
+         them their previous answers via datalist. */
+      const items=[];
+      if(applyDraft.avail)items.push({field:"availability",value:applyDraft.avail});
+      if(applyDraft.expect)items.push({field:"salary_expectation",value:applyDraft.expect});
+      if(applyDraft.letter&&applyDraft.letter.length<200)items.push({field:"cover_opener",value:applyDraft.letter});
+      if(items.length)recordAutofill(items);
       go("applyDone");
     }catch(err){
       notify({icon:"alert",title:"Couldn't submit application",body:err.message,for:user.id,link:null});
@@ -1461,7 +1475,25 @@ export function useStore(){
       log("pipeline.reject",`Rejected ${person(a.user).name}${reason?` — ${reason}`:""}`,"x");
     }catch(err){toast(err.message,"danger");}};
 
-  const publishJob=async f=>{
+  /* Autofill from user history: form fields the user has previously submitted are surfaced as
+     datalist suggestions on subsequent forms. Server-owned so it follows the user across
+     devices. Recording is best-effort - a failure never blocks the underlying submit. */
+  const getAutofillSuggestions=async(field,prefix="")=>{
+    try{const {suggestions}=await api.get(`/seeker/autofill?field=${encodeURIComponent(field)}${prefix?`&prefix=${encodeURIComponent(prefix)}`:""}`);
+      return Array.isArray(suggestions)?suggestions:[];
+    }catch{return [];}
+  };
+  const recordAutofill=(items)=>{
+    const arr=Array.isArray(items)?items:[items];
+    api.post("/seeker/autofill/record",{items:arr}).catch(()=>{});
+  };
+  const getJobDistributeUrl=async(jobId,channel)=>{
+    try{
+      const data=await api.get(`/jobs/${encodeURIComponent(jobId)}/distribute/${encodeURIComponent(channel)}`);
+      return {ok:true,data};
+    }catch(e){ return {ok:false,msg:e.message}; }
+  };
+  const publishJob=async(f,opts={})=>{
     /* plan enforcement: at-or-over live job cap → surface an upgrade */
     if(!can("jobs")){
       notify({icon:"alert",title:"Upgrade to post more jobs",
@@ -1486,6 +1518,8 @@ export function useStore(){
       /* Ontario Bill 149 posting disclosures - the server re-validates these against the
          posting's province and the employer's size before it will accept the listing. */
       aiScreening:f.aiScreening!==false,vacancyConfirmed:!!f.vacancyConfirmed,
+      distributionChannels:Array.isArray(f.distributionChannels)?f.distributionChannels:[],
+      forwardEmail:(f.forwardEmail||"").trim()||null,
       status:settings.autoApproveJobs?"live":"review"};
     let nj;
     try{
@@ -1514,7 +1548,11 @@ export function useStore(){
         }
       });
     }
-    setPipelineJob(nj.id); go("empJobs"); return {ok:true};
+    setPipelineJob(nj.id);
+    /* keepPage: the wizard is about to show the post-publish distribute-links modal, so leave
+       the caller on the current page. Without a channel selection the flow is unchanged. */
+    if(!opts.keepPage) go("empJobs");
+    return {ok:true,job:nj};
   };
   const approveJob=async id=>{
     try{const {job:updated}=await api.patch(`/jobs/${id}`,{approve:true});
@@ -2075,7 +2113,7 @@ export function useStore(){
     logout,completeSignup,saveProfile,deleteAccount,exportData,setUserSetting,setUserLocale,marketingConsent,setMarketingConsent,
     toggleSave,followEmployer,openJob,openEmployer,openBlog,openTraining,openCandidate,
     beginApply,submitApply,withdraw,acceptOffer,moveApp,rejectApp,noCvGateJobId,closeNoCvGate,
-    publishJob,approveJob,toggleJobStatus,flagJob,reportJob,jobReports,loadJobReports,decideJobReport,setPipelineJob:setPipelineJobFn,saveCompany,verifyEmployer,holdEmployer,toggleSuspend,eraseUser,
+    publishJob,getJobDistributeUrl,getAutofillSuggestions,recordAutofill,approveJob,toggleJobStatus,flagJob,reportJob,jobReports,loadJobReports,decideJobReport,setPipelineJob:setPipelineJobFn,saveCompany,verifyEmployer,holdEmployer,toggleSuspend,eraseUser,
     team,loadTeam,loadTeamAudit,inviteTeammate,revokeInvite,removeTeammate,getInvite,acceptInvite,inviteToken,
     messageTemplates,saveMessageTemplate,deleteMessageTemplate,
     stageAutomations,loadStageAutomations,setStageAutomation,

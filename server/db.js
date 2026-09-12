@@ -907,6 +907,22 @@ for (const stmt of [
   // single-approval, unchanged.
   "ALTER TABLE hr_leave ADD COLUMN first_approved_by TEXT",
   "ALTER TABLE hr_expenses ADD COLUMN first_approved_by TEXT",
+  // Multi-post distribution: which aggregator/board this listing should be surfaced on (JSON
+  // array of channel keys like "indeed", "linkedin", "jobbank", "ziprecruiter"), and an optional
+  // email address the employer wants every application also forwarded to. Actual outbound
+  // posting to those aggregators requires per-aggregator OAuth partnerships and is deferred -
+  // this column stores the intent and drives the on-publish "copy shareable link" affordance +
+  // the /jobs/:id/distribute/:channel URL builder + the forward-email BCC on new applications.
+  "ALTER TABLE jobs ADD COLUMN distribution_channels TEXT",
+  "ALTER TABLE jobs ADD COLUMN forward_email TEXT",
+  // Autofill from user history: every user-touched form field remembered so subsequent forms
+  // can offer datalist suggestions ranked by use_count. Server-owned rather than client-owned
+  // so a signed-in user gets their history across devices.
+  `CREATE TABLE IF NOT EXISTS user_field_history (
+     user_id TEXT NOT NULL, field TEXT NOT NULL, value TEXT NOT NULL,
+     use_count INTEGER NOT NULL DEFAULT 1, last_used TEXT NOT NULL DEFAULT (datetime('now')),
+     PRIMARY KEY (user_id, field, value)
+   )`,
 ]) {
   try { db.exec(stmt); } catch (e) { if (!/duplicate column/i.test(e.message)) console.error("migration:", stmt, e.message); }
 }

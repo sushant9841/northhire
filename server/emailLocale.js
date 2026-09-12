@@ -82,3 +82,41 @@ const EMAIL_STRINGS = {
 export function emailStrings(locale) {
   return EMAIL_STRINGS[locale] || EMAIL_STRINGS["en-CA"];
 }
+
+/* In-app / push notification strings. Kept in the same table so a single place governs every
+   server-generated user-facing string (mailer + notifications). Bill 96 applies just as much to
+   an in-app notification as it does to an email - the "commercial or transactional message in
+   the recipient's preferred language" bar isn't email-specific. */
+const NOTIF_STRINGS = {
+  "en-CA": {
+    newApplicationTitle: "New application",
+    newApplicationBody: jobTitle => `${jobTitle} just got a new applicant.`,
+    stageTitle: (stage, employerName) => `${stage} — ${employerName || "an employer"}`,
+    hrSetupTitle: "You're set up in HR Suite",
+    hrSetupBody: "Your employer added you to their HR Suite for attendance, leave and payroll.",
+    newMessageTitle: sender => `New message from ${sender || "someone"}`,
+    interviewScheduledTitle: employer => `Interview scheduled — ${employer || "an employer"}`,
+    interviewScheduledBody: (mode, when) => `${mode === "video" ? "Video call" : "On-site interview"} on ${when}.`,
+    interviewCancelledTitle: "Interview cancelled",
+    interviewCancelledBody: "An upcoming interview was cancelled.",
+  },
+  "fr-CA": {
+    newApplicationTitle: "Nouvelle candidature",
+    newApplicationBody: jobTitle => `${jobTitle} vient de recevoir une nouvelle candidature.`,
+    stageTitle: (stage, employerName) => `${stage} — ${employerName || "un employeur"}`,
+    hrSetupTitle: "Vous êtes configuré·e dans HR Suite",
+    hrSetupBody: "Votre employeur vous a ajouté·e à sa HR Suite pour la présence, les congés et la paie.",
+    newMessageTitle: sender => `Nouveau message de ${sender || "quelqu'un"}`,
+    interviewScheduledTitle: employer => `Entrevue planifiée — ${employer || "un employeur"}`,
+    interviewScheduledBody: (mode, when) => `${mode === "video" ? "Appel vidéo" : "Entrevue en personne"} le ${when}.`,
+    interviewCancelledTitle: "Entrevue annulée",
+    interviewCancelledBody: "Une entrevue à venir a été annulée.",
+  },
+};
+
+export function notifStrings(locale) {
+  return NOTIF_STRINGS[locale] || NOTIF_STRINGS["en-CA"];
+}
+export function notifStringsForUser(userId) {
+  return notifStrings(localeForUserId(userId));
+}

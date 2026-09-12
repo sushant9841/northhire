@@ -12,6 +12,7 @@ import {
   serializeHrAuditEntry, serializeHrSignDocument, serializeHrSignature, serializeHrShift,
 } from "../serialize.js";
 import { pushNotification } from "../lib/notify.js";
+import { notifStringsForUser } from "../emailLocale.js";
 
 export const hrRouter = Router();
 
@@ -173,8 +174,9 @@ hrRouter.post("/employees", requireHrAuth, requireHrPriv, (req, res) => {
   if (d.email) {
     const seekerUser = db.prepare("SELECT id FROM users WHERE email = ? AND role = 'seeker'").get(d.email.toLowerCase().trim());
     if (seekerUser) {
-      pushNotification({ for: seekerUser.id, icon: "sparkle", title: "You're set up in HR Suite",
-        body: `Your employer added you to their HR Suite for attendance, leave and payroll.`, link: "workerDashboard" });
+      const S = notifStringsForUser(seekerUser.id);
+      pushNotification({ for: seekerUser.id, icon: "sparkle", title: S.hrSetupTitle,
+        body: S.hrSetupBody, link: "workerDashboard" });
     }
   }
 });
