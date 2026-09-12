@@ -6,8 +6,9 @@ import { requireAuth, requireRole } from "../auth.js";
 import { storeUpload, listUploads, getUpload, deleteUpload } from "../uploads.js";
 import {
   serializeCv, serializeSavedSearch, serializeMessage, serializeInterview, serializeReview,
-  serializeNotification, serializeReference, serializePaymentMethod,
+  serializeNotification, serializeReference, serializePaymentMethod, serializeApplication,
 } from "../serialize.js";
+import { emit as liveEmit } from "../lib/liveBroker.js";
 
 export const seekerMiscRouter = Router();
 
@@ -125,7 +126,11 @@ seekerMiscRouter.post("/messages", requireAuth, (req, res) => {
   if (messageRateLimited(req.user.id)) return res.status(429).json({ error: "Too many messages sent — please slow down." });
   const id = nextId("m", "messages");
   db.prepare("INSERT INTO messages (id, from_user_id, to_user_id, job_id, text) VALUES (?, ?, ?, ?, ?)").run(id, req.user.id, toUserId, jobId || null, text.trim());
-  res.status(201).json({ message: serializeMessage(db.prepare("SELECT * FROM messages WHERE id = ?").get(id)) });
+  const message = serializeMessage(db.prepare("SELECT * FROM messages WHERE id = ?").get(id));
+  res.status(201).json({ message });
+  // Live-sync: both sides of the conversation see the new message immediately.
+  liveEmit(toUserId, "message:new", message);
+  liveEmit(req.user.id, "message:new", message);
 });
 seekerMiscRouter.patch("/messages/:id/read", requireAuth, (req, res) => {
   db.prepare("UPDATE messages SET read = 1 WHERE id = ? AND to_user_id = ?").run(req.params.id, req.user.id);
@@ -151,13 +156,29 @@ seekerMiscRouter.post("/interviews", requireAuth, requireRole("employer"), (req,
   ).run(id, applicationId, app.user_id, app.job_id, req.user.employer_id, when, mode, notes || "");
   const stageNote = `Interview ${mode === "video" ? "video call" : "in-person"} scheduled for ${when}`;
   db.prepare("UPDATE applications SET stage = 'Interview', note = ? WHERE id = ?").run(stageNote, applicationId);
-  res.status(201).json({ interview: serializeInterview(db.prepare("SELECT * FROM interviews WHERE id = ?").get(id)) });
+  const interview = serializeInterview(db.prepare("SELECT * FROM interviews WHERE id = ?").get(id));
+  res.status(201).json({ interview });
+  // Both parties learn about it live. Also refresh the seeker's application list since the
+  // stage was moved to Interview as a side effect.
+  liveEmit(app.user_id, "interview:scheduled", interview);
+  const teammates = db.prepare("SELECT id FROM users WHERE employer_id = ?").all(req.user.employer_id).map(r => r.id);
+  for (const t of teammates) liveEmit(t, "interview:scheduled", interview);
+  const appRow = db.prepare("SELECT * FROM applications WHERE id = ?").get(applicationId);
+  if (appRow) {
+    const appPayload = serializeApplication(appRow);
+    liveEmit(app.user_id, "application:updated", appPayload);
+    for (const t of teammates) liveEmit(t, "application:updated", appPayload);
+  }
 });
 seekerMiscRouter.patch("/interviews/:id/cancel", requireAuth, requireRole("employer"), (req, res) => {
   const row = db.prepare("SELECT * FROM interviews WHERE id = ?").get(req.params.id);
   if (!row || row.employer_id !== req.user.employer_id) return res.status(404).json({ error: "Not found." });
   db.prepare("UPDATE interviews SET status = 'cancelled' WHERE id = ?").run(req.params.id);
   res.json({ ok: true });
+  const iv = serializeInterview(db.prepare("SELECT * FROM interviews WHERE id = ?").get(req.params.id));
+  liveEmit(row.candidate_id, "interview:cancelled", iv);
+  const teammates = db.prepare("SELECT id FROM users WHERE employer_id = ?").all(row.employer_id).map(r => r.id);
+  for (const t of teammates) liveEmit(t, "interview:cancelled", iv);
 });
 
 /* ─── Reviews ─── */

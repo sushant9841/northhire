@@ -14,6 +14,7 @@ import { useHrStore } from "./useHrStore.js";
 import { useStaffingStore } from "./useStaffingStore.js";
 import { api, ApiUnreachableError, API_BASE } from "../helpers/api.js";
 import { mapApiJob, mapApiEmployer, mapApiApplication, mapApiUser } from "../helpers/apiMap.js";
+import { useLiveSync } from "./useLiveSync.js";
 import { buildPath, matchPath, ID_STATE_FOR_ROUTE } from "../helpers/urlRouter.js";
 import { parseCsvLine } from "../helpers/csv.js";
 import { expandQuery } from "../helpers/synonyms.js";
@@ -366,6 +367,59 @@ export function useStore(){
     actor:impersonating?.originalUser?`${impersonating.originalUser.name} (admin, viewing as ${user?.name})`
       :user?`${user.name} (${user.role})`:"Guest",at:nowStamp()},...a].slice(0,1000));
   const notify=(n)=>setNotifications(list=>[{id:uid("n"),read:false,at:"Just now",...n},...list]);
+
+  /* ─── Live-sync (SSE) ─────────────────────────────────────────────────────
+     Reuses the same setters everything else in this store uses, so an event pushed by the
+     server lands in the same shape as a local mutation. mapApiApplication converts
+     serializeApplication()'s camelCase payload into the id/e/t/note shape this file uses. */
+  useLiveSync({
+    enabled: !!user,
+    handlers: {
+      "application:new": (payload) => {
+        if (!payload) return;
+        const mapped = mapApiApplication(payload);
+        setApplications(l => l.some(a => a.id === mapped.id) ? l : [mapped, ...l]);
+        // Employer-side toast so the recruiter sees "a candidate just applied" without opening pipeline.
+        if (user?.role === "employer") {
+          notify({ icon: "target", title: "New application", body: "Someone just applied to one of your listings.", for: user.id, link: "empPipeline" });
+        }
+      },
+      "application:updated": (payload) => {
+        if (!payload) return;
+        const mapped = mapApiApplication(payload);
+        setApplications(l => l.some(a => a.id === mapped.id) ? l.map(a => a.id === mapped.id ? mapped : a) : [mapped, ...l]);
+      },
+      "message:new": (payload) => {
+        if (!payload) return;
+        // Server sends `serializeMessage` shape already used by /seeker/messages GET.
+        setMessages(l => l.some(m => m.id === payload.id) ? l : [payload, ...l]);
+        if (payload.to === user?.id) {
+          notify({ icon: "mail", title: "New message", body: (payload.text || "").slice(0, 80), for: user.id, link: "messages" });
+        }
+      },
+      "interview:scheduled": (payload) => {
+        if (!payload) return;
+        setInterviews(l => l.some(iv => iv.id === payload.id) ? l.map(iv => iv.id === payload.id ? payload : iv) : [payload, ...l]);
+        if (user?.role === "seeker") {
+          notify({ icon: "calendar", title: "Interview scheduled", body: `An interview was scheduled: ${payload.when||""}`.trim(), for: user.id, link: "interviews" });
+        }
+      },
+      "interview:updated": (payload) => {
+        if (!payload) return;
+        setInterviews(l => l.map(iv => iv.id === payload.id ? payload : iv));
+      },
+      "interview:cancelled": (payload) => {
+        if (!payload) return;
+        setInterviews(l => l.map(iv => iv.id === payload.id ? { ...iv, status: "cancelled" } : iv));
+        if (user?.role === "seeker") {
+          notify({ icon: "x", title: "Interview cancelled", body: "An upcoming interview was cancelled.", for: user.id, link: "interviews" });
+        }
+      },
+      "notification:new": (payload) => {
+        if (payload) setNotifications(l => [payload, ...l]);
+      },
+    },
+  });
 
   /* Auto-dismissing toast/snackbar — the shared feedback primitive that never existed, which is
      why so many actions across the app reached for alert() instead. Rendered by <ToastHost/>,

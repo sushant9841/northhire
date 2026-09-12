@@ -4,6 +4,14 @@ import { requireAuth, requireRole } from "../auth.js";
 import { serializeApplication } from "../serialize.js";
 import { emitWebhook } from "../webhooks.js";
 import { sendAndLogMail } from "../mail.js";
+import { emit as liveEmit, emitMany as liveEmitMany } from "../lib/liveBroker.js";
+
+/* Every user attached to a given employer_id — the employer account owner plus any teammates.
+   Used so a stage move made by one team member instantly refreshes the pipeline on their
+   colleagues' open tabs, not just their own. */
+function employerUserIds(employerId) {
+  return db.prepare("SELECT id FROM users WHERE employer_id = ?").all(employerId).map(r => r.id);
+}
 
 export const applicationsRouter = Router();
 
@@ -126,7 +134,11 @@ applicationsRouter.post("/", requireAuth, requireRole("seeker"), (req, res) => {
   res.status(201).json({ application: serializeApplication(row) });
   // Fired after the response so a customer webhook endpoint can never make an applicant wait.
   const ownerJob = db.prepare("SELECT employer_id FROM jobs WHERE id = ?").get(jobId);
-  if (ownerJob) emitWebhook(ownerJob.employer_id, "application.created", serializeApplication(row));
+  if (ownerJob) {
+    emitWebhook(ownerJob.employer_id, "application.created", serializeApplication(row));
+    // Live-sync: every employer teammate's Pipeline / Jobs tab picks this up without a refresh.
+    liveEmitMany(employerUserIds(ownerJob.employer_id), "application:new", serializeApplication(row));
+  }
 });
 
 const STAGE_NOTE = {
@@ -179,6 +191,14 @@ applicationsRouter.patch("/:id/stage", requireAuth, requireRole("employer"), (re
   res.json({ application: serializeApplication(row) });
   emitWebhook(req.user.employer_id, "application.stage_changed",
     { ...serializeApplication(row), previousStage: app.stage });
+
+  /* Live-sync fan-out. The candidate's Status page updates without a refresh, and every
+     employer teammate's Pipeline gets the new column position too. Send the previousStage
+     alongside the current row so client-side reducers can move a card between columns
+     rather than reloading the whole list. */
+  const payload = { ...serializeApplication(row), previousStage: app.stage };
+  liveEmit(app.user_id, "application:updated", payload);
+  liveEmitMany(employerUserIds(req.user.employer_id), "application:updated", payload);
 
   /* Tell the candidate their application moved. This is transactional mail about something they
      asked for, not a commercial message, so it correctly does not consult marketing consent —
@@ -236,6 +256,9 @@ applicationsRouter.patch("/:id/reject", requireAuth, requireRole("employer"), (r
   db.prepare("UPDATE applications SET stage = 'Withdrawn', note = ?, history_json = ? WHERE id = ?").run(note, history, req.params.id);
   const row = db.prepare("SELECT * FROM applications WHERE id = ?").get(req.params.id);
   res.json({ application: serializeApplication(row) });
+  const payload = { ...serializeApplication(row), previousStage: app.stage };
+  liveEmit(app.user_id, "application:updated", payload);
+  liveEmitMany(employerUserIds(req.user.employer_id), "application:updated", payload);
 });
 
 applicationsRouter.patch("/:id/withdraw", requireAuth, requireRole("seeker"), (req, res) => {
@@ -250,6 +273,10 @@ applicationsRouter.patch("/:id/withdraw", requireAuth, requireRole("seeker"), (r
   ).run(app.stage, note, withdrawnAt, history, req.params.id);
   const row = db.prepare("SELECT * FROM applications WHERE id = ?").get(req.params.id);
   res.json({ application: serializeApplication(row) });
+  const job = db.prepare("SELECT employer_id FROM jobs WHERE id = ?").get(app.job_id);
+  const payload = { ...serializeApplication(row), previousStage: app.stage };
+  liveEmit(app.user_id, "application:updated", payload);
+  if (job) liveEmitMany(employerUserIds(job.employer_id), "application:updated", payload);
 });
 
 applicationsRouter.patch("/:id/restore", requireAuth, requireRole("seeker"), (req, res) => {
@@ -266,6 +293,10 @@ applicationsRouter.patch("/:id/restore", requireAuth, requireRole("seeker"), (re
   ).run(restoredStage, note, history, req.params.id);
   const row = db.prepare("SELECT * FROM applications WHERE id = ?").get(req.params.id);
   res.json({ application: serializeApplication(row) });
+  const job = db.prepare("SELECT employer_id FROM jobs WHERE id = ?").get(app.job_id);
+  const payload = { ...serializeApplication(row), previousStage: "Withdrawn" };
+  liveEmit(app.user_id, "application:updated", payload);
+  if (job) liveEmitMany(employerUserIds(job.employer_id), "application:updated", payload);
 });
 
 applicationsRouter.patch("/:id/accept-offer", requireAuth, requireRole("seeker"), (req, res) => {
@@ -276,4 +307,8 @@ applicationsRouter.patch("/:id/accept-offer", requireAuth, requireRole("seeker")
   db.prepare("UPDATE applications SET note = ?, history_json = ? WHERE id = ?").run(note, history, req.params.id);
   const row = db.prepare("SELECT * FROM applications WHERE id = ?").get(req.params.id);
   res.json({ application: serializeApplication(row) });
+  const job = db.prepare("SELECT employer_id FROM jobs WHERE id = ?").get(app.job_id);
+  const payload = { ...serializeApplication(row), previousStage: app.stage };
+  liveEmit(app.user_id, "application:updated", payload);
+  if (job) liveEmitMany(employerUserIds(job.employer_id), "application:updated", payload);
 });
