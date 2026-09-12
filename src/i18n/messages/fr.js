@@ -401,6 +401,7 @@ export const fr = {
   tabs: {
     home: "Accueil", jobs: "Emplois", matched: "Correspondances", status: "Statut", profile: "Profil",
     candidates: "Candidat·e·s", post: "Publier", content: "Contenu", people: "Personnes", moderation: "Modération",
+    messages: "Messages",
   },
   hrShell: {
     myProfile: "Mon profil", tasks: "Tâches", calendar: "Calendrier", chat: "Clavardage", badges: "Badges",

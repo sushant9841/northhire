@@ -7,6 +7,7 @@ import { Btn, SmartLogo, SmartPortrait } from "../design/primitives.jsx";
 import { CATS } from "../store/seed/constants.js";
 import { ROUTES, TABS_BY_ROLE } from "../routes.js";
 import { useTranslation } from "../i18n/i18n.jsx";
+import { NotificationBell } from "./NotificationBell.jsx";
 
 export function Wordmark({light,size=20,onClick}){
   return <div onClick={onClick} className={`flex items-center gap-2.5 shrink-0 ${onClick?"cursor-pointer":"cursor-default"}`}>
@@ -32,7 +33,6 @@ export function Header(){
     return ()=>document.removeEventListener("keydown",onKey);
   },[menu,browseOpen]);
   const r=ROUTES[A.pg]||ROUTES.home;
-  const unread=A.notifications.filter(n=>!n.read&&(!n.for||n.for===A.user?.id||n.for===A.user?.role)).length;
   const isRoot=!!r.root;
   const showBackMob=mob&&!isRoot;
   const showBackDt=!mob&&!isRoot&&A.history?.length>0;
@@ -86,9 +86,7 @@ export function Header(){
       {!mob&&!A.user&&<><Btn kind="ghost" size="sm" onClick={()=>A.go("login")}>{t("common.signIn")}</Btn>
         <Btn kind="primary" size="sm" onClick={()=>A.go("signup")}>{t("common.createAccount")}</Btn></>}
       {/* Guest mobile: single sign-in pill only. Desktop already shows the two buttons above. */}
-      {A.user&&<button onClick={()=>A.go("alerts")} aria-label={t("nav.notificationsAria")} className="relative bg-bg border-0 w-10 h-10 rounded-xl cursor-pointer flex items-center justify-center text-text">
-        <I n="bell" s={19}/>
-        {unread>0&&<span className="absolute top-1.5 right-1.5 min-w-4 h-4 px-1 rounded-full bg-brand text-white text-xs font-bold flex items-center justify-center border-2 border-white" style={{animation:"pop .3s ease"}}>{unread}</span>}</button>}
+      {A.user&&<NotificationBell/>}
       <div className="relative">
         {A.user
           ? <button onClick={()=>setMenu(v=>!v)} aria-label={t("nav.accountAria")} aria-haspopup="menu" aria-expanded={menu}

@@ -6,6 +6,7 @@ import { I } from "../design/icons.jsx";
 import { Btn, SmartLogo, SmartPortrait, Tooltip } from "../design/primitives.jsx";
 import { ROUTES } from "../routes.js";
 import { useTranslation } from "../i18n/i18n.jsx";
+import { NotificationBell } from "./NotificationBell.jsx";
 
 /* label is an i18n key (looked up with t() at render time) - this module is static and has no
    access to the current locale, same pattern as TABS_BY_ROLE in routes.js. */
@@ -259,9 +260,7 @@ export function DashShell({modules,children,brandKind}){
     <div className={`flex-1 min-w-0 ${mob?"text-center":"text-left"}`}>
       <div className="text-base font-bold text-text tracking-tight">{currentModule?t(currentModule.label):(A.pageTitle||(ROUTES[A.pg]?.titleKey&&t(ROUTES[A.pg].titleKey))||t("dashShell.dashboardFallback"))}</div>
     </div>
-    <button onClick={()=>{const target=A.user?.role==="admin"?"admLog":A.user?.role==="employer"?"messages":"alerts"; A.go(target);}} aria-label={t("nav.notificationsAria")} className="relative bg-bg border-0 w-9 h-9 rounded-lg cursor-pointer flex items-center justify-center text-text">
-      <I n="bell" s={17}/>
-      {A.notifications.filter(n=>!n.read).length>0&&<span className="absolute top-1.5 right-1.5 min-w-3.5 h-3.5 px-1 rounded-full bg-brand text-white text-xs font-bold flex items-center justify-center border-2 border-white">{A.notifications.filter(n=>!n.read).length}</span>}</button>
+    <NotificationBell/>
     <div className="relative ml-2">
       <button onClick={()=>setAccountMenu(v=>!v)} aria-label={t("nav.accountAria")} aria-haspopup="menu" aria-expanded={accountMenu}
         className="bg-transparent border-0 p-0 cursor-pointer flex rounded-xl transition duration-200 hover:scale-105">

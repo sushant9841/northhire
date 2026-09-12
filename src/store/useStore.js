@@ -635,16 +635,17 @@ export function useStore(){
     :!cvs.length?"Build a CV to add 15%.":(user?.skills||[]).length<6?"Add more skills to reach 90%."
     :!user?.summary?"Add a professional summary.":"Enrol in a training to finish your profile.";
 
+  const unreadMessages=useMemo(()=>user?messages.filter(m=>m.to===user.id&&!m.read).length:0,[messages,user]);
   const tabBadges=useMemo(()=>{
     if(!user)return {};
     if(user.role==="seeker")return {status:myApps.filter(a=>a.stage!=="Withdrawn").length,
-      profile:cvs.length?0:1,matched:0};
+      profile:cvs.length?0:1,matched:0,messages:unreadMessages};
     if(user.role==="employer"){const mine=jobs.filter(j=>j.e===company?.id).map(j=>j.id);
       return {empPipeline:applications.filter(a=>mine.includes(a.job)&&a.stage==="Applied").length,
-        empJobs:jobs.filter(j=>j.e===company?.id&&j.status==="live").length};}
+        empJobs:jobs.filter(j=>j.e===company?.id&&j.status==="live").length,messages:unreadMessages};}
     return {admJobs:jobs.filter(j=>j.flagged).length,admUsers:employers.filter(e=>!e.verified).length,
       admBlogs:[...blogs,...trainings].filter(x=>x.status==="draft").length};
-  },[user,myApps,cvs,jobs,applications,company,employers,blogs,trainings]);
+  },[user,myApps,cvs,jobs,applications,company,employers,blogs,trainings,unreadMessages]);
 
   /* --- actions --- */
   const logout=()=>{
@@ -2025,7 +2026,7 @@ export function useStore(){
     emp,job,person,score,scoreCandidate,scoreBreakdown,saveScoreWeights,setJobRecruitingCost,DEFAULT_SCORE_WEIGHTS,matchReasons,myApps,appliedJobIds,myNotifications,defaultCv,
     stagesFor,stagesForApp,savePipelineStages,
     jobHiringType,jobHiringLabel,
-    completeness,completenessHint,tabBadges,
+    completeness,completenessHint,tabBadges,unreadMessages,
     logout,completeSignup,saveProfile,deleteAccount,exportData,setUserSetting,setUserLocale,marketingConsent,setMarketingConsent,
     toggleSave,followEmployer,openJob,openEmployer,openBlog,openTraining,openCandidate,
     beginApply,submitApply,withdraw,acceptOffer,moveApp,rejectApp,

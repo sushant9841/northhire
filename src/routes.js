@@ -153,7 +153,7 @@ export const ROUTES = {
    locale, so translation happens where these are consumed. */
 export const TABS_BY_ROLE = {
   guest:    [["home","tabs.home","home"],["search","tabs.jobs","search"],["trainings","nav.trainings","cap"],["blogs","nav.resources","book"],["login","common.signIn","user"]],
-  seeker:   [["home","tabs.home","home"],["matched","tabs.matched","target"],["search","common.search","search"],["status","tabs.status","activity"],["account","tabs.profile","user"]],
+  seeker:   [["home","tabs.home","home"],["matched","tabs.matched","target"],["search","common.search","search"],["status","tabs.status","activity"],["messages","tabs.messages","mail"],["account","tabs.profile","user"]],
   employer: [["empHome","tabs.home","home"],["empJobs","tabs.jobs","briefcase"],["empPost","tabs.post","plus"],["empPipeline","tabs.candidates","users"],["empCompany","tabs.profile","building"]],
   admin:    [["admHome","tabs.home","home"],["admBlogs","tabs.content","book"],["admUsers","tabs.people","users"],["admJobs","tabs.moderation","shield"],["admSettings","account.settings","gear"]],
 };

@@ -400,6 +400,7 @@ export const en = {
   tabs: {
     home: "Home", jobs: "Jobs", matched: "Matched", status: "Status", profile: "Profile",
     candidates: "Candidates", post: "Post", content: "Content", people: "People", moderation: "Moderation",
+    messages: "Messages",
   },
   hrShell: {
     myProfile: "My profile", tasks: "Tasks", calendar: "Calendar", chat: "Chat", badges: "Badges",
