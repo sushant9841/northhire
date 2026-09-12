@@ -501,6 +501,12 @@ export const en = {
     noMatch: "No conversations match", noMatchTip: "Try a different search term or turn off the unread filter.",
     unknownPerson: "Unknown", unknownTitle: "Team member", replyPlaceholder: "Type a reply…",
   },
+  dockedChat: {
+    title: "Messages", expandAria: "Open messages", collapseAria: "Collapse messages",
+    searchPlaceholder: "Search candidates…", typePlaceholder: "Type a message…",
+    youPrefix: "You:", allThreadsBtn: "All conversations",
+    emptyTitle: "No conversations yet", emptyBody: "Message a candidate from their profile to start one.",
+  },
   profile: {
     signInTitle: "Sign in to view your profile", signInBody: "Create a free account to build a profile, save jobs and track applications.",
     signInCreateBtn: "Create account", signInSignInBtn: "Sign in",

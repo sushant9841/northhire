@@ -7,6 +7,7 @@ import { Btn, SmartLogo, SmartPortrait, Tooltip } from "../design/primitives.jsx
 import { ROUTES } from "../routes.js";
 import { useTranslation } from "../i18n/i18n.jsx";
 import { NotificationBell } from "./NotificationBell.jsx";
+import { DockedChat } from "../pages/employer/components/DockedChat.jsx";
 
 /* label is an i18n key (looked up with t() at render time) - this module is static and has no
    access to the current locale, same pattern as TABS_BY_ROLE in routes.js. */
@@ -300,6 +301,7 @@ export function DashShell({modules,children,brandKind}){
       {topbar}
       <main className="flex-1 w-full max-w-wide mx-auto">{children}</main>
     </div>
+    <DockedChat/>
   </div>;
 }
 

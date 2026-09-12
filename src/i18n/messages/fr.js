@@ -502,6 +502,12 @@ export const fr = {
     noMatch: "Aucune conversation ne correspond", noMatchTip: "Essayez un terme de recherche différent ou désactivez le filtre non lu·e·s.",
     unknownPerson: "Inconnu·e", unknownTitle: "Membre de l'équipe", replyPlaceholder: "Tapez une réponse…",
   },
+  dockedChat: {
+    title: "Messages", expandAria: "Ouvrir les messages", collapseAria: "Réduire les messages",
+    searchPlaceholder: "Rechercher des candidat·e·s…", typePlaceholder: "Tapez un message…",
+    youPrefix: "Vous :", allThreadsBtn: "Toutes les conversations",
+    emptyTitle: "Aucune conversation pour l'instant", emptyBody: "Envoyez un message à un·e candidat·e depuis son profil pour en démarrer une.",
+  },
   profile: {
     signInTitle: "Se connecter pour voir votre profil", signInBody: "Créez un compte gratuit pour créer un profil, sauvegarder des emplois et suivre vos candidatures.",
     signInCreateBtn: "Créer un compte", signInSignInBtn: "Se connecter",
