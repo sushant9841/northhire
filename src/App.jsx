@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Ctx } from "./store/context.js";
 import { useStore } from "./store/useStore.js";
+import { useVersionCheck } from "./store/useVersionCheck.js";
 import { useTranslation } from "./i18n/i18n.jsx";
 import { Header } from "./shells/Header.jsx";
 import { TabBar } from "./shells/TabBar.jsx";
@@ -70,17 +71,26 @@ export default function NorthHire(){
   const mob=useMedia("(max-width: 900px)");
   const A=useStore();
   const {pg,user,settings,impersonating,stopImpersonating,hireOnboarding,setHireOnboarding,go}=A;
-  const {locale,setLocale}=useTranslation();
+  const {locale,setLocale,t}=useTranslation();
+  const outdated=useVersionCheck();
   /* Once a session loads a user with a saved `locale`, that account's preference wins over
      whatever this browser had stored locally (e.g. signing into a fr-CA account on a machine
      that was last used in English switches the UI to French, matching what Settings shows). */
   useEffect(()=>{
     if(user?.locale&&user.locale!==locale)setLocale(user.locale);
   },[user?.locale]);
-  /* In-memory only - the banner reappears on a fresh load rather than persisting a "seen it"
-     flag to storage, since nothing on the client persists across reloads any more. */
-  const [cookieAck,setCookieAck]=useState(false);
-  const acceptCookies=()=>{setCookieAck(true); A.logActivity("cookies.accepted","Accepted cookie use","shield");};
+  /* Persist the "accepted cookies" flag - it's a per-viewer UI convenience (matches the memory
+     allow-list) AND a legal record of consent. A fresh reload should not bring the banner back
+     to a user who has already dismissed it. Reads guarded with try/catch since a private-window
+     or storage-blocked browser can throw the accessor itself. */
+  const [cookieAck,setCookieAck]=useState(()=>{
+    try { return localStorage.getItem("northhire.cookieAck")==="1"; } catch { return false; }
+  });
+  const acceptCookies=()=>{
+    setCookieAck(true);
+    try { localStorage.setItem("northhire.cookieAck","1"); } catch { /* fine - the acceptance still holds for this tab */ }
+    A.logActivity("cookies.accepted","Accepted cookie use","shield");
+  };
 
   const _roleWrap=(node)=>{
     if(user?.role==="employer")return <EmpShell>{node}</EmpShell>;
@@ -213,6 +223,11 @@ export default function NorthHire(){
               <p style={{fontSize:15,color:C.text2,lineHeight:1.65,margin:0}}>
                 We are making some improvements and will be back shortly. Thanks for your patience.</p></Card></div>
         : <>
+            {outdated&&<div role="status" aria-live="polite" style={{background:C.ink,color:"#fff",padding:"10px 18px",
+              display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap",fontSize:13.5,fontWeight:600}} data-version-banner>
+              <span style={{display:"flex",alignItems:"center",gap:8}}><I n="sparkle" s={16}/>{t("common.newVersionMsg")}</span>
+              <button onClick={()=>{try{window.location.reload();}catch{/* ignore */}}} style={{background:"#fff",color:C.ink,border:"none",padding:"6px 14px",borderRadius:8,cursor:"pointer",fontWeight:700,fontSize:13,fontFamily:"inherit"}}>{t("common.newVersionBtn")}</button>
+            </div>}
             {impersonating?.originalUser&&<div style={{background:C.warn,color:"#fff",padding:"10px 18px",
               display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap",fontSize:13.5,fontWeight:600}} data-impersonation-banner>
               <span style={{display:"flex",alignItems:"center",gap:8}}><I n="eye" s={16}/>Viewing as {user?.name}</span>

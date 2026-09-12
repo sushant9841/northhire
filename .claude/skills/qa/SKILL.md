@@ -25,8 +25,19 @@ The persistent screenshot set lives in the repo at `.claude/qa-screenshots/` (un
 
 ## Checklist (pick relevant subset per run)
 
+- **Userflow correctness** — mandatory on every audit. Walk each top flow (apply, post-job, hire, punch-in, message, interview) in TWO account states: one that has the required prior data (a CV, an employer profile, an HR employee record) and one that doesn't. For each, verify:
+  - Empty state names what's missing and offers a one-click path to create it (never a silent bounce to a builder mid-flow).
+  - "Which one" selection appears when N > 1, with a sensible default (first-created, most-recent, or the one already flagged as primary).
+  - Single-item cases default to that item and skip the picker.
+  - Every action button moves the user's world forward — no click-does-nothing, no toast-only "coming soon", no modal whose Save just closes.
+  - Pre-checks catch missing state BEFORE the user fills a form, not at submit.
+  - Silent 401/403 doesn't look like an empty state.
+  - Data written on one side (employer moves stage, HR schedules interview) appears live on the other side without refresh — SSE is wired.
+  - The critical CTA is visible in the first fold at 400px width — mobile-hidden-under-menu is a defect.
+  See [feedback-userflow-audit](../../memory/feedback_userflow_audit.md) for the ten anti-patterns and their examples.
+- **Server-authoritative** — mandatory on every audit. Grep `localStorage\.` and verify every hit fits the whitelist in [feedback-server-authoritative](../../memory/feedback_server_authoritative.md): per-viewer UI conveniences only. Any business data in localStorage (CVs, applications, saved jobs, messages, notifications, plan state, HR records) is a defect and must be moved server-side.
 - **Visual/UI**: layout breaks at the actual breakpoints this app uses (900/820/1024/960px via `mob`, not Tailwind's defaults), overflow/clipping, inconsistent spacing or type scale versus [ui](../ui/SKILL.md).
-- **Functionality**: does the action actually reach the store (`use()`/`A.*` calls), not just update local component state that looks like it worked?
+- **Functionality**: does the action actually reach the store (`use()`/`A.*` calls) AND the server (API call), not just update local component state or local store state that looks like it worked?
 - **Responsiveness**: test at a genuinely narrow viewport (390px) and at desktop — this app's mobile bugs have historically been real (see the CV-builder sidebar/grid bugs fixed earlier), not hypothetical.
 - **Accessibility**: keyboard reachability of custom controls (toolbar buttons, dropdown menus, modals — does Escape/click-outside close them?), focus visibility, alt text on meaningful images, color contrast on custom inline-style text.
 - **Performance**: obvious problems only at this stage — unpaginated tables rendering hundreds of rows, images with no size hints, redundant re-renders from inline object/array literals in render (lower priority, don't chase micro-optimizations without profiling first).

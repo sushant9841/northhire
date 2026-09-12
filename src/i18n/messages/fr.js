@@ -128,6 +128,7 @@ export const fr = {
 
   common: {
     save: "Enregistrer", cancel: "Annuler", close: "Fermer", delete: "Supprimer", edit: "Modifier",
+    newVersionMsg: "Une nouvelle version de NorthHire est disponible.", newVersionBtn: "Actualiser",
     search: "Rechercher", loading: "Chargement…", send: "Envoyer", back: "Retour", next: "Suivant",
     done: "Terminé", yes: "Oui", no: "Non", viewAll: "Tout voir", read: "Lire", view: "Voir",
     signIn: "Se connecter", signOut: "Se déconnecter", createAccount: "Créer un compte",

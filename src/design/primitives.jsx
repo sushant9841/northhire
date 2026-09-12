@@ -288,6 +288,29 @@ export function SmartPortrait({ seed = 0, size = 48, radius = 999, bg }) {
   return <Portrait seed={seed} size={size} radius={radius} bg={bg}/>;
 }
 
+/* --- UserAvatar: real user's uploaded photo when present, else their initials on a
+   deterministic colored ground. No third-party CDN (randomuser.me and clearbit are both blocked
+   by most adblockers), no cartoon fallback that reads as "generic" to a signed-in user seeing
+   their own header. Prefers `user.photo` (data URL or uploaded blob path) then falls back to
+   initials from `user.name`, then to a single '?' when even that is missing. --- */
+const AVATAR_BGS = ["#005CCC","#0B7A4B","#8F5B05","#5B3BC4","#AE2119","#0E6B8C","#2F5233","#B4335A"];
+export function UserAvatar({ user, size = 40, radius = 12 }) {
+  const name = (user?.name || "").trim();
+  const initials = name
+    ? name.split(/\s+/).slice(0,2).map(w=>w[0]||"").join("").toUpperCase() || "?"
+    : "?";
+  const bg = AVATAR_BGS[Math.abs((name || "?").split("").reduce((a,c)=>a+c.charCodeAt(0),0)) % AVATAR_BGS.length];
+  const fallback = (
+    <div className="flex items-center justify-center font-bold text-white shrink-0"
+         style={{ width:size, height:size, borderRadius:radius, background:bg, fontSize:Math.round(size*0.4) }}>
+      {initials}
+    </div>
+  );
+  if (!user?.photo) return fallback;
+  return <SmartImg src={user.photo} alt={name} className="shrink-0"
+    style={{ width:size, height:size, borderRadius:radius }} fallback={fallback}/>;
+}
+
 /* ═══════════════ CORE UI ATOMS ═══════════════ */
 export function Btn({children,onClick,kind="primary",size="md",full,disabled,loading,icon,iconR,style,title,type,"aria-label":ariaLabel,className=""}){
  const S={xs:"text-xs py-2 px-3 rounded-lg gap-1.5",sm:"text-sm py-2.5 px-4 rounded-xl gap-2",

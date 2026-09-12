@@ -25,6 +25,13 @@ import { ssoRouter } from "./routes/sso.js";
 import { offersRouter } from "./routes/offers.js";
 import { eventsRouter } from "./routes/events.js";
 import { infinityReplacer } from "../src/helpers/jsonInfinity.js";
+import { execSync } from "node:child_process";
+
+/* Build identity for this server process. Client checks this against its own __BUILD_ID__
+   (defined at frontend build time - see vite.config.js) and shows a discreet refresh banner
+   when they diverge, so a shipped fix never depends on the user knowing to hard-refresh. */
+const BUILD_ID = process.env.BUILD_ID
+  || (() => { try { return execSync("git rev-parse --short HEAD", { stdio: ["ignore", "pipe", "ignore"] }).toString().trim(); } catch { return `srv-${Date.now()}`; } })();
 
 const app = express();
 const PORT = process.env.PORT || 8787;
@@ -95,10 +102,28 @@ app.use((req, res, next) => {
   if (process.env.NODE_ENV === "production") {
     res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   }
+  /* SPA HTML shell must never be cached: Vite hashes JS/CSS filenames so those are
+     safe to cache forever, but index.html is the pointer to whichever hashed script
+     the client should load. A cached index.html pins the user to an old build even
+     after we ship - the whole point of the version banner is defeated if the shell
+     never re-fetches. Applied to any path that looks like an HTML document; the
+     JSON API responses each carry their own cache posture. */
+  const p = req.path || "";
+  if (p === "/" || p.endsWith(".html") || (!p.startsWith("/api") && !/\.[a-z0-9]{2,5}$/i.test(p))) {
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  }
   next();
 });
 
 app.get("/api/health", (req, res) => res.json({ ok: true }));
+/* Public - no auth needed. The client polls this every few minutes and after every route
+   change, so gating it behind a session would break the version-banner for a signed-out
+   viewer sitting on a marketing page when we ship a fix. Always no-store so a CDN never
+   caches yesterday's id. */
+app.get("/api/version", (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ id: BUILD_ID });
+});
 app.use("/api/auth", authRouter);
 app.use("/api/jobs", jobsRouter);
 app.use("/api/employers", employersRouter);

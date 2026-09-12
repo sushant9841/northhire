@@ -3,7 +3,7 @@ import { use } from "../store/context.js";
 import { useMedia } from "../helpers/hooks.js";
 import { C, SH } from "../design/tokens.js";
 import { I } from "../design/icons.jsx";
-import { Btn, SmartLogo, SmartPortrait } from "../design/primitives.jsx";
+import { Btn, SmartLogo, UserAvatar } from "../design/primitives.jsx";
 import { CATS } from "../store/seed/constants.js";
 import { ROUTES, TABS_BY_ROLE } from "../routes.js";
 import { useTranslation } from "../i18n/i18n.jsx";
@@ -92,8 +92,8 @@ export function Header(){
           ? <button onClick={()=>setMenu(v=>!v)} aria-label={t("nav.accountAria")} aria-haspopup="menu" aria-expanded={menu}
               className="bg-transparent border-0 p-0 cursor-pointer flex rounded-xl transition duration-200 hover:scale-105">
               {A.user.role==="employer"
-                ? <SmartLogo e={A.company||{mark:"hex",a:C.brand,b:"#fff",name:"",site:""}} size={38} radius={11}/>
-                : <SmartPortrait seed={A.user.seed??0} size={38} radius={11}/>}
+                ? <SmartLogo e={A.company||{mark:"hex",a:C.brand,b:"#fff",name:A.user.name||"",site:""}} size={38} radius={11}/>
+                : <UserAvatar user={A.user} size={38} radius={11}/>}
             </button>
           : mob&&<button onClick={()=>A.go("login")} className="bg-brand text-white border-0 py-2.5 px-3.5 h-10 rounded-xl cursor-pointer text-sm font-semibold flex items-center gap-1.5 transition duration-150 hover:brightness-110 active:scale-95">
               {t("common.signIn")}</button>}
@@ -102,8 +102,8 @@ export function Header(){
           <div className="absolute top-12 right-0 w-64 bg-white border border-line rounded-2xl shadow-md z-500 overflow-hidden" style={{animation:"pop .16s ease"}}>
             <div className="py-3.5 px-4 border-b border-line-soft flex gap-3 items-center">
               {A.user.role==="employer"
-                ? <SmartLogo e={A.company||{mark:"hex",a:C.brand,b:"#fff",name:"",site:""}} size={40} radius={11}/>
-                : <SmartPortrait seed={A.user.seed??0} size={40} radius={11}/>}
+                ? <SmartLogo e={A.company||{mark:"hex",a:C.brand,b:"#fff",name:A.user.name||"",site:""}} size={40} radius={11}/>
+                : <UserAvatar user={A.user} size={40} radius={11}/>}
               <div className="min-w-0">
                 <div className="text-sm font-bold text-text overflow-hidden text-ellipsis whitespace-nowrap">{A.user.name}</div>
                 <div className="text-xs text-text-3">{A.user.role==="seeker"?t("account.jobSeeker"):A.user.role==="employer"?t("account.employer"):t("account.administrator")}</div></div></div>
