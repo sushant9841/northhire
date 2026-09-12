@@ -169,6 +169,14 @@ export function QuestionBuilder({value=[],onChange}){
   const addPreset=(p)=>onChange([...value,{id:uid("q"),...p,prompt:p.t,required:true,options:p.options||[]}]);
 
   return <div>
+    {/* Compliance Register hire5: Human Rights Codes (every province) and the Canadian Human
+        Rights Act prohibit hiring criteria tied to a protected ground — age, sex, gender identity,
+        family/marital status, race, ethnic origin, religion, disability, sexual orientation,
+        pregnancy, or citizenship (beyond confirming legal work eligibility). Custom questions
+        must ask about job-related requirements, not the applicant's personal characteristics. */}
+    <div className="text-xs text-text-2 mb-3 leading-relaxed p-2.5 bg-tint border border-line-soft rounded-md">
+      {t("formControls.qHumanRightsHint")||"Ask about job-related requirements, not the applicant's personal characteristics. Human Rights Codes (all provinces) and the Canadian Human Rights Act prohibit questions about age, sex, family or marital status, race, ethnic origin, religion, disability, sexual orientation, gender identity, pregnancy, or citizenship beyond legal work eligibility."}
+    </div>
     {value.length>0&&<div className="flex flex-col gap-3 mb-4">
       {value.map((q,i)=><div key={q.id} className="border border-line rounded-xl p-3.5 bg-white">
         <div className="flex gap-2.5 items-center mb-2.5">

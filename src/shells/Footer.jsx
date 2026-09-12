@@ -49,6 +49,7 @@ export function Footer(){
           <button onClick={()=>A.go("accessibility")} className="bg-transparent border-0 p-0 cursor-pointer text-sm text-white/40 transition-colors duration-150 hover:text-white">{t("footer.accessibility")}</button>
           <button onClick={()=>A.go("pipeda")} className="bg-transparent border-0 p-0 cursor-pointer text-sm text-white/40 transition-colors duration-150 hover:text-white">{t("footer.pipeda")}</button>
           <button onClick={()=>A.go("credits")} className="bg-transparent border-0 p-0 cursor-pointer text-sm text-white/40 transition-colors duration-150 hover:text-white">{t("footer.credits")}</button>
+          <button onClick={()=>A.go("security")} className="bg-transparent border-0 p-0 cursor-pointer text-sm text-white/40 transition-colors duration-150 hover:text-white">{t("footer.security")}</button>
           {/* Bill 96: a working language switch, not just a static "English (CA)" label. */}
           <div className="flex items-center gap-1.5" role="group" aria-label={t("account.language")}>
             <button onClick={()=>chooseLocale("en-CA")} className={`bg-transparent border-0 p-0 cursor-pointer text-sm transition-colors duration-150 ${locale==="en-CA"?"text-white font-semibold":"text-white/40 hover:text-white"}`}>English (CA)</button>

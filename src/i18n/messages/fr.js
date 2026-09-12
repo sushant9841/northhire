@@ -45,6 +45,7 @@ export const fr = {
     accessibility: "Accessibilité (LAPHO)",
     pipeda: "Conformité à la LPRPDE",
     credits: "Mentions de logiciels libres",
+    security: "Sécurité",
     unsubscribe: "Se désabonner",
     matchScore: "Comment fonctionne l'indice de pertinence",
     verifyEmail: "Confirmez votre courriel",
@@ -210,6 +211,7 @@ export const fr = {
     tagline: "La plateforme d'emploi du Canada pour tous les types de travail. Métiers, soins, transport, cuisines, entrepôts et bureaux, avec un salaire réel publié sur chaque annonce.",
     copyright: "© 2026 NorthHire Technologies Inc. Conçu au Canada.",
     accessibility: "Accessibilité (LAPHO)", pipeda: "Conforme à la LPRPDE", credits: "Crédits des logiciels libres",
+    security: "Sécurité",
     fixTracker: "Suivi des correctifs", complianceRegister: "Registre de conformité", comingSoon: "Bientôt disponible",
   },
   cookie: {
@@ -457,6 +459,7 @@ export const fr = {
     qWorkPermit: "Avez-vous un permis de travail canadien valide?", qVisa: "Avez-vous besoin d'un parrainage de visa?",
     qShifts: "Quels quarts êtes-vous disponible pour?", qShiftsOpts: "Jour,Soir,Nuit,Fin de semaine",
     qStart: "Quand pourriez-vous commencer?", qStartOpts: "Immédiatement,Dans 2 semaines,Dans 1 mois,Plus de 1 mois",
+    qHumanRightsHint: "Posez des questions sur les exigences liées au poste, non sur les caractéristiques personnelles de la personne candidate. Les Chartes des droits de la personne (toutes les provinces) et la Loi canadienne sur les droits de la personne interdisent les questions relatives à l'âge, au sexe, à la situation familiale ou matrimoniale, à la race, à l'origine ethnique, à la religion, au handicap, à l'orientation sexuelle, à l'identité de genre, à la grossesse ou à la citoyenneté au-delà de la vérification de l'admissibilité légale au travail.",
   },
   hireOnboarding: {
     hireConfirmed: "Embauche confirmée",

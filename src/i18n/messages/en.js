@@ -44,6 +44,7 @@ export const en = {
     accessibility: "Accessibility (AODA)",
     pipeda: "PIPEDA compliance",
     credits: "Open-source credits",
+    security: "Security",
     unsubscribe: "Unsubscribe",
     matchScore: "How the match score works",
     verifyEmail: "Confirm your email",
@@ -209,6 +210,7 @@ export const en = {
     tagline: "Canada's job platform for every kind of work. Trades, care, transport, kitchens, warehouses and offices, with real pay published on every listing.",
     copyright: "© 2026 NorthHire Technologies Inc. Built in Canada.",
     accessibility: "Accessibility (AODA)", pipeda: "PIPEDA compliant", credits: "Open-source credits",
+    security: "Security",
     fixTracker: "Fix Tracker", complianceRegister: "Compliance Register", comingSoon: "Coming soon",
   },
   cookie: {
@@ -456,6 +458,7 @@ export const en = {
     qWorkPermit: "Do you have a valid Canadian work permit?", qVisa: "Do you require visa sponsorship?",
     qShifts: "Which shifts are you available for?", qShiftsOpts: "Days,Evenings,Overnights,Weekends",
     qStart: "When could you start?", qStartOpts: "Immediately,Within 2 weeks,Within 1 month,More than 1 month",
+    qHumanRightsHint: "Ask about job-related requirements, not the applicant's personal characteristics. Human Rights Codes (all provinces) and the Canadian Human Rights Act prohibit questions about age, sex, family or marital status, race, ethnic origin, religion, disability, sexual orientation, gender identity, pregnancy, or citizenship beyond legal work eligibility.",
   },
   hireOnboarding: {
     hireConfirmed: "Hire confirmed",

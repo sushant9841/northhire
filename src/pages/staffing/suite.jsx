@@ -1526,6 +1526,14 @@ export function AgencyWorkers(){
         </div>}
         <div className="mt-4">
           <Lbl>Background check</Lbl>
+          {/* Compliance Register hire4: PIPEDA + five provinces' human-rights codes require the
+              worker's informed consent BEFORE any background check is run, and restrict how any
+              spent/pardoned record can be used. This block captures that consent structurally so
+              it's auditable, and records whether the result was used in an adverse decision so the
+              adverse-action disclosure obligation is traceable. */}
+          <div className="text-xs text-text-2 mb-2 leading-relaxed p-2.5 bg-tint border border-line-soft rounded-md">
+            Under PIPEDA and provincial human-rights codes, do not run a background check without the worker's written consent. Do not consider spent or pardoned records. If a result is used to withdraw an offer or end an assignment, tell the worker in writing and give them a chance to respond (adverse-action disclosure).
+          </div>
           <div className={`grid gap-2.5 ${mob?"grid-cols-1":"grid-cols-3"}`}>
             <Field label="Status">
               <Sel value={w.backgroundCheck?.status||"not-started"} onChange={e=>A.updateWorker(w.id,{backgroundCheck:{...w.backgroundCheck,status:e.target.value}})}>
@@ -1534,6 +1542,22 @@ export function AgencyWorkers(){
             </Field>
             <Field label="Provider"><Input defaultValue={w.backgroundCheck?.provider||""} placeholder="e.g. Certn, Sterling" onBlur={e=>A.updateWorker(w.id,{backgroundCheck:{...w.backgroundCheck,provider:e.target.value}})}/></Field>
             <Field label="Completed"><DatePicker value={w.backgroundCheck?.completedDate||""} onChange={v=>A.updateWorker(w.id,{backgroundCheck:{...w.backgroundCheck,completedDate:v}})}/></Field>
+          </div>
+          <div className={`grid gap-2.5 mt-2 ${mob?"grid-cols-1":"grid-cols-2"}`}>
+            <Field label="Worker consent on file">
+              <Sel value={w.backgroundCheck?.consent||"no"} onChange={e=>A.updateWorker(w.id,{backgroundCheck:{...w.backgroundCheck,consent:e.target.value,consentDate:e.target.value==="yes"&&!w.backgroundCheck?.consentDate?new Date().toISOString().slice(0,10):w.backgroundCheck?.consentDate}})}>
+                <option value="no">No — do not run the check</option>
+                <option value="yes">Yes — written consent on file</option>
+                <option value="verbal">Verbal only — get it in writing</option>
+              </Sel>
+            </Field>
+            <Field label="Used in adverse decision?">
+              <Sel value={w.backgroundCheck?.adverseUse||"no"} onChange={e=>A.updateWorker(w.id,{backgroundCheck:{...w.backgroundCheck,adverseUse:e.target.value}})}>
+                <option value="no">No</option>
+                <option value="yes">Yes — disclosure sent to worker</option>
+                <option value="pending">Yes — disclosure still owed</option>
+              </Sel>
+            </Field>
           </div>
           <Field label="Notes" style={{marginTop:8}}><Area rows={2} defaultValue={w.backgroundCheck?.notes||""} onBlur={e=>A.updateWorker(w.id,{backgroundCheck:{...w.backgroundCheck,notes:e.target.value}})}/></Field>
         </div>

@@ -50,6 +50,7 @@ export const ROUTES = {
   accessibility:{titleKey:"routeTitles.accessibility", tab:"home", root:false, path:"/accessibility"},
   pipeda:       {titleKey:"routeTitles.pipeda", tab:"home", root:false, path:"/pipeda"},
   credits:      {titleKey:"routeTitles.credits", tab:"home", root:false, path:"/credits"},
+  security:     {titleKey:"routeTitles.security", tab:"home", root:false, path:"/security"},
   /* CASL requires the unsubscribe link in a commercial email to work without signing in. */
   unsubscribe:  {titleKey:"routeTitles.unsubscribe", tab:"home", root:false, path:"/unsubscribe"},
   matchScore:   {titleKey:"routeTitles.matchScore", tab:"home", root:false, path:"/match-score"},
