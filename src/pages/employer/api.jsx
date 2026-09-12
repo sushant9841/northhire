@@ -18,14 +18,21 @@ import {
    incorrectly is an authentication bypass, not a cosmetic bug — and the pricing copy now says
    OIDC to match. Endpoints are discovered from the issuer rather than pasted by hand. */
 function _SsoConfig({mob,isOwner}){
-  const [state,setState]=useState({available:false,config:null,callbackUrl:""});
+  /* `loaded` distinguishes "we haven't heard back from the server yet" from "the server says the
+     plan doesn't include SSO". Without this, a slow or briefly-failed /sso/config call rendered
+     the entire page as nothing at all — the parent already gated by A.can("sso"), so an empty
+     render there was the "There is nothing on Single sign-on" complaint. */
+  const [state,setState]=useState({available:null,config:null,callbackUrl:""});
+  const [loaded,setLoaded]=useState(false);
+  const [loadErr,setLoadErr]=useState("");
   const [form,setForm]=useState({issuer:"",clientId:"",clientSecret:"",emailDomain:"",enabled:false});
   const [err,setErr]=useState(""); const [msg,setMsg]=useState(""); const [busy,setBusy]=useState(false);
 
   const load=()=>api.get("/sso/config").then(r=>{
-    setState(r);
+    setState(r); setLoadErr("");
     if(r.config)setForm(f=>({...f,issuer:r.config.issuer,clientId:r.config.clientId,emailDomain:r.config.emailDomain,enabled:r.config.enabled}));
-  }).catch(()=>{});
+  }).catch(e=>setLoadErr(e.message||"Couldn't load single sign-on settings."))
+    .finally(()=>setLoaded(true));
   useEffect(()=>{load();},[]);
 
   const save=async()=>{
@@ -37,7 +44,11 @@ function _SsoConfig({mob,isOwner}){
     finally{setBusy(false);}
   };
 
-  if(!state.available) return null;
+  if(!loaded) return <Card pad={mob?20:26}><div className="text-sm text-text-3">Loading single sign-on settings…</div></Card>;
+  if(loadErr) return <Card pad={mob?20:26}>
+    <Banner tone="danger" icon="alert">{loadErr}</Banner>
+    <Btn kind="outline" size="sm" onClick={()=>{setLoaded(false);setLoadErr("");load();}} style={{marginTop:12}}>Try again</Btn>
+  </Card>;
 
   return <Card pad={mob?20:26}>
     <Lbl>Single sign-on (OIDC)</Lbl>
@@ -101,6 +112,11 @@ export function EmpSsoPage(){
 export function EmpApiPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [data,setData]=useState({keys:[],webhooks:[],enabled:false,events:[]});
+  /* Same rationale as _SsoConfig: an in-flight /api-keys/ fetch is not proof the plan lacks API
+     access. The client's own A.can("api") is the authoritative plan gate; we only fall back to
+     the server's `enabled` flag as an extra safety check while data.enabled is still its default. */
+  const [loaded,setLoaded]=useState(false);
+  const [loadErr,setLoadErr]=useState("");
   const [keyName,setKeyName]=useState("");
   const [issuedKey,setIssuedKey]=useState(null);
   const [hookUrl,setHookUrl]=useState(""); const [hookEvents,setHookEvents]=useState([]);
@@ -108,8 +124,11 @@ export function EmpApiPage(){
   const [err,setErr]=useState(""); const [busy,setBusy]=useState(false);
   const [revokeKey,setRevokeKey]=useState(null); const [removeHook,setRemoveHook]=useState(null);
   const isOwner=A.user?.employerRole==="owner";
+  const planAllowsApi=A.can("api");
 
-  const load=()=>api.get("/api-keys/").then(setData).catch(()=>{});
+  const load=()=>api.get("/api-keys/").then(r=>{setData(r);setLoadErr("");})
+    .catch(e=>setLoadErr(e.message||"Couldn't load API keys."))
+    .finally(()=>setLoaded(true));
   useEffect(()=>{load();},[]);
 
   const createKey=async()=>{
@@ -131,12 +150,28 @@ export function EmpApiPage(){
 
   const copy=v=>{navigator.clipboard?.writeText(v);};
 
-  if(!data.enabled) return <Page narrow>
+  /* Enterprise gate: the client's own plan check is the primary authority (fast, correct on
+     load), the server's `enabled` flag is honoured only when the client also says the plan is
+     insufficient - otherwise a brief network hiccup used to render the "Available on Enterprise"
+     empty state on a plan that actually included API access. */
+  if(!planAllowsApi&&loaded&&!data.enabled) return <Page narrow>
     <H1 sub="Programmatic access to your own jobs and applications">API &amp; webhooks</H1>
     <Card pad={mob?20:26}>
       <Empty icon="lock" title="Available on Enterprise"
         body="API keys and webhooks let your own systems — or a tool like Zapier — read your jobs and applications and react to new candidates without anyone logging in."
         action={<Btn kind="primary" onClick={()=>A.go("pricing")}>See plans</Btn>}/>
+    </Card>
+  </Page>;
+
+  if(!loaded) return <Page narrow>
+    <H1 sub="Programmatic access to your own jobs and applications">API &amp; webhooks</H1>
+    <Card pad={mob?20:26}><div className="text-sm text-text-3">Loading…</div></Card>
+  </Page>;
+  if(loadErr&&planAllowsApi) return <Page narrow>
+    <H1 sub="Programmatic access to your own jobs and applications">API &amp; webhooks</H1>
+    <Card pad={mob?20:26}>
+      <Banner tone="danger" icon="alert">{loadErr}</Banner>
+      <Btn kind="outline" size="sm" onClick={()=>{setLoaded(false);setLoadErr("");load();}} style={{marginTop:12}}>Try again</Btn>
     </Card>
   </Page>;
 
