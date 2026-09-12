@@ -19,8 +19,12 @@ const COLLAPSE_KEY = "northhire.empChatCollapsed";
 export function DockedChat(){
   const A=use(); const { t, locale } = useTranslation();
   const mob=useMedia("(max-width: 900px)");
+  // Starts collapsed (the rail) for anyone who hasn't set a preference yet - a brand-new
+  // employer landing on their dashboard for the first time shouldn't be greeted by a 360px
+  // panel already covering part of the screen. Only an explicit "0" in storage (they opened
+  // and left it open) starts it expanded.
   const [collapsed,setCollapsed]=useState(()=>{
-    try{ return localStorage.getItem(COLLAPSE_KEY)==="1"; }catch{ return false; }
+    try{ return localStorage.getItem(COLLAPSE_KEY)!=="0"; }catch{ return true; }
   });
   const [openThread,setOpenThread]=useState(null);
   const [draft,setDraft]=useState({});
@@ -132,7 +136,10 @@ export function DockedChat(){
     </button>;
   }
 
-  return <div className="fixed top-0 right-0 bottom-0 z-40 bg-white border-l border-line shadow-[-8px_0_24px_rgba(15,23,42,0.08)] flex flex-col" style={{width:360}}>
+  {/* top is offset below DashShell's topbar (sticky, z-20) rather than the viewport edge, and
+      the drawer's own z-index sits below it - otherwise an open drawer overlaps the top-right
+      notification bell and account menu and silently eats their clicks. */}
+  return <div className="fixed right-0 bottom-0 bg-white border-l border-line shadow-[-8px_0_24px_rgba(15,23,42,0.08)] flex flex-col" style={{width:360,top:64,zIndex:15}}>
     <div className="flex items-center justify-between gap-2 py-3.5 px-4 border-b border-line-soft shrink-0">
       <div className="flex items-center gap-2 min-w-0">
         <I n="mail" s={17}/>

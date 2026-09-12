@@ -152,12 +152,16 @@ hrRouter.post("/employees", requireHrAuth, requireHrPriv, (req, res) => {
   const d = req.body || {};
   const { hash, salt } = hashPassword("pcl2026"); // shared demo password for newly-added demo employees, matching the seeded set
   const id = nextId("emp", "hr_employees");
+  // node:sqlite's bind step throws (not a validation error - an uncaught 500) on a plain JS
+  // `undefined`, unlike better-sqlite3 which silently treats it as NULL - every optional field
+  // here needs an explicit `?? null` so an incomplete payload gets whatever the schema allows
+  // rather than crashing the request.
   db.prepare(
     `INSERT INTO hr_employees (id, company_id, name, email, password_hash, password_salt, role, dept, title, hired, seed, phone, city, prov, salary, birth_date, manager, skills_json, badges_json, pay_type, hourly_rate)
      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
-  ).run(id, req.hrEmployee.company_id, d.name, d.email, hash, salt, d.role || "employee", d.dept, d.title,
-    d.hired || new Date().toISOString().slice(0, 10), d.seed ?? Math.floor(Math.random() * 11), d.phone, d.city, d.prov,
-    d.salary, d.birthDate, d.manager || null, JSON.stringify(d.skills || []), JSON.stringify(d.badges || []),
+  ).run(id, req.hrEmployee.company_id, d.name ?? null, d.email ?? null, hash, salt, d.role || "employee", d.dept ?? null, d.title ?? null,
+    d.hired || new Date().toISOString().slice(0, 10), d.seed ?? Math.floor(Math.random() * 11), d.phone ?? null, d.city ?? null, d.prov ?? null,
+    d.salary ?? null, d.birthDate ?? null, d.manager || null, JSON.stringify(d.skills || []), JSON.stringify(d.badges || []),
     d.payType === "hourly" ? "hourly" : "salary", d.hourlyRate || null);
   res.status(201).json({ employee: serializeHrEmployee(db.prepare("SELECT * FROM hr_employees WHERE id = ?").get(id)) });
 
