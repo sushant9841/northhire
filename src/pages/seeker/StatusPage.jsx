@@ -3,6 +3,7 @@ import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
 import { Btn, Card, Tag, Bar, Sel, Stat, Tabs, Empty, H1, Page, ConfirmDialog, Modal, Field, Area } from "../../design/primitives.jsx";
+import { I } from "../../design/icons.jsx";
 import { pay, payShort } from "../../helpers/utils.js";
 import { STAGES } from "../../store/seed/constants.js";
 import { EmpMark } from "../shared/cards.jsx";
@@ -83,6 +84,7 @@ export function StatusPage(){
         {t("seeker.status.showingOfApplications",{shown:mine.length,total:allMine.length})}{" "}
         <button onClick={()=>setPeriod("all")} className="bg-transparent border-0 p-0 cursor-pointer text-sm font-semibold text-brand underline">{t("seeker.status.showAllTime")}</button>
       </div>}
+    <UpcomingInterviewsCard/>
     <div className="grid gap-3 mb-5" style={{gridTemplateColumns:`repeat(auto-fit,minmax(${mob?140:160}px,1fr))`}}>
       <Stat icon="send" label={t("seeker.status.statApplications")} value={mine.length} tone={C.brand}/>
       <Stat icon="eye" label={t("seeker.status.statReviewed")} value={(counts.Reviewed||0)+(counts.Shortlisted||0)+(counts.Interview||0)+(counts.Offer||0)}/>
@@ -133,4 +135,65 @@ export function StatusPage(){
     {viewingAnswers&&<AnswersModal app={viewingAnswers.app} job={viewingAnswers.job} onClose={()=>setViewingAnswers(null)}/>}
     {viewingHistory&&<HistoryModal app={viewingHistory} onClose={()=>setViewingHistory(null)}/>}
   </Page>;
+}
+
+/* Upcoming interviews summary card, rendered at the top of the seeker's Status page.
+   The reported gap: once an employer scheduled an interview, the seeker "had nothing on
+   their end" — the Interviews page existed but lived under a mobile account menu, so
+   nothing on the home surface (Status is the seeker's dashboard) told them anything had
+   happened. This card is the one-glance answer: title, time, mode, "Add to calendar"
+   and "Message" quick actions. Hidden when there is nothing to show — no empty state
+   here, because the whole page already has one for zero applications. */
+function UpcomingInterviewsCard(){
+  const A=use(); const {t}=useTranslation();
+  if(!A.user)return null;
+  const upcoming=(A.interviews||[])
+    .filter(iv=>iv.candidate===A.user.id&&iv.status!=="cancelled")
+    .sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+  if(!upcoming.length)return null;
+  const dl=(iv)=>{
+    // Minimal iCal for the schedule the operator typed. `when_text` is free-form
+    // (e.g. "Thursday 2pm"), so we can't compute an exact start; drop it into DESCRIPTION
+    // and give the event a "today" date so most calendar clients accept the file. This is
+    // strictly better than the pre-existing zero: the seeker can open the .ics, see the
+    // details, and reschedule to the real slot themselves.
+    const j=A.job(iv.job); const e=A.emp(iv.employer);
+    const stamp=(d)=>d.toISOString().replace(/[-:]/g,"").replace(/\.\d{3}/,"");
+    const now=new Date(); const end=new Date(now.getTime()+45*60000);
+    const ics=[
+      "BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//NorthHire//EN","BEGIN:VEVENT",
+      `UID:${iv.id}@northhire`,`DTSTAMP:${stamp(now)}`,`DTSTART:${stamp(now)}`,`DTEND:${stamp(end)}`,
+      `SUMMARY:${(j?.t||"Interview").replace(/[,;\n]/g," ")} — ${e?.name||""}`,
+      `DESCRIPTION:${(iv.when||"").replace(/[,;\n]/g," ")}${iv.notes?" — "+iv.notes.replace(/[,;\n]/g," "):""}`,
+      "END:VEVENT","END:VCALENDAR",
+    ].join("\r\n");
+    const blob=new Blob([ics],{type:"text/calendar"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a"); a.href=url; a.download=`interview-${iv.id}.ics`; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+  };
+  return <div className="mb-5 border border-brand/25 bg-brand/5 rounded-2xl p-4">
+    <div className="flex items-center gap-2 mb-3">
+      <span className="w-8 h-8 rounded-full bg-brand text-white flex items-center justify-center"><I n="calendar" s={16}/></span>
+      <div className="font-bold text-text tracking-tight">{t("seeker.status.upcomingInterviewsTitle")}</div>
+      <div className="ml-auto text-xs text-text-3">{t("seeker.status.upcomingInterviewsCount",{n:upcoming.length})}</div>
+    </div>
+    <div className="flex flex-col gap-2">
+      {upcoming.slice(0,3).map(iv=>{const j=A.job(iv.job); const e=A.emp(iv.employer);
+        return <div key={iv.id} className="bg-white border border-line rounded-xl px-3 py-2.5 flex items-center gap-3 flex-wrap">
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold text-text truncate">{j?.t||t("interviews.interviewDefault")} — {e?.name||""}</div>
+            <div className="text-xs text-text-2 mt-0.5">
+              <strong>{iv.when||"—"}</strong> · {iv.mode==="video"?t("interviews.videoCall"):t("interviews.onSiteInterview")}
+              {iv.notes?` · ${iv.notes}`:""}
+            </div>
+          </div>
+          <div className="flex gap-1.5 shrink-0">
+            <Btn kind="ghost" size="xs" icon="download" onClick={()=>dl(iv)}>{t("seeker.status.addToCalendarBtn")}</Btn>
+            <Btn kind="outline" size="xs" icon="mail" onClick={()=>A.go("messages")}>{t("seeker.status.messageHiringMgrBtn")}</Btn>
+          </div>
+        </div>;})}
+      {upcoming.length>3&&<button onClick={()=>A.go("interviews")} className="self-start bg-transparent border-0 p-0 cursor-pointer text-sm font-semibold text-brand underline">{t("seeker.status.viewAllInterviewsBtn",{n:upcoming.length})}</button>}
+    </div>
+  </div>;
 }

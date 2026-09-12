@@ -2886,6 +2886,10 @@ export const fr = {
       withdrawRestoreNote: "Vous pouvez la restaurer dans les 7 jours depuis cette page si vous changez d'avis.",
       reasonOptionalLabel: "Raison (facultatif)", reasonOptionalHint: "Partagée avec l'employeur pour qu'il comprenne pourquoi, si vous le souhaitez.",
       reasonPlaceholder: "p. ex. Offre acceptée ailleurs",
+      upcomingInterviewsTitle: "Entrevues à venir",
+      upcomingInterviewsCount: "{n} prévue·s",
+      addToCalendarBtn: "Ajouter au calendrier", messageHiringMgrBtn: "Message",
+      viewAllInterviewsBtn: "Voir toutes les {n}",
     },
     apply: {
       stepProfile: "Votre profil", stepQuestions: "Questions", stepReview: "Révision",

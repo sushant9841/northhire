@@ -2767,6 +2767,10 @@ export const en = {
       withdrawRestoreNote: "You can restore it within 7 days from this page if you change your mind.",
       reasonOptionalLabel: "Reason (optional)", reasonOptionalHint: "Shared with the employer so they know why, if you'd like.",
       reasonPlaceholder: "e.g. Accepted another offer",
+      upcomingInterviewsTitle: "Upcoming interviews",
+      upcomingInterviewsCount: "{n} scheduled",
+      addToCalendarBtn: "Add to calendar", messageHiringMgrBtn: "Message",
+      viewAllInterviewsBtn: "View all {n}",
     },
     apply: {
       stepProfile: "Your profile", stepQuestions: "Questions", stepReview: "Review",
