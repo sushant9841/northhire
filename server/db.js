@@ -901,6 +901,12 @@ for (const stmt of [
   // P4 deferred item #16 - annual pricing: every subscription-checkout invoice records which
   // billing cycle the customer chose so the receipt/portal shows year-vs-month correctly.
   "ALTER TABLE employer_invoices ADD COLUMN billing_cycle TEXT DEFAULT 'monthly'",
+  // P4 deferred #15 - editable approval chains. First approver id is stamped on the row so a
+  // dual-approval threshold (an amount above which two distinct approvers must agree) can enforce
+  // that the second decision is by a different person. Legacy rows keep NULL and behave as
+  // single-approval, unchanged.
+  "ALTER TABLE hr_leave ADD COLUMN first_approved_by TEXT",
+  "ALTER TABLE hr_expenses ADD COLUMN first_approved_by TEXT",
 ]) {
   try { db.exec(stmt); } catch (e) { if (!/duplicate column/i.test(e.message)) console.error("migration:", stmt, e.message); }
 }

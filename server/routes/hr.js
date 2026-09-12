@@ -81,6 +81,50 @@ function canDecideFor(hrEmployee, targetEmployeeId) {
   return isPriv(hrEmployee) || target.manager === hrEmployee.id;
 }
 
+/* P4 deferred #15 - editable approval chains. Reads the company settings' approvalChains blob
+   (edited from HR Settings) and answers the two questions the two decide-endpoints ask:
+   "may this HR user approve this row" and (for expenses) "is a second approver required for
+   this amount". If no chain is configured for a workflow, the legacy canDecideFor rule stands.
+   Delegations let an approver route their approvals to a colleague during PTO for a date range;
+   a delegate can approve on the delegator's behalf without appearing in the chain itself. */
+function getCompanySettings(companyId) {
+  const row = db.prepare("SELECT settings_json FROM hr_company_settings WHERE company_id = ?").get(companyId);
+  return row ? JSON.parse(row.settings_json) : null;
+}
+function activeDelegateFor(settings, delegatorId) {
+  const d = settings?.delegations?.[delegatorId];
+  if (!d?.toId) return null;
+  const today = new Date().toISOString().slice(0, 10);
+  if (d.from && d.from > today) return null;
+  if (d.to && d.to < today) return null;
+  return d.toId;
+}
+function chainApprovers(settings, workflow) {
+  const list = settings?.approvalChains?.[workflow]?.approvers;
+  return Array.isArray(list) ? list.filter(x => typeof x === "string") : [];
+}
+export function canDecideByChain(hrEmployee, targetEmployeeId, workflow) {
+  const settings = getCompanySettings(hrEmployee.company_id);
+  const approvers = chainApprovers(settings, workflow);
+  // No chain configured -> fall back to the legacy manager+HR rule (fully backwards compatible).
+  if (!approvers.length) return canDecideFor(hrEmployee, targetEmployeeId);
+  if (approvers.includes(hrEmployee.id)) return canDecideFor(hrEmployee, targetEmployeeId);
+  // Delegate check: any listed approver can name a stand-in during a date range, and that
+  // stand-in acts with the same rights as the delegator - so a listed approver going on PTO
+  // doesn't jam the queue.
+  for (const approverId of approvers) {
+    if (activeDelegateFor(settings, approverId) === hrEmployee.id) return canDecideFor(hrEmployee, targetEmployeeId);
+  }
+  return false;
+}
+export function requiresDualApproval(companyId, workflow, amount) {
+  const settings = getCompanySettings(companyId);
+  const chain = settings?.approvalChains?.[workflow];
+  if (!chain) return false;
+  const threshold = Number(chain.dualThreshold || 0);
+  return threshold > 0 && Number(amount || 0) >= threshold;
+}
+
 // Each employee's own visibility_json (salary/phone/birthDate/email/manager) was previously only
 // enforced by a client-side helper (hrPublicProfile) run on data the browser already had in full -
 // any colleague could read the raw network response and see every hidden field regardless of the
@@ -460,8 +504,19 @@ hrRouter.post("/leave", requireHrAuth, (req, res) => {
 hrRouter.patch("/leave/:id/decide", requireHrAuth, async (req, res) => {
   const row = db.prepare("SELECT * FROM hr_leave WHERE id = ?").get(req.params.id);
   if (!row) return res.status(404).json({ error: "Leave request not found." });
-  if (!canDecideFor(req.hrEmployee, row.employee_id)) return res.status(403).json({ error: "Only this employee's manager or HR can decide this request." });
-  db.prepare("UPDATE hr_leave SET status = ?, approved_by = ? WHERE id = ?").run(req.body?.decision, req.hrEmployee.id, req.params.id);
+  if (!canDecideByChain(req.hrEmployee, row.employee_id, "leave")) return res.status(403).json({ error: "You aren't on this workflow's approval chain." });
+  // Dual approval: threshold expressed as days of leave for the leave workflow. First "approved"
+  // decision stamps first_approved_by but keeps status pending; the second must be a different
+  // person. A "denied" decision short-circuits (single denial is final).
+  const decision = req.body?.decision;
+  if (decision === "approved" && requiresDualApproval(req.hrEmployee.company_id, "leave", row.days) && !row.first_approved_by) {
+    db.prepare("UPDATE hr_leave SET first_approved_by = ? WHERE id = ?").run(req.hrEmployee.id, req.params.id);
+    return res.json({ leave: serializeHrLeave(db.prepare("SELECT * FROM hr_leave WHERE id = ?").get(req.params.id)), awaitingSecond: true });
+  }
+  if (decision === "approved" && row.first_approved_by && row.first_approved_by === req.hrEmployee.id) {
+    return res.status(400).json({ error: "This request needs a second, different approver." });
+  }
+  db.prepare("UPDATE hr_leave SET status = ?, approved_by = ? WHERE id = ?").run(decision, req.hrEmployee.id, req.params.id);
   const emp = db.prepare("SELECT name, email, erased FROM hr_employees WHERE id = ?").get(row.employee_id);
   if (emp && !emp.erased) {
     await sendAndLogMail(emp.email, `Your ${row.type} leave request was ${req.body?.decision}`,
@@ -625,8 +680,19 @@ hrRouter.post("/expenses", requireHrAuth, (req, res) => {
 hrRouter.patch("/expenses/:id/decide", requireHrAuth, (req, res) => {
   const target = db.prepare("SELECT * FROM hr_expenses WHERE id = ?").get(req.params.id);
   if (!target) return res.status(404).json({ error: "Expense claim not found." });
-  if (!canDecideFor(req.hrEmployee, target.employee_id)) return res.status(403).json({ error: "Only this employee's manager or HR can decide this claim." });
+  if (!canDecideByChain(req.hrEmployee, target.employee_id, "expense")) return res.status(403).json({ error: "You aren't on this workflow's approval chain." });
   const { decision, reason } = req.body || {};
+  // Dual-approval on the expense workflow: amount above the configured threshold requires two
+  // distinct approvers. The first "approved" is stamped in first_approved_by and status stays
+  // submitted; the second must be a different HR employee and finalizes the row. A "rejected"
+  // decision is single-step regardless of amount.
+  if (decision === "approved" && requiresDualApproval(req.hrEmployee.company_id, "expense", target.amount) && !target.first_approved_by) {
+    db.prepare("UPDATE hr_expenses SET first_approved_by = ? WHERE id = ?").run(req.hrEmployee.id, req.params.id);
+    return res.json({ expense: serializeHrExpense(db.prepare("SELECT * FROM hr_expenses WHERE id = ?").get(req.params.id)), awaitingSecond: true });
+  }
+  if (decision === "approved" && target.first_approved_by && target.first_approved_by === req.hrEmployee.id) {
+    return res.status(400).json({ error: "This claim needs a second, different approver." });
+  }
   db.prepare("UPDATE hr_expenses SET status = ?, approved_by = ?, approved_at = CASE WHEN ? = 'approved' THEN datetime('now') ELSE approved_at END, reject_reason = ? WHERE id = ?")
     .run(decision, req.hrEmployee.id, decision, reason || null, req.params.id);
   res.json({ expense: serializeHrExpense(db.prepare("SELECT * FROM hr_expenses WHERE id = ?").get(req.params.id)) });

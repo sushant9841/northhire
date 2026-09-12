@@ -1971,31 +1971,80 @@ export function HrSettings(){
   const setMod=(m,v)=>setD(p=>({...p,modules:{...p.modules,[m]:v}}));
   const setSection=(sec,k,v)=>setD(p=>({...p,[sec]:{...p[sec],[k]:v}}));
 
+  /* P4 deferred #15 - editable approval chains. Persisted at
+     settings.approvalChains[workflow] = { approvers: [hrEmployeeId, ...], dualThreshold }
+     and settings.delegations[approverId] = { toId, from, to }. The server's canDecideByChain +
+     requiresDualApproval read exactly this shape - see server/routes/hr.js. Empty approver list
+     for a workflow means "fall back to the legacy manager+HR rule" (backwards compatible). */
+  const chains=d.approvalChains||{};
+  const setChain=(wf,patch)=>setD(p=>({...p,approvalChains:{...(p.approvalChains||{}),[wf]:{...(p.approvalChains?.[wf]||{approvers:[],dualThreshold:0}),...patch}}}));
+  const delegations=d.delegations||{};
+  const setDelegation=(fromId,patch)=>setD(p=>{
+    const next={...(p.delegations||{})};
+    if(patch===null){delete next[fromId];}
+    else next[fromId]={...(next[fromId]||{}),...patch};
+    return {...p,delegations:next};
+  });
+  const activeEmps=(A.hrEmployees||[]).filter(e=>e.companyId===company.id&&e.status==="active");
+  const empName=id=>activeEmps.find(e=>e.id===id)?.name||id;
+
   return <div style={{maxWidth:900}}>
-    {/* Approval-chain visualisation: shows what actions require which approvers, derived from
-        the same routing the server enforces. Was implicit in code (leave/expense approvers,
-        payroll executor, invoice-paid role) - reading this off route guards is what an admin
-        actually wants to see, not a piece of documentation that could drift from the code. */}
     <Card pad={mob?20:26} style={{borderRadius:16,marginBottom:16}}>
       <Lbl>{t("hr.settings.approvalChains")}</Lbl>
-      <div className="text-sm text-text-3 mb-3.5">{t("hr.settings.approvalChainsDesc")}</div>
-      <div className="flex flex-col gap-2">
-        {[
-          ["Leave request","The employee's direct manager, or any HR/Owner if no manager is set."],
-          ["Expense claim","The employee's direct manager approves; Finance or HR/Owner marks it paid (a separate role, kept distinct from approval)."],
-          ["Payroll execution","Owner, HR, or Finance can approve a run; Owner or Finance executes it."],
-          ["Invoice paid","Owner, HR, or Finance marks an invoice paid. Reversal is Owner/Finance only, with a required reason."],
-          ["Role change (demote Owner)","Cannot demote the last remaining Owner - blocked with a toast, not a silent no-op."],
-          ["Offboarding","Owner or HR runs the checklist. Manager on the person's chain does not by itself have offboarding rights."],
-          ["1:1 notes","Manager + report can log and read. HR/Owner can also read (for coaching and compliance). No other colleague can."],
-        ].map(([action,rule])=>
-          <div key={action} className="flex gap-3 items-start py-2.5 px-3 bg-bg rounded-lg">
-            <div className="w-9 h-9 rounded-lg bg-brand-wash text-brand flex items-center justify-center shrink-0"><I n="shield" s={16}/></div>
-            <div className="min-w-0">
-              <div className="text-sm font-semibold text-text">{action}</div>
-              <div className="text-xs text-text-2 mt-0.5 leading-relaxed">{rule}</div>
-            </div>
+      <div className="text-sm text-text-3 mb-3.5">{t("hr.settings.approvalChainsEditableDesc")}</div>
+      {[["leave",t("hr.settings.workflowLeave"),t("hr.settings.workflowLeaveHelp"),t("hr.settings.dualThresholdLeaveHint"),"days"],
+        ["expense",t("hr.settings.workflowExpense"),t("hr.settings.workflowExpenseHelp"),t("hr.settings.dualThresholdExpenseHint"),"$"]].map(([wf,label,help,thresholdHelp,unit])=>{
+        const c=chains[wf]||{approvers:[],dualThreshold:0};
+        const move=(i,dir)=>{const next=[...c.approvers];const j=i+dir;if(j<0||j>=next.length)return;[next[i],next[j]]=[next[j],next[i]];setChain(wf,{approvers:next});};
+        const remove=i=>setChain(wf,{approvers:c.approvers.filter((_,k)=>k!==i)});
+        const add=id=>{if(!id||c.approvers.includes(id))return;setChain(wf,{approvers:[...c.approvers,id]});};
+        const eligible=activeEmps.filter(e=>!c.approvers.includes(e.id));
+        return <div key={wf} className="mb-5 pb-5 border-b border-line-soft last:border-b-0 last:pb-0 last:mb-0">
+          <div className="text-sm font-bold text-text mb-1">{label}</div>
+          <div className="text-xs text-text-3 mb-3">{help}</div>
+          {c.approvers.length===0
+            ? <div className="text-xs text-text-3 italic py-2 px-3 bg-bg rounded-lg">{t("hr.settings.chainDefaultFallback")}</div>
+            : <div className="flex flex-col gap-1.5">
+                {c.approvers.map((id,i)=>
+                  <div key={id} className="flex gap-2 items-center py-2 px-3 bg-bg rounded-lg">
+                    <span className="text-xs text-text-3 font-semibold w-6">#{i+1}</span>
+                    <span className="text-sm text-text font-medium grow min-w-0 truncate">{empName(id)}</span>
+                    <Btn kind="ghost" size="xs" disabled={i===0} onClick={()=>move(i,-1)} aria-label={t("hr.settings.moveUp")}>↑</Btn>
+                    <Btn kind="ghost" size="xs" disabled={i===c.approvers.length-1} onClick={()=>move(i,1)} aria-label={t("hr.settings.moveDown")}>↓</Btn>
+                    <Btn kind="ghost" size="xs" onClick={()=>remove(i)} aria-label={t("hr.settings.removeApprover")}>×</Btn>
+                  </div>)}
+              </div>}
+          <div className="flex gap-2 items-center mt-2">
+            <Sel value="" onChange={e=>add(e.target.value)} style={{maxWidth:260}}>
+              <option value="">{t("hr.settings.addApprover")}</option>
+              {eligible.map(e=><option key={e.id} value={e.id}>{e.name}</option>)}
+            </Sel>
+            <Field label={t("hr.settings.dualThresholdLabel",{unit})} style={{maxWidth:180}}>
+              <Input type="number" min="0" value={c.dualThreshold||0} onChange={e=>setChain(wf,{dualThreshold:Number(e.target.value)||0})}/>
+            </Field>
+          </div>
+          <div className="text-xs text-text-3 mt-1">{thresholdHelp}</div>
+        </div>;
+      })}
+      <div className="mt-4 pt-4 border-t border-line-soft">
+        <div className="text-sm font-bold text-text mb-1">{t("hr.settings.delegationsTitle")}</div>
+        <div className="text-xs text-text-3 mb-3">{t("hr.settings.delegationsDesc")}</div>
+        {Object.entries(delegations).map(([fromId,dg])=>
+          <div key={fromId} className="flex flex-wrap gap-2 items-end py-2 px-3 bg-bg rounded-lg mb-1.5">
+            <Field label={t("hr.settings.delegationFrom")} style={{minWidth:140}}>
+              <Sel value={fromId} onChange={e=>{const v=e.target.value;if(v===fromId)return;setDelegation(fromId,null);setDelegation(v,dg);}}>
+                {activeEmps.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}
+              </Sel></Field>
+            <Field label={t("hr.settings.delegationTo")} style={{minWidth:140}}>
+              <Sel value={dg.toId||""} onChange={e=>setDelegation(fromId,{toId:e.target.value})}>
+                <option value="">{t("hr.settings.selectDelegate")}</option>
+                {activeEmps.filter(x=>x.id!==fromId).map(x=><option key={x.id} value={x.id}>{x.name}</option>)}
+              </Sel></Field>
+            <Field label={t("hr.settings.delegationFromDate")}><Input type="date" value={dg.from||""} onChange={e=>setDelegation(fromId,{from:e.target.value||null})}/></Field>
+            <Field label={t("hr.settings.delegationToDate")}><Input type="date" value={dg.to||""} onChange={e=>setDelegation(fromId,{to:e.target.value||null})}/></Field>
+            <Btn kind="ghost" size="xs" onClick={()=>setDelegation(fromId,null)}>{t("hr.settings.removeDelegation")}</Btn>
           </div>)}
+        <Btn kind="outline" size="xs" icon="plus" onClick={()=>{const first=activeEmps.find(e=>!delegations[e.id]);if(first)setDelegation(first.id,{toId:"",from:null,to:null});}}>{t("hr.settings.addDelegation")}</Btn>
       </div>
     </Card>
 

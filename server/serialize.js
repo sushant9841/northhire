@@ -254,7 +254,7 @@ export function serializeHrAttendance(row) {
 export function serializeHrLeave(row) {
   if (!row) return null;
   return { id: row.id, employee: row.employee_id, type: row.type, from: row.from_date, to: row.to_date, days: row.days,
-    status: row.status, reason: row.reason, approvedBy: row.approved_by, requestedAt: sqlTime(row.requested_at).getTime() };
+    status: row.status, reason: row.reason, approvedBy: row.approved_by, firstApprovedBy: row.first_approved_by || null, requestedAt: sqlTime(row.requested_at).getTime() };
 }
 export function serializeHrTask(row) {
   if (!row) return null;
@@ -284,7 +284,7 @@ export function serializeHrExpense(row) {
     status: row.status, submitted: sqlTime(row.submitted_at).getTime(), approvedBy: row.approved_by,
     approvedAt: row.approved_at ? sqlTime(row.approved_at).getTime() : null,
     paidAt: row.paid_at ? sqlTime(row.paid_at).getTime() : null,
-    rejectReason: row.reject_reason, reimburseVia: row.reimburse_via };
+    rejectReason: row.reject_reason, reimburseVia: row.reimburse_via, firstApprovedBy: row.first_approved_by || null };
 }
 export function serializeHrPayrun(row) {
   if (!row) return null;
