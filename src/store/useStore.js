@@ -447,6 +447,26 @@ export function useStore(){
      navigate in the same tick — reading the id back from state would still see the stale
      pre-update value, since state setters don't apply mid-render). */
   const _idStateValues={jobId,empId,blogId,trainingId,candidateId,cvId,editId,inviteToken,offerToken};
+  /* Per-history-entry scroll memory: keyed by the {depth} every pushState carries, so
+     forward navigation (go()) always lands at the top of the new page while native
+     back/forward (popstate) restores whatever scroll position that page was at when the
+     visitor left it. A passive scroll listener keeps the current depth's entry fresh -
+     saving only at navigation time would miss whatever the visitor scrolled to since the
+     last nav. This is scoped to window/document scroll only; sidebar nav has its own
+     independent overflow-y-auto container and is never touched by window.scrollTo, so its
+     scrollTop already survives route changes untouched. */
+  const scrollPosRef=useRef({});
+  const currentDepthRef=useRef(0);
+  useEffect(()=>{
+    if(typeof window==="undefined")return;
+    let raf=null;
+    const onScroll=()=>{
+      if(raf)return;
+      raf=requestAnimationFrame(()=>{raf=null;scrollPosRef.current[currentDepthRef.current]=window.scrollY;});
+    };
+    window.addEventListener("scroll",onScroll,{passive:true});
+    return ()=>{window.removeEventListener("scroll",onScroll);if(raf)cancelAnimationFrame(raf);};
+  },[]);
   const go=(p,title,idOverride)=>{
     const r=ROUTES[p];
     if(r?.roles&&(!user||!r.roles.includes(user.role))){setStack(s=>[...s,pg]);setPg("denied");setPageTitle(null);return;}
@@ -462,8 +482,10 @@ export function useStore(){
       const path=buildPath(ROUTES,p,id)||"/";
       const depth=(window.history.state?.depth||0)+1;
       window.history.pushState({depth,pg:p,id},"",path);
+      currentDepthRef.current=depth;
     }
     setStack(s=>[...s,pg]); setPg(p); setPageTitle(title||null);
+    /* Always a brand-new page in the stack (never a revisit), so it always starts at top. */
     if(typeof window!=="undefined")window.scrollTo?.(0,0);
   };
   /* Browser-native back/forward is now the source of truth (see the popstate effect below) -
@@ -491,7 +513,14 @@ export function useStore(){
       if(idKey)SETTER_FOR_ID_KEY[idKey]?.(id2);
       setPg(pg2); setPageTitle(null);
       setStack(s=>s.length?s.slice(0,-1):s);
-      window.scrollTo?.(0,0);
+      /* Native back/forward: restore that entry's remembered scroll (set by the passive
+         scroll listener while it was previously visited), instead of always snapping to
+         top - a fresh depth we've never seen (e.g. forward into an entry from a previous
+         session) has nothing recorded, so it falls back to top. */
+      const depth2=state?.depth||0;
+      currentDepthRef.current=depth2;
+      const saved=scrollPosRef.current[depth2];
+      requestAnimationFrame(()=>window.scrollTo?.(0,saved||0));
     };
     window.addEventListener("popstate",onPopState);
     return ()=>window.removeEventListener("popstate",onPopState);
