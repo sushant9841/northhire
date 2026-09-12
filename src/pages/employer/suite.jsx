@@ -497,7 +497,7 @@ function _PipelineCard({a,u,s,idx,selected,tog,A,notice,stages,t}){
 function _PipelineColumn({stage,items,job,sel,tog,selectStage,A,mob,stages,t}){
   const {setNodeRef,isOver}=useDroppable({id:stage});
   const allSelected=items.length>0&&items.every(a=>sel.has(a.id));
-  return <div ref={setNodeRef} className={`${mob?"w-44":"w-46"} flex flex-col gap-2 rounded-2xl transition-colors duration-150`}
+  return <div ref={setNodeRef} className={`${mob?"w-52":"flex-1 min-w-56"} flex flex-col gap-2 rounded-2xl transition-colors duration-150`}
     style={{background:isOver?C.tint:"transparent",padding:isOver?5:0}}>
     <div className="flex items-center justify-between px-1">
       <span className="text-xs font-bold text-text-2 uppercase tracking-wide">{applicationStageLabel(stage,t)}</span>
@@ -525,9 +525,13 @@ function _PipelineBoard({apps,job,sel,tog,selectStage,A,mob,stages,t}){
     const app=apps.find(a=>a.id===active.id);
     if(app&&app.stage!==over.id)A.moveApp(active.id,over.id);
   };
-  return <div className={`flex-1 overflow-x-auto ${mob?"p-2.5":"p-3"}`}>
+  /* No left/right padding on desktop — the sidebar and dashboard shell already provide the
+     outer gutter, and any extra padding here just squeezes the cards for no visual gain. On
+     desktop columns flex to fill the available width; on mobile they keep a fixed width and
+     the container scrolls horizontally. */
+  return <div className={`flex-1 ${mob?"overflow-x-auto p-2.5":"py-3"}`}>
     <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-      <div className="flex gap-2 items-start" style={{minWidth:"max-content"}}>
+      <div className={`flex gap-2 items-start ${mob?"":"w-full"}`} style={mob?{minWidth:"max-content"}:undefined}>
         {stages.map(stage=><_PipelineColumn key={stage} stage={stage} items={apps.filter(a=>a.stage===stage)}
           job={job} sel={sel} tog={tog} selectStage={selectStage} A={A} mob={mob} stages={stages} t={t}/>)}
       </div>
