@@ -152,6 +152,24 @@ export function useStaffingStore(user,platformConfig){
     setWorkers(l=>l.map(x=>x.id===id?w:x));
     return {ok:true,amount};
   };
+  /* P4 deferred #5 - bench bulk actions. Both hit thin server endpoints that expand the id list
+     into a transaction so a partial success can't leave the bench half-updated. */
+  const bulkMarkUnavailable=async(ids,reason)=>{
+    if(!ids?.length)return {ok:false,msg:"No workers selected."};
+    try{
+      const {workers:rows,count}=await api.post("/staffing/workers/bulk-mark-unavailable",{ids,reason:reason||null});
+      const byId=Object.fromEntries(rows.map(w=>[w.id,w]));
+      setWorkers(l=>l.map(w=>byId[w.id]||w));
+      return {ok:true,count};
+    }catch(e){return {ok:false,msg:e.message};}
+  };
+  const bulkMessageWorkers=async(ids,body,subject)=>{
+    if(!ids?.length||!body?.trim())return {ok:false,msg:"Select workers and enter a message."};
+    try{
+      const {sent,skipped}=await api.post("/staffing/workers/bulk-message",{ids,body,subject:subject||null});
+      return {ok:true,sent,skipped};
+    }catch(e){return {ok:false,msg:e.message};}
+  };
   const setWorkerAvailability=async(id,availability)=>{
     if(agencyStaff)return updateWorker(id,{availability});
     const {worker:w}=await api.patch("/staffing/my/availability",{availability});
@@ -404,7 +422,7 @@ export function useStaffingStore(user,platformConfig){
     worker,workerByPersonId,staffingClient,staffingClientByEmployerId,jobOrder,assignment,timesheet,
     workerAssignments,activeAssignments,clientAssignments,clientTimesheets,workerTimesheets,openJobOrders,
     agencyLogin,agencyLogout,agencyCurrentStaff,agencyAuthChecked,agencyResetRequest,agencyResetConfirm,STAFFING_AGENCY,STAFFING_RATES,
-    optInAsWorker,updateWorker,setWorkerAvailability,payoutVacation,
+    optInAsWorker,updateWorker,setWorkerAvailability,payoutVacation,bulkMarkUnavailable,bulkMessageWorkers,
     createJobOrder,updateJobOrder,closeJobOrder,
     submittals,loadSubmittals,submitWorker,updateSubmittal,
     createAssignment,updateAssignment,endAssignment,

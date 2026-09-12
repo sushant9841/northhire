@@ -699,6 +699,17 @@ export function AgencyBench(){
   const [q,setQ]=useState(""); const [prov,setProv]=useState("all"); const [avail,setAvail]=useState("all");
   const [ticketFilter,setTicketFilter]=useState("all"); const [rateMin,setRateMin]=useState(""); const [rateMax,setRateMax]=useState("");
   const [placing,setPlacing]=useState(null);
+  /* P4 deferred #5 - bench bulk actions. `selected` holds worker ids; the floating action bar
+     appears when selected.size>0 and offers mark-unavailable + broadcast-message. Both hit real
+     endpoints (bulkMarkUnavailable / bulkMessageWorkers on the store) with proper transactions
+     server-side. */
+  const [selected,setSelected]=useState(()=>new Set());
+  const [bulkModal,setBulkModal]=useState(null); // 'unavailable' | 'message'
+  const [bulkBody,setBulkBody]=useState("");
+  const [bulkSubject,setBulkSubject]=useState("");
+  const [bulkBusy,setBulkBusy]=useState(false);
+  const toggleRow=id=>setSelected(s=>{const n=new Set(s);n.has(id)?n.delete(id):n.add(id);return n;});
+  const clearSelection=()=>setSelected(new Set());
   // Union of every ticket across the bench, so the filter offers what's actually there rather
   // than a hardcoded list that goes stale as new tickets appear.
   const allTickets=[...new Set(A.workers.flatMap(w=>w.tickets||[]))].sort();
@@ -749,13 +760,21 @@ export function AgencyBench(){
     </Card>
 
     <Card pad={0} style={{borderRadius:14,overflow:"hidden"}}>
-      <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:720}}>
+      <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:760}}>
         <thead><tr className="border-b-2 border-line text-left">
-          {t("staffing.bench.tableHeaders").map(h=>
+          <th className={TH_CLS} style={{width:36}}>
+            <input type="checkbox" aria-label={t("staffing.bench.selectAllOnPage")}
+              checked={pg.pageItems.length>0&&pg.pageItems.every(w=>selected.has(w.id))}
+              onChange={e=>{const on=e.target.checked;setSelected(s=>{const n=new Set(s);for(const w of pg.pageItems){on?n.add(w.id):n.delete(w.id);}return n;});}}/>
+          </th>
+          {(Array.isArray(t("staffing.bench.tableHeaders"))?t("staffing.bench.tableHeaders"):[]).map(h=>
             <th key={h} className={TH_CLS}>{h}</th>)}
         </tr></thead>
         <tbody>{pg.pageItems.map(w=>{const person=(A.people||[]).find(p=>p.id===w.personId);
-          return <tr key={w.id} className="border-b border-line-soft transition-colors duration-150 cursor-pointer hover:bg-bg" onClick={()=>A.go("agencyWorkers")}>
+          return <tr key={w.id} className={`border-b border-line-soft transition-colors duration-150 cursor-pointer hover:bg-bg ${selected.has(w.id)?"bg-brand-tint":""}`} onClick={()=>A.go("agencyWorkers")}>
+            <td className={TD_CLS} onClick={e=>{e.stopPropagation();toggleRow(w.id);}}>
+              <input type="checkbox" checked={selected.has(w.id)} onChange={()=>toggleRow(w.id)} onClick={e=>e.stopPropagation()} aria-label={t("staffing.bench.selectRow")}/>
+            </td>
             <td className={TD_CLS}>
               <div className="flex gap-2.5 items-center">
                 <SmartPortrait seed={person?.seed||0} size={30} radius={8}/>
@@ -788,12 +807,53 @@ export function AgencyBench(){
                 : <span className="text-xs text-text-3">—</span>}
             </td>
           </tr>;})}
-          {list.length===0&&<tr><td colSpan={7} className="p-5"><Empty icon="users" title={t("staffing.bench.emptyTitle")} body={t("staffing.bench.emptyBody")}/></td></tr>}
+          {list.length===0&&<tr><td colSpan={8} className="p-5"><Empty icon="users" title={t("staffing.bench.emptyTitle")} body={t("staffing.bench.emptyBody")}/></td></tr>}
         </tbody>
       </table></div>
     </Card>
     <Pagination {...pg}/>
     {placing&&<_PlaceFromBenchModal worker={placing} onClose={()=>setPlacing(null)} onPlace={()=>{A.toast(t("staffing.bench.placementCreated"),"ok");setPlacing(null);}}/>}
+    {selected.size>0&&<div className="fixed left-1/2 -translate-x-1/2 bottom-5 z-40 bg-ink text-white rounded-full shadow-lg pl-5 pr-2 py-2 flex items-center gap-3 flex-wrap max-w-[95vw]">
+      <span className="text-sm font-semibold">{t("staffing.bench.nSelected",{n:selected.size})}</span>
+      <Btn kind="onDark" size="xs" icon="mail" onClick={()=>{setBulkBody("");setBulkSubject("");setBulkModal("message");}}>{t("staffing.bench.bulkMessage")}</Btn>
+      <Btn kind="onDark" size="xs" icon="pause" onClick={()=>setBulkModal("unavailable")}>{t("staffing.bench.bulkMarkUnavailable")}</Btn>
+      <Btn kind="ghost" size="xs" onClick={clearSelection}>{t("staffing.bench.clearSelection")}</Btn>
+    </div>}
+    {bulkModal==="unavailable"&&<Modal onClose={()=>setBulkModal(null)} title={t("staffing.bench.bulkMarkUnavailable")}>
+      <div className="text-sm text-text-2 mb-3">{t("staffing.bench.bulkMarkUnavailableConfirm",{n:selected.size})}</div>
+      <Field label={t("staffing.bench.optionalReason")}>
+        <Input value={bulkBody} onChange={e=>setBulkBody(e.target.value)} placeholder={t("staffing.bench.reasonPlaceholder")}/>
+      </Field>
+      <div className="flex justify-end gap-2 mt-4">
+        <Btn kind="ghost" onClick={()=>setBulkModal(null)}>{t("staffing.bench.cancel")}</Btn>
+        <Btn kind="primary" disabled={bulkBusy} onClick={async()=>{
+          setBulkBusy(true);
+          const r=await A.bulkMarkUnavailable([...selected],bulkBody||null);
+          setBulkBusy(false);
+          if(r.ok){A.toast(t("staffing.bench.bulkMarkedUnavailable",{n:r.count}),"ok");clearSelection();setBulkModal(null);}
+          else A.toast(r.msg,"danger");
+        }}>{t("staffing.bench.confirmMarkUnavailable")}</Btn>
+      </div>
+    </Modal>}
+    {bulkModal==="message"&&<Modal onClose={()=>setBulkModal(null)} title={t("staffing.bench.bulkMessage")}>
+      <div className="text-sm text-text-2 mb-3">{t("staffing.bench.bulkMessageIntro",{n:selected.size})}</div>
+      <Field label={t("staffing.bench.messageSubject")}>
+        <Input value={bulkSubject} onChange={e=>setBulkSubject(e.target.value)} placeholder={t("staffing.bench.subjectPlaceholder")}/>
+      </Field>
+      <Field label={t("staffing.bench.messageBody")}>
+        <Area rows={5} value={bulkBody} onChange={e=>setBulkBody(e.target.value)} placeholder={t("staffing.bench.bodyPlaceholder")}/>
+      </Field>
+      <div className="flex justify-end gap-2 mt-4">
+        <Btn kind="ghost" onClick={()=>setBulkModal(null)}>{t("staffing.bench.cancel")}</Btn>
+        <Btn kind="primary" disabled={bulkBusy||!bulkBody.trim()} onClick={async()=>{
+          setBulkBusy(true);
+          const r=await A.bulkMessageWorkers([...selected],bulkBody,bulkSubject||undefined);
+          setBulkBusy(false);
+          if(r.ok){A.toast(t("staffing.bench.bulkMessageSent",{sent:r.sent,skipped:r.skipped}),"ok");clearSelection();setBulkModal(null);}
+          else A.toast(r.msg,"danger");
+        }}>{t("staffing.bench.sendMessage")}</Btn>
+      </div>
+    </Modal>}
   </div>;
 }
 

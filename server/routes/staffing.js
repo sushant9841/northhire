@@ -198,6 +198,45 @@ staffingRouter.patch("/workers/:id", requireAgencyAuth, (req, res) => {
   res.json({ worker: serializeWorker(db.prepare("SELECT * FROM staffing_workers WHERE id = ?").get(req.params.id)) });
 });
 
+/* P4 deferred #5: bench bulk actions. Two thin endpoints that expand a list of worker ids into
+   individual updates so the recruiter's floating action bar can act on many rows at once without
+   the client having to loop /workers/:id N times. Both endpoints run inside a transaction so
+   either every worker is touched or none is - a partial batch that half-updates the bench is a
+   worse UX than an outright failure with an error message. */
+staffingRouter.post("/workers/bulk-mark-unavailable", requireAgencyAuth, (req, res) => {
+  const ids = Array.isArray(req.body?.ids) ? req.body.ids.filter(x => typeof x === "string") : [];
+  if (!ids.length) return res.status(400).json({ error: "Select at least one worker." });
+  const reason = typeof req.body?.reason === "string" ? req.body.reason.slice(0, 240) : null;
+  const stmt = db.prepare("UPDATE staffing_workers SET availability = 'unavailable', notes = COALESCE(?, notes) WHERE id = ? AND status = 'active'");
+  const tx = db.transaction((rows) => { for (const id of rows) stmt.run(reason, id); });
+  tx(ids);
+  const updated = db.prepare(`SELECT * FROM staffing_workers WHERE id IN (${ids.map(() => "?").join(",")})`).all(...ids).map(serializeWorker);
+  res.json({ workers: updated, count: updated.length });
+});
+
+staffingRouter.post("/workers/bulk-message", requireAgencyAuth, (req, res) => {
+  const ids = Array.isArray(req.body?.ids) ? req.body.ids.filter(x => typeof x === "string") : [];
+  const body = typeof req.body?.body === "string" ? req.body.body.trim() : "";
+  if (!ids.length || !body) return res.status(400).json({ error: "Select workers and enter a message." });
+  // Delivered as one notifications row per recipient - the worker sees it in their in-app bell
+  // menu (linked to their status page). We route by person_id (the seeker's user id); workers
+  // without a linked user account are skipped and reported so the recruiter knows the real reach.
+  // Notifications is the right table because agency_staff isn't in users, so the messages table's
+  // NOT NULL from_user_id can't be satisfied without inventing a synthetic account.
+  const rows = db.prepare(`SELECT id, person_id FROM staffing_workers WHERE id IN (${ids.map(() => "?").join(",")}) AND status = 'active'`).all(...ids);
+  const targets = rows.filter(r => r.person_id);
+  const skipped = rows.length - targets.length;
+  const title = typeof req.body?.subject === "string" ? req.body.subject.slice(0, 200) : "A message from your staffing agency";
+  const insert = db.prepare("INSERT INTO notifications (id, for_value, icon, title, body, link) VALUES (?, ?, 'mail', ?, ?, '/status')");
+  const tx = db.transaction((list) => {
+    for (const w of list) {
+      insert.run(nextId("nfy", "notifications"), w.person_id, title, body.slice(0, 2000));
+    }
+  });
+  tx(targets);
+  res.json({ sent: targets.length, skipped });
+});
+
 staffingRouter.patch("/workers/:id/payout-vacation", requireAgencyAuth, (req, res) => {
   const row = db.prepare("SELECT * FROM staffing_workers WHERE id = ?").get(req.params.id);
   if (!row) return res.status(404).json({ error: "Worker not found." });
