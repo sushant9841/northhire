@@ -1158,6 +1158,7 @@ export const fr = {
       included: "Inclus", managerDescription: "Votre forfait comprend un gestionnaire de compte canadien nommé et une réponse prioritaire. Rejoignez-les à enterprise@northhire.ca — citez le nom de votre entreprise et nous l'acheminerons à votre gestionnaire plutôt qu'à la file d'attente générale.",
       standardSupport: "Vous bénéficiez du support standard — envoyez-nous un courriel à support@northhire.ca et nous répondons dans l'ordre reçu. Enterprise ajoute un gestionnaire de compte nommé et une réponse prioritaire.",
       enterpriseSupport: "Ce que le support Enterprise ajoute", invoices: "Factures", printSaveAsPDF: "Imprimer / Enregistrer en PDF",
+      annualCycle: "Annuel",
     },
     analytics: {
       analyticsTitle: "Analytique", analyticsTag: "Analytique", analyticsHeader: "Comment va votre embauche.", analyticsSubtitle: "Chiffres en direct de vos annonces.",

@@ -1156,6 +1156,7 @@ export const en = {
       included: "Included", managerDescription: "Your plan includes a named Canadian account manager and priority response. Reach them at enterprise@northhire.ca — quote your company name and we'll route it to your manager rather than the general queue.",
       standardSupport: "You're on standard support — email us at support@northhire.ca and we answer in the order received. Enterprise adds a named account manager and priority response.",
       enterpriseSupport: "What Enterprise support adds", invoices: "Invoices", printSaveAsPDF: "Print / Save as PDF",
+      annualCycle: "Annual",
     },
     analytics: {
       analyticsTitle: "Analytics", analyticsTag: "Analytics", analyticsHeader: "How your hiring is doing.", analyticsSubtitle: "Live numbers from your postings.",

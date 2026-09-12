@@ -1671,7 +1671,7 @@ export function EmpBilling(){
   const price=A.PLANS[plan]?.price||0;
   const nextRenewal=(()=>{const d=new Date();d.setMonth(d.getMonth()+1,1);return formatDate(d,locale,{day:"numeric",month:"long",year:"numeric"});})();
   const invoices=A.employerInvoices.map(inv=>({id:inv.id,date:formatDate(inv.createdAt,locale,{day:"numeric",month:"short",year:"numeric"}),
-    amt:inv.amountPretax,tax:inv.tax,taxLabel:inv.taxLabel,total:inv.total,plan:inv.plan}));
+    amt:inv.amountPretax,tax:inv.tax,taxLabel:inv.taxLabel,total:inv.total,plan:inv.plan,billingCycle:inv.billingCycle||"monthly"}));
   // Lands here on the real redirect back from Stripe Checkout (see server/stripe.js's success_url)
   // - verifies the session server-side (never trusts the URL alone) and shows the outcome once,
   // then strips the query string so a refresh of this page doesn't re-verify the same session.
@@ -1730,11 +1730,11 @@ export function EmpBilling(){
     </Card>
 
     {invoices.length>0&&<Card style={{borderRadius:20}}><H2>{t("employer.billing.invoices")}</H2>
-      {invoices.map(({id,date,amt,tax,taxLabel,total,plan:invPlan})=>
+      {invoices.map(({id,date,amt,tax,taxLabel,total,plan:invPlan,billingCycle})=>
         <div key={id} className="flex items-center gap-3.5 py-3 border-b border-line-soft flex-wrap">
           <div className="grow shrink basis-35 min-w-0">
             <div className="text-sm font-semibold text-text">{id}</div>
-            <div className="text-xs text-text-3 mt-0.5">{date}</div></div>
+            <div className="text-xs text-text-3 mt-0.5">{date}{billingCycle==="annual"?" • "+t("employer.billing.annualCycle"):""}</div></div>
           <div className="text-sm font-semibold text-text">${total.toFixed(2)}</div>
           <Tag tone="ok" sm icon="check">{t("employer.billing.paid")}</Tag>
           <Btn kind="ghost" size="xs" icon="download" onClick={()=>A.printInvoice(id,date,amt,invPlan,tax,taxLabel)}>{t("employer.billing.printSaveAsPDF")}</Btn></div>)}</Card>}

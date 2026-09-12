@@ -707,9 +707,9 @@ export function useStore(){
       return {ok:false,msg:e.message};
     }
   };
-  const startCheckout=async(planKey)=>{
+  const startCheckout=async(planKey,billingCycle="monthly")=>{
     try{
-      const {url}=await api.post("/billing/checkout",{plan:planKey});
+      const {url}=await api.post("/billing/checkout",{plan:planKey,billingCycle});
       window.location.href=url;
       return {ok:true};
     }catch(e){return {ok:false,msg:e.message};}
@@ -1882,11 +1882,11 @@ export function useStore(){
   };
   const PLANS=platformConfig?.plans||DEFAULT_PLANS;
   const payrollTaxConfig=platformConfig?.payrollTax||DEFAULT_PAYROLL_TAX_CONFIG;
-  const choosePlan=async n=>{
+  const choosePlan=async(n,billingCycle="monthly")=>{
     if(!PLANS[n])return;
     if(user?.role==="employer"){
       if(PLANS[n].price>0){
-        const r=await startCheckout(n); // redirects to Stripe - nothing after this runs on success
+        const r=await startCheckout(n,billingCycle); // redirects to Stripe - nothing after this runs on success
         if(!r.ok)toast(r.msg,"danger");
         return;
       }

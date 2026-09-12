@@ -23,14 +23,15 @@ billingRouter.get("/config", (req, res) => {
 billingRouter.post("/checkout", requireAuth, requireRole("employer"), async (req, res) => {
   if (!stripeConfigured()) return res.status(503).json({ error: "Payments aren't configured on this server yet." });
   const employer = resolveOwnEmployer(req, res); if (!employer) return;
-  const { plan } = req.body || {};
+  const { plan, billingCycle } = req.body || {};
   const plans = getConfig("plans");
   if (!plans[plan]) return res.status(400).json({ error: "Unknown plan." });
   const price = plans[plan].price || 0;
   if (price <= 0) return res.status(400).json({ error: "This plan is free — no checkout needed. Use the plan-switch action instead." });
+  const cycle = billingCycle === "annual" ? "annual" : "monthly";
   try {
     const session = await createCheckoutSession({
-      employerId: employer.id, employerEmail: req.user.email, plan, priceDollars: price, province: employer.prov || "ON",
+      employerId: employer.id, employerEmail: req.user.email, plan, priceDollars: price, province: employer.prov || "ON", billingCycle: cycle,
     });
     res.json({ url: session.url });
   } catch (e) {
@@ -67,10 +68,11 @@ billingRouter.get("/verify", requireAuth, requireRole("employer"), async (req, r
   const pretax = Number(session.metadata.pretax) || 0;
   const tax = Number(session.metadata.tax) || 0;
   const id = nextId("inv", "employer_invoices");
+  const cycle = session.metadata.billingCycle === "annual" ? "annual" : "monthly";
   db.prepare(
-    `INSERT INTO employer_invoices (id, employer_id, plan, amount_pretax, tax, tax_label, total, stripe_session_id, stripe_subscription_id, status)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'paid')`
-  ).run(id, employer.id, plan, pretax, tax, session.metadata.taxLabel || null, pretax + tax, sessionId, session.subscription?.id || null);
+    `INSERT INTO employer_invoices (id, employer_id, plan, amount_pretax, tax, tax_label, total, stripe_session_id, stripe_subscription_id, status, billing_cycle)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'paid', ?)`
+  ).run(id, employer.id, plan, pretax, tax, session.metadata.taxLabel || null, pretax + tax, sessionId, session.subscription?.id || null, cycle);
   db.prepare("UPDATE employers SET plan = ?, stripe_customer_id = COALESCE(stripe_customer_id, ?) WHERE id = ?")
     .run(plan, typeof session.customer === "string" ? session.customer : session.customer?.id, employer.id);
 

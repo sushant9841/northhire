@@ -84,7 +84,7 @@ export function serializeJob(row) {
 export function serializeEmployerInvoice(row) {
   if (!row) return null;
   return { id: row.id, employerId: row.employer_id, plan: row.plan, amountPretax: row.amount_pretax,
-    tax: row.tax, taxLabel: row.tax_label, total: row.total, status: row.status, createdAt: sqlTime(row.created_at).getTime() };
+    tax: row.tax, taxLabel: row.tax_label, total: row.total, status: row.status, billingCycle: row.billing_cycle || "monthly", createdAt: sqlTime(row.created_at).getTime() };
 }
 export function serializeEmployer(row) {
   if (!row) return null;

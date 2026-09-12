@@ -1002,10 +1002,10 @@ export function PricingPage(){
   const faqKeys=["faq1","faq2","faq3","faq4","faq5","faq6","faq7"];
   const faq=faqKeys.map(k=>[t(`pricing.${k}Q`),t(`pricing.${k}A`)]);
   const [open,setOpen]=useState(-1);
-  // Annual billing gets 15% off (a common SaaS discount). This is display-only until Stripe
-  // actually offers an annual price - checkout still creates the monthly subscription, and the
-  // FAQ notes annual is by request. Removes the parity gap versus every competitor's pricing
-  // page having a toggle.
+  // Annual billing gets 15% off. When the toggle is on `choosePlan` passes billingCycle="annual"
+  // to startCheckout which passes it through to the server, so Stripe issues a real annual
+  // subscription at the discounted rate (server/stripe.js:createCheckoutSession is the authority
+  // on the discount %; keep this constant in sync if the server changes it).
   const [billing,setBilling]=useState("monthly");
   const annualPct=0.15;
   const pad=mob?"py-14 px-4":"py-24 px-8";
@@ -1053,7 +1053,7 @@ export function PricingPage(){
                   return <div key={x} className={`flex gap-2.5 text-sm leading-snug ${isSubItem?"text-text-2 pl-1":"text-text pl-0"}`}>
                     {!isSubItem&&<span className="text-ok shrink-0 flex mt-0.5"><I n="check" s={16} w={2.6}/></span>}
                     <span>{isSubItem?x.slice(2):x}</span></div>;})}</div>
-              <Btn kind={isCurrent?"outline":p.best?"primary":"outline"} size="lg" full disabled={isCurrent} onClick={()=>A.choosePlan(p.n)}>
+              <Btn kind={isCurrent?"outline":p.best?"primary":"outline"} size="lg" full disabled={isCurrent} onClick={()=>A.choosePlan(p.n,billing)}>
                 {isCurrent?t("pricing.currentPlan"):p.p===0?t("pricing.startFreeBtn"):t("pricing.chooseBtn",{plan:p.n})}</Btn></div></div>;})}</div>
       </div>
     </section>

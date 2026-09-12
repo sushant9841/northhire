@@ -898,6 +898,9 @@ for (const stmt of [
   // need their own locale so password-reset and other transactional mail to them can be localized
   // the same way it is for regular users.
   "ALTER TABLE agency_staff ADD COLUMN locale TEXT DEFAULT 'en-CA'",
+  // P4 deferred item #16 - annual pricing: every subscription-checkout invoice records which
+  // billing cycle the customer chose so the receipt/portal shows year-vs-month correctly.
+  "ALTER TABLE employer_invoices ADD COLUMN billing_cycle TEXT DEFAULT 'monthly'",
 ]) {
   try { db.exec(stmt); } catch (e) { if (!/duplicate column/i.test(e.message)) console.error("migration:", stmt, e.message); }
 }
