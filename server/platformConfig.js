@@ -22,8 +22,21 @@ const DEFAULT_ADMIN_ALERTS = {
   contentDraftsHigh: 20,
   moderationBacklogHigh: 10,
 };
-const CONFIG_KEYS = ["plans", "payrollTax", "staffingRates", "staffingAgency", "overtimePolicy", "adminAlerts"];
-const DEFAULTS = { plans: PLANS, payrollTax: DEFAULT_PAYROLL_TAX_CONFIG, staffingRates: DEFAULT_STAFFING_RATES, staffingAgency: DEFAULT_STAFFING_AGENCY, overtimePolicy: DEFAULT_OVERTIME_POLICY, adminAlerts: DEFAULT_ADMIN_ALERTS };
+/* Legal minimum wage by province (hourly, CAD) - editable in admin business-config so the
+   platform can push a new rate the day a province raises theirs. Every job-post pay field
+   reads the province of the listing and warns (not blocks) when the wage entered is below
+   this floor. Values current as of 2026 - update when provinces publish new rates. */
+const DEFAULT_MIN_WAGE_BY_PROVINCE = {
+  AB: 15.00, BC: 17.85, MB: 15.80, NB: 15.30, NL: 15.60, NS: 15.20,
+  ON: 17.20, PE: 16.00, QC: 15.75, SK: 15.00, NT: 16.05, YT: 17.59, NU: 19.00,
+};
+/* Admin-extendable pools that the post-job AI helper merges on top of the per-sector defaults
+   baked into the frontend (see src/pages/shared/formControls.jsx). Empty by default; an admin
+   fills these to add sector-specific benefits or common questions without a deploy. */
+const DEFAULT_JOB_AI_BENEFITS_BY_SECTOR = {};
+const DEFAULT_JOB_AI_QUESTIONS_BY_SECTOR = {};
+const CONFIG_KEYS = ["plans", "payrollTax", "staffingRates", "staffingAgency", "overtimePolicy", "adminAlerts", "minWageByProvince", "jobAiBenefitsBySector", "jobAiQuestionsBySector"];
+const DEFAULTS = { plans: PLANS, payrollTax: DEFAULT_PAYROLL_TAX_CONFIG, staffingRates: DEFAULT_STAFFING_RATES, staffingAgency: DEFAULT_STAFFING_AGENCY, overtimePolicy: DEFAULT_OVERTIME_POLICY, adminAlerts: DEFAULT_ADMIN_ALERTS, minWageByProvince: DEFAULT_MIN_WAGE_BY_PROVINCE, jobAiBenefitsBySector: DEFAULT_JOB_AI_BENEFITS_BY_SECTOR, jobAiQuestionsBySector: DEFAULT_JOB_AI_QUESTIONS_BY_SECTOR };
 
 export function getConfig(key) {
   if (!CONFIG_KEYS.includes(key)) throw new Error(`Unknown platform config key: ${key}`);

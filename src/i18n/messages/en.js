@@ -1030,6 +1030,8 @@ export const en = {
       suggest: "Generate", regenerate: "Regenerate", enterTitleFirst: "Enter title first",
       selectPlaceholder: "Select…",
       expRequired: "Pick an experience level", eduRequired: "Pick an education level",
+      belowProvMinTitle: "This wage is below the legal minimum for {prov} ({min}/hr).",
+      belowProvMinBody: "You can still publish, but paying below the provincial minimum is illegal in most cases. Confirm the wage before continuing.",
       jobDescription: "Job description", jobDescriptionHint: "Describe the day-to-day work, the team and the site.",
       jobDescriptionPlaceholder: "What will this person actually do week to week?",
       mainDuties: "Main duties", mainDutiesHint: "What they'll actually do. Use bullets for readability.",

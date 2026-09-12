@@ -1032,6 +1032,8 @@ export const fr = {
       suggest: "Générer", regenerate: "Régénérer", enterTitleFirst: "Saisissez d'abord le titre",
       selectPlaceholder: "Sélectionner…",
       expRequired: "Choisissez un niveau d'expérience", eduRequired: "Choisissez un niveau de formation",
+      belowProvMinTitle: "Ce salaire est inférieur au minimum légal pour {prov} ({min}/h).",
+      belowProvMinBody: "Vous pouvez tout de même publier, mais payer sous le minimum provincial est illégal dans la plupart des cas. Confirmez le salaire avant de continuer.",
       jobDescription: "Description du poste", jobDescriptionHint: "Décrivez le travail quotidien, l'équipe et le site.",
       jobDescriptionPlaceholder: "Que fera concrètement cette personne au quotidien?",
       mainDuties: "Tâches principales", mainDutiesHint: "Ce qu'iels feront concrètement. Utilisez des puces pour la lisibilité.",

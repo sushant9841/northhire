@@ -192,6 +192,15 @@ export function EmpPost(){
      in Ontario/BC" turns on), falling back to the company's own province before a location is
      picked. See helpers/jobPostingLaw.js - the server re-checks all of this on publish. */
   const lawRules=postingRules({prov:PCODE[f.prov]||A.company?.prov,employerSize:A.company?.size});
+  /* Per-province legal minimum wage, admin-editable via platform_config.minWageByProvince
+     (see server/platformConfig.js DEFAULT_MIN_WAGE_BY_PROVINCE). Used to seed placeholders and
+     to warn (not block) when the entered hourly wage sits below the provincial floor - the
+     platform must not silently allow illegal ads while giving the employer a clear signal. */
+  const _MIN_WAGE_FALLBACK={AB:15.00,BC:17.85,MB:15.80,NB:15.30,NL:15.60,NS:15.20,ON:17.20,PE:16.00,QC:15.75,SK:15.00,NT:16.05,YT:17.59,NU:19.00};
+  const provCode=PCODE[f.prov]||"ON";
+  const provMinWage=(A.platformConfig?.minWageByProvince||_MIN_WAGE_FALLBACK)[provCode]||15.00;
+  const wageValue=f.payType==="range"?Number(f.lo||0):Number(f.fixed||0);
+  const belowProvinceMin=f.payPeriod==="hr"&&wageValue>0&&wageValue<provMinWage;
 
   const validate=()=>{const e={};
     if(step===1){
@@ -211,7 +220,10 @@ export function EmpPost(){
       /* Presence + hi>lo alone let $1/hr or $1,000,000/hr both through - add sane per-period
          bounds so an obvious fat-finger (missing a digit, an extra zero) gets caught here
          instead of publishing a listing no one would believe. */
-      const bounds={hr:[15,500],yr:[20000,500000],contract:[100,10000000]}[f.payPeriod]||[0,Infinity];
+      /* Hourly floor is only the fat-finger catch ($10 rules out obvious garbage). The
+         province-min check is a soft warning banner rendered next to the input - blocking
+         submit here would force employers to keep two floors in sync in their head. */
+      const bounds={hr:[10,500],yr:[20000,500000],contract:[100,10000000]}[f.payPeriod]||[0,Infinity];
       const [minV,maxV]=bounds;
       const realisticKey=f.payPeriod==="hr"?"employer.post.realisticAmountHourly":f.payPeriod==="yr"?"employer.post.realisticAmountYearly":f.payPeriod==="contract"?"employer.post.realisticAmountContract":"employer.post.realisticAmount";
       const boundsParams={lo:`$${minV.toLocaleString()}`,hi:`$${maxV.toLocaleString()}`};
@@ -374,15 +386,24 @@ export function EmpPost(){
           </div>
           <div className="grid gap-3" style={{gridTemplateColumns:mob?"1fr":f.payType==="range"?"1fr 1fr 1fr":"1fr 1fr"}}>
             {f.payType==="range"?<>
-              <Field label={t("employer.post.minimum")} error={err.lo}><Input icon="wallet" type="number" inputMode="decimal" min="0" value={f.lo} onChange={e=>set("lo",e.target.value.replace(/[^\d.]/g,""))} placeholder={f.payPeriod==="yr"?"60000":"28"} invalid={!!err.lo}/></Field>
-              <Field label={t("employer.post.maximum")} error={err.hi}><Input icon="wallet" type="number" inputMode="decimal" min="0" value={f.hi} onChange={e=>set("hi",e.target.value.replace(/[^\d.]/g,""))} placeholder={f.payPeriod==="yr"?"80000":"36"} invalid={!!err.hi}/></Field>
-            </>:<Field label={t("employer.post.amount")} error={err.fixed}><Input icon="wallet" type="number" inputMode="decimal" min="0" value={f.fixed} onChange={e=>set("fixed",e.target.value.replace(/[^\d.]/g,""))} placeholder={f.payPeriod==="yr"?"70000":"32"} invalid={!!err.fixed}/></Field>}
+              <Field label={t("employer.post.minimum")} error={err.lo} name="lo"><Input icon="wallet" type="number" inputMode="decimal" min="0" value={f.lo} onChange={e=>set("lo",e.target.value.replace(/[^\d.]/g,""))} placeholder={f.payPeriod==="yr"?"60000":f.payPeriod==="hr"?String(provMinWage):"28"} invalid={!!err.lo}/></Field>
+              <Field label={t("employer.post.maximum")} error={err.hi} name="hi"><Input icon="wallet" type="number" inputMode="decimal" min="0" value={f.hi} onChange={e=>set("hi",e.target.value.replace(/[^\d.]/g,""))} placeholder={f.payPeriod==="yr"?"80000":f.payPeriod==="hr"?String((provMinWage*1.4).toFixed(2)):"36"} invalid={!!err.hi}/></Field>
+            </>:<Field label={t("employer.post.amount")} error={err.fixed} name="fixed"><Input icon="wallet" type="number" inputMode="decimal" min="0" value={f.fixed} onChange={e=>set("fixed",e.target.value.replace(/[^\d.]/g,""))} placeholder={f.payPeriod==="yr"?"70000":f.payPeriod==="hr"?String(provMinWage):"32"} invalid={!!err.fixed}/></Field>}
             <Field label={t("employer.post.payPeriod")}><Sel value={f.payPeriod} onChange={e=>set("payPeriod",e.target.value)}>
               <option value="hr">{t("employer.post.perHour")}</option>
               <option value="yr">{t("employer.post.perYear")}</option>
               <option value="mi">{t("employer.post.perMile")}</option>
               <option value="contract">{t("employer.post.totalContract")}</option></Sel></Field>
           </div>
+          {belowProvinceMin&&<div className="mt-2.5 rounded-xl border border-warn-ln bg-warn-bg p-3 flex gap-2.5 items-start">
+            <I n="alert" s={17} c={C.warn}/>
+            <div className="min-w-0 text-xs text-text-2 leading-relaxed">
+              <div className="font-semibold text-text mb-1">
+                {t("employer.post.belowProvMinTitle",{prov:PCODE[f.prov]||"—",min:`$${provMinWage.toFixed(2)}`})||`This wage is below the legal minimum for ${PCODE[f.prov]} ($${provMinWage.toFixed(2)}/hr).`}
+              </div>
+              {t("employer.post.belowProvMinBody")||"You can still publish, but paying below the provincial minimum is illegal in most cases. Confirm the wage before continuing."}
+            </div>
+          </div>}
         </Field>
 
         <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
