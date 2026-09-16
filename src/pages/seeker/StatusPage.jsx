@@ -1,14 +1,24 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
-import { Btn, Card, Tag, Bar, Sel, Stat, Tabs, Empty, H1, Page, ConfirmDialog, Modal, Field, Area } from "../../design/primitives.jsx";
+import { Btn, Card, Tag, Bar, Sel, Stat, Tabs, Empty, H1, Page, ConfirmDialog, Modal, Field, Area, Tooltip, Banner } from "../../design/primitives.jsx";
 import { I } from "../../design/icons.jsx";
 import { pay, payShort } from "../../helpers/utils.js";
 import { STAGES } from "../../store/seed/constants.js";
 import { EmpMark } from "../shared/cards.jsx";
 import { useTranslation } from "../../i18n/i18n.jsx";
 import { applicationStageLabel } from "../../helpers/enumLabels.js";
+
+/* Job Seeker Transformation Tranche 4 (JS-06): a short, honest "what this means for you" line
+   per stage, shown as the row's next-expected-step microcopy. Custom employer stages (outside
+   STAGES) fall back to a generic line rather than guessing. */
+const NEXT_STEP_KEY={Applied:"seeker.status.nextStepApplied",Reviewed:"seeker.status.nextStepReviewed",
+  Shortlisted:"seeker.status.nextStepShortlisted",Interview:"seeker.status.nextStepInterview",
+  Offer:"seeker.status.nextStepOffer",Hired:"seeker.status.nextStepHired"};
+const STAGE_TOOLTIP_KEY={Applied:"seeker.status.stageTooltipApplied",Reviewed:"seeker.status.stageTooltipReviewed",
+  Shortlisted:"seeker.status.stageTooltipShortlisted",Interview:"seeker.status.stageTooltipInterview",
+  Offer:"seeker.status.stageTooltipOffer",Hired:"seeker.status.stageTooltipHired",Withdrawn:"seeker.status.stageTooltipWithdrawn"};
 
 function AnswersModal({app:a,job:j,onClose}){
   const {t}=useTranslation();
@@ -49,6 +59,7 @@ export function StatusPage(){
   const [withdrawing,setWithdrawing]=useState(null); const [withdrawReason,setWithdrawReason]=useState("");
   const [viewingAnswers,setViewingAnswers]=useState(null);
   const [viewingHistory,setViewingHistory]=useState(null);
+  const [stageTip,setStageTip]=useState(null);
   /* The stat tiles were all-time counts with no way to ask "how did the last month go" - the
      usual question after a burst of applying. Applications carry a real createdAt, so a period
      filter is a genuine answer rather than the fabricated trend line the finding also asked for
@@ -58,6 +69,36 @@ export function StatusPage(){
   const since=periodMs?Date.now()-periodMs:null;
   const allMine=A.myApps;
   const mine=since?allMine.filter(a=>(a.createdAt||0)>=since):allMine;
+  const activeCount=allMine.filter(a=>a.stage!=="Withdrawn").length;
+
+  /* JS-10 / "Track application": a notification tap or the Apply success card's "Track
+     application" button sets A.focusAppId. This page owns turning that into an actual scroll +
+     brief highlight, then clears it so a later, unrelated visit doesn't re-trigger it. */
+  const rowRefs=useRef({});
+  const [highlightId,setHighlightId]=useState(null);
+  useEffect(()=>{
+    if(!A.focusAppId)return;
+    if(!allMine.some(a=>a.id===A.focusAppId)){A.setFocusAppId(null);return;}
+    if(tab!=="all")setTab("all");
+    if(period!=="all")setPeriod("all");
+  },[A.focusAppId]);
+  useEffect(()=>{
+    if(!A.focusAppId)return;
+    // Rows mount a tick after the tab/period switch above resolves - poll briefly rather than
+    // trying to sequence two separate effects against React's render timing.
+    let tries=0;
+    const iv=setInterval(()=>{
+      tries++;
+      const el=rowRefs.current[A.focusAppId];
+      if(el){
+        clearInterval(iv);
+        el.scrollIntoView({behavior:"smooth",block:"center"});
+        setHighlightId(A.focusAppId);
+        setTimeout(()=>{A.setFocusAppId(null);setHighlightId(null);},2500);
+      }else if(tries>20)clearInterval(iv);
+    },50);
+    return ()=>clearInterval(iv);
+  },[A.focusAppId,tab,period]);
   const counts=mine.reduce((m,a)=>({...m,[a.stage]:(m[a.stage]||0)+1}),{});
   const list=tab==="all"?mine:mine.filter(a=>a.stage===tab);
   /* Employers can define their own pipeline stages, so a seeker's filter list is the union of
@@ -79,11 +120,17 @@ export function StatusPage(){
         </Sel>
         <Btn kind="outline" size="sm" icon="bookmark" onClick={()=>A.go("saved")}>{t("seeker.status.savedBtn",{count:A.saved.size})}</Btn>
       </div>}>{t("seeker.status.pageTitle")}</H1>
+    {/* JS-06/status summary (Tranche 4): the one-glance answer to "where do I stand overall" -
+        distinct from the "Applications" stat tile below, which is a period-scoped count rather
+        than "still open right now" (Withdrawn excluded). */}
+    <div className="text-base font-semibold text-text -mt-2 mb-4">
+      {t(activeCount===1?"seeker.status.activeCountOne":"seeker.status.activeCountOther",{count:activeCount})}</div>
     {period!=="all"&&allMine.length!==mine.length&&
       <div className="text-sm text-text-2 -mt-3 mb-4">
         {t("seeker.status.showingOfApplications",{shown:mine.length,total:allMine.length})}{" "}
         <button onClick={()=>setPeriod("all")} className="bg-transparent border-0 p-0 cursor-pointer text-sm font-semibold text-brand underline">{t("seeker.status.showAllTime")}</button>
       </div>}
+    <ProfileCompletionNudge/>
     <UpcomingInterviewsCard/>
     <div className="grid gap-3 mb-5" style={{gridTemplateColumns:`repeat(auto-fit,minmax(${mob?140:160}px,1fr))`}}>
       <Stat icon="send" label={t("seeker.status.statApplications")} value={mine.length} tone={C.brand}/>
@@ -98,15 +145,30 @@ export function StatusPage(){
         {list.map((a,i)=>{const j=A.job(a.job); if(!j) return null; const e=A.emp(j.e);
           const cardStages=A.stagesForApp(a);
           const idx=cardStages.indexOf(a.stage); const pct=a.stage==="Withdrawn"?0:((idx+1)/cardStages.length)*100;
-          return <Card key={a.id} pad={0} delay={Math.min(i,6)*0.05} style={{overflow:"hidden"}}>
+          const lastUpdate=a.history?.length?a.history[a.history.length-1].at:a.at;
+          const nextStep=NEXT_STEP_KEY[a.stage]?t(NEXT_STEP_KEY[a.stage]):null;
+          const highlighted=highlightId===a.id;
+          return <div key={a.id} ref={el=>{rowRefs.current[a.id]=el;}}>
+          <Card pad={0} delay={Math.min(i,6)*0.05}
+            style={{overflow:"hidden",outline:highlighted?`2px solid ${C.brand}`:"none",transition:"outline-color .3s"}}>
             <div className={`flex gap-3.5 items-start ${mob?"p-4":"p-5"}`}>
               <EmpMark e={e} size={46}/>
               <div className="flex-1 min-w-0">
                 <button onClick={()=>A.openJob(j.id)} className="bg-transparent border-0 p-0 cursor-pointer text-left text-base font-bold text-text tracking-tight">{j.t}</button>
                 <div className="text-sm text-text-2 mt-1">{e.name} • {j.city}, {j.prov} • {pay(j)}{payShort(j)}</div>
                 <div className="flex gap-2.5 items-center mt-2.5 flex-wrap">
-                  <Tag tone={a.stage==="Offer"?"ok":a.stage==="Interview"?"warn":a.stage==="Withdrawn"?"neutral":"brand"} sm>{applicationStageLabel(a.stage,t)}</Tag>
-                  <span className={`text-sm ${a.stage==="Withdrawn"?"text-text-3":"text-text-2"}`}>{a.note}</span></div></div>
+                  {/* Status pill tooltip (JS-06) - every stage shown gets a plain-language
+                      explanation, not just a color-coded word. */}
+                  <span className="relative inline-block"
+                    onMouseEnter={ev=>{const r=ev.currentTarget.getBoundingClientRect();setStageTip({id:a.id,top:r.top+r.height/2,left:r.right+10});}}
+                    onMouseLeave={()=>setStageTip(null)}>
+                    <Tag tone={a.stage==="Offer"?"ok":a.stage==="Interview"?"warn":a.stage==="Withdrawn"?"neutral":"brand"} sm>{applicationStageLabel(a.stage,t)}</Tag>
+                    <Tooltip show={stageTip?.id===a.id} top={stageTip?.top} left={stageTip?.left}>
+                      {t(STAGE_TOOLTIP_KEY[a.stage]||"seeker.status.stageTooltipGeneric")}</Tooltip>
+                  </span>
+                  <span className={`text-sm ${a.stage==="Withdrawn"?"text-text-3":"text-text-2"}`}>{a.note}</span></div>
+                <div className="text-xs text-text-3 mt-1.5">{t("seeker.status.lastUpdateLabel",{when:lastUpdate})}</div>
+                {nextStep&&<div className="text-sm text-brand font-medium mt-1">{nextStep}</div>}</div>
               {!mob&&<div className="text-right shrink-0">
                 <div className="text-xs text-text-3">{t("seeker.status.appliedLabel")}</div>
                 <div className="text-sm font-semibold text-text mt-0.5">{a.at}</div></div>}</div>
@@ -116,14 +178,18 @@ export function StatusPage(){
                 {cardStages.map((s,k)=><div key={s} className="text-center flex-1">
                   <div className={`w-2 h-2 rounded-full mx-auto mb-1 transition-colors duration-500 ${k<=idx?(a.stage==="Offer"?"bg-ok":"bg-brand"):"bg-line"}`}/>
                   <div className={`text-xs ${k<=idx?"text-text-2":"text-text-3"} ${k===idx?"font-bold":"font-normal"}`}>{applicationStageLabel(s,t)}</div></div>)}</div></div>}
+            {a.stage==="Withdrawn"&&<div className="py-3 px-5 bg-bg border-t border-line-soft flex items-center justify-between gap-3 flex-wrap">
+              <span className="text-sm text-text-2">{t("seeker.status.withdrawnKindNote")}</span>
+              <Btn kind="outline" size="sm" icon="search" onClick={()=>A.go("search")}>{t("seeker.status.similarRolesBtn")}</Btn></div>}
             <div className="py-3 px-5 border-t border-line-soft flex gap-2.5 flex-wrap">
               <Btn kind="outline" size="sm" iconR="chevR" onClick={()=>A.openJob(j.id)}>{t("seeker.status.viewJobBtn")}</Btn>
+              {a.stage!=="Withdrawn"&&<Btn kind="ghost" size="sm" icon="mail" onClick={()=>A.go("messages")}>{t("seeker.status.messageHiringTeamBtn")}</Btn>}
               <Btn kind="ghost" size="sm" icon="file" onClick={()=>setViewingAnswers({app:a,job:j})}>{t("seeker.status.yourAnswersBtn")}</Btn>
               {(a.history?.length||0)>1&&<Btn kind="ghost" size="sm" icon="clock" onClick={()=>setViewingHistory(a)}>{t("seeker.status.timelineBtn")}</Btn>}
               {a.stage!=="Withdrawn"&&a.stage!=="Offer"&&<Btn kind="ghost" size="sm" onClick={()=>{setWithdrawing(a);setWithdrawReason("");}}>{t("seeker.status.withdrawBtn")}</Btn>}
               {a.stage==="Offer"&&<Btn kind="ok" size="sm" icon="check" onClick={()=>A.acceptOffer(a.id)}>{t("seeker.status.acceptOfferBtn")}</Btn>}
             {a.stage==="Withdrawn"&&a.withdrawnAt&&(Date.now()-a.withdrawnAt<7*24*60*60*1000)&&
-              <Btn kind="outline" size="sm" icon="refresh" onClick={()=>A.restoreApp(a.id)}>{t("seeker.status.restoreBtn")}</Btn>}</div></Card>;})}</div>}
+              <Btn kind="outline" size="sm" icon="refresh" onClick={()=>A.restoreApp(a.id)}>{t("seeker.status.restoreBtn")}</Btn>}</div></Card></div>;})}</div>}
     <ConfirmDialog open={!!withdrawing} onClose={()=>setWithdrawing(null)} confirmLabel={t("seeker.status.withdrawBtn")}
       title={t("seeker.status.withdrawConfirmTitle")} onConfirm={()=>A.withdraw(withdrawing.id,withdrawReason.trim())}>
       <div className="flex flex-col gap-3">
@@ -135,6 +201,27 @@ export function StatusPage(){
     {viewingAnswers&&<AnswersModal app={viewingAnswers.app} job={viewingAnswers.job} onClose={()=>setViewingAnswers(null)}/>}
     {viewingHistory&&<HistoryModal app={viewingHistory} onClose={()=>setViewingHistory(null)}/>}
   </Page>;
+}
+
+/* Job Seeker Transformation Tranche 4 - "Proactive nudges": incomplete profile. Dismissable, but
+   (per the plan) reappears every 7 days until the profile reaches 80% - a per-viewer UI
+   convenience (feedback_server_authoritative), not app data, so the dismiss timestamp is fine in
+   localStorage: nothing about it needs to be shared across devices or survive a data export. */
+const PROFILE_NUDGE_DISMISS_KEY="northhire.profileNudgeDismissedAt";
+function ProfileCompletionNudge(){
+  const A=use(); const {t}=useTranslation();
+  const [dismissedAt,setDismissedAt]=useState(()=>{
+    try{return Number(localStorage.getItem(PROFILE_NUDGE_DISMISS_KEY))||0;}catch{return 0;}
+  });
+  if(!A.user||A.user.role!=="seeker"||A.completeness>=80)return null;
+  if(Date.now()-dismissedAt<7*24*60*60*1000)return null;
+  const dismiss=()=>{const now=Date.now(); try{localStorage.setItem(PROFILE_NUDGE_DISMISS_KEY,String(now));}catch{/* best-effort */} setDismissedAt(now);};
+  return <Banner tone="neutral" icon="sparkle" title={t("seeker.status.completeProfileNudgeTitle")} style={{marginBottom:20}}
+    action={<div className="flex gap-2 flex-wrap">
+      <Btn kind="outline" size="sm" onClick={()=>A.go("profile")}>{t("seeker.status.completeProfileBtn")}</Btn>
+      <Btn kind="ghost" size="sm" onClick={dismiss}>{t("seeker.status.dismissNudgeBtn")}</Btn></div>}>
+    {A.completenessHint}
+  </Banner>;
 }
 
 /* Upcoming interviews summary card, rendered at the top of the seeker's Status page.

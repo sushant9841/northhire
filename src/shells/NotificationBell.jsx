@@ -20,6 +20,16 @@ export function NotificationBell(){
     return ()=>document.removeEventListener("keydown",onKey);
   },[open]);
   const recent=list.slice(0,12);
+  /* Job Seeker Transformation Tranche 4: group by recency so the panel reads as a timeline
+     ("Today" / "This week" / "Earlier") instead of one undifferentiated stack - the same shape
+     as the Status page's own sections. Falls back to "Earlier" for anything with no createdAt
+     (older rows persisted before this field existed). */
+  const now=Date.now(); const startOfToday=new Date().setHours(0,0,0,0); const weekAgo=now-7*86400000;
+  const groups=[
+    [t("alerts.groupToday"),recent.filter(n=>(n.createdAt??0)>=startOfToday)],
+    [t("alerts.groupThisWeek"),recent.filter(n=>(n.createdAt??0)<startOfToday&&(n.createdAt??0)>=weekAgo)],
+    [t("alerts.groupEarlier"),recent.filter(n=>(n.createdAt??0)<weekAgo)],
+  ].filter(([,items])=>items.length>0);
   return <div className="relative">
     <button onClick={()=>setOpen(v=>!v)} aria-label={t("nav.notificationsAria")} aria-haspopup="menu" aria-expanded={open}
       className="relative bg-bg border-0 w-9 h-9 rounded-lg cursor-pointer flex items-center justify-center text-text">
@@ -39,17 +49,20 @@ export function NotificationBell(){
                 <div className="text-sm font-semibold text-text mb-1">{t("alerts.nothingYetTitle")}</div>
                 <div className="text-xs text-text-3">{t("alerts.nothingYetBody")}</div>
               </div>
-            : recent.map(n=>
-              <button key={n.id} onClick={()=>{setOpen(false); A.readNotif(n.id,n.link);}}
-                className={`w-full flex gap-3 items-start text-left py-3 px-4 border-0 cursor-pointer border-b border-line-soft last:border-b-0 hover:bg-bg ${n.read?"bg-transparent":"bg-tint"}`}>
-                <div className="w-8 h-8 rounded-full bg-white border border-line-2 flex items-center justify-center shrink-0 text-brand"><I n={n.icon||"bell"} s={15}/></div>
-                <div className="flex-1 min-w-0">
-                  <div className={`text-sm text-text leading-snug ${n.read?"font-medium":"font-bold"}`}>{n.title}</div>
-                  {n.body&&<div className="text-xs text-text-3 mt-0.5 leading-snug overflow-hidden text-ellipsis" style={{display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>{n.body}</div>}
-                  <div className="text-xs text-text-3 mt-1">{n.at}</div>
-                </div>
-                {!n.read&&<span className="w-2 h-2 rounded-full bg-brand shrink-0 mt-1.5"/>}
-              </button>)}
+            : groups.map(([label,items])=><div key={label}>
+                <div className="py-1.5 px-4 text-xs font-bold text-text-3 tracking-wide uppercase bg-bg">{label}</div>
+                {items.map(n=>
+                  <button key={n.id} onClick={()=>{setOpen(false); A.readNotif(n.id,n.link);}}
+                    className={`w-full flex gap-3 items-start text-left py-3 px-4 border-0 cursor-pointer border-b border-line-soft last:border-b-0 hover:bg-bg ${n.read?"bg-transparent":"bg-tint"}`}>
+                    <div className="w-8 h-8 rounded-full bg-white border border-line-2 flex items-center justify-center shrink-0 text-brand"><I n={n.icon||"bell"} s={15}/></div>
+                    <div className="flex-1 min-w-0">
+                      <div className={`text-sm text-text leading-snug ${n.read?"font-medium":"font-bold"}`}>{n.title}</div>
+                      {n.body&&<div className="text-xs text-text-3 mt-0.5 leading-snug overflow-hidden text-ellipsis" style={{display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>{n.body}</div>}
+                      <div className="text-xs text-text-3 mt-1">{n.at}</div>
+                    </div>
+                    {!n.read&&<span className="w-2 h-2 rounded-full bg-brand shrink-0 mt-1.5"/>}
+                  </button>)}
+              </div>)}
         </div>
         <button onClick={()=>{setOpen(false); A.go("alerts");}} className="w-full text-center py-2.5 border-0 border-t border-line-soft bg-bg cursor-pointer text-xs font-semibold text-text-2 hover:text-text">
           {t("alerts.title")}
