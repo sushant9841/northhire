@@ -75,6 +75,22 @@ export function HomePage(){
         </div>
       </section>
 
+      {/* Job Seeker Transformation Tranche 1 (JS-01): a persistent completeness meter replaces the
+          old up-front 6-step wizard as the mechanism for collecting the rest of the profile — it
+          nudges without gating access to jobs. Reuses the same completeness()/completenessHint()
+          selector ProfilePage already shows, so the two never drift out of sync. */}
+      {A.completeness<100&&<section className={mob?"px-4 pt-5":"px-8 pt-6"}>
+        <div className={wrapCls}>
+          <div className={`bg-tint border border-line-2 rounded-2xl flex items-center gap-4 flex-wrap ${mob?"p-4":"p-5"}`}>
+            <div className="flex-1 min-w-0" style={{minWidth:220}}>
+              <div className="flex justify-between items-baseline mb-1.5">
+                <span className="text-sm font-bold text-text">{t("home.completenessTitle",{pct:A.completeness})}</span></div>
+              <Bar v={A.completeness} tone={C.brand}/>
+              <div className="text-xs text-text-2 mt-1.5 leading-normal">{A.completenessHint}</div></div>
+            <Btn kind="outline" size="sm" onClick={()=>A.go(A.defaultCv?"profile":"cvs")}>{t("home.completenessCta")}</Btn></div>
+        </div>
+      </section>}
+
       <section className={`bg-white ${mob?"py-6 px-4":"py-8 px-8"}`}>
         <div className={wrapCls}>
           {H(t("home.matchedForYouTitle"),t("home.matchedForYouSub",{count:mySkills.length||"your"}),null,

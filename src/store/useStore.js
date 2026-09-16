@@ -749,16 +749,26 @@ export function useStore(){
          collected (title/cat/city/skills/pay expectations...) is a profile update on top,
          same two-step shape saveProfile already uses elsewhere. */
       const provCode=PCODE[d.prov];
-      const patch={title:d.title,cat:d.cat,city:d.city,prov:provCode,years:yearsMap[d.years]??2,phone:d.phone,
+      /* Job Seeker Transformation Tranche 1 (JS-01): the minimal signup no longer asks years of
+         experience up front, so d.years is legitimately unset here. Only send a years value when
+         the wizard actually collected one (kept for any caller still passing full wizard data) -
+         leaving it undefined lets the post-first-apply contextual prompt (in apply.jsx) detect
+         "never asked" rather than a fabricated default. */
+      const patch={title:d.title,cat:d.cat,city:d.city,prov:provCode,phone:d.phone,
         skills:d.skills,edu:d.edu,eligible:d.eligible,payMin:Number(d.payMin)||0,payUnit:d.payUnit,
         types:d.types,modes:d.modes};
+      if(d.years)patch.years=yearsMap[d.years]??2;
       // Bill 96: a Quebec-registered account defaults to fr-CA rather than the platform default
       // en-CA. Sent as a second small patch (rather than folded into the profile patch above)
       // since locale isn't one of the profile fields /users/me's whitelist already covered.
       if(provCode==="QC")patch.locale="fr-CA";
       await api.patch("/users/me",patch); /* persisted server-side so it survives a refresh, unlike before this store was cookie/API-backed */
       const u={...mapApiUser(apiUser),...patch,startWhen:d.startWhen,summary:"",defaultCv:null,joined:_fmtDate(new Date())};
-      setUser(u); setPeople(p=>[u,...p]); _hardNav("welcome");
+      setUser(u); setPeople(p=>[u,...p]);
+      /* Job Seeker Transformation Tranche 1 (JS-01): the minimal signup goes straight to Home
+         showing live job recommendations, not the multi-step welcome tour — profile completeness
+         becomes a contextual nudge (see profileCompleteness()) rather than a gate before value. */
+      _hardNav("home");
       notify({icon:"sparkle",title:"Welcome to NorthHire",body:"Your profile is live. Check Matched jobs to see what fits your skills.",for:u.id,link:"matched"});
       log("auth.signup",`New job seeker registered: ${u.name}`,"user");
       return {ok:true};

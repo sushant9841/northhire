@@ -235,6 +235,14 @@ export function ApplyDone(){
   const A=use(); const job=A.job(A.applyDraft.job); const {t}=useTranslation();
   const e=job?A.emp(job.e):null;
   const more=A.jobs.filter(j=>j.status==="live"&&j.cat===job?.cat&&j.id!==job?.id).slice(0,3);
+  /* Job Seeker Transformation Tranche 1 (JS-01): "First Apply" contextual profile prompt. Rather
+     than asking experience level up front at signup, ask it once, right after the first
+     successful apply — when years is genuinely unset (completeSignup no longer defaults it for a
+     minimal signup, see useStore.js). Dismissable; only ever shown while years is still unset. */
+  const [expPromptDismissed,setExpPromptDismissed]=useState(false);
+  const showExpPrompt=A.user?.role==="seeker"&&A.user.years==null&&!expPromptDismissed;
+  const YEARS_OPTIONS=[[t("auth.noExperience"),0],[t("auth.lessThanYear"),1],["1-2 years",2],["3-5 years",4],["6-10 years",8],["More than 10 years",12]];
+  const setYears=years=>{A.saveProfile({...A.user,years}); setExpPromptDismissed(true);};
   return <Page narrow>
     <div className="text-center pt-5 pb-2" style={{animation:"rise .4s ease both"}}>
       <div className="w-19 h-19 rounded-full bg-ok-bg border-2 border-ok-ln flex items-center justify-center mx-auto mb-5" style={{animation:"pop .45s cubic-bezier(.22,.68,.35,1) both"}}>
@@ -245,6 +253,15 @@ export function ApplyDone(){
       <div className="flex gap-2.5 justify-center flex-wrap mb-8">
         <Btn kind="primary" icon="activity" onClick={()=>A.go("status")}>{t("seeker.apply.trackInStatusBtn")}</Btn>
         <Btn kind="outline" icon="search" onClick={()=>A.go("search")}>{t("seeker.apply.keepSearchingBtn")}</Btn></div></div>
+    {showExpPrompt&&<Card pad={20} style={{marginBottom:24}}>
+      <div className="flex justify-between items-start gap-3 mb-3">
+        <div className="text-sm font-bold text-text">{t("seeker.apply.expPromptTitle")}</div>
+        <button onClick={()=>setExpPromptDismissed(true)} className="bg-transparent border-0 p-0 cursor-pointer text-text-3"><I n="x" s={16}/></button></div>
+      <div className="flex flex-wrap gap-2">
+        {YEARS_OPTIONS.map(([label,years])=><button key={label} onClick={()=>setYears(years)}
+          className="py-2 px-3.5 rounded-xl cursor-pointer text-sm font-medium border-2 border-line bg-white text-text hover:border-brand">
+          {label}</button>)}</div>
+    </Card>}
     {more.length>0&&<><H2 sub={t("seeker.apply.similarJobsSub")}>{t("seeker.apply.similarJobsTitle")}</H2>
       <div className="flex flex-col gap-3">{more.map((j,i)=><JobCard key={j.id} job={j} delay={i*0.05}/>)}</div></>}
   </Page>;

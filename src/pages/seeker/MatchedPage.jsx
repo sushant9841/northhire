@@ -1,16 +1,29 @@
+import { useState } from "react";
 import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
-import { Btn, Tag, Ring, Empty, usePagination, Pagination, HERO_TIGHT } from "../../design/primitives.jsx";
+import { Btn, Tag, Ring, Empty, Input, usePagination, Pagination, HERO_TIGHT } from "../../design/primitives.jsx";
 import { pay, payUnit } from "../../helpers/utils.js";
 import { CATS } from "../../store/seed/constants.js";
 import { EmpMark } from "../shared/cards.jsx";
 import { useTranslation } from "../../i18n/i18n.jsx";
 
+/* Job Seeker Transformation Tranche 1 (JS-01) — contextual profile prompt: a generic,
+   sector-agnostic starter set shown the first time a seeker opens Match with fewer than 3
+   skills on file. Deliberately not per-sector (that dictionary lives in the signup wizard) —
+   this is a 30-second nudge, not a re-run of onboarding. */
+const QUICK_SKILL_CHIPS=["Customer Service","Communication","Teamwork","Time Management",
+  "Problem Solving","MS Office","Physical Stamina","Attention to Detail","Forklift","First Aid"];
+
 export function MatchedPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const {t}=useTranslation();
+  const [skillDraft,setSkillDraft]=useState("");
+  const mySkills=A.user?.skills||[];
+  const needsSkills=mySkills.length<3;
+  const addSkill=s=>{const v=s.trim(); if(!v||mySkills.some(x=>x.toLowerCase()===v.toLowerCase()))return;
+    A.saveProfile({...A.user,skills:[...mySkills,v]}); setSkillDraft("");};
   const list=A.jobs.filter(j=>j.status==="live").map(j=>({j,s:A.score(j)})).filter(x=>x.s>=50).sort((a,b)=>b.s-a.s);
   const strong=list.filter(x=>x.s>=75); const good=list.filter(x=>x.s>=50&&x.s<75);
   /* "Add more skills" was generic filler copy naming nothing specific - tally which missing
@@ -60,16 +73,35 @@ export function MatchedPage(){
 
     <section className={`bg-bg min-h-100 ${mob?"pt-8 px-4 pb-14":"pt-12 px-8 pb-24"}`}>
       <div className="max-w-6xl mx-auto">
-        <div className={`bg-white rounded-3xl border border-line mb-8 flex gap-4 items-center flex-wrap ${mob?"p-6":"p-7"}`}>
-          <div className="w-13 h-13 rounded-2xl bg-wash text-brand flex items-center justify-center shrink-0"><I n="sparkle" s={24}/></div>
-          <div className="flex-[1_1_260px] min-w-0">
-            <div className="text-base font-bold text-text tracking-tight mb-1">{t("seeker.matched.strongMatchesCount",{count:strong.length})}</div>
-            <div className="text-sm text-text-2 leading-normal">
-              {topMissing.length>0
-                ? t("seeker.matched.addingWouldTurn",{skills:topMissing.join(", ")})
-                : t("seeker.matched.addSkillsWiden",{count:CATS.length})}
-            </div></div>
-          <Btn kind="primary" onClick={()=>A.go("profile")}>{t("seeker.matched.addSkillsBtn")}</Btn></div>
+        {needsSkills
+          ? <div className={`bg-white rounded-3xl border border-line mb-8 ${mob?"p-6":"p-7"}`}>
+              <div className="flex gap-4 items-start flex-wrap mb-4">
+                <div className="w-13 h-13 rounded-2xl bg-wash text-brand flex items-center justify-center shrink-0"><I n="sparkle" s={24}/></div>
+                <div className="flex-[1_1_260px] min-w-0">
+                  <div className="text-base font-bold text-text tracking-tight mb-1">{t("seeker.matched.addSkillsPromptTitle")}</div>
+                  <div className="text-sm text-text-2 leading-normal">{t("seeker.matched.addSkillsPromptBody")}</div></div></div>
+              <div className="flex gap-2.5 mb-3.5">
+                <Input value={skillDraft} onChange={e=>setSkillDraft(e.target.value)} placeholder={t("auth.typeSkill")}
+                  onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();addSkill(skillDraft);}}}/>
+                <Btn kind="primary" icon="plus" disabled={!skillDraft.trim()} onClick={()=>addSkill(skillDraft)}>{t("formControls.inlineListAdd")}</Btn></div>
+              {mySkills.length>0&&<div className="flex flex-wrap gap-2 mb-3.5">
+                {mySkills.map(s=><span key={s} className="inline-flex items-center gap-2 bg-brand text-white text-sm font-semibold py-1.5 px-3 rounded-lg">{s}</span>)}</div>}
+              <div className="flex flex-wrap gap-2">
+                {QUICK_SKILL_CHIPS.filter(s=>!mySkills.some(x=>x.toLowerCase()===s.toLowerCase())).map(s=>
+                  <button key={s} onClick={()=>addSkill(s)}
+                    className="inline-flex items-center gap-1.5 bg-white border-2 border-dashed border-line text-text-2 text-sm font-medium py-1.5 px-3 rounded-lg cursor-pointer">
+                    <I n="plus" s={13} c={C.brand} w={2.4}/>{s}</button>)}</div>
+            </div>
+          : <div className={`bg-white rounded-3xl border border-line mb-8 flex gap-4 items-center flex-wrap ${mob?"p-6":"p-7"}`}>
+              <div className="w-13 h-13 rounded-2xl bg-wash text-brand flex items-center justify-center shrink-0"><I n="sparkle" s={24}/></div>
+              <div className="flex-[1_1_260px] min-w-0">
+                <div className="text-base font-bold text-text tracking-tight mb-1">{t("seeker.matched.strongMatchesCount",{count:strong.length})}</div>
+                <div className="text-sm text-text-2 leading-normal">
+                  {topMissing.length>0
+                    ? t("seeker.matched.addingWouldTurn",{skills:topMissing.join(", ")})
+                    : t("seeker.matched.addSkillsWiden",{count:CATS.length})}
+                </div></div>
+              <Btn kind="primary" onClick={()=>A.go("profile")}>{t("seeker.matched.addSkillsBtn")}</Btn></div>}
         <G title={t("seeker.matched.strongMatchesTitle")} sub={t("seeker.matched.strongMatchesSub")} items={strong}/>
         <G title={t("seeker.matched.worthLookTitle")} sub={t("seeker.matched.worthLookSub")} items={good}/>
         {strong.length+good.length===0&&<Empty icon="target" title={t("seeker.matched.noMatchesTitle")}

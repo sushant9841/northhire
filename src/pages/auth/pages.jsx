@@ -11,12 +11,13 @@ import { TurnstileWidget } from "../shared/formControls.jsx";
 import { useTranslation } from "../../i18n/i18n.jsx";
 
 /* ═══════════════ SIGN UP · SIGN IN · FORGOT PASSWORD ═══════════════ */
+/* Job Seeker Transformation Tranche 1 (JS-01): the old 6-step wizard (9 fields + 5 selectors
+   before value) is replaced for seekers with a single "seekerAccount" step — role tile, email,
+   password, first name. Everything else (sector, skills, pay, availability) moves to contextual
+   post-signup prompts so a seeker sees jobs in under 30 seconds. The employer wizard is
+   untouched — employer onboarding is its own transformation, out of scope here. */
 const SU_STEPS_SEEKER=[{k:"role",t:"Get started",d:"Are you looking for work, or hiring?"},
-  {k:"account",t:"Create your account",d:"Email and a secure password"},
-  {k:"about",t:"About you",d:"Name, location and work eligibility"},
-  {k:"work",t:"Your work",d:"Sector, job title and experience"},
-  {k:"skills",t:"Your skills",d:"Tickets, certificates and abilities"},
-  {k:"prefs",t:"What you are looking for",d:"Pay, job type and availability"}];
+  {k:"seekerAccount",t:"Create your account",d:"Just the basics — you can add more later"}];
 const SU_STEPS_EMPLOYER=[{k:"role",t:"Get started",d:"Are you looking for work, or hiring?"},
   {k:"account",t:"Create your account",d:"Work email and a secure password"},
   {k:"company",t:"About your company",d:"Company name, industry and size"}];
@@ -76,8 +77,12 @@ export function SignupPage(){
     if(step.k==="account"){
       if(!d.email.includes("@"))e.email=t("auth.enterValidEmail");
       else if(A.hasAccount(d.email))e.email=t("auth.accountExists");
-      if(d.password.length<8)e.password=t("auth.atLeast8Chars");
-      if(d.role==="seeker"&&d.phone.replace(/\D/g,"").length<10)e.phone=t("auth.enter10DigitPhone");}
+      if(d.password.length<8)e.password=t("auth.atLeast8Chars");}
+    if(step.k==="seekerAccount"){
+      if(!d.first.trim())e.first=t("auth.requiredField");
+      if(!d.email.includes("@"))e.email=t("auth.enterValidEmail");
+      else if(A.hasAccount(d.email))e.email=t("auth.accountExists");
+      if(d.password.length<8)e.password=t("auth.atLeast8Chars");}
     if(step.k==="about"){if(!d.first.trim())e.first=t("auth.requiredField"); if(!d.last.trim())e.last=t("auth.requiredField");
       if(!d.city.trim())e.city=t("auth.requiredField"); if(!d.eligible)e.eligible=t("auth.pleaseChooseOne");}
     if(step.k==="work"){if(!d.cat)e.cat=t("auth.chooseSector");
@@ -158,8 +163,21 @@ export function SignupPage(){
             <Field label={t("auth.emailAddress")} required error={err.email} name="email">
               <Input icon="mail" type="email" value={d.email} onChange={e=>set("email",e.target.value)}
                 placeholder={d.role==="employer"?"you@yourcompany.ca":"you@example.ca"} invalid={!!err.email}/></Field>
-            {d.role==="seeker"&&<Field label={t("auth.mobileNumber")} required error={err.phone} hint={t("auth.mobileHint")} name="phone">
-              <Input icon="phone" value={d.phone} onChange={e=>set("phone",e.target.value)} placeholder="416 555 0100" invalid={!!err.phone}/></Field>}
+            <Field label={t("auth.createPassword")} required error={err.password} hint={t("auth.createPasswordHint")} name="password">
+              <Input icon="lock" type="password" value={d.password} onChange={e=>set("password",e.target.value)} placeholder={t("auth.passwordHint")} invalid={!!err.password}/></Field>
+            <Banner tone="neutral" icon="shield" title={t("auth.detailsStayYours")}>
+              {t("auth.detailsStayYoursBody")}</Banner></div>}
+
+          {/* Job Seeker Transformation Tranche 1: the entire seeker signup collapses to this one
+              screen — first name, email, password. Everything else (sector, skills, pay,
+              location) is asked contextually after signup, once the seeker is already looking at
+              real jobs, instead of gating them behind a 6-step form up front. */}
+          {step.k==="seekerAccount"&&<div className="flex flex-col gap-4">
+            <Field label={t("auth.firstName")} required error={err.first} name="first">
+              <Input icon="user" value={d.first} onChange={e=>set("first",e.target.value)} placeholder="Jean" invalid={!!err.first}/></Field>
+            <Field label={t("auth.emailAddress")} required error={err.email} name="email">
+              <Input icon="mail" type="email" value={d.email} onChange={e=>set("email",e.target.value)}
+                placeholder="you@example.ca" invalid={!!err.email}/></Field>
             <Field label={t("auth.createPassword")} required error={err.password} hint={t("auth.createPasswordHint")} name="password">
               <Input icon="lock" type="password" value={d.password} onChange={e=>set("password",e.target.value)} placeholder={t("auth.passwordHint")} invalid={!!err.password}/></Field>
             <Banner tone="neutral" icon="shield" title={t("auth.detailsStayYours")}>
