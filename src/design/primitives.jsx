@@ -511,6 +511,38 @@ export function Modal({open=true,onClose,title,sub,children,footer,width=520}){
    {footer&&<div className={`py-4 px-6 border-t border-line-soft bg-bg shrink-0 ${mob?"":"rounded-b-2xl"}`}
      style={{paddingBottom: mob ? "calc(16px + env(safe-area-inset-bottom))" : undefined}}>{footer}</div>}</div></div>;}
 
+/* Job Seeker Transformation Tranche 2 — the mobile-first BottomSheet primitive: a bottom-sheet on
+   mobile, a right-side slide-in drawer on desktop. Unlike <Modal> (which centers as a dialog on
+   desktop), this is for content that's naturally a drawer — filters, pickers, the match-score
+   breakdown — reused across the transformation and, per the plan, later mobile surfaces. */
+export function BottomSheet({open,onClose,title,sub,children,footer,width=420}){
+ const mob=useMedia("(max-width: 820px)");
+ const boxRef=useRef(null);
+ useEffect(()=>{if(!open||typeof document==="undefined")return;const p=document.body.style.overflow;
+  document.body.style.overflow="hidden";return()=>{document.body.style.overflow=p;};},[open]);
+ useEffect(()=>{
+  if(!open)return;
+  boxRef.current?.focus();
+  const onKey=e=>{if(e.key==="Escape")onClose?.();};
+  document.addEventListener("keydown",onKey);
+  return()=>document.removeEventListener("keydown",onKey);
+ },[open,onClose]);
+ if(!open)return null;
+ return <div onClick={onClose} className={`fixed inset-0 bg-ink/50 z-[700] flex ${mob?"items-end justify-center":"items-stretch justify-end"}`}
+  style={{animation:"fadeIn .16s ease"}}>
+  <div onClick={e=>e.stopPropagation()} ref={boxRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={title}
+   className={`bg-white shadow-lg flex flex-col outline-none ${mob?"w-full rounded-t-3xl max-h-[90vh]":"h-full"}`}
+   style={{width:mob?undefined:width,maxWidth:mob?undefined:"92vw",
+    animation:mob?"up .26s cubic-bezier(.22,.68,.35,1)":"slideInR .22s cubic-bezier(.22,.68,.35,1)"}}>
+   {mob&&<div className="w-10 h-1 bg-line rounded-full mt-2.5 mx-auto mb-0.5 shrink-0"/>}
+   <div className="py-5 px-6 border-b border-line-soft flex justify-between gap-3.5 items-start shrink-0">
+    <div><div className="text-lg font-bold tracking-tight text-text">{title}</div>
+     {sub&&<div className="text-sm text-text-2 mt-1">{sub}</div>}</div>
+    <button onClick={onClose} className="bg-bg border-0 w-9 h-9 rounded-full cursor-pointer text-text-2 flex items-center justify-center shrink-0"><I n="x" s={17}/></button></div>
+   <div className="p-6 overflow-y-auto flex-1">{children}</div>
+   {footer&&<div className="py-4 px-6 border-t border-line-soft bg-bg shrink-0"
+     style={{paddingBottom: mob ? "calc(16px + env(safe-area-inset-bottom))" : undefined}}>{footer}</div>}</div></div>;}
+
 /* Shared "are you sure?" dialog — replaces the native confirm()/window.confirm() calls scattered
    across destructive actions (offboard, wipe data, execute payroll, remove badge). Renders nothing
    when closed, so a caller can mount it unconditionally and just flip `open`. */

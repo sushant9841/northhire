@@ -198,6 +198,7 @@ export default function NorthHire(){
         @keyframes pop{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
         @keyframes up{from{transform:translateY(100%)}to{transform:none}}
         @keyframes slideIn{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:none}}
+        @keyframes slideInR{from{transform:translateX(100%)}to{transform:none}}
         @keyframes grow{from{height:0}}
         @keyframes shake{10%,90%{transform:translateX(-1px)}30%,70%{transform:translateX(2px)}50%{transform:translateX(-2px)}}
         @media print{header,nav,footer{display:none!important}}

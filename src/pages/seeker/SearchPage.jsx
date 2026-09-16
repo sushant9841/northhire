@@ -12,6 +12,10 @@ import { JobsMap } from "./components/JobsMap.jsx";
 import { useTranslation } from "../../i18n/i18n.jsx";
 
 /* ═══════════════ SEARCH · MATCHED · SAVED · EMPLOYERS ═══════════════ */
+/* Job Seeker Transformation Tranche 2 — "Recent searches" list. This is pure UI convenience (what
+   did I search recently), never a substitute for server-held saved searches (those already exist
+   via A.saveSearch/savedSearches) - fine to keep per-device in localStorage. */
+const RECENT_SEARCHES_KEY="northhire.recentSearches";
 /* Employment type / work setting / experience filter values are stored and matched against job
    data as canonical English strings (see the STANDING RULE not to touch stored enum values) -
    these maps translate only the label shown to the user. */
@@ -103,6 +107,19 @@ export function SearchPage(){
   const latestFilters=useRef();
   latestFilters.current={q,where,...f};
   useEffect(()=>()=>{A.setSearch(latestFilters.current);},[]);
+  const [recent]=useState(()=>{try{return JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY)||"[]");}catch{return [];}});
+  /* Record on unmount (leaving the page), same trigger as the filter-memory effect above, so a
+     search only lands in "recent" once the seeker has actually moved on from it, not on every
+     keystroke. */
+  useEffect(()=>()=>{
+    const {q:lq,where:lw}=latestFilters.current;
+    if(!lq.trim()&&!lw.trim())return;
+    const id=`${lq.trim()}|${lw.trim()}`;
+    let prev; try{prev=JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY)||"[]");}catch{prev=[];}
+    const next=[{q:lq.trim(),where:lw.trim()},...prev.filter(r=>`${r.q}|${r.where}`!==id)].slice(0,5);
+    try{localStorage.setItem(RECENT_SEARCHES_KEY,JSON.stringify(next));}catch{}
+  },[]);
+  const applyRecent=r=>{setQ(r.q);setWhere(r.where);};
   const n=(f.cats?.length||0)+(f.types?.length||0)+(f.modes?.length||0)+(f.exps?.length||0)+(f.prov?1:0)+(f.minPay?1:0);
   const clear=()=>setF({cats:[],types:[],modes:[],exps:[],prov:"",minPay:""});
   const res=useMemo(()=>{
@@ -153,6 +170,11 @@ export function SearchPage(){
         {radiusKm>0&&<div className="text-xs mt-2 max-w-3xl mx-auto text-center" style={{color:geocoding?C.text3:origin?C.ok:C.warn}}>
           {geocoding?t("seeker.search.locating"):origin?t("seeker.search.searchingWithin",{km:radiusKm,place:origin.displayName?.split(",").slice(0,2).join(", ")||where}):where.trim()?t("seeker.search.couldntFindLocation"):t("seeker.search.typeCityRadius")}</div>}
         <div className="text-xs text-text-3 mt-2 max-w-3xl mx-auto text-center">{t("seeker.search.excludeTipPrefix")} <strong>{t("seeker.search.excludeTipWord")}</strong> {t("seeker.search.excludeTipSuffix")}</div>
+        {recent.length>0&&<div className="flex items-center gap-2 flex-wrap justify-center mt-4 max-w-3xl mx-auto">
+          <span className="text-xs text-text-3 font-semibold">{t("seeker.search.recentSearchesLabel")}</span>
+          {recent.map((r,i)=><button key={i} onClick={()=>applyRecent(r)}
+            className="bg-white border border-line rounded-lg py-1.5 px-3 text-xs font-medium text-text cursor-pointer">
+            {r.q||t("seeker.search.anyTitleChip")}{r.where?` • ${r.where}`:""}</button>)}</div>}
       </div>
     </section>
 
@@ -176,7 +198,10 @@ export function SearchPage(){
                 {A.user?.role==="seeker"&&<option value="match">{t("seeker.search.bestMatchOption")}</option>}
                 <option value="recent">{t("seeker.search.mostRecentOption")}</option><option value="pay">{t("seeker.search.highestPayOption")}</option><option value="closing">{t("seeker.search.closingSoonOption")}</option></Sel>
             </div></div>
-          {n>0&&<div className="flex gap-2 flex-wrap mb-5 items-center">
+          {/* Sticky filter-chip strip (Tranche 2): the active-filter chips stay visible while
+              scrolling the results list, so clearing/adjusting a filter never requires scrolling
+              back up. */}
+          {n>0&&<div className="sticky top-0 z-10 bg-bg pt-1 pb-1 flex gap-2 flex-wrap mb-5 items-center">
             {(f.cats||[]).map(c=><button key={c} onClick={()=>setF({...f,cats:f.cats.filter(x=>x!==c)})}
               className="flex items-center gap-1.5 bg-wash border border-line-2 text-brand text-xs font-semibold py-1.5 px-3 rounded-lg cursor-pointer">{CATM[c].label}<I n="x" s={12} w={2.4}/></button>)}
             {[...(f.types||[]),...(f.modes||[]),...(f.exps||[])].map(ty=><button key={ty}

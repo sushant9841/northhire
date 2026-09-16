@@ -3,17 +3,27 @@ import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
-import { Btn, Tag, Ring, Empty, Lbl, Banner, Page, Modal, Field, Area, HERO_TIGHT } from "../../design/primitives.jsx";
+import { Btn, Tag, Ring, Empty, Lbl, Banner, Page, Modal, Field, Area, Input, Tooltip, HERO_TIGHT } from "../../design/primitives.jsx";
 import { pay, payUnit, annual, dlText, money } from "../../helpers/utils.js";
 import { EmpMark, HiringTypeBadge, JobCard } from "./cards.jsx";
+import { MatchScoreDrawer } from "./MatchScoreDrawer.jsx";
 import { AI_DISCLOSURE_TEXT, VACANCY_CONFIRMED_TEXT } from "../../helpers/jobPostingLaw.js";
 import { useTranslation } from "../../i18n/i18n.jsx";
+
+/* Job Seeker Transformation Tranche 1 (JS-01) contextual prompt: "where are you looking?" is
+   asked once, the first time a seeker with no city on file taps a job's location — never as a
+   signup gate. Which users have already been asked is a pure UI-nag-suppression flag, not
+   business data, so it's fine as a per-viewer localStorage convenience (feedback_server_authoritative). */
+const LOCATION_PROMPT_KEY="northhire.locationPromptSeen";
 
 export function JobDetailPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)"); const { t } = useTranslation();
   /* All hooks before any early return - a conditional useEffect is a Rules-of-Hooks violation
      that crashes when the job goes from initial-null to loaded (or the other way). */
   const [reporting,setReporting]=useState(false); const [reportReason,setReportReason]=useState(""); const [reportSent,setReportSent]=useState(false);
+  const [scoreDrawerOpen,setScoreDrawerOpen]=useState(false);
+  const [locationPrompt,setLocationPrompt]=useState(false); const [whereCity,setWhereCity]=useState("");
+  const [appliedTip,setAppliedTip]=useState(null);
   const job=A.job(A.jobId);
   const e=job?A.emp(job.e):null;
   useEffect(()=>{ if(e?.id) A.loadEmployerReviews(e.id); },[e?.id]);
@@ -22,7 +32,7 @@ export function JobDetailPage(){
   const applied=A.appliedJobIds.has(job.id); const score=A.score(job);
   const relatedJobs=A.jobs.filter(j=>j.id!==job.id&&j.status==="live"&&(j.cat===job.cat||(j.city===job.city&&j.prov===job.prov))).slice(0,3);
   const employerReviews=A.reviews.filter(r=>r.employer===e.id);
-  const Meta=({icon,k,v})=><div className="flex gap-3 items-start">
+  const Meta=({icon,k,v,onClick})=><div onClick={onClick} className={`flex gap-3 items-start ${onClick?"cursor-pointer":""}`}>
     <div className="w-10 h-10 rounded-xl bg-bg flex items-center justify-center text-brand shrink-0"><I n={icon} s={17}/></div>
     <div className="min-w-0"><div className="text-xs text-text-3 mb-1 font-medium tracking-wide">{k}</div>
       <div className="text-sm font-semibold text-text leading-snug">{v}</div></div></div>;
@@ -33,6 +43,18 @@ export function JobDetailPage(){
       <span className="text-brand mt-1 shrink-0 flex"><I n="check" s={16} w={2.4}/></span>{x}</li>)}</ul>;
 
   const apply=()=>{ if(!A.user) return A.go("login"); if(A.user.role!=="seeker") return A.go("denied"); A.beginApply(job.id); };
+  const onLocationTap=()=>{
+    if(A.user?.role!=="seeker"||A.user.city)return;
+    let seen; try{seen=JSON.parse(localStorage.getItem(LOCATION_PROMPT_KEY)||"{}");}catch{seen={};}
+    if(seen[A.user.id])return;
+    setWhereCity(""); setLocationPrompt(true);
+  };
+  const confirmLocation=()=>{
+    let seen; try{seen=JSON.parse(localStorage.getItem(LOCATION_PROMPT_KEY)||"{}");}catch{seen={};}
+    seen[A.user.id]=true; try{localStorage.setItem(LOCATION_PROMPT_KEY,JSON.stringify(seen));}catch{}
+    if(whereCity.trim())A.saveProfile({...A.user,city:whereCity.trim()});
+    setLocationPrompt(false);
+  };
 
   return <div className="bg-white min-h-full">
 
@@ -48,14 +70,30 @@ export function JobDetailPage(){
               {e.verified&&<Tag tone="brand" sm icon="checkC2">{t("shared.jobDetail.verified")}</Tag>}
               {e.rating>0&&<button onClick={()=>A.openEmployer(e.id)} className="bg-transparent border-0 p-0 cursor-pointer flex items-center gap-1 text-sm text-warn font-semibold">
                 <I n="star" s={14} fill={C.warn} w={0}/>{e.rating}<span className="text-text-3 font-normal">({employerReviews.length} {employerReviews.length===1?t("shared.jobDetail.review"):t("shared.jobDetail.reviews")})</span></button>}
-              <span className="text-text-3">•</span><span>{job.city}, {job.prov}</span></div>
+              <span className="text-text-3">•</span>
+              <span onClick={onLocationTap} className={onLocationTap&&A.user?.role==="seeker"&&!A.user.city?"cursor-pointer underline decoration-dotted":""}>{job.city}, {job.prov}</span></div>
+            {/* Above-fold answer set (JS-11): pay + employment type sit right under the title,
+                not only lower in a salary card — one line each, no wall of text before them. */}
+            <div className="flex items-baseline gap-1.5 mt-2.5 text-lg font-bold text-brand tracking-tight">
+              {pay(job)}<span className="text-sm font-semibold text-text-2">{payUnit(job)}</span></div>
             <div className="flex gap-2 flex-wrap mt-3.5">
               <HiringTypeBadge jobId={job.id}/>
               <Tag icon="clock">{job.type}</Tag>
               {job.mode!=="On-site"&&<Tag tone="ok" icon="globe">{job.mode}</Tag>}
               {job.urgent&&<Tag tone="warn" icon="alert">{t("shared.jobDetail.urgentHiring")}</Tag>}
-              <Tag tone={job.dl<=7?"danger":"neutral"} icon="calendar">{dlText(job.dl)}</Tag></div></div>
-          {A.user?.role==="seeker"&&!mob&&<Ring v={score} size={72} label={t("shared.jobDetail.yourMatch")}/>}
+              <Tag tone={job.dl<=7?"danger":"neutral"} icon="calendar">{dlText(job.dl)}</Tag>
+              {/* Status pill tooltip (JS-06) - "Applied" is never left unexplained. */}
+              {applied&&<span className="relative inline-block"
+                onMouseEnter={e=>{const r=e.currentTarget.getBoundingClientRect();setAppliedTip({top:r.top+r.height/2,left:r.right+10});}}
+                onMouseLeave={()=>setAppliedTip(null)}>
+                <Tag tone="ok" icon="check">{t("shared.jobDetail.applied")}</Tag>
+                <Tooltip show={!!appliedTip} top={appliedTip?.top} left={appliedTip?.left}>{t("shared.jobDetail.appliedTooltip")}</Tooltip>
+              </span>}</div></div>
+          {A.user?.role==="seeker"&&(mob
+            ?<button onClick={()=>setScoreDrawerOpen(true)} className="flex flex-col items-center bg-transparent border-0 cursor-pointer p-0">
+                <Ring v={score} size={52}/><span className="text-xs text-brand font-semibold underline mt-1">{t("shared.jobDetail.howCalculated")}</span></button>
+            :<button onClick={()=>setScoreDrawerOpen(true)} className="bg-transparent border-0 cursor-pointer p-0">
+                <Ring v={score} size={72} label={t("shared.jobDetail.yourMatch")}/></button>)}
         </div>
       </div>
     </section>
@@ -71,7 +109,7 @@ export function JobDetailPage(){
               {t("shared.jobDetail.annualizedNote",{annual:money(annual(job))})}</div>}</div>
           <div className="grid gap-6 mb-9" style={{gridTemplateColumns:`repeat(auto-fit,minmax(${mob?150:200}px,1fr))`}}>
             <Meta icon="users" k={t("shared.jobDetail.vacancies")} v={`${job.vac} ${job.vac===1?t("shared.jobDetail.position"):t("shared.jobDetail.positions")}`}/>
-            <Meta icon="pin" k={t("shared.jobDetail.location")} v={`${job.city}, ${job.prov}`}/>
+            <Meta icon="pin" k={t("shared.jobDetail.location")} v={`${job.city}, ${job.prov}`} onClick={onLocationTap}/>
             <Meta icon="award" k={t("shared.jobDetail.experience")} v={job.exp}/>
             <Meta icon="cap" k={t("shared.jobDetail.education")} v={job.edu}/>
             <Meta icon="briefcase" k={t("shared.jobDetail.employment")} v={job.type}/>
@@ -112,9 +150,10 @@ export function JobDetailPage(){
           <div className="bg-white rounded-3xl p-6 border border-line">
             {A.user?.role==="seeker"&&<div className="pb-5 mb-5 border-b border-line-soft">
               <div className="flex items-center gap-3.5">
-                <Ring v={score} size={56}/><div><div className="text-sm font-bold text-text">{t("shared.jobDetail.matchScore")}</div>
+                <button onClick={()=>setScoreDrawerOpen(true)} className="bg-transparent border-0 cursor-pointer p-0"><Ring v={score} size={56}/></button>
+                <div><div className="text-sm font-bold text-text">{t("shared.jobDetail.matchScore")}</div>
                   <div className="text-sm text-text-2 mt-1">{t("shared.jobDetail.fromSkills")}</div>
-                  <button onClick={()=>A.go("matchScore")} className="bg-transparent border-0 p-0 mt-1 cursor-pointer text-xs font-semibold text-brand underline">{t("shared.jobDetail.howCalculated")}</button></div></div>
+                  <button onClick={()=>setScoreDrawerOpen(true)} className="bg-transparent border-0 p-0 mt-1 cursor-pointer text-xs font-semibold text-brand underline">{t("shared.jobDetail.howCalculated")}</button></div></div>
               {A.matchReasons(job).length>0&&<div className="flex flex-wrap gap-1.5 mt-3.5">
                 {A.matchReasons(job).map(r=><Tag key={r} tone="ok" sm icon="check">{r}</Tag>)}</div>}</div>}
             <Btn kind={applied?"soft":"primary"} size="lg" full disabled={applied} icon={applied?"check":"send"} onClick={apply}>
@@ -208,6 +247,20 @@ export function JobDetailPage(){
         </div>
       </div>}
     </Modal>}
+
+    {locationPrompt&&<Modal onClose={()=>setLocationPrompt(false)} title={t("shared.jobDetail.whereLookingTitle")}>
+      <div className="flex flex-col gap-3.5">
+        <p className="text-sm text-text-2 m-0">{t("shared.jobDetail.whereLookingBody")}</p>
+        <Field label={t("auth.city")}><Input icon="pin" value={whereCity} onChange={e=>setWhereCity(e.target.value)} placeholder={t("auth.exampleCityAlt")}
+          onKeyDown={ev=>ev.key==="Enter"&&confirmLocation()}/></Field>
+        <div className="flex gap-2.5 justify-end">
+          <Btn kind="ghost" onClick={confirmLocation}>{t("shared.jobDetail.skipForNow")}</Btn>
+          <Btn kind="primary" disabled={!whereCity.trim()} onClick={confirmLocation}>{t("common.confirm")}</Btn>
+        </div>
+      </div>
+    </Modal>}
+
+    <MatchScoreDrawer job={A.user?.role==="seeker"?job:null} open={scoreDrawerOpen} onClose={()=>setScoreDrawerOpen(false)}/>
 
     {mob&&<div className="sticky bottom-0 bg-white/97 backdrop-blur-md border-t border-line py-3 px-4 flex gap-2.5 z-300">
       <Btn kind="outline" onClick={()=>A.toggleSave(job.id)} icon="bookmark" style={{flexShrink:0}}>{A.saved.has(job.id)?t("shared.jobDetail.saved"):t("shared.jobDetail.save")}</Btn>
