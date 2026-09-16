@@ -3,7 +3,7 @@ import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C, FONT, SH } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
-import { Btn, Tag, Card, Input, Field, Banner, H2, Empty, Tabs, SmartPortrait, RichText, Page, ConfirmDialog, HERO_TIGHT } from "../../design/primitives.jsx";
+import { Btn, Tag, Card, Input, Field, Banner, H2, Empty, Tabs, SmartPortrait, RichText, Page, ConfirmDialog, Tooltip, HERO_TIGHT } from "../../design/primitives.jsx";
 import { uid } from "../../helpers/utils.js";
 import { sanitizeHtml } from "../../helpers/sanitize.js";
 import { CV_TEMPLATES } from "../../store/seed/constants.js";
@@ -124,11 +124,18 @@ export function CvPreview({cv,u,scale=1,mob=false}){
   </div>;
 }
 
+/* Job Seeker Transformation Tranche 3 (JS-07): the 5-CV cap used to be a purely server-side fact
+   the seeker discovered only when a "New CV" POST failed. Surfacing it proactively at count=5 -
+   before they've composed anything - turns a dead end into three real next steps. */
+const MAX_CVS=5;
 export function CvsPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)"); const {t}=useTranslation();
   const heroPad=mob?"py-11 px-4":"py-18 px-8";
   const [importing,setImporting]=useState(false);
+  const [limitTip,setLimitTip]=useState(null);
   const fileRef=useRef(null);
+  const myCvs=A.cvs.filter(c=>c.user===A.user.id);
+  const atLimit=myCvs.length>=MAX_CVS;
   const onFilePicked=async(e)=>{
     const file=e.target.files?.[0]; e.target.value="";
     if(!file)return;
@@ -137,6 +144,7 @@ export function CvsPage(){
     catch(err){A.toast(err.message||t("seeker.cv.couldntReadFile"),"danger");}
     setImporting(false);
   };
+  const showTip=e=>{const r=e.currentTarget.getBoundingClientRect();setLimitTip({top:r.top+r.height/2,left:r.right+10});};
   if(!A.settings.cvBuilder)return <Page><Empty icon="lock" title={t("seeker.cv.cvBuilderUnavailableTitle")}
     body={t("seeker.cv.cvBuilderUnavailableBodyList")}/></Page>;
   return <div className="bg-white min-h-full">
@@ -148,11 +156,23 @@ export function CvsPage(){
             <p className={`text-text-2 leading-normal max-w-xl ${mob?"text-base":"text-lg"}`}>{t("seeker.cv.myCvsSub")}</p></div>
           <div className="flex gap-2.5">
             <input ref={fileRef} type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden onChange={onFilePicked}/>
-            <Btn kind="outline" size="lg" icon="upload" disabled={importing} onClick={()=>fileRef.current?.click()}>{importing?t("seeker.cv.readingBtn"):t("seeker.cv.importBtn")}</Btn>
-            <Btn kind="primary" size="lg" icon="plus" onClick={()=>A.newCv()}>{t("seeker.cv.newCvBtn")}</Btn></div></div>
+            <span className="relative inline-block" onMouseEnter={atLimit?showTip:undefined} onMouseLeave={()=>setLimitTip(null)}>
+              <Btn kind="outline" size="lg" icon="upload" disabled={importing||atLimit} onClick={()=>fileRef.current?.click()}>{importing?t("seeker.cv.readingBtn"):t("seeker.cv.importBtn")}</Btn>
+              {atLimit&&<Tooltip show={!!limitTip} top={limitTip?.top} left={limitTip?.left}>{t("seeker.cv.maxCvsTooltip")}</Tooltip>}</span>
+            <span className="relative inline-block" onMouseEnter={atLimit?showTip:undefined} onMouseLeave={()=>setLimitTip(null)}>
+              <Btn kind="primary" size="lg" icon="plus" disabled={atLimit} onClick={()=>A.newCv()}>{t("seeker.cv.newCvBtn")}</Btn>
+              {atLimit&&<Tooltip show={!!limitTip} top={limitTip?.top} left={limitTip?.left}>{t("seeker.cv.maxCvsTooltip")}</Tooltip>}</span></div></div>
+        {atLimit&&<Banner tone="warn" icon="alert" title={t("seeker.cv.maxCvsTitle")} style={{marginTop:20}}>
+          <div className="flex flex-col gap-2.5">
+            <div>{t("seeker.cv.maxCvsBody")}</div>
+            <div className="flex gap-2 flex-wrap">
+              <Btn kind="outline" size="sm" icon="edit" onClick={()=>A.editCv(myCvs[0].id)}>{t("seeker.cv.editExistingBtn")}</Btn>
+              <Btn kind="outline" size="sm" icon="copy" onClick={()=>A.duplicateCv(myCvs[0].id)}>{t("seeker.cv.duplicateOneBtn")}</Btn>
+              <Btn kind="outline" size="sm" icon="trash" onClick={()=>document.getElementById("cv-grid")?.scrollIntoView({behavior:"smooth",block:"start"})}>{t("seeker.cv.deleteOldOneBtn")}</Btn>
+            </div></div></Banner>}
       </div>
     </section>
-    <section className={`bg-bg min-h-100 ${mob?"pt-8 px-4 pb-14":"pt-12 px-8 pb-24"}`}>
+    <section id="cv-grid" className={`bg-bg min-h-100 ${mob?"pt-8 px-4 pb-14":"pt-12 px-8 pb-24"}`}>
       <div className="max-w-6xl mx-auto">
     {A.cvs.length===0?<Empty icon="file" title={t("seeker.cv.noCvsYetTitle")}
       body={t("seeker.cv.noCvsYetBody")}

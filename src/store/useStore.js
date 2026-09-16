@@ -372,7 +372,7 @@ export function useStore(){
        attributes to them explicitly rather than silently reading as if the target did it. */
     actor:impersonating?.originalUser?`${impersonating.originalUser.name} (admin, viewing as ${user?.name})`
       :user?`${user.name} (${user.role})`:"Guest",at:nowStamp()},...a].slice(0,1000));
-  const notify=(n)=>setNotifications(list=>[{id:uid("n"),read:false,at:"Just now",...n},...list]);
+  const notify=(n)=>setNotifications(list=>[{id:uid("n"),read:false,at:"Just now",createdAt:Date.now(),...n},...list]);
 
   /* ─── Live-sync (SSE) ─────────────────────────────────────────────────────
      Reuses the same setters everything else in this store uses, so an event pushed by the
@@ -1392,6 +1392,13 @@ export function useStore(){
      click from. */
   const [noCvGateJobId,setNoCvGateJobId]=useState(null);
   const closeNoCvGate=()=>setNoCvGateJobId(null);
+  /* Job Seeker Transformation Tranche 3/4: "Track application" from the post-submit success
+     card, and a notification tap (JS-10), both need to land on My Status pre-scrolled to one
+     specific row rather than just the page. lastAppliedId remembers what was just submitted;
+     focusAppId is the row StatusPage should scroll to and briefly highlight on its next mount,
+     cleared once consumed so it doesn't re-trigger on a later unrelated visit. */
+  const [lastAppliedId,setLastAppliedId]=useState(null);
+  const [focusAppId,setFocusAppId]=useState(null);
   const beginApply=(id,source)=>{
     const invited=[...invitedCandidates].some(k=>k.startsWith(`${id}:`)&&k.endsWith(`:${user?.id}`));
     const src=invited?"invite":(source||(pg==="matched"?"matched":pg==="search"?"search":"direct"));
@@ -1417,7 +1424,8 @@ export function useStore(){
     try{
       const {application}=await api.post("/applications",{jobId:j.id,cvId:applyDraft.cv||null,availability:applyDraft.avail,payExpectation:applyDraft.expect,coverLetter:applyDraft.letter,screeningAnswers:applyDraft.screeningAnswers||{},source:applyDraft.source||"direct"});
       setApplications(l=>[...l,mapApiApplication(application)]);
-      notify({icon:"send",title:`Application sent to ${e.name}`,body:`Your application for ${j.t} is now in their pipeline.`,for:user.id,link:"status"});
+      setLastAppliedId(application.id);
+      notify({icon:"send",title:`Application sent to ${e.name}`,body:`Your application for ${j.t} is now in their pipeline.`,for:user.id,link:`status:${application.id}`});
       log("application.create",`Applied to ${j.t} at ${e.name}`,"send");
       /* Autofill history: remember what this user typed so subsequent applications can offer
          them their previous answers via datalist. */
@@ -1437,7 +1445,7 @@ export function useStore(){
       const {application}=await api.patch(`/applications/${id}/withdraw`,{reason});
       setApplications(l=>l.map(a=>a.id===id?mapApiApplication(application):a));
       log("application.withdraw","Withdrew an application","x");
-      notify({icon:"x",title:"Application withdrawn",body:"You can restore it within 7 days from My Status.",for:user?.id,link:"status"});
+      notify({icon:"x",title:"Application withdrawn",body:"You can restore it within 7 days from My Status.",for:user?.id,link:`status:${id}`});
     }catch(err){toast(err.message,"danger");}
   };
   const restoreApp=async id=>{
@@ -1451,7 +1459,7 @@ export function useStore(){
     try{
       const {application}=await api.patch(`/applications/${id}/accept-offer`);
       setApplications(l=>l.map(x=>x.id===id?mapApiApplication(application):x));
-      notify({icon:"award",title:"Offer accepted",body:`You accepted the offer for ${j.t}.`,for:user.id,link:"status"});
+      notify({icon:"award",title:"Offer accepted",body:`You accepted the offer for ${j.t}.`,for:user.id,link:`status:${id}`});
       log("application.accept",`Accepted offer for ${j.t}`,"award");
     }catch(err){toast(err.message,"danger");}};
 
@@ -1469,7 +1477,7 @@ export function useStore(){
         setJobs(js=>js.map(x=>x.id===j.id?mapApiJob(freshJob):x));
       }
       notify({icon:stage==="Hired"?"award":stage==="Offer"?"award":"activity",title:`${stage} — ${e.name}`,
-        body:stage==="Hired"?`You've been hired for ${j.t}. Congratulations!`:`Your application for ${j.t} moved to ${stage}.`,for:a.user,link:"status"});
+        body:stage==="Hired"?`You've been hired for ${j.t}. Congratulations!`:`Your application for ${j.t} moved to ${stage}.`,for:a.user,link:`status:${id}`});
       log("pipeline.move",`Moved ${person(a.user).name} to ${stage} on ${j.t}`,"users");
       /* Trigger HR onboarding suggestion when candidate is hired at an Enterprise employer */
       if(stage==="Hired"&&user?.role==="employer"&&company?.plan==="Enterprise"){
@@ -2089,7 +2097,17 @@ export function useStore(){
   };
   const readNotif=async(id,link)=>{
     setNotifications(l=>l.map(n=>n.id===id?{...n,read:true}:n));
-    if(link)go(link);
+    /* JS-10: a notification's `link` is either a bare route ("status") or, when it points at one
+       specific entity, "route:entityId" (e.g. "status:app_42"). No schema change needed - `link`
+       was already a free-text column - so this reuses it instead of adding a focus_id field.
+       The route half still drives go(); the id half becomes what the destination page scrolls to. */
+    if(link){
+      const sep=link.indexOf(":");
+      const route=sep===-1?link:link.slice(0,sep);
+      const entityId=sep===-1?null:link.slice(sep+1);
+      if(entityId)setFocusAppId(entityId);
+      go(route);
+    }
     try{await api.patch(`/seeker/notifications/${id}/read`);}catch{/* best-effort */}
   };
   const markAllRead=async()=>{
@@ -2123,6 +2141,7 @@ export function useStore(){
     logout,completeSignup,saveProfile,deleteAccount,exportData,setUserSetting,setUserLocale,marketingConsent,setMarketingConsent,
     toggleSave,followEmployer,openJob,openEmployer,openBlog,openTraining,openCandidate,
     beginApply,submitApply,withdraw,acceptOffer,moveApp,rejectApp,noCvGateJobId,closeNoCvGate,
+    lastAppliedId,focusAppId,setFocusAppId,
     publishJob,getJobDistributeUrl,getAutofillSuggestions,recordAutofill,approveJob,toggleJobStatus,flagJob,reportJob,jobReports,loadJobReports,decideJobReport,setPipelineJob:setPipelineJobFn,saveCompany,verifyEmployer,holdEmployer,toggleSuspend,eraseUser,
     team,loadTeam,loadTeamAudit,inviteTeammate,revokeInvite,removeTeammate,getInvite,acceptInvite,inviteToken,
     messageTemplates,saveMessageTemplate,deleteMessageTemplate,

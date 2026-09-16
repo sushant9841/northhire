@@ -116,6 +116,13 @@ export function Apply1(){
   return <ApplyShell step={1} job={job} onBack={()=>A.go("job")} onNext={()=>A.go("apply2")} nextLabel={t("seeker.apply.continueBtn")}>
     <Card pad={22}>
       <H2 sub={t("seeker.apply.confirmDetailsSub")}>{t("seeker.apply.confirmDetailsTitle")}</H2>
+      {/* Job Seeker Transformation Tranche 3 (JS-05 lead-in): the pre-fill audit. Every field below
+          is what NorthHire already has on file - this banner says so up front, so the seeker
+          reads the rest of the step as "check my own data" rather than "fill out yet another
+          form". Nothing here changes what gets submitted; every value stays editable exactly as
+          it did before (feedback_server_authoritative / risk called out in the plan). */}
+      <Banner tone="ok" icon="sparkle" title={t("seeker.apply.prefilledTitle")} style={{marginBottom:20}}>
+        {t("seeker.apply.prefilledBody")}</Banner>
       <div className="flex gap-3.5 items-center bg-tint border border-line-2 rounded-xl p-4 mb-5">
         <SmartPortrait seed={u.seed??0} size={54} radius={13}/>
         <div className="min-w-0 flex-1">
@@ -232,8 +239,15 @@ export function Apply3(){
     </Card></ApplyShell>;
 }
 export function ApplyDone(){
-  const A=use(); const job=A.job(A.applyDraft.job); const {t}=useTranslation();
+  const A=use(); const job=A.job(A.applyDraft.job); const {t,locale}=useTranslation();
   const e=job?A.emp(job.e):null;
+  /* Job Seeker Transformation Tranche 3 (JS-05): rich confirmation instead of a bare checkmark -
+     which CV went out, when, and what to expect, all on the one screen that follows a decision
+     the seeker just made. applyDraft still holds what was actually submitted (it isn't reset
+     until the next beginApply), so this reads the real attached CV rather than re-guessing. */
+  const sentCv=(A.cvs||[]).find(c=>c.id===A.applyDraft.cv)||A.defaultCv;
+  const appliedAt=new Date().toLocaleDateString(locale==="fr-CA"?"fr-CA":"en-CA",{day:"numeric",month:"short",year:"numeric"});
+  const trackApplication=()=>{ if(A.lastAppliedId)A.setFocusAppId(A.lastAppliedId); A.go("status"); };
   const more=A.jobs.filter(j=>j.status==="live"&&j.cat===job?.cat&&j.id!==job?.id).slice(0,3);
   /* Job Seeker Transformation Tranche 1 (JS-01): "First Apply" contextual profile prompt. Rather
      than asking experience level up front at signup, ask it once, right after the first
@@ -247,12 +261,24 @@ export function ApplyDone(){
     <div className="text-center pt-5 pb-2" style={{animation:"rise .4s ease both"}}>
       <div className="w-19 h-19 rounded-full bg-ok-bg border-2 border-ok-ln flex items-center justify-center mx-auto mb-5" style={{animation:"pop .45s cubic-bezier(.22,.68,.35,1) both"}}>
         <I n="check" s={38} c={C.ok} w={2.6}/></div>
-      <h1 className={`${HERO_QUIET} text-2xl mb-2.5`}>{t("seeker.apply.appSentTitle")}</h1>
-      <p className="text-base text-text-2 leading-relaxed mx-auto mb-7 max-w-md">
-        {e?t("seeker.apply.appSentBodyWithEmployer",{job:job.t,employer:e.name}):t("seeker.apply.appSentBodyGeneric")}</p>
-      <div className="flex gap-2.5 justify-center flex-wrap mb-8">
-        <Btn kind="primary" icon="activity" onClick={()=>A.go("status")}>{t("seeker.apply.trackInStatusBtn")}</Btn>
-        <Btn kind="outline" icon="search" onClick={()=>A.go("search")}>{t("seeker.apply.keepSearchingBtn")}</Btn></div></div>
+      <h1 className={`${HERO_QUIET} text-2xl mb-2.5`}>{e?t("seeker.apply.appSentToTitle",{employer:e.name}):t("seeker.apply.appSentTitle")}</h1>
+    </div>
+    {job&&<Card pad={20} style={{marginBottom:24}}>
+      <div className="flex gap-3.5 items-center mb-4">
+        <EmpMark e={e} size={46}/>
+        <div className="min-w-0 flex-1">
+          <div className="text-base font-bold text-text truncate">{job.t}</div>
+          <div className="text-sm text-text-2 mt-0.5">{t("seeker.apply.appliedOnMeta",{date:appliedAt})}</div></div>
+        <Tag tone="ok" icon="check" sm>{t("seeker.apply.statusAppliedTag")}</Tag></div>
+      <div className="flex items-center gap-2.5 border border-line rounded-xl py-2.5 px-3.5 mb-4">
+        <div className="w-8 h-8 rounded-lg bg-wash text-brand flex items-center justify-center shrink-0"><I n="file" s={15}/></div>
+        <div className="text-sm text-text-2">{sentCv?t("seeker.apply.usingCvPill",{cv:sentCv.name}):t("seeker.apply.noCvSentPill")}</div></div>
+      <Banner tone="brand" icon="sparkle" title={t("seeker.apply.whatHappensNextTitle")} style={{marginBottom:16}}>
+        {t("seeker.apply.whatHappensNextBody",{employer:e?.name||t("seeker.apply.defaultEmployer")})}</Banner>
+      <div className="flex gap-2.5 justify-center flex-wrap">
+        <Btn kind="primary" icon="activity" onClick={trackApplication}>{t("seeker.apply.trackInStatusBtn")}</Btn>
+        <Btn kind="outline" icon="search" onClick={()=>A.go("search")}>{t("seeker.apply.seeSimilarRolesBtn")}</Btn></div>
+    </Card>}
     {showExpPrompt&&<Card pad={20} style={{marginBottom:24}}>
       <div className="flex justify-between items-start gap-3 mb-3">
         <div className="text-sm font-bold text-text">{t("seeker.apply.expPromptTitle")}</div>

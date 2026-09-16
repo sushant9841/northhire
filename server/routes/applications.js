@@ -259,7 +259,9 @@ applicationsRouter.patch("/:id/stage", requireAuth, requireRole("employer"), (re
   {
     const S = notifStringsForUser(app.user_id);
     pushNotification({ for: app.user_id, icon: stage === "Hired" || stage === "Offer" ? "award" : "activity",
-      title: S.stageTitle(stage, stageEmployer?.name), body: note, link: "status" });
+      // JS-10: encode the entity as "status:<applicationId>" in the existing free-text link
+      // column so a tap on the notification can scroll straight to this row, not just the page.
+      title: S.stageTitle(stage, stageEmployer?.name), body: note, link: `status:${app.id}` });
   }
 
   /* Run the employer's stage-change automation, if any: send the linked message template to the

@@ -217,8 +217,11 @@ export function serializeReview(row) {
 }
 export function serializeNotification(row) {
   if (!row) return null;
+  // createdAt (raw ms) added alongside the existing relative-time `at` string so the client can
+  // group notifications into Today / This week / Earlier (Job Seeker Transformation Tranche 4)
+  // without re-parsing a locale-formatted string.
   return { id: row.id, for: row.for_value, icon: row.icon, title: row.title, body: row.body, link: row.link,
-    read: !!row.read, at: relativeTime(row.created_at) };
+    read: !!row.read, at: relativeTime(row.created_at), createdAt: sqlTime(row.created_at).getTime() };
 }
 export function serializeReference(row) {
   if (!row) return null;
