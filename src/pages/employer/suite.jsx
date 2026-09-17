@@ -119,7 +119,21 @@ export function EmpHome(){
 
   return <Page wide>
     <H1 sub={`${e.verified?t("employer.home.verified"):t("employer.home.awaitingVerification")} • ${A.planName?A.planName():e.plan||"Free"} ${t("employer.home.planSuffix")}`}
-      action={<div className="flex gap-2.5 flex-wrap">
+      action={<div className="flex gap-2.5 flex-wrap items-center">
+        {/* E5: featured-credit pill so the balance is visible without navigating to Billing.
+            Unlimited on Enterprise, N of M on Growth, hidden on Free (feature not available). */}
+        {A.can&&A.can("featured")&&(()=>{
+          const used=jobs.filter(j=>j.featured&&j.status==="live").length;
+          const limit=A.limitOf?A.limitOf("featured"):0;
+          const unlimited=limit===Infinity;
+          const label=unlimited
+            ?t("employer.home.featuredCreditsUnlimited")
+            :t("employer.home.featuredCreditsCount",{used,limit});
+          return <button onClick={()=>A.go("empJobs")}
+            className="bg-transparent border border-line-soft rounded-lg py-2 px-3 cursor-pointer text-xs text-text hover:bg-bg flex items-center gap-1.5">
+            <I n="award" s={14} c={C.brand}/>
+            {label}</button>;
+        })()}
         <Btn kind="outline" onClick={()=>A.go("empPipeline")}>{t("employer.home.candidates")}</Btn>
         <Btn kind="primary" icon="plus" onClick={()=>A.go("empPost")}>{t("employer.home.postAJob")}</Btn></div>}>{e.name}</H1>
     {!e.verified&&<Banner tone="warn" icon="clock" title={t("employer.home.verificationTitle")} style={{marginBottom:18}}>

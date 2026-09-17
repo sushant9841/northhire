@@ -1025,6 +1025,7 @@ export const fr = {
       attExpiringOne: "{n} poste ferme dans 3 jours", attExpiringOther: "{n} postes ferment dans 3 jours", attExpiringBody: "Prolongez l'échéance ou commencez à réviser le pipeline maintenant.",
       attPoorOne: "{n} poste a moins de candidatures que des annonces similaires", attPoorOther: "{n} postes ont moins de candidatures que des annonces similaires", attPoorBody: "Améliorez l'annonce ou mettez-la en vedette pour toucher plus de candidat·e·s.",
       attOfferOne: "{n} offre en attente de réponse du candidat", attOfferOther: "{n} offres en attente de réponse", attOfferBody: "Relancez si l'offre est ouverte depuis plus de deux jours.",
+      featuredCreditsCount: "{used} de {limit} crédits vedettes", featuredCreditsUnlimited: "Mises en vedette illimitées",
     },
     jobs: {
       subtitleOne: "{n} annonce • {a} candidat·e·s", subtitleOther: "{n} annonces • {a} candidat·e·s",

@@ -1023,6 +1023,7 @@ export const en = {
       attExpiringOne: "{n} job closes within 3 days", attExpiringOther: "{n} jobs close within 3 days", attExpiringBody: "Extend the deadline or start reviewing the pipeline now.",
       attPoorOne: "{n} job has fewer applicants than similar postings", attPoorOther: "{n} jobs have fewer applicants than similar postings", attPoorBody: "Improve the posting or feature it to reach more candidates.",
       attOfferOne: "{n} offer waiting on candidate response", attOfferOther: "{n} offers waiting on candidate response", attOfferBody: "Follow up if the offer has been open for more than a couple of days.",
+      featuredCreditsCount: "{used} of {limit} featured credits", featuredCreditsUnlimited: "Unlimited featured upgrades",
     },
     jobs: {
       subtitleOne: "{n} listing • {a} applicants", subtitleOther: "{n} listings • {a} applicants",
