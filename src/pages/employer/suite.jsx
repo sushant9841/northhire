@@ -1032,6 +1032,37 @@ export function EmpCandidate(){
   useEffect(()=>{if(!a)return; let cancelled=false;A.loadCandidateContact(a.id).then(c=>{if(!cancelled)setContact(c);});return()=>{cancelled=true;};},[a?.id]);
   const refreshScorecards=()=>{if(a)A.loadScorecards(a.id).then(setScorecards);};
   useEffect(()=>{refreshScorecards();},[a?.id]);
+  /* E3 keyboard shortcuts. Computes stage/neighbours INSIDE the callback so this useEffect can
+     sit before the `if(!a) return` guard without hitting the JS temporal dead zone on candStages
+     and idx (charter rule: shell/route/hook changes verified against TDZ). Only fires when a
+     text field is not focused, so an employer typing into a message composer never accidentally
+     advances a stage. */
+  useEffect(()=>{
+    const isTyping=()=>{const el=document.activeElement; if(!el) return false;
+      const tag=(el.tagName||"").toLowerCase();
+      return tag==="input"||tag==="textarea"||tag==="select"||el.isContentEditable;};
+    const onKey=(e)=>{
+      const app=A.applications.find(x=>x.id===A.candidateId);
+      if(!app||isTyping()||e.metaKey||e.ctrlKey||e.altKey) return;
+      const stages=A.stagesForApp(app); const i=stages.indexOf(app.stage);
+      const sameStage=A.applications.filter(x=>x.job===app.job&&x.stage===app.stage).sort((x,y)=>String(x.id).localeCompare(String(y.id)));
+      const pos=sameStage.findIndex(x=>x.id===app.id);
+      const nextApp=pos>=0&&pos<sameStage.length-1?sameStage[pos+1]:null;
+      const prevApp=pos>0?sameStage[pos-1]:null;
+      const k=e.key.toLowerCase();
+      if(k==="a"&&!e.shiftKey&&i<stages.length-1){e.preventDefault();A.moveApp(app.id,stages[i+1]);}
+      else if(k==="a"&&e.shiftKey&&i>0){e.preventDefault();A.moveApp(app.id,stages[i-1]);}
+      else if(k==="m"&&A.can("messages")){e.preventDefault();setShowMsg(true);}
+      else if(k==="i"&&A.can("interviews")){e.preventDefault();setShowSched(true);}
+      else if(k==="n"){e.preventDefault();setScRating(0);setScNotes("");setShowScorecard(true);}
+      else if(k==="r"){e.preventDefault();setConfirmReject(true);setRejectReason("");}
+      else if(e.key==="ArrowRight"&&nextApp){e.preventDefault();A.openCandidate?.(nextApp.id);}
+      else if(e.key==="ArrowLeft"&&prevApp){e.preventDefault();A.openCandidate?.(prevApp.id);}
+      else if(e.key==="Escape"){A.go("empPipeline");}
+    };
+    window.addEventListener("keydown",onKey);
+    return()=>window.removeEventListener("keydown",onKey);
+  },[a?.id]);
   if(!a) return <Page><Empty icon="users" title={t("employer.candidate.candidateTitle")} body={t("employer.post.reviewPublishSub")}
     action={<Btn kind="primary" onClick={()=>A.go("empPipeline")}>{t("employer.pipeline.moveBack")}</Btn>}/></Page>;
   const u=A.person(a.user), job=A.job(a.job), s=A.scoreCandidate(u,job);
@@ -1104,7 +1135,24 @@ export function EmpCandidate(){
         {A.can("interviews")?<Btn kind="outline" icon="calendar" onClick={()=>setShowSched(true)}>{t("employer.candidate.scheduleInterview")}</Btn>:<Btn kind="ghost" icon="lock" onClick={()=>A.go("pricing")}>{t("employer.candidate.scheduleInterview")} (Growth+)</Btn>}
         {a.stage==="Offer"&&<Btn kind="ok" icon="file" onClick={()=>setShowOfferLetter(true)}>{t("employer.candidate.generateOfferLetter")}</Btn>}
         <Btn kind="dangerSoft" onClick={()=>{setConfirmReject(true);setRejectReason("");}}>{ t("employer.candidate.notAFit")}</Btn>
-        <Btn kind="ghost" onClick={()=>A.go("empPipeline")}>{t("employer.candidate.backToPipeline")}</Btn></div></Card>
+        <Btn kind="ghost" onClick={()=>A.go("empPipeline")}>{t("employer.candidate.backToPipeline")}</Btn></div>
+      {(() => {
+        /* E3 next-candidate flow: after any stage move the reader normally has to go back to
+           the kanban to pick the next candidate. This surfaces the neighbours in the same stage
+           inline so they can review straight through. Same → and ← keys drive it. */
+        const sameStage=A.applications.filter(x=>x.job===a.job&&x.stage===a.stage).sort((x,y)=>String(x.id).localeCompare(String(y.id)));
+        const pos=sameStage.findIndex(x=>x.id===a.id);
+        const nextApp=pos>=0&&pos<sameStage.length-1?sameStage[pos+1]:null;
+        const prevApp=pos>0?sameStage[pos-1]:null;
+        if(!nextApp&&!prevApp) return null;
+        return <div className="mt-3 pt-3 border-t border-line-soft flex gap-2.5 items-center flex-wrap text-xs text-text-3">
+          <span>{t("employer.candidate.candidateInStagePos",{pos:pos+1,total:sameStage.length,stage:a.stage})}</span>
+          {prevApp&&<button onClick={()=>A.openCandidate(prevApp.id)} className="bg-transparent border border-line-soft rounded-lg py-1.5 px-2.5 cursor-pointer text-xs text-text hover:bg-bg">← {t("employer.candidate.prevCandidate")}</button>}
+          {nextApp&&<button onClick={()=>A.openCandidate(nextApp.id)} className="bg-transparent border border-line-soft rounded-lg py-1.5 px-2.5 cursor-pointer text-xs text-text hover:bg-bg">{t("employer.candidate.nextCandidate")} →</button>}
+          <span className="ml-auto text-text-3">{t("employer.candidate.keyboardHint")}</span>
+        </div>;
+      })()}
+    </Card>
     <ConfirmDialog open={confirmReject} onClose={()=>setConfirmReject(false)} confirmLabel={t("common.delete")}
       title={t("employer.candidate.rejectConfirmTitle",{name:u.name})} onConfirm={()=>{A.rejectApp(a.id,rejectReason.trim());A.go("empPipeline");}}>
       <div className="flex flex-col gap-3">
