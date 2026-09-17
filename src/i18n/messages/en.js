@@ -1055,6 +1055,7 @@ export const en = {
       billNoCanExpHow: "Ontario's Bill 149 prohibits requiring Canadian experience — remove \"{hit}\".",
       subtitle: "About five minutes. Listings go live immediately.", title: "Post a job",
       startOver: "Start over", resumedBanner: "Picked up where you left off.",
+      draftSavedJustNow: "Draft saved just now", draftSavedSecondsAgo: "Draft saved {n}s ago", draftSavedMinutesAgo: "Draft saved {n} min ago", draftSavedLongerAgo: "Draft saved",
       cannotPublish: "Cannot publish", seePlans: "See plans",
       stepRoleDetails: "Role details", stepPayLocation: "Pay & location", stepApplication: "Application",
       roleDetailsSub: "Clear titles and honest descriptions get far more qualified applicants",

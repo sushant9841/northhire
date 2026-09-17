@@ -262,9 +262,22 @@ export function EmpPost(){
   const [step,setStep]=useState(draft?.step||1); const [err,setErr]=useState({});
   const [f,setF]=useState(draft?.f||_defaultJobPostData());
   /* A refresh mid-wizard used to lose every field with no warning - persist the draft the same
-     way SignupPage does, since it's the same class of bug. */
-  useEffect(()=>{try{sessionStorage.setItem(JOBPOST_DRAFT_KEY,JSON.stringify({step,f}));}catch{}},[step,f]);
-  const discardDraft=()=>{try{sessionStorage.removeItem(JOBPOST_DRAFT_KEY);}catch{} setStep(1); setF(_defaultJobPostData()); setErr({});};
+     way SignupPage does, since it's the same class of bug. E2 adds an autosave state indicator
+     so the reader can see the draft is actually being saved without opening devtools. */
+  const [draftSavedAt,setDraftSavedAt]=useState(draft?Date.now():null);
+  const [nowTick,setNowTick]=useState(Date.now());
+  useEffect(()=>{try{sessionStorage.setItem(JOBPOST_DRAFT_KEY,JSON.stringify({step,f})); setDraftSavedAt(Date.now());}catch{}},[step,f]);
+  useEffect(()=>{const id=setInterval(()=>setNowTick(Date.now()),30000); return()=>clearInterval(id);},[]);
+  const draftIndicator=(()=>{
+    if(!draftSavedAt) return "";
+    const s=Math.round((nowTick-draftSavedAt)/1000);
+    if(s<10) return t("employer.post.draftSavedJustNow");
+    if(s<60) return t("employer.post.draftSavedSecondsAgo",{n:s});
+    const m=Math.round(s/60);
+    if(m<60) return t("employer.post.draftSavedMinutesAgo",{n:m});
+    return t("employer.post.draftSavedLongerAgo");
+  })();
+  const discardDraft=()=>{try{sessionStorage.removeItem(JOBPOST_DRAFT_KEY);}catch{} setStep(1); setF(_defaultJobPostData()); setErr({}); setDraftSavedAt(null);};
 
   const set=(k,v)=>{setF(p=>({...p,[k]:v}));setErr(e=>({...e,[k]:undefined}));};
   const setLocation=loc=>{const parts=loc.split(",").map(s=>s.trim());
@@ -405,7 +418,11 @@ export function EmpPost(){
   const maxDate=(()=>{const d=new Date();d.setMonth(d.getMonth()+3);return d.toISOString().slice(0,10);})();
 
   return <Page narrow>
-    <H1 sub={t("employer.post.subtitle")}>{t("employer.post.title")}</H1>
+    <H1 sub={t("employer.post.subtitle")}
+      action={draftIndicator?<div className="flex items-center gap-3">
+        <span className="text-xs text-text-3" aria-live="polite">{draftIndicator}</span>
+        {(resumed||step>1)&&<button onClick={discardDraft} className="bg-transparent border-0 p-0 cursor-pointer text-xs font-semibold text-text-2 hover:text-brand">{t("employer.post.startOver")}</button>}
+      </div>:null}>{t("employer.post.title")}</H1>
 
     {resumed&&<Banner tone="brand" icon="clock" style={{marginBottom:16}}
       action={<button onClick={discardDraft} className="bg-transparent border-0 p-0 cursor-pointer text-sm font-semibold text-brand">{t("employer.post.startOver")}</button>}>

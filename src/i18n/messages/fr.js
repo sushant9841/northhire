@@ -1057,6 +1057,7 @@ export const fr = {
       billNoCanExpHow: "La Loi 149 de l'Ontario interdit d'exiger une expérience canadienne — retirez « {hit} ».",
       subtitle: "Environ cinq minutes. Les annonces sont publiées immédiatement.", title: "Publier un emploi",
       startOver: "Recommencer", resumedBanner: "Reprise là où vous vous étiez arrêté·e.",
+      draftSavedJustNow: "Brouillon enregistré à l'instant", draftSavedSecondsAgo: "Brouillon enregistré il y a {n}s", draftSavedMinutesAgo: "Brouillon enregistré il y a {n} min", draftSavedLongerAgo: "Brouillon enregistré",
       cannotPublish: "Impossible de publier", seePlans: "Voir les forfaits",
       stepRoleDetails: "Détails du poste", stepPayLocation: "Paie et emplacement", stepApplication: "Candidature",
       roleDetailsSub: "Des titres clairs et des descriptions honnêtes attirent beaucoup plus de candidat·e·s qualifié·e·s",
