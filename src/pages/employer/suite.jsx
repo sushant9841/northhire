@@ -29,6 +29,94 @@ export function EmpHome(){
   const byStage=stages.reduce((m,s)=>({...m,[s]:apps.filter(a=>a.stage===s).length}),{});
   const canContent=A.settings.employerContent;
   const pendingApprovalCount=jobs.filter(j=>j.pendingOwnerApproval).length;
+  const liveJobs=jobs.filter(j=>j.status==="live");
+
+  /* Employer Transformation E1: first-visit dashboard. A brand-new employer with no jobs and no
+     applicants doesn't need a full analytics grid — they need to publish their first job. All
+     other tiles suppress until that first publish happens. */
+  const isFirstVisit=jobs.length===0&&apps.length===0;
+  if(isFirstVisit){
+    return <Page wide>
+      <H1 sub={`${A.planName?A.planName():e.plan||"Free"} ${t("employer.home.planSuffix")}`}>{e.name}</H1>
+      {!e.verified&&<Banner tone="warn" icon="clock" title={t("employer.home.verificationTitle")} style={{marginBottom:18}}>
+        {t("employer.home.verificationBody")}</Banner>}
+      <div className={`grid gap-4 ${mob?"grid-cols-1":"grid-cols-2"} mb-6`}>
+        <Card pad={mob?24:36}>
+          <div className="flex items-start gap-4 mb-4"><div className="w-12 h-12 rounded-xl bg-brand/10 text-brand flex items-center justify-center shrink-0"><I n="plus" s={24}/></div>
+            <div><H2>{t("employer.home.firstJobTitle")}</H2>
+              <p className="text-sm text-text-2 mt-1 leading-snug">{t("employer.home.firstJobBody")}</p></div></div>
+          <Btn kind="primary" icon="plus" full onClick={()=>A.go("empPost")}>{t("employer.home.publishFirstJobBtn")}</Btn>
+        </Card>
+        <Card pad={mob?24:36}>
+          <div className="flex items-start gap-4 mb-4"><div className="w-12 h-12 rounded-xl bg-wash text-brand flex items-center justify-center shrink-0"><I n="building" s={24}/></div>
+            <div><H2>{t("employer.home.completeProfileTitle")}</H2>
+              <p className="text-sm text-text-2 mt-1 leading-snug">{t("employer.home.completeProfileBody")}</p></div></div>
+          <Btn kind="outline" icon="edit" full onClick={()=>A.go("empCompany")}>{t("employer.home.completeProfileBtn")}</Btn>
+        </Card>
+      </div>
+      <Card>
+        <H2>{t("employer.home.howItWorksTitle")}</H2>
+        <div className={`grid gap-4 ${mob?"grid-cols-1":"grid-cols-3"} mt-2`}>
+          {[["edit",t("employer.home.howItWorksStep1Title"),t("employer.home.howItWorksStep1Body")],
+            ["users",t("employer.home.howItWorksStep2Title"),t("employer.home.howItWorksStep2Body")],
+            ["check",t("employer.home.howItWorksStep3Title"),t("employer.home.howItWorksStep3Body")]].map(([ic,tit,body])=>
+            <div key={tit} className="flex flex-col items-start gap-2">
+              <div className="w-9 h-9 rounded-lg bg-wash text-brand flex items-center justify-center"><I n={ic} s={18}/></div>
+              <div className="text-sm font-bold text-text">{tit}</div>
+              <div className="text-xs text-text-2 leading-snug">{body}</div></div>)}
+        </div>
+      </Card>
+    </Page>;
+  }
+
+  /* Employer Transformation E1: action-oriented attention stack. Answers "what needs my attention
+     today?" rather than "what data do I have?" Ordered by urgency, cheap to compute — each item
+     is a filter over jobs/apps/interviews that we're already loading. Numbers move below. */
+  const now=Date.now();
+  const dayMs=86400000;
+  const attention=[];
+  /* 1. Interviews today (highest priority) */
+  const interviewsToday=(A.interviews||[]).filter(iv=>{
+    const t=new Date(iv.at||iv.date||0).getTime();
+    return t>=now-6*3600*1000 && t<=now+18*3600*1000;
+  });
+  if(interviewsToday.length) attention.push({icon:"calendar",tone:C.warn,
+    title:t(interviewsToday.length===1?"employer.home.attInterviewsTodayOne":"employer.home.attInterviewsTodayOther",{n:interviewsToday.length}),
+    body:t("employer.home.attInterviewsTodayBody"),cta:t("employer.home.attReviewCta"),onClick:()=>A.go("interviews")});
+  /* 2. Candidates awaiting review >= 24h in Applied */
+  const stale=apps.filter(a=>a.stage==="Applied"&&(now-new Date(a.at||a.createdAt||now).getTime())>=dayMs);
+  if(stale.length) attention.push({icon:"users",tone:C.brand,
+    title:t(stale.length===1?"employer.home.attStaleOne":"employer.home.attStaleOther",{n:stale.length}),
+    body:t("employer.home.attStaleBody"),cta:t("employer.home.attReviewCta"),onClick:()=>A.go("empPipeline")});
+  /* 3. Strong candidates (score >= 85 in Applied) */
+  const strong=apps.filter(a=>a.stage==="Applied").map(a=>{
+    const u=A.person(a.user); const j=A.job(a.job);
+    return {a,score:u&&j?A.scoreCandidate(u,j):0};
+  }).filter(x=>x.score>=85);
+  if(strong.length) attention.push({icon:"sparkle",tone:C.ok,
+    title:t(strong.length===1?"employer.home.attStrongOne":"employer.home.attStrongOther",{n:strong.length}),
+    body:t("employer.home.attStrongBody"),cta:t("employer.home.attReviewCta"),onClick:()=>A.go("empPipeline")});
+  /* 4. Jobs approaching expiration (dl <= 3 days) */
+  const expiring=liveJobs.filter(j=>j.dl!=null&&j.dl<=3);
+  if(expiring.length) attention.push({icon:"clock",tone:C.warn,
+    title:t(expiring.length===1?"employer.home.attExpiringOne":"employer.home.attExpiringOther",{n:expiring.length}),
+    body:t("employer.home.attExpiringBody"),cta:t("employer.home.attManageCta"),onClick:()=>A.go("empJobs")});
+  /* 5. Poor-performing jobs (open > 7 days, < 3 applicants) */
+  const poor=liveJobs.filter(j=>{
+    const posted=new Date(j.createdAt||now).getTime();
+    const days=(now-posted)/dayMs;
+    const n=apps.filter(a=>a.job===j.id).length;
+    return days>=7&&n<3;
+  });
+  if(poor.length) attention.push({icon:"trend",tone:C.warn,
+    title:t(poor.length===1?"employer.home.attPoorOne":"employer.home.attPoorOther",{n:poor.length}),
+    body:t("employer.home.attPoorBody"),cta:t("employer.home.attImproveCta"),onClick:()=>A.go("empJobs")});
+  /* 6. Offer-stage waiting on response */
+  const offerWaiting=apps.filter(a=>a.stage==="Offer");
+  if(offerWaiting.length) attention.push({icon:"award",tone:C.ok,
+    title:t(offerWaiting.length===1?"employer.home.attOfferOne":"employer.home.attOfferOther",{n:offerWaiting.length}),
+    body:t("employer.home.attOfferBody"),cta:t("employer.home.attReviewCta"),onClick:()=>A.go("empPipeline")});
+
   return <Page wide>
     <H1 sub={`${e.verified?t("employer.home.verified"):t("employer.home.awaitingVerification")} • ${A.planName?A.planName():e.plan||"Free"} ${t("employer.home.planSuffix")}`}
       action={<div className="flex gap-2.5 flex-wrap">
@@ -42,23 +130,44 @@ export function EmpHome(){
       <Banner tone="warn" icon="shield" title={t("employer.home.needsApprovalTitle")} style={{marginBottom:18}}
         action={<Btn kind="primary" size="sm" onClick={()=>A.go("empJobs")}>{t("employer.home.review")}</Btn>}>
         {t(pendingApprovalCount===1?"employer.home.listingsWontGoLiveOne":"employer.home.listingsWontGoLiveOther",{n:pendingApprovalCount})}</Banner>}
+
+    {/* Action stack: what needs attention today, ordered by urgency */}
+    {attention.length>0?<Card style={{marginBottom:20}}>
+      <H2 sub={t("employer.home.attentionSub")}>{t("employer.home.attentionTitle")}</H2>
+      <div className="flex flex-col gap-2 mt-2">
+        {attention.slice(0,6).map((a,i)=>
+          <button key={i} onClick={a.onClick} className="w-full flex gap-3 items-center py-3 px-3 rounded-xl border border-line-soft bg-white hover:bg-bg cursor-pointer text-left transition duration-150">
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{background:`${a.tone}18`,color:a.tone}}>
+              <I n={a.icon} s={18}/></div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-semibold text-text">{a.title}</div>
+              <div className="text-xs text-text-2 mt-0.5">{a.body}</div></div>
+            <Tag sm>{a.cta}</Tag>
+          </button>)}
+      </div>
+    </Card>:<Card style={{marginBottom:20}}>
+      <div className="flex items-center gap-3 py-2">
+        <div className="w-9 h-9 rounded-lg bg-ok-bg text-ok flex items-center justify-center"><I n="check" s={18}/></div>
+        <div className="text-sm text-text-2">{t("employer.home.attentionAllClear")}</div>
+      </div>
+    </Card>}
+
+    {/* Secondary insights: numbers move down here, not the primary surface */}
     <div className="grid gap-3 mb-5" style={{gridTemplateColumns:`repeat(auto-fit,minmax(${mob?140:170}px,1fr))`}}>
-      <Stat icon="briefcase" label={t("employer.home.liveListings")} value={jobs.filter(j=>j.status==="live").length} tone={C.brand} onClick={()=>A.go("empJobs")}/>
+      <Stat icon="briefcase" label={t("employer.home.liveListings")} value={liveJobs.length} tone={C.brand} onClick={()=>A.go("empJobs")}/>
       <Stat icon="users" label={t("employer.home.totalApplicants")} value={apps.length} onClick={()=>A.go("empPipeline")}/>
       <Stat icon="calendar" label={t("employer.home.inInterview")} value={byStage.Interview||0} tone={C.warn}/>
       <Stat icon="award" label={t("employer.home.offersOut")} value={byStage.Offer||0} tone={C.ok}/></div>
     <div className="grid gap-4" style={{gridTemplateColumns:mob?"1fr":"1.4fr 1fr"}}>
       <Card>
         <H2 action={<Btn kind="ghost" size="sm" onClick={()=>A.go("empJobs")}>{t("employer.home.manageAll")}</Btn>}>{t("employer.home.yourListings")}</H2>
-        {jobs.length===0?<Empty icon="briefcase" title={t("employer.home.noListingsYet")} body={t("employer.home.noListingsBody")}
-          action={<Btn kind="primary" icon="plus" onClick={()=>A.go("empPost")}>{t("employer.home.postAJob")}</Btn>}/>
-          :jobs.slice(0,6).map(j=>{const n=A.applications.filter(a=>a.job===j.id).length;
-            return <div key={j.id} onClick={()=>A.go("empPipeline")} className="flex items-center gap-3 py-3 border-b border-line-soft cursor-pointer">
-              <div className={`w-2 h-2 rounded-full shrink-0 ${j.status==="live"?"bg-ok":j.status==="paused"?"bg-warn":"bg-text-3"}`}/>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap">{j.t}</div>
-                <div className="text-xs text-text-3 mt-1">{t(n===1?"employer.home.applicantOne":"employer.home.applicantOther",{n})} • {t("employer.home.viewsCount",{n:formatNumber(j.views,locale)})} • {j.posted}</div></div>
-              <Tag tone={jobTone(j.status)} sm>{jobStatusLabel(j.status,t)}</Tag></div>;})}</Card>
+        {jobs.slice(0,6).map(j=>{const n=A.applications.filter(a=>a.job===j.id).length;
+          return <div key={j.id} onClick={()=>A.go("empPipeline")} className="flex items-center gap-3 py-3 border-b border-line-soft cursor-pointer">
+            <div className={`w-2 h-2 rounded-full shrink-0 ${j.status==="live"?"bg-ok":j.status==="paused"?"bg-warn":"bg-text-3"}`}/>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap">{j.t}</div>
+              <div className="text-xs text-text-3 mt-1">{t(n===1?"employer.home.applicantOne":"employer.home.applicantOther",{n})} • {t("employer.home.viewsCount",{n:formatNumber(j.views,locale)})} • {j.posted}</div></div>
+            <Tag tone={jobTone(j.status)} sm>{jobStatusLabel(j.status,t)}</Tag></div>;})}</Card>
       <div className="flex flex-col gap-4">
         <Card><H2>{t("employer.home.pipeline")}</H2>
           {stages.map(s=>{const n=byStage[s]||0;
