@@ -3077,6 +3077,8 @@ export const fr = {
       editBtn: "Modifier", pdfBtn: "PDF", duplicateTitle: "Dupliquer", deleteTitle: "Supprimer", makeDefaultBtn: "Définir par défaut",
       cvNamePlaceholder: "Nom du CV, p. ex. CV métiers", backToCvsBtn: "Retour aux CV",
       printSaveAsPdfBtn: "Imprimer / Enregistrer en PDF", saveBtn: "Enregistrer", savedBtn: "Enregistré",
+      savingIndicator: "Enregistrement…", saveErrorIndicator: "Échec — réessayez",
+      savedJustNow: "Enregistré à l'instant", savedSecondsAgo: "Enregistré il y a {n}s", savedMinutesAgo: "Enregistré il y a {n} min", savedLongerAgo: "Toutes les modifications sont enregistrées",
       cvNotFoundTitle: "CV introuvable", cvNotFoundBody: "Il a peut-être été supprimé.", myCvsBtn: "Mes CV",
       secBasics: "Base", secExpTab: "Expérience", secEduTab: "Formation", secSkillsTab: "Compétences", secDesign: "Présentation",
       contactDetailsTitle: "Coordonnées", contactDetailsSub: "Tirées de votre profil — modifiez ici pour ce CV seulement",

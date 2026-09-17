@@ -2958,6 +2958,8 @@ export const en = {
       editBtn: "Edit", pdfBtn: "PDF", duplicateTitle: "Duplicate", deleteTitle: "Delete", makeDefaultBtn: "Make default",
       cvNamePlaceholder: "CV name, e.g. Trades CV", backToCvsBtn: "Back to CVs",
       printSaveAsPdfBtn: "Print / Save as PDF", saveBtn: "Save", savedBtn: "Saved",
+      savingIndicator: "Saving…", saveErrorIndicator: "Couldn't save — try again",
+      savedJustNow: "Saved just now", savedSecondsAgo: "Saved {n}s ago", savedMinutesAgo: "Saved {n} min ago", savedLongerAgo: "All changes saved",
       cvNotFoundTitle: "CV not found", cvNotFoundBody: "It may have been deleted.", myCvsBtn: "My CVs",
       secBasics: "Basics", secExpTab: "Experience", secEduTab: "Education", secSkillsTab: "Skills", secDesign: "Design",
       contactDetailsTitle: "Contact details", contactDetailsSub: "Pulled from your profile — edit here for this CV only",

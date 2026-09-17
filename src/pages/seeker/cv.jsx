@@ -211,6 +211,35 @@ export function CvEditPage(){
     action={<Btn kind="primary" onClick={()=>A.go("cvs")}>{t("seeker.cv.myCvsBtn")}</Btn>}/></Page>;
   const set=(k,v)=>setD(p=>({...p,[k]:v}));
   const dirty=JSON.stringify(d)!==JSON.stringify(cv);
+  /* Seeker Tranche 5 (JS-08) autosave: 900ms debounce on any change, plus a footer indicator
+     that says "Saving…" during the roundtrip and "Saved just now / N minutes ago" after. The
+     manual Save button stays as a keyboard-friendly escape hatch, but the reader should
+     essentially never need to press it. Save is a no-op when nothing changed. */
+  const [saveState,setSaveState]=useState("idle"); /* idle | saving | saved | error */
+  const [savedAt,setSavedAt]=useState(cv?Date.now():null);
+  const [nowTick,setNowTick]=useState(Date.now());
+  useEffect(()=>{ const id=setInterval(()=>setNowTick(Date.now()),30000); return()=>clearInterval(id); },[]);
+  useEffect(()=>{
+    if(!dirty) return;
+    setSaveState("saving");
+    const id=setTimeout(async()=>{
+      try{ await A.saveCv(d); setSavedAt(Date.now()); setSaveState("saved"); }
+      catch{ setSaveState("error"); }
+    },900);
+    return()=>clearTimeout(id);
+  },[JSON.stringify(d)]);
+  const savedRelative=()=>{
+    if(!savedAt) return "";
+    const s=Math.round((nowTick-savedAt)/1000);
+    if(s<10) return t("seeker.cv.savedJustNow");
+    if(s<60) return t("seeker.cv.savedSecondsAgo",{n:s});
+    const m=Math.round(s/60);
+    if(m<60) return t("seeker.cv.savedMinutesAgo",{n:m});
+    return t("seeker.cv.savedLongerAgo");
+  };
+  const saveIndicator=saveState==="saving"?t("seeker.cv.savingIndicator"):
+    saveState==="error"?t("seeker.cv.saveErrorIndicator"):
+    dirty?t("seeker.cv.savingIndicator"):savedRelative();
   const addExp=()=>set("exp",[...(d.exp||[]),{id:uid("x"),role:"",org:"",place:"",from:"",to:"Present",detail:""}]);
   const addEdu=()=>set("edu",[...(d.edu||[]),{id:uid("e"),qual:"",org:"",year:""}]);
   const upd=(key,id,k,v)=>set(key,d[key].map(x=>x.id===id?{...x,[k]:v}:x));
@@ -230,10 +259,11 @@ export function CvEditPage(){
         <div className="flex-[1_1_200px] min-w-0">
           <Input value={d.name} onChange={e=>set("name",e.target.value)} placeholder={t("seeker.cv.cvNamePlaceholder")}
             style={{fontWeight:640,fontSize:15,border:"none",padding:"6px 0",boxShadow:"none"}}/></div>
-        <div className="flex gap-2.5 flex-wrap">
+        <div className="flex gap-2.5 flex-wrap items-center">
+          <span className={`text-xs mr-1 ${saveState==="error"?"text-danger":"text-text-3"}`} aria-live="polite">{saveIndicator}</span>
           <Btn kind="ghost" size="sm" icon="chevL" onClick={()=>dirty?setConfirmLeave(true):A.go("cvs")}>{t("seeker.cv.backToCvsBtn")}</Btn>
           <Btn kind="outline" size="sm" icon="download" onClick={()=>A.printCv(d)}>{t("seeker.cv.printSaveAsPdfBtn")}</Btn>
-          <Btn kind="primary" size="sm" icon="check" disabled={!dirty} onClick={()=>A.saveCv(d)}>{dirty?t("seeker.cv.saveBtn"):t("seeker.cv.savedBtn")}</Btn></div></div></div>
+          <Btn kind="primary" size="sm" icon="check" disabled={!dirty} onClick={()=>{A.saveCv(d); setSavedAt(Date.now()); setSaveState("saved");}}>{dirty?t("seeker.cv.saveBtn"):t("seeker.cv.savedBtn")}</Btn></div></div></div>
     <div className={`max-w-site mx-auto grid items-start gap-5 ${mob?"grid-cols-1 pt-4 px-4 pb-8":"grid-cols-[1fr_400px] pt-6 px-7 pb-11"}`}>
       <div>
         <Tabs items={secs} value={sec} onChange={setSec} style={{marginBottom:16}}/>
