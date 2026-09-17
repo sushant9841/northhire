@@ -7,9 +7,10 @@ import { I } from "../../design/icons.jsx";
 import {
   Page, H1, H2, Btn, Banner, Stat, Card, Empty, Tag, Bar, Modal, Area, Field, Input, Sel,
   RichText, Switch, CheckRow, DatePicker, Ring, Tabs, Lbl, SmartPortrait, SmartScene, SmartLogo, Mark, MARKS, ConfirmDialog,
-  usePagination, Pagination, HERO_WIDE,
+  usePagination, Pagination, HERO_WIDE, SuccessCard, BottomSheet,
 } from "../../design/primitives.jsx";
-import { hiringSummary } from "../../helpers/hiringAnalytics.js";
+import { hiringSummary, timeToHire } from "../../helpers/hiringAnalytics.js";
+import { defaultMessageTemplates } from "../../helpers/messageTemplates.js";
 import { postingRules, checkPayRange, findCanadianExperience, applicationDecisionNotice, AI_DISCLOSURE_TEXT } from "../../helpers/jobPostingLaw.js";
 import { pay, payShort, dlText, money, uid, matchesQuery, matchesBooleanQuery, focusFirstError } from "../../helpers/utils.js";
 import { sanitizeHtml } from "../../helpers/sanitize.js";
@@ -19,6 +20,7 @@ import { applicationStageLabel } from "../../helpers/enumLabels.js";
 import { LocationInput, InlineList, QuestionBuilder, aiSuggestJD } from "../shared/formControls.jsx";
 import { useTranslation } from "../../i18n/i18n.jsx";
 import { formatNumber, formatDate, formatDateTime } from "../../i18n/format.js";
+import { JobDetailPage } from "../shared/JobDetailPage.jsx";
 
 export function EmpHome(){
   const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
@@ -207,7 +209,17 @@ export function EmpJobs(){
   const applicantsN=A.applications.filter(a=>jobs.some(j=>j.id===a.job)).length;
   return <Page wide>
     <H1 sub={t(jobs.length===1?"employer.jobs.subtitleOne":"employer.jobs.subtitleOther",{n:jobs.length,a:applicantsN})}
-      action={<div className="flex gap-2.5 flex-wrap">
+      action={<div className="flex gap-2.5 flex-wrap items-center">
+        {/* E5: same featured-credit pill as EmpHome, so the balance is visible from the surface
+           where featuring actually happens too, not only the dashboard. */}
+        {A.can&&A.can("featured")&&(()=>{
+          const used=jobs.filter(j=>j.featured&&j.status==="live").length;
+          const limit=A.limitOf?A.limitOf("featured"):0;
+          const unlimited=limit===Infinity;
+          return <span className="bg-transparent border border-line-soft rounded-lg py-2 px-3 text-xs text-text flex items-center gap-1.5">
+            <I n="award" s={14} c={C.brand}/>
+            {unlimited?t("employer.home.featuredCreditsUnlimited"):t("employer.home.featuredCreditsCount",{used,limit})}</span>;
+        })()}
         {A.can("csvImport")?<Btn kind="outline" icon="upload" onClick={()=>setShowImport(true)}>{t("employer.jobs.importCsv")}</Btn>:<Btn kind="ghost" icon="lock" onClick={()=>A.go("pricing")} title={t("employer.jobs.csvImportTitle")}>{t("employer.jobs.csvImportLocked")}</Btn>}
         <Btn kind="primary" icon="plus" onClick={()=>A.go("empPost")}>{t("employer.jobs.postAJob")}</Btn></div>}>{t("employer.jobs.title")}</H1>
     {showImport&&<Modal onClose={()=>{setShowImport(false);setImportResult(null);setCsv("");}} title={t("employer.jobs.importTitle")}>
@@ -249,6 +261,29 @@ export function EmpJobs(){
   </Page>;
 }
 
+/* E2 Step 4 preview: maps the wizard's in-progress form state to the same job shape a real
+   published job has, so JobDetailPage (imported above) can render it with zero special-casing.
+   Field-by-field this mirrors exactly what publishJob()/buildPayload() send to the server -
+   any field the wizard doesn't otherwise convert (duties/reqs from newline text to arrays, pay
+   range vs fixed, closing date to a days-remaining int) is converted here the same way. */
+function _buildPreviewJob(f,company){
+  return {
+    id:undefined, e:company?.id,
+    t:f.t||"Untitled role", cat:f.cat, city:f.city||f.location||"", prov:PCODE[f.prov]||f.prov,
+    type:f.type, mode:f.mode, urgent:!!f.urgent, featured:!!f.featured,
+    lo:Number(f.payType==="range"?f.lo:f.fixed)||0, hi:Number(f.payType==="range"?f.hi:f.fixed)||0, unit:f.payPeriod,
+    vac:f.vac||1, exp:f.exp||"—", edu:f.edu||"—",
+    dl:f.dlDate?Math.max(1,Math.ceil((new Date(f.dlDate)-new Date())/86400000)):14,
+    skills:[...(f.mustHave||[]),...(f.skills||[])],
+    perks:f.perks||[],
+    duties:(f.duties||"").split("\n").map(s=>s.replace(/^[•\-]\s*/,"").trim()).filter(Boolean),
+    reqs:(f.reqs||"").split("\n").map(s=>s.replace(/^[•\-]\s*/,"").trim()).filter(Boolean),
+    desc:f.desc||"",
+    how:f.how||"Apply through NorthHire with your resume.",
+    aiScreening:f.aiScreening!==false, vacancyConfirmed:!!f.vacancyConfirmed,
+    views:0, posted:"Just now", scoreWeights:null, recruitingCost:0,
+  };
+}
 const JOBPOST_DRAFT_KEY="northhire.jobPostDraft";
 const _defaultJobPostData=()=>({t:"",cat:"trades",type:"Full Time",mode:"On-site",desc:"",
     skills:[],mustHave:[],location:"",city:"",prov:"Ontario",
@@ -272,7 +307,7 @@ const _loadJobPostDraft=()=>{try{return JSON.parse(sessionStorage.getItem(JOBPOS
 export function EmpPost(){
   const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const draft=_loadJobPostDraft();
-  const [resumed]=useState(!!draft&&draft.step>1);
+  const [resumed,setResumed]=useState(!!draft&&draft.step>1);
   const [step,setStep]=useState(draft?.step||1); const [err,setErr]=useState({});
   const [f,setF]=useState(draft?.f||_defaultJobPostData());
   /* A refresh mid-wizard used to lose every field with no warning - persist the draft the same
@@ -281,6 +316,22 @@ export function EmpPost(){
   const [draftSavedAt,setDraftSavedAt]=useState(draft?Date.now():null);
   const [nowTick,setNowTick]=useState(Date.now());
   useEffect(()=>{try{sessionStorage.setItem(JOBPOST_DRAFT_KEY,JSON.stringify({step,f})); setDraftSavedAt(Date.now());}catch{}},[step,f]);
+  /* E2: server-side draft (job_drafts table), debounced 800ms, alongside sessionStorage which
+     stays the pre-server fallback for network failures. sessionStorage always wins on load
+     since it's instant and same-tab-fresh; the server copy exists so a draft survives a
+     cleared session / different device, and is what actually powers the "Continue draft" resume
+     when sessionStorage is empty (private window, browser restart, etc). */
+  useEffect(()=>{
+    const id=setTimeout(()=>{ A.saveJobDraft(f,step); },800);
+    return ()=>clearTimeout(id);
+  },[f,step]);
+  useEffect(()=>{
+    if(draft)return; // sessionStorage already had one - server copy would just be stale-or-same
+    A.loadJobDraft().then(sd=>{
+      if(sd&&sd.data){ setF(sd.data); setStep(sd.step||1); setDraftSavedAt(new Date(sd.updatedAt).getTime()||Date.now()); setResumed((sd.step||1)>1); }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[]);
   useEffect(()=>{const id=setInterval(()=>setNowTick(Date.now()),30000); return()=>clearInterval(id);},[]);
   const draftIndicator=(()=>{
     if(!draftSavedAt) return "";
@@ -291,7 +342,7 @@ export function EmpPost(){
     if(m<60) return t("employer.post.draftSavedMinutesAgo",{n:m});
     return t("employer.post.draftSavedLongerAgo");
   })();
-  const discardDraft=()=>{try{sessionStorage.removeItem(JOBPOST_DRAFT_KEY);}catch{} setStep(1); setF(_defaultJobPostData()); setErr({}); setDraftSavedAt(null);};
+  const discardDraft=()=>{try{sessionStorage.removeItem(JOBPOST_DRAFT_KEY);}catch{} A.deleteJobDraft(); setStep(1); setF(_defaultJobPostData()); setErr({}); setDraftSavedAt(null);};
 
   const set=(k,v)=>{setF(p=>({...p,[k]:v}));setErr(e=>({...e,[k]:undefined}));};
   const setLocation=loc=>{const parts=loc.split(",").map(s=>s.trim());
@@ -395,41 +446,76 @@ export function EmpPost(){
 
   const [postErr,setPostErr]=useState("");
   const [posting,setPosting]=useState(false);
-  const [distributeLinks,setDistributeLinks]=useState(null); /* {jobId, channels:[{key,label,url}]} */
+  const [published,setPublished]=useState(null); /* {job, links:[{key,label,url}]} — E2 publish success screen */
+  const [showFeatureLimitModal,setShowFeatureLimitModal]=useState(false);
+  const buildPayload=()=>({...f,
+    skills:[...f.mustHave,...f.skills].join(","),
+    lo:f.payType==="range"?f.lo:f.fixed,
+    hi:f.payType==="range"?f.hi:f.fixed,
+    unit:f.payPeriod,
+    perks:(f.perks||[]).join(","),
+    dl:f.dlDate?Math.max(1,Math.ceil((new Date(f.dlDate)-new Date())/(1000*60*60*24))):14,
+    featured:f.featured,
+    aiScreening:f.aiScreening,vacancyConfirmed:f.vacancyConfirmed,
+    distributionChannels:f.distributionChannels,forwardEmail:f.forwardEmail});
   const next=async()=>{if(!validate())return;
-    if(step<3){setStep(step+1);return;}
-    /* Backfill legacy fields the store expects */
-    const payload={...f,
-      skills:[...f.mustHave,...f.skills].join(","),
-      lo:f.payType==="range"?f.lo:f.fixed,
-      hi:f.payType==="range"?f.hi:f.fixed,
-      unit:f.payPeriod,
-      perks:(f.perks||[]).join(","),
-      dl:f.dlDate?Math.max(1,Math.ceil((new Date(f.dlDate)-new Date())/(1000*60*60*24))):14,
-      featured:f.featured,
-      aiScreening:f.aiScreening,vacancyConfirmed:f.vacancyConfirmed,
-      distributionChannels:f.distributionChannels,forwardEmail:f.forwardEmail};
+    if(step<4){setStep(step+1);return;}
+    const payload=buildPayload();
     setPosting(true);
-    const r=await A.publishJob(payload,{keepPage:!!(f.distributionChannels||[]).length});
+    const r=await A.publishJob(payload,{keepPage:true});
     setPosting(false);
     if(r&&!r.ok){setPostErr(r.msg); return;}
     try{sessionStorage.removeItem(JOBPOST_DRAFT_KEY);}catch{}
-    /* Post-publish: if the employer selected any distribution channels, resolve their share
-       URLs via the distribute endpoint and show the copy-link confirmation modal before
-       returning to the jobs list. */
+    A.deleteJobDraft();
+    /* E2 publish success: always a rich SuccessCard (preview link, copy URL, candidates-already-
+       match nudge, per-channel copy-link rows if any board was selected) instead of silently
+       navigating to EmpJobs or only showing a modal when channels happened to be picked. */
+    let links=[];
     if(r?.job?.id&&(f.distributionChannels||[]).length){
-      const links=[];
       for(const key of f.distributionChannels){
         try{const linkRes=await A.getJobDistributeUrl(r.job.id,key); if(linkRes?.ok)links.push(linkRes.data);}
         catch{}
       }
-      if(links.length){setDistributeLinks({jobId:r.job.id,channels:links}); return;}
     }
+    setPublished({job:r.job,links});
   };
 
-  const steps=[t("employer.post.stepRoleDetails"),t("employer.post.stepPayLocation"),t("employer.post.stepApplication")];
+  const steps=[t("employer.post.stepRoleDetails"),t("employer.post.stepPayLocation"),t("employer.post.stepApplication"),t("employer.post.stepPreview")];
   const today=new Date().toISOString().slice(0,10);
   const maxDate=(()=>{const d=new Date();d.setMonth(d.getMonth()+3);return d.toISOString().slice(0,10);})();
+
+  /* E2 publish success — reuses SuccessCard (design/primitives.jsx), same primitive as the
+     seeker apply-confirmation and the E4 offer-sent screen. Preview link + copy public URL +
+     "N candidates already match" (only when Talent Pool is on the plan, so it never surfaces a
+     paid feature's data to a Free employer) + per-board copy-link rows when any were selected. */
+  if(published){
+    const pubJob=published.job;
+    const publicUrl=typeof window!=="undefined"?`${window.location.origin}/jobs/${pubJob.id}`:"";
+    const matchCount=A.can("talentPool")?A.reverseMatch(pubJob.id,65).length:0;
+    return <Page narrow>
+      <SuccessCard title={t("employer.post.publishedTitle",{title:pubJob.t})} subtitle={t("employer.post.publishedSub")}
+        actions={[
+          <Btn key="preview" kind="outline" icon="eye" onClick={()=>A.openJob(pubJob.id,{preview:true})}>{t("employer.post.viewLivePosting")}</Btn>,
+          <Btn key="copy" kind="outline" icon="copy" onClick={()=>navigator.clipboard?.writeText(publicUrl)}>{t("employer.post.copyPublicUrl")}</Btn>,
+          <Btn key="done" kind="primary" onClick={()=>A.go("empJobs")}>{t("common.close")}</Btn>,
+        ]}>
+        {matchCount>0&&<Banner tone="brand" icon="sparkle" style={{marginBottom:published.links.length?12:0}}
+          action={<Btn kind="primary" size="sm" onClick={()=>{A.setPipelineJob(pubJob.id);A.go("empPipeline");}}>{t(matchCount===1?"employer.pipeline.showCandidates":"employer.pipeline.showCandidatesPlural",{n:matchCount})}</Btn>}>
+          {t(matchCount===1?"employer.post.candidatesAlreadyMatch":"employer.post.candidatesAlreadyMatchPlural",{n:matchCount})}
+        </Banner>}
+        {published.links.length>0&&<div>
+          <Lbl style={{marginTop:matchCount>0?12:0}}>{t("employer.post.postToOtherBoards")}</Lbl>
+          <div className="flex flex-col gap-2">
+            {published.links.map(c=><div key={c.channel} className="flex gap-2 items-center border border-line rounded-lg p-2.5 bg-bg">
+              <span className="text-sm font-semibold text-text w-28 shrink-0">{c.label}</span>
+              <code className="text-xs bg-white border border-line rounded px-2 py-1 flex-1 min-w-0 truncate">{c.url}</code>
+              <Btn kind="outline" size="sm" icon="copy" onClick={async()=>{try{await navigator.clipboard.writeText(c.url); A.toast(`Copied ${c.label} link`,"ok");}catch{}}}>Copy</Btn>
+            </div>)}
+          </div>
+        </div>}
+      </SuccessCard>
+    </Page>;
+  }
 
   return <Page narrow>
     <H1 sub={t("employer.post.subtitle")}
@@ -446,13 +532,13 @@ export function EmpPost(){
 
     <Card pad={mob?16:20} style={{marginBottom:16}}>
       <div className="flex items-center">
-        {steps.map((s,i)=><div key={s} className="flex items-center min-w-0" style={{flex:i<2?1:"0 0 auto"}}>
+        {steps.map((s,i)=><div key={s} className="flex items-center min-w-0" style={{flex:i<steps.length-1?1:"0 0 auto"}}>
           <div className="flex items-center gap-2 min-w-0">
             <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all duration-200"
               style={{background:step>i+1?C.ok:step===i+1?C.brand:C.lineSoft,color:step>=i+1?"#fff":C.text3}}>
               {step>i+1?<I n="check" s={14} c="#fff" w={3}/>:i+1}</div>
             {!mob&&<span className="text-sm whitespace-nowrap" style={{fontWeight:step===i+1?650:500,color:step===i+1?C.text:C.text3}}>{s}</span>}</div>
-          {i<2&&<div className="flex-1 h-0.5 rounded-full mx-2.5 transition-colors duration-300" style={{background:step>i+1?C.ok:C.lineSoft,minWidth:14}}/>}</div>)}</div></Card>
+          {i<steps.length-1&&<div className="flex-1 h-0.5 rounded-full mx-2.5 transition-colors duration-300" style={{background:step>i+1?C.ok:C.lineSoft,minWidth:14}}/>}</div>)}</div></Card>
 
     <Card pad={mob?20:26}>
       <div key={step} style={{animation:"slideIn .26s ease both"}}>
@@ -618,7 +704,8 @@ export function EmpPost(){
           <div><div className="text-sm font-semibold text-text">{t("employer.post.markUrgent")}</div>
             <div className="text-xs text-text-2 mt-0.5">{t("employer.post.markUrgentSub")}</div></div>
           <Switch on={f.urgent} onChange={v=>set("urgent",v)}/></div>
-        <div className="flex items-center justify-between gap-3.5 py-3.5 border-t border-line-soft">
+        <div className="flex items-center justify-between gap-3.5 py-3.5 border-t border-line-soft"
+          onClick={()=>{ if(A.can("featured")&&!canFeature&&!f.featured)setShowFeatureLimitModal(true); }}>
           <div><div className="text-sm font-semibold text-text">{t("employer.post.featureListing")}</div>
             <div className="text-xs text-text-2 mt-0.5">
               {A.can("featured")
@@ -628,6 +715,22 @@ export function EmpPost(){
             </div></div>
           <Switch on={f.featured} onChange={v=>set("featured",v)} disabled={!canFeature&&!f.featured}/></div>
       </div>}
+
+      {/* E6: Growth employer clicks Feature this job with 0 credits remaining → featured-credit
+         modal explaining the limit with an upgrade path to Enterprise (unlimited featured). This
+         is a distinct case from the generic UpgradePromptModal - the employer already HAS the
+         "featured" feature on Growth, they've just used up its numeric credit allowance, so the
+         generic "available on Growth" copy would be actively wrong here. */}
+      {showFeatureLimitModal&&<Modal onClose={()=>setShowFeatureLimitModal(false)} title={t("employer.post.featuredLimitTitle")}>
+        <div className="flex flex-col gap-3.5">
+          <p className="text-sm text-text-2 leading-relaxed m-0">
+            {t("employer.post.featuredLimitBody",{plan:A.planName(),limit:featuredLimit,plural:featuredLimit===1?"":"s"})}</p>
+          <div className="flex gap-2.5 justify-end">
+            <Btn kind="ghost" onClick={()=>setShowFeatureLimitModal(false)}>{t("common.cancel")}</Btn>
+            <Btn kind="primary" icon="award" onClick={()=>{setShowFeatureLimitModal(false);A.go("pricing");}}>{t("employer.post.featuredLimitCta")}</Btn>
+          </div>
+        </div>
+      </Modal>}
 
       {step===3&&<div>
         <H2 sub="This is exactly how candidates will see it">Review and publish</H2>
@@ -688,27 +791,23 @@ export function EmpPost(){
         </div>
       </div>}
 
+      {/* E2 Step 4 = Preview — renders through the ACTUAL public JobDetailPage component (not a
+         hand-maintained second layout, not an iframe), so what the employer sees here is
+         provably identical to what a candidate will see once published. preview=true disables
+         every candidate-only interactive affordance (apply/save/share/report). */}
+      {step===4&&<div>
+        <H2 sub={t("employer.post.previewStepTitle")}>{t("employer.post.stepPreview")}</H2>
+        <div className="border border-line rounded-2xl overflow-hidden" style={{marginTop:8}}>
+          <JobDetailPage preview previewJob={_buildPreviewJob(f,A.company)}/>
+        </div>
+      </div>}
+
       </div>
       <div className="flex justify-between gap-2.5 mt-6 pt-5 border-t border-line-soft">
         <Btn kind="ghost" icon="arrowL" onClick={()=>step===1?A.go("empJobs"):setStep(step-1)}>{step===1?"Cancel":"Back"}</Btn>
-        <Btn kind={step===3?"ok":"primary"} size="lg" iconR={step===3?"check":"arrowR"} onClick={next} disabled={posting}>
-          {posting?"Publishing…":step===3?"Publish listing":"Continue"}</Btn></div>
+        <Btn kind={step===4?"ok":"primary"} size="lg" iconR={step===4?"check":"arrowR"} onClick={next} disabled={posting}>
+          {posting?"Publishing…":step===4?"Publish listing":"Continue"}</Btn></div>
     </Card>
-    {distributeLinks&&<Modal onClose={()=>{setDistributeLinks(null);A.go("empJobs");}} title="Listing published — share it on your other boards">
-      <p className="text-sm text-text-2 leading-relaxed mb-3">
-        Copy each link and paste it into your account on that board. Actual programmatic posting
-        requires per-board OAuth partnerships and isn't wired yet, but the pre-filled share link
-        gets the listing in front of that board's audience with one paste.
-      </p>
-      <div className="flex flex-col gap-2.5">
-        {distributeLinks.channels.map(c=><div key={c.channel} className="flex gap-2 items-center border border-line rounded-lg p-2.5 bg-bg">
-          <span className="text-sm font-semibold text-text w-28 shrink-0">{c.label}</span>
-          <code className="text-xs bg-white border border-line rounded px-2 py-1 flex-1 min-w-0 truncate">{c.url}</code>
-          <Btn kind="outline" size="sm" icon="copy" onClick={async()=>{try{await navigator.clipboard.writeText(c.url); A.toast(`Copied ${c.label} link`,"ok");}catch{}}}>Copy</Btn>
-        </div>)}
-      </div>
-      <div className="flex gap-2 justify-end mt-4"><Btn kind="primary" onClick={()=>{setDistributeLinks(null);A.go("empJobs");}}>Done</Btn></div>
-    </Modal>}
   </Page>;
 }
 
@@ -716,15 +815,15 @@ export function EmpPost(){
    buttons (kept as the accessible, no-pointer-required path - drag is an addition, not a
    replacement). A PointerSensor activation distance stops an ordinary click-to-open-candidate
    from being swallowed as an accidental drag. ─── */
-function _PipelineCard({a,u,s,idx,selected,tog,A,notice,stages,t}){
+function _PipelineCard({a,u,s,idx,selected,tog,A,notice,stages,t,onOpen}){
   const {attributes,listeners,setNodeRef,transform,isDragging}=useDraggable({id:a.id});
   const style=transform?{transform:`translate3d(${transform.x}px,${transform.y}px,0)`,zIndex:50,opacity:0.9}:undefined;
   return <div ref={setNodeRef} style={{...style,border:`${selected?2:1}px solid ${selected?C.brand:C.line}`,padding:selected?12:13}}
     role="button" tabIndex={0} aria-label={`Open ${u.name}'s application`}
     className={`bg-white rounded-2xl cursor-grab shadow-xs transition-all duration-150 ${isDragging?"shadow-md":""}`}
     {...attributes} {...listeners}
-    onClick={e=>{if(e.target.closest("[data-nc]"))return; A.openCandidate(a.id);}}
-    onKeyDown={e=>{if((e.key==="Enter"||e.key===" ")&&!e.target.closest("[data-nc]")){e.preventDefault();A.openCandidate(a.id);}}}>
+    onClick={e=>{if(e.target.closest("[data-nc]"))return; onOpen(a.id);}}
+    onKeyDown={e=>{if((e.key==="Enter"||e.key===" ")&&!e.target.closest("[data-nc]")){e.preventDefault();onOpen(a.id);}}}>
     <div className="flex gap-2.5 items-center mb-2.5">
       {A.can("bulkActions")&&<div data-nc role="checkbox" aria-checked={selected} aria-label={`Select ${u.name}`} tabIndex={0}
         onClick={()=>tog(a.id)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();tog(a.id);}}}
@@ -748,7 +847,7 @@ function _PipelineCard({a,u,s,idx,selected,tog,A,notice,stages,t}){
       {idx<stages.length-1&&<Btn kind="outline" size="xs" iconR="arrowR" onClick={()=>A.moveApp(a.id,stages[idx+1])} style={{flex:2}}>{t("employer.pipeline.advance")}</Btn>}</div>
   </div>;
 }
-function _PipelineColumn({stage,items,job,sel,tog,selectStage,A,mob,stages,t}){
+function _PipelineColumn({stage,items,job,sel,tog,selectStage,A,mob,stages,t,onOpen}){
   const {setNodeRef,isOver}=useDroppable({id:stage});
   const allSelected=items.length>0&&items.every(a=>sel.has(a.id));
   return <div ref={setNodeRef} className={`${mob?"w-52":"flex-1 min-w-56"} flex flex-col gap-2 rounded-2xl transition-colors duration-150`}
@@ -768,11 +867,11 @@ function _PipelineColumn({stage,items,job,sel,tog,selectStage,A,mob,stages,t}){
         <span className="bg-wash text-brand border border-line-2 text-xs font-bold rounded-full flex items-center justify-center px-1.5" style={{minWidth:22,height:22}}>{items.length}</span></div></div>
     {items.map(a=>{const u=A.person(a.user); const s=A.scoreCandidate(u,job); const idx=stages.indexOf(stage);
       const notice=applicationDecisionNotice(a,postingRules({prov:job?.prov,employerSize:A.company?.size}));
-      return <_PipelineCard key={a.id} a={a} u={u} s={s} idx={idx} selected={sel.has(a.id)} tog={tog} A={A} notice={notice} stages={stages} t={t}/>;})}
+      return <_PipelineCard key={a.id} a={a} u={u} s={s} idx={idx} selected={sel.has(a.id)} tog={tog} A={A} notice={notice} stages={stages} t={t} onOpen={onOpen}/>;})}
     {items.length===0&&<div className="rounded-2xl text-center text-xs text-text-3 py-6 px-3" style={{border:`1.5px dashed ${C.line}`}}>{t("employer.pipeline.emptyColumn")}</div>}
   </div>;
 }
-function _PipelineBoard({apps,job,sel,tog,selectStage,A,mob,stages,t}){
+function _PipelineBoard({apps,job,sel,tog,selectStage,A,mob,stages,t,onOpen}){
   const sensors=useSensors(useSensor(PointerSensor,{activationConstraint:{distance:8}}));
   const onDragEnd=({active,over})=>{
     if(!over)return;
@@ -787,7 +886,7 @@ function _PipelineBoard({apps,job,sel,tog,selectStage,A,mob,stages,t}){
     <DndContext sensors={sensors} onDragEnd={onDragEnd}>
       <div className={`flex gap-2 items-start ${mob?"":"w-full"}`} style={mob?{minWidth:"max-content"}:undefined}>
         {stages.map(stage=><_PipelineColumn key={stage} stage={stage} items={apps.filter(a=>a.stage===stage)}
-          job={job} sel={sel} tog={tog} selectStage={selectStage} A={A} mob={mob} stages={stages} t={t}/>)}
+          job={job} sel={sel} tog={tog} selectStage={selectStage} A={A} mob={mob} stages={stages} t={t} onOpen={onOpen}/>)}
       </div>
     </DndContext>
   </div>;
@@ -848,8 +947,21 @@ function _JobScoring({A,job,mob,t}){
 export function EmpPipeline(){
   const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const myJobs=A.jobs.filter(j=>j.e===A.company.id);
-  const jobId=A.pipelineJob||myJobs[0]?.id;
+  /* E3: candidate detail is now a drawer overlay ON this page rather than a route that replaces
+     it - the kanban stays mounted (and its scroll position/selection intact) behind the drawer.
+     The deep-link /employer/candidates/:id still works: App.jsx now renders THIS component for
+     that route too, and pg==="empCandidate" here means "arrived via a full navigation or a raw
+     URL, force the drawer open for A.candidateId" - closing it then returns to the plain
+     /employer/pipeline URL rather than leaving pg stuck on the candidate route. */
+  const forceOpenId=A.pg==="empCandidate"?A.candidateId:null;
+  const deepLinkApp=forceOpenId?A.applications.find(x=>x.id===forceOpenId):null;
+  const [drawerCandidateId,setDrawerCandidateId]=useState(forceOpenId);
+  useEffect(()=>{ if(forceOpenId)setDrawerCandidateId(forceOpenId); },[forceOpenId]);
+  const openDrawer=id=>{A.openCandidateInline(id); setDrawerCandidateId(id);};
+  const closeDrawer=()=>{ setDrawerCandidateId(null); if(forceOpenId)A.go("empPipeline"); };
+  const jobId=A.pipelineJob||deepLinkApp?.job||myJobs[0]?.id;
   const job=A.job(jobId);
+  useEffect(()=>{ if(deepLinkApp&&deepLinkApp.job!==A.pipelineJob)A.setPipelineJob(deepLinkApp.job); },[deepLinkApp?.job]);
   const pipelineStages=A.stagesFor(A.company.id);
   const rawApps=A.applications.filter(a=>a.job===jobId);
   const [tab,setTab]=useState("pipeline");
@@ -893,6 +1005,7 @@ export function EmpPipeline(){
 
   const [talentMinScore,setTalentMinScore]=useState(65);
   const [talentQ,setTalentQ]=useState("");
+  const [inviteJobFor,setInviteJobFor]=useState({}); /* candidateId -> jobId, for the E5 per-card "invite to which job" picker */
   const [noting,setNoting]=useState(null); const [noteText,setNoteText]=useState(""); const [noteTags,setNoteTags]=useState("");
   const [viewingOutreach,setViewingOutreach]=useState(null); const [outreachEvents,setOutreachEvents]=useState([]);
   const viewOutreach=async(p)=>{setViewingOutreach(p); setOutreachEvents(await A.loadCandidateOutreach(p.id));};
@@ -953,7 +1066,15 @@ export function EmpPipeline(){
       {reverseCandidates.length===0
         ? <Empty icon="target" title={t("employer.pipeline.talentNoMatches")} body={t("employer.pipeline.talentNoMatchesBody")}/>
         : <><div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-2"}`}>
-            {talentPg.pageItems.map(({p,score})=>{const invited=A.invitedCandidates.has(`${jobId}:${p.id}`);
+            {talentPg.pageItems.map(({p,score})=>{
+              /* E5: "Invite to apply to {Role}" — a dropdown of the employer's own live jobs,
+                 not locked to whichever posting the pipeline tab happens to be on. Defaults to
+                 the current pipeline job (least surprising), remembered per-candidate-card so
+                 picking a different job for one match doesn't affect the others. */
+              const liveJobs=myJobs.filter(j=>j.status==="live");
+              const inviteJobId=inviteJobFor[p.id]||jobId;
+              const inviteJob=A.job(inviteJobId);
+              const invited=A.invitedCandidates.has(`${inviteJobId}:${p.id}`);
               const cn=A.candidateNotes[p.id];
               return <Card key={p.id} style={{padding:20,borderRadius:16}}>
               <div className="flex gap-3.5 items-center">
@@ -968,10 +1089,14 @@ export function EmpPipeline(){
               {cn?.tags?.length>0&&<div className="flex flex-wrap gap-1.5 mt-2">
                 {cn.tags.map(tag=><Tag key={tag} tone="violet" sm>{tag}</Tag>)}</div>}
               {cn?.note&&<div className="text-xs text-text-2 mt-2.5 p-2.5 bg-bg rounded-lg italic leading-snug">{cn.note}</div>}
+              {liveJobs.length>1&&!invited&&<div className="mt-3">
+                <Sel value={inviteJobId} onChange={e=>setInviteJobFor(m=>({...m,[p.id]:e.target.value}))} aria-label={t("employer.pipeline.inviteChooseJob")}>
+                  {liveJobs.map(j=><option key={j.id} value={j.id}>{j.t}</option>)}</Sel>
+              </div>}
               <div className="flex gap-2 mt-3.5">
                 {invited
-                  ?<Btn kind="soft" size="sm" full icon="check" disabled>{t("employer.pipeline.invited")}</Btn>
-                  :<Btn kind="outline" size="sm" full icon="send" onClick={()=>A.inviteToApply(p.id,jobId)}>{t("employer.pipeline.inviteToApply")}</Btn>}
+                  ?<Btn kind="soft" size="sm" full icon="check" disabled>{t("employer.pipeline.invitedToRole",{role:inviteJob?.t||""})}</Btn>
+                  :<Btn kind="outline" size="sm" full icon="send" onClick={()=>A.inviteToApply(p.id,inviteJobId)}>{t("employer.pipeline.inviteToApplyRole",{role:inviteJob?.t||""})}</Btn>}
                 <Btn kind="ghost" size="sm" icon="edit" onClick={()=>{setNoting(p);setNoteText(cn?.note||"");setNoteTags((cn?.tags||[]).join(", "));}}>{ cn?t("employer.pipeline.editNote"):t("employer.pipeline.addNote")}</Btn>
                 <Btn kind="ghost" size="sm" icon="clock" onClick={()=>viewOutreach(p)}>{t("employer.pipeline.viewHistory")}</Btn>
               </div>
@@ -991,7 +1116,7 @@ export function EmpPipeline(){
         </div>
         <Btn kind="onDark" size="sm" icon="x" onClick={()=>setConfirmRejectAll(true)}>Reject all</Btn>
         <Btn kind="onDark" size="sm" onClick={clear}>Clear</Btn></div>}
-      <_PipelineBoard apps={apps} job={job} sel={sel} tog={tog} selectStage={selectStage} A={A} mob={mob} stages={pipelineStages} t={t}/>
+      <_PipelineBoard apps={apps} job={job} sel={sel} tog={tog} selectStage={selectStage} A={A} mob={mob} stages={pipelineStages} t={t} onOpen={openDrawer}/>
     </>}
     <ConfirmDialog open={confirmRejectAll} onClose={()=>setConfirmRejectAll(false)} confirmLabel="Reject all"
       title={`Reject ${sel.size} candidate${sel.size===1?"":"s"}?`} onConfirm={()=>runBulk("reject")}>
@@ -1025,18 +1150,40 @@ export function EmpPipeline(){
         </div>)}
       </div>
     </Modal>}
+    {/* E3: candidate drawer overlay — BottomSheet already renders as a right-side drawer on
+       desktop and a bottom sheet on mobile, so no separate primitive was needed. Kanban stays
+       mounted and visible behind it; closing it returns to it with scroll position/selection
+       untouched since the board never unmounted. */}
+    <BottomSheet open={!!drawerCandidateId} onClose={closeDrawer}
+      title={(()=>{const app=drawerCandidateId&&A.applications.find(x=>x.id===drawerCandidateId); const p=app&&A.person(app.user); return p?.name||t("employer.candidate.candidateTitle");})()}
+      width={560}>
+      {drawerCandidateId&&<EmpCandidate inline onClose={closeDrawer}/>}
+    </BottomSheet>
   </div>;
 }
 
 
-export function EmpCandidate(){
+/* E3: EmpCandidate doubles as (a) the full-page deep-link fallback for /employer/candidates/:id
+   and (b) the content rendered inside CandidateDrawer when opened from the pipeline kanban.
+   inline=true swaps the <Page narrow> wrapper for a plain passthrough (the drawer already
+   supplies its own scroll container + padding) and routes "close"/"next candidate" through the
+   caller's inline navigation instead of a full page navigation, so the kanban never unmounts
+   behind it. Both modes read the SAME A.candidateId — the caller is responsible for setting it
+   (A.openCandidate for a full navigation, A.openCandidateInline to stay on the pipeline route). */
+const _Frag=({children})=>children;
+export function EmpCandidate({inline=false,onClose}={}){
   const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
+  const Wrap=inline?_Frag:Page;
+  const close=onClose||(()=>A.go("empPipeline"));
+  const nav=id=>{ if(inline)A.openCandidateInline(id); else A.openCandidate(id); };
   const [showMsg,setShowMsg]=useState(false); const [msgText,setMsgText]=useState("");
   const [savingTemplate,setSavingTemplate]=useState(false); const [templateName,setTemplateName]=useState("");
   const [showSched,setShowSched]=useState(false);
   const [ivDate,setIvDate]=useState(""); const [ivTime,setIvTime]=useState(""); const [ivMode,setIvMode]=useState("video"); const [ivNotes,setIvNotes]=useState("");
+  const [ivTzOverride,setIvTzOverride]=useState(""); /* E4: employer override of the derived candidate timezone */
   const [confirmReject,setConfirmReject]=useState(false); const [rejectReason,setRejectReason]=useState("");
   const [showOfferLetter,setShowOfferLetter]=useState(false);
+  const [priorOffers,setPriorOffers]=useState([]); /* E4: sent/viewed/accepted/declined/expired history for this candidate */
   const [offerLink,setOfferLink]=useState(""); const [offerErr,setOfferErr]=useState(""); const [sendingOffer,setSendingOffer]=useState(false);
   const [offerDraft,setOfferDraft]=useState({startDate:"",salary:"",manager:"",deadline:""});
   const [contact,setContact]=useState(undefined); // undefined = loading, null = load failed
@@ -1046,6 +1193,7 @@ export function EmpCandidate(){
   useEffect(()=>{if(!a)return; let cancelled=false;A.loadCandidateContact(a.id).then(c=>{if(!cancelled)setContact(c);});return()=>{cancelled=true;};},[a?.id]);
   const refreshScorecards=()=>{if(a)A.loadScorecards(a.id).then(setScorecards);};
   useEffect(()=>{refreshScorecards();},[a?.id]);
+  useEffect(()=>{ if(showOfferLetter&&a)A.loadOffers(a.id).then(setPriorOffers); },[showOfferLetter,a?.id]);
   /* E3 keyboard shortcuts. Computes stage/neighbours INSIDE the callback so this useEffect can
      sit before the `if(!a) return` guard without hitting the JS temporal dead zone on candStages
      and idx (charter rule: shell/route/hook changes verified against TDZ). Only fires when a
@@ -1070,20 +1218,20 @@ export function EmpCandidate(){
       else if(k==="i"&&A.can("interviews")){e.preventDefault();setShowSched(true);}
       else if(k==="n"){e.preventDefault();setScRating(0);setScNotes("");setShowScorecard(true);}
       else if(k==="r"){e.preventDefault();setConfirmReject(true);setRejectReason("");}
-      else if(e.key==="ArrowRight"&&nextApp){e.preventDefault();A.openCandidate?.(nextApp.id);}
-      else if(e.key==="ArrowLeft"&&prevApp){e.preventDefault();A.openCandidate?.(prevApp.id);}
-      else if(e.key==="Escape"){A.go("empPipeline");}
+      else if(e.key==="ArrowRight"&&nextApp){e.preventDefault();nav(nextApp.id);}
+      else if(e.key==="ArrowLeft"&&prevApp){e.preventDefault();nav(prevApp.id);}
+      else if(e.key==="Escape"){close();}
     };
     window.addEventListener("keydown",onKey);
     return()=>window.removeEventListener("keydown",onKey);
   },[a?.id]);
-  if(!a) return <Page><Empty icon="users" title={t("employer.candidate.candidateTitle")} body={t("employer.post.reviewPublishSub")}
-    action={<Btn kind="primary" onClick={()=>A.go("empPipeline")}>{t("employer.pipeline.moveBack")}</Btn>}/></Page>;
+  if(!a) return <Wrap><Empty icon="users" title={t("employer.candidate.candidateTitle")} body={t("employer.post.reviewPublishSub")}
+    action={<Btn kind="primary" onClick={close}>{t("employer.pipeline.moveBack")}</Btn>}/></Wrap>;
   const u=A.person(a.user), job=A.job(a.job), s=A.scoreCandidate(u,job);
   const candStages=A.stagesForApp(a); const idx=candStages.indexOf(a.stage);
   const threadMessages=A.messages.filter(m=>(m.from===u.id&&m.to===A.user?.id)||(m.to===u.id&&m.from===A.user?.id)).slice().reverse();
   const upcomingInterviews=A.interviews.filter(iv=>iv.app===a.id&&iv.status==="scheduled");
-  return <Page narrow>
+  return <Wrap narrow>
     <Card pad={mob?20:26} style={{marginBottom:16}}>
       <div className="flex gap-4 items-center flex-wrap">
         <SmartPortrait seed={u.seed} size={mob?62:74} radius={18}/>
@@ -1145,11 +1293,13 @@ export function EmpCandidate(){
       <div className="flex gap-2.5 flex-wrap">
         {idx>0&&<Btn kind="outline" icon="arrowL" onClick={()=>A.moveApp(a.id,candStages[idx-1])}>{t("employer.candidate.backToStage",{stage:candStages[idx-1]})}</Btn>}
         {idx<candStages.length-1&&<Btn kind="primary" iconR="arrowR" onClick={()=>A.moveApp(a.id,candStages[idx+1])}>{t("employer.candidate.advanceToStage",{stage:candStages[idx+1]})}</Btn>}
-        {A.can("messages")?<Btn kind="outline" icon="mail" onClick={()=>setShowMsg(true)}>{t("employer.candidate.message")}</Btn>:<Btn kind="ghost" icon="lock" onClick={()=>A.go("pricing")}>{t("employer.candidate.message")} (Growth+)</Btn>}
-        {A.can("interviews")?<Btn kind="outline" icon="calendar" onClick={()=>setShowSched(true)}>{t("employer.candidate.scheduleInterview")}</Btn>:<Btn kind="ghost" icon="lock" onClick={()=>A.go("pricing")}>{t("employer.candidate.scheduleInterview")} (Growth+)</Btn>}
+        {A.can("messages")?<Btn kind="outline" icon="mail" onClick={()=>setShowMsg(true)}>{t("employer.candidate.message")}</Btn>
+          :<Btn kind="ghost" icon="lock" onClick={()=>A.requestUpgrade("messages",t("employer.candidate.message"),"mail")}>{t("employer.candidate.messageUpgradeLabel")}</Btn>}
+        {A.can("interviews")?<Btn kind="outline" icon="calendar" onClick={()=>setShowSched(true)}>{t("employer.candidate.scheduleInterview")}</Btn>
+          :<Btn kind="ghost" icon="lock" onClick={()=>A.requestUpgrade("interviews",t("employer.candidate.scheduleInterview"),"calendar")}>{t("employer.candidate.interviewUpgradeLabel")}</Btn>}
         {a.stage==="Offer"&&<Btn kind="ok" icon="file" onClick={()=>setShowOfferLetter(true)}>{t("employer.candidate.generateOfferLetter")}</Btn>}
         <Btn kind="dangerSoft" onClick={()=>{setConfirmReject(true);setRejectReason("");}}>{ t("employer.candidate.notAFit")}</Btn>
-        <Btn kind="ghost" onClick={()=>A.go("empPipeline")}>{t("employer.candidate.backToPipeline")}</Btn></div>
+        <Btn kind="ghost" onClick={close}>{t("employer.candidate.backToPipeline")}</Btn></div>
       {(() => {
         /* E3 next-candidate flow: after any stage move the reader normally has to go back to
            the kanban to pick the next candidate. This surfaces the neighbours in the same stage
@@ -1161,14 +1311,14 @@ export function EmpCandidate(){
         if(!nextApp&&!prevApp) return null;
         return <div className="mt-3 pt-3 border-t border-line-soft flex gap-2.5 items-center flex-wrap text-xs text-text-3">
           <span>{t("employer.candidate.candidateInStagePos",{pos:pos+1,total:sameStage.length,stage:a.stage})}</span>
-          {prevApp&&<button onClick={()=>A.openCandidate(prevApp.id)} className="bg-transparent border border-line-soft rounded-lg py-1.5 px-2.5 cursor-pointer text-xs text-text hover:bg-bg">← {t("employer.candidate.prevCandidate")}</button>}
-          {nextApp&&<button onClick={()=>A.openCandidate(nextApp.id)} className="bg-transparent border border-line-soft rounded-lg py-1.5 px-2.5 cursor-pointer text-xs text-text hover:bg-bg">{t("employer.candidate.nextCandidate")} →</button>}
+          {prevApp&&<button onClick={()=>nav(prevApp.id)} className="bg-transparent border border-line-soft rounded-lg py-1.5 px-2.5 cursor-pointer text-xs text-text hover:bg-bg">← {t("employer.candidate.prevCandidate")}</button>}
+          {nextApp&&<button onClick={()=>nav(nextApp.id)} className="bg-transparent border border-line-soft rounded-lg py-1.5 px-2.5 cursor-pointer text-xs text-text hover:bg-bg">{t("employer.candidate.nextCandidate")} →</button>}
           <span className="ml-auto text-text-3">{t("employer.candidate.keyboardHint")}</span>
         </div>;
       })()}
     </Card>
     <ConfirmDialog open={confirmReject} onClose={()=>setConfirmReject(false)} confirmLabel={t("common.delete")}
-      title={t("employer.candidate.rejectConfirmTitle",{name:u.name})} onConfirm={()=>{A.rejectApp(a.id,rejectReason.trim());A.go("empPipeline");}}>
+      title={t("employer.candidate.rejectConfirmTitle",{name:u.name})} onConfirm={()=>{A.rejectApp(a.id,rejectReason.trim());close();}}>
       <div className="flex flex-col gap-3">
         <div>{t("employer.candidate.rejectBody")}</div>
         <Field label={t("employer.candidate.rejectReasonLabel")} hint={t("employer.candidate.rejectReasonHint")}>
@@ -1176,8 +1326,35 @@ export function EmpCandidate(){
       </div>
     </ConfirmDialog>
 
-    {showOfferLetter&&<Modal onClose={()=>setShowOfferLetter(false)} title={`Offer letter — ${u.name}`}>
-      <div className="flex flex-col gap-3.5">
+    {showOfferLetter&&<Modal onClose={()=>{setShowOfferLetter(false);setOfferLink("");}} title={`Offer letter — ${u.name}`}>
+      {offerLink
+        /* E4: reuse SuccessCard after send, same as job-publish (E2) - a rich confirmation
+           instead of a thin inline banner buried under the form that was just filled in. */
+        ? <SuccessCard title={t("employer.candidate.offerSent")} subtitle={t("employer.candidate.offerSentEmailBody")}
+            actions={[
+              <Btn key="copy" kind="outline" icon="copy" onClick={()=>navigator.clipboard?.writeText(offerLink)}>{t("employer.candidate.copyButton")}</Btn>,
+              <Btn key="close" kind="primary" onClick={()=>{setShowOfferLetter(false);setOfferLink("");}}>{t("employer.candidate.close")}</Btn>,
+            ]}>
+            <code className="text-xs bg-bg border border-line rounded-lg px-2.5 py-1.5 break-all block">{offerLink}</code>
+          </SuccessCard>
+        : <div className="flex flex-col gap-3.5">
+        {/* E4 offer tracking: sent / viewed / accepted / declined / expired / withdrawn history
+           for this candidate, sourced from the same offer_letters rows the send action writes -
+           viewed/expired are derived server-side (see offers.js effectiveStatus()). */}
+        {priorOffers.length>0&&<div className="border border-line rounded-xl p-3">
+          <Lbl style={{marginBottom:8}}>{t("employer.candidate.priorOffers")}</Lbl>
+          <div className="flex flex-col gap-1.5">
+            {priorOffers.map(off=>{
+              const toneByStatus={sent:"brand",viewed:"warn",accepted:"ok",declined:"danger",expired:"neutral",withdrawn:"neutral"};
+              const labelByStatus={sent:t("employer.candidate.offerStatusSent"),viewed:t("employer.candidate.offerStatusViewed"),
+                accepted:t("employer.candidate.offerStatusAccepted"),declined:t("employer.candidate.offerStatusDeclined"),
+                expired:t("employer.candidate.offerStatusExpired"),withdrawn:t("employer.candidate.offerStatusWithdrawn")};
+              return <div key={off.id} className="flex justify-between items-center gap-2 text-sm">
+                <span className="text-text-2">{formatDate(off.createdAt,locale)}</span>
+                <Tag tone={toneByStatus[off.status]||"neutral"} sm>{labelByStatus[off.status]||off.status}</Tag>
+              </div>;})}
+          </div>
+        </div>}
         <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
           <Field label="Start date"><Input type="date" value={offerDraft.startDate} onChange={e=>setOfferDraft({...offerDraft,startDate:e.target.value})}/></Field>
           <Field label="Compensation"><Input value={offerDraft.salary} onChange={e=>setOfferDraft({...offerDraft,salary:e.target.value})} placeholder={`e.g. ${pay(job)}${payShort(job)}`}/></Field>
@@ -1188,15 +1365,7 @@ export function EmpCandidate(){
           <Area rows={7} value={offerDraft.body||""} onChange={e=>setOfferDraft({...offerDraft,body:e.target.value})}
             placeholder={`Dear ${u.name},\n\nWe're pleased to offer you the position of ${job.t} at ${A.company.name}.`}/></Field>
         {offerErr&&<Banner tone="danger" icon="alert">{offerErr}</Banner>}
-        {offerLink
-          ? <Banner tone="ok" icon="check" title={t("employer.candidate.offerSent")}>
-              <div className="text-xs text-text-2 mb-2">{t("employer.candidate.offerSentEmailBody")}</div>
-              <div className="flex gap-2 items-center flex-wrap">
-                <code className="text-xs bg-white border border-line rounded-lg px-2.5 py-1.5 break-all flex-1 min-w-0">{offerLink}</code>
-                <Btn kind="outline" size="sm" onClick={()=>navigator.clipboard?.writeText(offerLink)}>{t("employer.candidate.copyButton")}</Btn>
-              </div>
-            </Banner>
-          : <Banner tone="brand" icon="info">{t("employer.candidate.offerSignatureInfo")}</Banner>}
+        <Banner tone="brand" icon="info">{t("employer.candidate.offerSignatureInfo")}</Banner>
         <div className="flex gap-2.5 justify-end flex-wrap">
           <Btn kind="ghost" onClick={()=>setShowOfferLetter(false)}>{t("employer.candidate.close")}</Btn>
           <Btn kind="outline" icon="file" onClick={()=>A.printOfferLetter(u,job,A.company,offerDraft)}>{t("employer.candidate.printCopy")}</Btn>
@@ -1215,7 +1384,7 @@ export function EmpCandidate(){
             if(r.ok)setOfferLink(r.link); else setOfferErr(r.msg);
           }}>{sendingOffer?t("employer.candidate.sending"):t("employer.candidate.sendForSignature")}</Btn>
         </div>
-      </div>
+      </div>}
     </Modal>}
 
     {showScorecard&&<Modal onClose={()=>setShowScorecard(false)} title={`Scorecard for ${u.name}`}>
@@ -1255,12 +1424,12 @@ export function EmpCandidate(){
             {iv.notes&&<div className="text-xs text-text-2 mt-1">{iv.notes}</div>}</div>
           <Btn kind="ghost" size="xs" icon="x" onClick={()=>A.cancelInterview(iv.id)}/></div>)}</div></Card>}
 
-    {showMsg&&<Modal onClose={()=>{setShowMsg(false);setSavingTemplate(false);}} title={`Message ${u.name}`}>
-      {A.messageTemplates.length>0&&<Field label={t("employer.candidate.startFromTemplate")}>
-        <Sel value="" onChange={e=>{const tm=A.messageTemplates.find(x=>x.id===e.target.value); if(tm)setMsgText(tm.body
+    {showMsg&&(()=>{const allTemplates=[...defaultMessageTemplates(t),...A.messageTemplates]; return <Modal onClose={()=>{setShowMsg(false);setSavingTemplate(false);}} title={`Message ${u.name}`}>
+      {allTemplates.length>0&&<Field label={t("employer.candidate.startFromTemplate")}>
+        <Sel value="" onChange={e=>{const tm=allTemplates.find(x=>x.id===e.target.value); if(tm)setMsgText(tm.body
           .replace(/\{\{name\}\}/gi,u.name.split(" ")[0]).replace(/\{\{job\}\}/gi,job.t).replace(/\{\{company\}\}/gi,A.company.name));}}>
           <option value="">{t("employer.candidate.chooseTemplate")}</option>
-          {A.messageTemplates.map(tm=><option key={tm.id} value={tm.id}>{tm.name}</option>)}
+          {allTemplates.map(tm=><option key={tm.id} value={tm.id}>{tm.name}</option>)}
         </Sel></Field>}
       <Field label={t("employer.candidate.yourMessage")} hint={t("employer.candidate.mergeFieldsHint",{name:u.name})}>
         <Area rows={5} value={msgText} onChange={e=>setMsgText(e.target.value)} placeholder={t("employer.candidate.messagePlaceholder")}/></Field>
@@ -1274,36 +1443,58 @@ export function EmpCandidate(){
         className="bg-transparent border-0 p-0 mt-2.5 text-xs font-semibold text-brand cursor-pointer disabled:text-text-3 disabled:cursor-default">{t("employer.candidate.saveTemplate")}</button>}
       <div className="flex gap-2.5 justify-end mt-3.5">
         <Btn kind="ghost" onClick={()=>{setShowMsg(false);setSavingTemplate(false);}}>{t("common.cancel")}</Btn>
-        <Btn kind="primary" icon="send" disabled={!msgText.trim()} onClick={()=>{A.sendMessage(u.id,job.id,msgText.trim());setMsgText("");setShowMsg(false);setSavingTemplate(false);}}>{ t("employer.candidate.message")}</Btn></div></Modal>}
+        <Btn kind="primary" icon="send" disabled={!msgText.trim()} onClick={()=>{A.sendMessage(u.id,job.id,msgText.trim());setMsgText("");setShowMsg(false);setSavingTemplate(false);}}>{ t("employer.candidate.message")}</Btn></div></Modal>;})()}
 
     {showSched&&(()=>{
       /* E4 timezone honesty: an interview time is always a pair, not a single number.
          Show both the employer's local time (what they typed) and the candidate's local time
          (derived from their province if we know it) side by side, so no one accidentally
-         confirms 2 PM ET thinking it's 2 PM PT. */
+         confirms 2 PM ET thinking it's 2 PM PT. ivTzOverride lets the employer correct the
+         derived candidate zone when their profile province is stale/wrong. */
       const PROV_TZ={AB:"America/Edmonton",BC:"America/Vancouver",MB:"America/Winnipeg",NB:"America/Moncton",NL:"America/St_Johns",NS:"America/Halifax",ON:"America/Toronto",PE:"America/Halifax",QC:"America/Toronto",SK:"America/Regina",NT:"America/Yellowknife",YT:"America/Whitehorse",NU:"America/Iqaluit"};
       const empTz=Intl.DateTimeFormat().resolvedOptions().timeZone||"America/Toronto";
       const candProv=(u.prov||"").toUpperCase();
       const provCode=Object.keys(PCODE||{}).find(k=>PCODE[k]===candProv)||candProv;
-      const candTz=PROV_TZ[provCode]||empTz;
+      const derivedCandTz=PROV_TZ[provCode]||empTz;
+      const candTz=ivTzOverride||derivedCandTz;
       const both=ivDate&&ivTime;
       let empLine="",candLine="",sameTz=empTz===candTz;
+      let empUtcIso=null;
       if(both){
         try{
           const iso=`${ivDate}T${ivTime}:00`;
           /* Interpret the typed date+time as being in the employer's local zone. Then re-render
              in the candidate's zone for the second line. */
           const asEmpDate=new Date(iso);
+          empUtcIso=asEmpDate.toISOString();
           const fmt=(tz)=>new Intl.DateTimeFormat(locale||"en-CA",{weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit",timeZone:tz,timeZoneName:"short"}).format(asEmpDate);
           empLine=fmt(empTz);
           if(!sameTz)candLine=fmt(candTz);
         }catch{ empLine=`${ivDate} at ${ivTime}`; }
       }
+      const downloadIcs=()=>{
+        if(!empUtcIso)return;
+        const dt=empUtcIso.replace(/[-:]/g,"").split(".")[0]+"Z";
+        const endDt=new Date(new Date(empUtcIso).getTime()+3600000).toISOString().replace(/[-:]/g,"").split(".")[0]+"Z";
+        const desc=[`${t("employer.candidate.tzYourTime")}: ${empLine}`,!sameTz&&`${t("employer.candidate.tzCandidateTime",{name:u.name.split(" ")[0]||u.name})}: ${candLine}`,ivNotes]
+          .filter(Boolean).join("\\n");
+        const ics=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//NorthHire//Interview//EN","BEGIN:VEVENT",
+          `UID:iv-${a.id}-${Date.now()}@northhire.ca`,`DTSTAMP:${dt}`,`DTSTART:${dt}`,`DTEND:${endDt}`,
+          `SUMMARY:${(ivMode==="video"?t("employer.candidate.videoCall"):t("employer.candidate.onsiteInterview"))} — ${u.name} — ${job.t}`,
+          `DESCRIPTION:${desc}`,"END:VEVENT","END:VCALENDAR"].join("\r\n");
+        const blob=new Blob([ics],{type:"text/calendar"}); const url=URL.createObjectURL(blob);
+        const link=document.createElement("a"); link.href=url; link.download=`interview-${u.name.replace(/\s+/g,"-")}.ics`; link.click(); URL.revokeObjectURL(url);
+      };
       return <Modal onClose={()=>setShowSched(false)} title={t("employer.candidate.scheduleInterviewTitle",{name:u.name})}>
       <div className="flex flex-col gap-3.5">
         <div className="grid grid-cols-2 gap-3">
           <Field label={t("employer.candidate.dateLabel")}><Input type="date" value={ivDate} onChange={e=>setIvDate(e.target.value)}/></Field>
           <Field label={t("employer.candidate.timeLabel")}><Input type="time" value={ivTime} onChange={e=>setIvTime(e.target.value)}/></Field></div>
+        <Field label={t("employer.candidate.tzOverrideLabel")} hint={t("employer.candidate.tzOverrideHint")}>
+          <Sel value={ivTzOverride} onChange={e=>setIvTzOverride(e.target.value)}>
+            <option value="">{derivedCandTz}</option>
+            {Object.values(PROV_TZ).filter((v,i,arr)=>arr.indexOf(v)===i).map(tz=><option key={tz} value={tz}>{tz}</option>)}
+          </Sel></Field>
         {both&&<Banner tone={sameTz?"neutral":"brand"} icon="clock">
           <div className="text-sm"><span className="font-semibold">{t("employer.candidate.tzYourTime")}:</span> {empLine}</div>
           {!sameTz&&<div className="text-sm mt-1"><span className="font-semibold">{t("employer.candidate.tzCandidateTime",{name:u.name.split(" ")[0]||u.name})}:</span> {candLine}</div>}
@@ -1316,15 +1507,16 @@ export function EmpCandidate(){
                 style={{fontWeight:on?640:520,borderColor:on?C.brand:C.line,background:on?C.tint:"#fff",color:on?C.brand:C.text}}>{l}</button>;})}</div></Field>
         <Field label={t("employer.candidate.interviewNotes")} hint={t("employer.candidate.interviewNotesHint")}>
           <Area rows={3} value={ivNotes} onChange={e=>setIvNotes(e.target.value)} placeholder={t("employer.candidate.notesPlaceholder")}/></Field>
+        {both&&<Btn kind="outline" size="sm" icon="calendar" onClick={downloadIcs} style={{alignSelf:"flex-start"}}>{t("employer.candidate.addToCalendar")}</Btn>}
         <div className="flex gap-2.5 justify-end">
           <Btn kind="ghost" onClick={()=>setShowSched(false)}>{t("common.cancel")}</Btn>
           <Btn kind="primary" icon="calendar" disabled={!ivDate||!ivTime} onClick={()=>{
             const when=`${ivDate} at ${ivTime}`;
             A.scheduleInterview(a.id,when,ivMode,ivNotes);
-            setShowSched(false);setIvDate("");setIvTime("");setIvNotes("");
+            setShowSched(false);setIvDate("");setIvTime("");setIvNotes("");setIvTzOverride("");
           }}>Schedule</Btn></div></div></Modal>;
     })()}
-  </Page>;
+  </Wrap>;
 }
 
 /* ═══════════════ CONTENT CRUD (employer + admin) ═══════════════ */
@@ -2014,7 +2206,15 @@ export function EmpBilling(){
   useEffect(()=>{
     const params=new URLSearchParams(window.location.search);
     if(params.get("checkout")==="success"&&params.get("session_id")){
-      A.verifyCheckout(params.get("session_id")).then(r=>setCheckoutResult(r.paid?{ok:true}:{ok:false,msg:r.error||"Payment could not be confirmed."}));
+      A.verifyCheckout(params.get("session_id")).then(r=>{
+        setCheckoutResult(r.paid?{ok:true}:{ok:false,msg:r.error||"Payment could not be confirmed."});
+        /* E6 post-checkout welcome: only for a genuinely new plan the employer hasn't been shown
+           the welcome tour for yet - a re-verify of the same session on refresh (welcomeSeenPlan
+           already matches) stays on this page with just the confirmation banner. */
+        if(r.paid&&r.employer&&r.employer.plan!=="Free"&&r.employer.welcomeSeenPlan!==r.employer.plan){
+          A.go("empWelcome");
+        }
+      });
       window.history.replaceState({},"",window.location.pathname);
     }
   },[]);
@@ -2147,7 +2347,62 @@ export function EmpAnalyticsPage(){
   const [range,setRange]=useState(null); // null = all-time
   const stats=A.employerAnalytics(range); if(!stats) return <Page><Empty icon="activity" title="No data" body="Post a job first."/></Page>;
   const ranges=[[null,t("employer.analytics.allTime")],[7,t("employer.analytics.last7d")],[30,t("employer.analytics.last30d")],[90,t("employer.analytics.last90d")],[365,t("employer.analytics.last12mo")]];
+  // E6: full trend history is Enterprise-only past analyticsHistoryDays (Free=30, Growth=90).
+  // "All time" (v=null) is treated as unlimited, so it's locked whenever the plan cap isn't
+  // Infinity too. Clicking a locked range opens the upgrade modal instead of switching to it.
+  const histDays=A.limitOf("analyticsHistoryDays")||30;
+  const rangeLocked=v=>histDays!==Infinity&&(v==null||v>histDays);
   const pad=mob?"py-11 px-4":"py-18 px-8";
+
+  /* E5 analytics-with-actions (EG-04): every metric that can suggest a concrete next step gets
+     one, computed defensively - a metric that can't be computed (no jobs, no hires yet) simply
+     doesn't render a card rather than showing a misleading zero or NaN. */
+  const myJobIds=A.jobs.filter(j=>j.e===A.company.id).map(j=>j.id);
+  const allApps=A.applications.filter(a=>myJobIds.includes(a.job));
+  const insights=[];
+  // Low applicant count: a live job open 7+ days with real views but under 3 applications.
+  const lowAppJob=(stats.byJob||[]).find(j=>{
+    const jr=A.job(j.id); if(!jr||jr.status!=="live")return false;
+    const days=(Date.now()-new Date(jr.createdAt||Date.now()).getTime())/86400000;
+    return days>=7&&j.views>=20&&j.applications<3;
+  });
+  /* "Improve posting" opens the job's row in EmpJobs (preview + pause/reopen/feature all live
+     there) rather than a wizard "edit mode" that doesn't exist yet — the post wizard is
+     create-only today, so pointing this CTA at it would be a dead-end button. */
+  if(lowAppJob)insights.push({icon:"trend",tone:C.warn,text:t("employer.analytics.insightLowApplicants",{title:lowAppJob.title}),
+    cta:t("employer.analytics.improvePosting"),onClick:()=>A.go("empJobs")});
+  // High pipeline drop-off: the stage with the steepest count decline from the stage before it.
+  (()=>{const bs=stats.byStage||[]; for(let i=1;i<bs.length;i++){
+    const prev=bs[i-1].count,cur=bs[i].count;
+    if(prev>=8&&cur>0&&cur/prev<0.25){insights.push({icon:"users",tone:C.warn,
+      text:t("employer.analytics.insightHighDropoff",{stage:applicationStageLabel(bs[i].stage,t)}),
+      cta:t("employer.analytics.reviewPipelineFlow"),onClick:()=>A.go("empPipeline")}); break;}}})();
+  // Featured credit usage: only meaningful once at least one credit has actually been used.
+  if(A.can("featured")){
+    const used=A.jobs.filter(j=>j.e===A.company.id&&j.featured&&j.status==="live").length;
+    const limit=A.limitOf("featured");
+    if(limit!==Infinity&&used>0)insights.push({icon:"award",tone:C.brand,
+      text:t("employer.analytics.insightFeaturedUsage",{used,limit}),
+      cta:t("employer.analytics.chooseJobToFeature"),onClick:()=>A.go("empJobs")});
+  }
+  // Time-to-hire trend: real median-of-median comparison between the last 45 days of hires and
+  // the 45 days before that - never fabricated, and silent when either window has too few hires
+  // to mean anything (fewer than 2).
+  (()=>{
+    const hired=allApps.filter(a=>a.stage==="Hired");
+    const now=Date.now(),DAY=86400000,WIN=45;
+    const hireTs=a=>{const h=(a.history||[]).find(x=>x.stage==="Hired"); const t=h&&new Date(String(h.at||"").replace(" ","T")).getTime(); return Number.isFinite(t)?t:null;};
+    const median=arr=>{if(!arr.length)return null; const s=[...arr].sort((a,b)=>a-b); const m=Math.floor(s.length/2); return s.length%2?s[m]:Math.round(((s[m-1]+s[m])/2)*10)/10;};
+    const cur=[],prior=[];
+    hired.forEach(a=>{const ts=hireTs(a); if(!ts)return; const ttl=timeToHire(a); if(ttl==null)return;
+      if(now-ts<=WIN*DAY)cur.push(ttl); else if(now-ts<=2*WIN*DAY)prior.push(ttl);});
+    const curM=median(cur),priorM=median(prior);
+    if(cur.length>=2&&prior.length>=2&&curM>priorM*1.15){
+      insights.push({icon:"clock",tone:C.warn,text:t("employer.analytics.insightTimeToHireUp",{current:curM,prior:priorM}),
+        cta:t("employer.analytics.seePipeline"),onClick:()=>A.go("empPipeline")});
+    }
+  })();
+
   return <div className="bg-white min-h-full">
     <section className={`bg-white border-b border-line-soft ${pad}`}>
       <div className="max-w-280 mx-auto">
@@ -2158,11 +2413,23 @@ export function EmpAnalyticsPage(){
     <section className={`bg-bg ${mob?"pt-8 px-4 pb-14":"pt-12 px-8 pb-24"}`}>
       <div className="max-w-280 mx-auto">
         <_HiringVelocity A={A} mob={mob}/>
-        <div className="flex gap-1.5 mb-4 flex-wrap">
-          {ranges.map(([v,label])=><button key={label} onClick={()=>setRange(v)}
-            className={`text-sm font-semibold py-2 px-3.5 rounded-lg border cursor-pointer transition-colors duration-150 ${range===v?"bg-brand text-white border-brand":"bg-white text-text-2 border-line hover:border-brand"}`}>
-            {label}</button>)}
+        {insights.length>0&&<Card style={{marginBottom:16,padding:mob?18:20,borderRadius:16}}>
+          <div className="flex flex-col gap-2.5">
+            {insights.map((ins,i)=><div key={i} className="flex gap-3 items-center py-1">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{background:`${ins.tone}18`,color:ins.tone}}><I n={ins.icon} s={16}/></div>
+              <div className="flex-1 min-w-0 text-sm text-text-2 leading-snug">{ins.text}</div>
+              <Btn kind="outline" size="sm" onClick={ins.onClick} style={{flexShrink:0}}>{ins.cta}</Btn>
+            </div>)}
+          </div>
+        </Card>}
+        <div className="flex gap-1.5 mb-2 flex-wrap">
+          {ranges.map(([v,label])=>{const locked=rangeLocked(v);
+            return <button key={label} onClick={()=>locked?A.requestUpgrade("analyticsHistoryDays",label,"trend"):setRange(v)}
+              className={`text-sm font-semibold py-2 px-3.5 rounded-lg border cursor-pointer transition-colors duration-150 flex items-center gap-1.5 ${range===v?"bg-brand text-white border-brand":locked?"bg-white text-text-3 border-line-soft":"bg-white text-text-2 border-line hover:border-brand"}`}>
+              {locked&&<I n="lock" s={11}/>}{label}</button>;})}
         </div>
+        {histDays!==Infinity&&<div className="text-xs text-text-3 mb-4">
+          {t("employer.analytics.historyLockedTitle")} — {t("employer.analytics.historyLockedBody",{days:histDays})}</div>}
         <div className={`grid gap-3.5 mb-6 ${mob?"grid-cols-2":"grid-cols-4"}`}>
           <Stat label={t("employer.analytics.liveJobs")} value={stats.liveJobs} icon="briefcase"/>
           <Stat label={t("employer.analytics.totalViews")} value={stats.totalViews.toLocaleString()} icon="eye"/>

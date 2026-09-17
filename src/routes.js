@@ -126,6 +126,7 @@ export const ROUTES = {
   empCompany:  {titleKey:"routeTitles.empCompany", tab:"profile", roles:["employer"], bare:true, root:true, path:"/employer/company"},
   empTeam:     {titleKey:"routeTitles.empTeam", tab:"profile", roles:["employer"], bare:true, root:true, path:"/employer/team"},
   empBilling:  {titleKey:"routeTitles.empBilling", tab:"profile", roles:["employer"], bare:true, root:true, path:"/employer/billing"},
+  empWelcome:  {titleKey:"routeTitles.empWelcome", tab:"home", roles:["employer"], bare:true, root:true, path:"/employer/welcome"},
 
   invite:      {titleKey:"routeTitles.invite", tab:"home", bare:true, path:"/invite/:id"},
   /* A candidate reads and signs an offer here without an account - the token in the URL is what

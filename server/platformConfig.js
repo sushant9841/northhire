@@ -41,7 +41,26 @@ const DEFAULTS = { plans: PLANS, payrollTax: DEFAULT_PAYROLL_TAX_CONFIG, staffin
 export function getConfig(key) {
   if (!CONFIG_KEYS.includes(key)) throw new Error(`Unknown platform config key: ${key}`);
   const row = db.prepare("SELECT value_json FROM platform_config WHERE key = ?").get(key);
-  if (row) return JSON.parse(row.value_json, infinityReviver);
+  if (row) {
+    const stored = JSON.parse(row.value_json, infinityReviver);
+    // "plans" is backfilled against DEFAULTS.plans on every read: a plan row persisted before a
+    // new per-plan field existed in code (e.g. Employer Transformation E5's analyticsHistoryDays)
+    // would otherwise read as undefined forever for every employer, even Enterprise, since this
+    // table is the actual source of truth once a row exists - editing the PLANS constant alone
+    // never reaches an already-seeded database. Any field an admin has genuinely customized on a
+    // plan is left exactly as they set it; only fields ABSENT from the stored plan are filled in.
+    if (key === "plans") {
+      let healed = false;
+      for (const planName of Object.keys(DEFAULTS.plans)) {
+        if (!stored[planName]) { stored[planName] = DEFAULTS.plans[planName]; healed = true; continue; }
+        for (const field of Object.keys(DEFAULTS.plans[planName])) {
+          if (!(field in stored[planName])) { stored[planName][field] = DEFAULTS.plans[planName][field]; healed = true; }
+        }
+      }
+      if (healed) db.prepare("UPDATE platform_config SET value_json = ? WHERE key = ?").run(JSON.stringify(stored, infinityReplacer), key);
+    }
+    return stored;
+  }
   db.prepare("INSERT INTO platform_config (key, value_json) VALUES (?, ?)").run(key, JSON.stringify(DEFAULTS[key], infinityReplacer));
   return DEFAULTS[key];
 }

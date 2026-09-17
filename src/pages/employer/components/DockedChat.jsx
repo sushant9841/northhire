@@ -5,8 +5,15 @@ import { I } from "../../../design/icons.jsx";
 import { SmartPortrait, Area, Input } from "../../../design/primitives.jsx";
 import { useTranslation } from "../../../i18n/i18n.jsx";
 import { formatDate, formatDateTime } from "../../../i18n/format.js";
+import { defaultMessageTemplates } from "../../../helpers/messageTemplates.js";
 
 const COLLAPSE_KEY = "northhire.empChatCollapsed";
+// Per-thread draft persistence (E4 polish): an in-progress message survives a refresh or the
+// employer switching threads and coming back. This is exactly the class of per-viewer UI
+// convenience feedback_server_authoritative carves out for sessionStorage (an unsent draft) -
+// the message itself is still only real once actually sent through A.sendMessage.
+const DRAFTS_KEY = "northhire.empChatDrafts";
+const _loadDrafts = () => { try { return JSON.parse(sessionStorage.getItem(DRAFTS_KEY) || "{}"); } catch { return {}; } };
 
 /* Docked employer chat drawer — "for the message the flow doesn't seem good, there is a lot of
    back and forth, add a chat box on right hand for easy communication on emp suite" (verbatim
@@ -27,8 +34,9 @@ export function DockedChat(){
     try{ return localStorage.getItem(COLLAPSE_KEY)!=="0"; }catch{ return true; }
   });
   const [openThread,setOpenThread]=useState(null);
-  const [draft,setDraft]=useState({});
+  const [draft,setDraft]=useState(_loadDrafts);
   const [q,setQ]=useState("");
+  const [showTemplates,setShowTemplates]=useState(false);
   const lastCandidateRef=useRef(null);
   const scrollRef=useRef(null);
 
@@ -91,6 +99,17 @@ export function DockedChat(){
     try{ localStorage.setItem(COLLAPSE_KEY, collapsed?"1":"0"); }catch{/* private mode etc - non-fatal */}
   },[collapsed]);
 
+  // Persist drafts (debounced) - drop empty ones so this doesn't grow forever with cleared threads.
+  useEffect(()=>{
+    const id=setTimeout(()=>{
+      try{
+        const nonEmpty=Object.fromEntries(Object.entries(draft).filter(([,v])=>(v||"").trim()));
+        sessionStorage.setItem(DRAFTS_KEY,JSON.stringify(nonEmpty));
+      }catch{/* private mode etc - non-fatal */}
+    },400);
+    return ()=>clearTimeout(id);
+  },[draft]);
+
   // Mark the active thread's incoming messages read as soon as it's actually visible.
   useEffect(()=>{
     if(collapsed||!openThread)return;
@@ -102,6 +121,7 @@ export function DockedChat(){
   useEffect(()=>{
     if(scrollRef.current)scrollRef.current.scrollTop=scrollRef.current.scrollHeight;
   },[openThread,threads]);
+  useEffect(()=>{ setShowTemplates(false); },[openThread]);
 
   // "/" opens the drawer (unless a text field has focus), Esc closes it.
   useEffect(()=>{
@@ -208,15 +228,34 @@ export function DockedChat(){
                 </div>;
               })}
             </div>
-            <div className="p-2.5 border-t border-line-soft flex gap-2 items-end">
-              <Area rows={1} value={draft[active.otherId]||""} placeholder={t("dockedChat.typePlaceholder")}
-                onChange={e=>setDraft(d=>({...d,[active.otherId]:e.target.value}))}
-                onKeyDown={e=>{ if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); send(); } }}
-                style={{minHeight:38,maxHeight:90,fontSize:13.5,padding:"9px 12px"}}/>
-              <button onClick={send} disabled={!(draft[active.otherId]||"").trim()} aria-label={t("common.send")}
-                className={`shrink-0 w-9 h-9 rounded-lg border-0 flex items-center justify-center ${(draft[active.otherId]||"").trim()?"bg-brand text-white cursor-pointer":"bg-line text-text-3 cursor-not-allowed"}`}>
-                <I n="send" s={15}/>
-              </button>
+            <div className="p-2.5 border-t border-line-soft flex flex-col gap-1.5">
+              {/* E4 polish: canned messages for common scenarios (shortlist ping / interview
+                 invite / offer follow-up / rejection), reusing the same A.messageTemplates the
+                 EmpCandidate message modal already writes to - one template library either
+                 surface can draw from. */}
+              {(()=>{const allTemplates=[...defaultMessageTemplates(t),...A.messageTemplates]; return allTemplates.length>0&&<div className="relative">
+                <button type="button" onClick={()=>setShowTemplates(s=>!s)}
+                  className="bg-transparent border-0 p-0 cursor-pointer text-xs font-semibold text-brand flex items-center gap-1">
+                  <I n="file" s={12}/>{t("employer.candidate.templatesLabel")}
+                </button>
+                {showTemplates&&<div className="absolute bottom-full left-0 mb-1.5 bg-white border border-line rounded-xl shadow-lg p-1.5 z-20" style={{minWidth:220,maxHeight:200,overflowY:"auto"}}>
+                  {allTemplates.map(tm=><button key={tm.id} onClick={()=>{
+                    const firstName=(activePerson?.name||"").split(" ")[0]||"";
+                    const text=tm.body.replace(/\{\{name\}\}/gi,firstName).replace(/\{\{job\}\}/gi,active.role||"").replace(/\{\{company\}\}/gi,A.company?.name||"");
+                    setDraft(d=>({...d,[active.otherId]:text})); setShowTemplates(false);
+                  }} className="block w-full text-left py-2 px-2.5 bg-transparent border-0 cursor-pointer text-xs text-text rounded-lg hover:bg-bg">{tm.name}</button>)}
+                </div>}
+              </div>;})()}
+              <div className="flex gap-2 items-end">
+                <Area rows={1} value={draft[active.otherId]||""} placeholder={t("dockedChat.typePlaceholder")}
+                  onChange={e=>setDraft(d=>({...d,[active.otherId]:e.target.value}))}
+                  onKeyDown={e=>{ if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); send(); } }}
+                  style={{minHeight:38,maxHeight:90,fontSize:13.5,padding:"9px 12px"}}/>
+                <button onClick={send} disabled={!(draft[active.otherId]||"").trim()} aria-label={t("common.send")}
+                  className={`shrink-0 w-9 h-9 rounded-lg border-0 flex items-center justify-center ${(draft[active.otherId]||"").trim()?"bg-brand text-white cursor-pointer":"bg-line text-text-3 cursor-not-allowed"}`}>
+                  <I n="send" s={15}/>
+                </button>
+              </div>
             </div>
           </div>}
         </div>}

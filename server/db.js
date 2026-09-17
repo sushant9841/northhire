@@ -923,6 +923,28 @@ for (const stmt of [
      use_count INTEGER NOT NULL DEFAULT 1, last_used TEXT NOT NULL DEFAULT (datetime('now')),
      PRIMARY KEY (user_id, field, value)
    )`,
+  // Employer Transformation E2: server-side job-creation drafts, replacing the sessionStorage-only
+  // draft (which still stays wired as the pre-server fallback for network failures/offline edits).
+  // One active draft per employer - the wizard is a single in-progress "next job" concept, not a
+  // multi-draft library, so employer_id is UNIQUE and every save upserts the same row.
+  `CREATE TABLE IF NOT EXISTS job_drafts (
+     id TEXT PRIMARY KEY,
+     employer_id TEXT NOT NULL UNIQUE REFERENCES employers(id),
+     created_by TEXT,
+     data_json TEXT NOT NULL,
+     step INTEGER NOT NULL DEFAULT 1,
+     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+     created_at TEXT NOT NULL DEFAULT (datetime('now'))
+   )`,
+  // Offer tracking (E4): distinguish "sent, not yet opened" from "candidate opened the link" so
+  // the employer-side status list can show sent/viewed/accepted/declined/expired instead of
+  // collapsing viewed into sent. Set once, the first time the token GET fires while status='sent'.
+  "ALTER TABLE offer_letters ADD COLUMN viewed_at TEXT",
+  // Post-checkout welcome screen (E6): one-shot per plan change. Stores the plan name the
+  // employer has already seen the welcome tour for; the client compares it to the employer's
+  // current plan rather than trusting a purely local flag, so it survives across devices/browsers
+  // and a plan downgrade-then-upgrade correctly re-shows the tour.
+  "ALTER TABLE employers ADD COLUMN welcome_seen_plan TEXT",
 ]) {
   try { db.exec(stmt); } catch (e) { if (!/duplicate column/i.test(e.message)) console.error("migration:", stmt, e.message); }
 }

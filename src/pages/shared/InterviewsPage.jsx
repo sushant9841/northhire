@@ -2,7 +2,7 @@ import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
-import { Btn, Card, Tag, Empty, H2, Page, HERO_TIGHT } from "../../design/primitives.jsx";
+import { Btn, Card, Tag, Empty, H2, Page, HERO_TIGHT, Banner } from "../../design/primitives.jsx";
 import { useTranslation } from "../../i18n/i18n.jsx";
 
 export function InterviewsPage(){
@@ -42,6 +42,14 @@ export function InterviewsPage(){
           <div className="text-2xl font-bold text-text tracking-tight mb-1">{t("interviews.pageTag")}</div>
           <div className="text-sm text-text-3">{t("interviews.upcomingPastSub",{upcoming:upcoming.length,past:past.length})}</div>
         </div>}
+        {/* E6 contextual gate: a Free employer can still land here via a direct/deep link (the
+           sidebar itself already blocks navigation with a lock icon) - this banner is the
+           "opened the page anyway" contextual moment the plan calls for, not a page-load popup
+           blocking the rest of the (empty) page. */}
+        {A.user.role==="employer"&&A.company&&!A.can("interviews")&&<Banner tone="neutral" icon="calendar" style={{marginBottom:16}}
+          title={t("interviews.lockedBannerTitle")}
+          action={<Btn kind="primary" size="sm" onClick={()=>A.requestUpgrade("interviews",t("interviews.lockedBannerTitle"),"calendar")}>{t("interviews.lockedBannerCta")}</Btn>}>
+          {t("interviews.lockedBannerBody")}</Banner>}
         {list.length===0?<Empty icon="calendar" title={t("interviews.noInterviews")} body={A.user.role==="employer"?t("interviews.noInterviewsEmployer"):t("interviews.noInterviewsSeeker")}/>:<>
           {upcoming.length>0&&<><H2>{t("interviews.upcomingHead")}</H2>{upcoming.map(iv=><IvCard key={iv.id} iv={iv}/>)}</>}
           {past.length>0&&<><H2 style={{marginTop:24}}>{t("interviews.pastHead")}</H2>{past.map(iv=><IvCard key={iv.id} iv={iv}/>)}</>}

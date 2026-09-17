@@ -108,7 +108,9 @@ export function UpgradePromptModal({payload,onClose}){
           </div>
         </div>}
 
-        {/* Plans that unlock it */}
+        {/* Plans that unlock it — doubles as the "what it costs" part of the 5-part shape:
+            each row already states the plan's monthly price, and the cheapest plan that unlocks
+            this feature is visually called out. */}
         <div className="p-4 bg-bg rounded-xl mb-5">
           <div className="text-xs font-bold text-text-3 tracking-wider uppercase mb-3">{t("dashShell.availableOn")}</div>
           <div className="flex flex-col gap-2">
@@ -119,6 +121,18 @@ export function UpgradePromptModal({payload,onClose}){
               </div>
               <I n="check" s={16} c={C.ok}/>
             </div>)}
+          </div>
+        </div>
+
+        {/* 5th part of the charter-mandated shape: "what changes" — everything on the current
+            plan keeps working, this is additive. b.whatChanges is per-feature copy from
+            dashShell.featureBenefits.<feature>.whatChanges when written; otherwise a generic
+            line that's still true for every feature (nothing is ever removed on upgrade). */}
+        <div className="p-4 border border-line-soft rounded-xl flex gap-2.5 items-start">
+          <div className="w-6 h-6 rounded-full bg-ok-bg text-ok flex items-center justify-center shrink-0 mt-px"><I n="check" s={13}/></div>
+          <div className="text-sm text-text-2 leading-relaxed">
+            <span className="font-semibold text-text">{t("dashShell.whatChangesLabel")}</span>{" "}
+            {b.whatChanges||t("dashShell.whatChangesFallback",{plan:cheapest?.[0]||requiredPlan})}
           </div>
         </div>
       </div>

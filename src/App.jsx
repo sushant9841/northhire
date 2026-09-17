@@ -31,9 +31,10 @@ import { MessagesPage } from "./pages/shared/MessagesPage.jsx";
 import { InterviewsPage } from "./pages/shared/InterviewsPage.jsx";
 import { WorkerDashboard, WorkerTimesheet, WorkerPayStubs, WorkerDocuments } from "./pages/seeker/worker.jsx";
 import {
-  EmpHome, EmpJobs, EmpPost, EmpPipeline, EmpCandidate, ContentManager, EmpArticlesPage,
+  EmpHome, EmpJobs, EmpPost, EmpPipeline, ContentManager, EmpArticlesPage,
   EmpTrainingsAdminPage, BlogEditor, TrainingEditor, EmpCompany, EmpTeam, EmpBilling, EmpAnalyticsPage,
 } from "./pages/employer/suite.jsx";
+import { EmpPostCheckoutWelcome } from "./pages/employer/PostCheckoutWelcome.jsx";
 import {
   EmpStaffing, EmpStaffingTimesheets, EmpStaffingInvoices, EmpStaffingAssignments, EmpStaffingRequests,
 } from "./pages/employer/staffing.jsx";
@@ -105,10 +106,16 @@ export default function NorthHire(){
     about:<AboutPage/>,contact:<ContactPage/>,privacy:<LegalPage kind="privacy"/>,terms:<LegalPage kind="terms"/>,
     pricing:<PricingPage/>,forEmployers:<ForEmployersPage/>,howItWorks:<HowItWorksPage/>,login:<LoginPage/>,signup:<SignupPage/>,forgot:<ForgotPasswordPage/>,invite:<InviteAcceptPage/>,denied:<DeniedPage/>,
     welcome:<WelcomeTourPage kind="seeker"/>,welcomeEmp:<WelcomeTourPage kind="employer"/>,
-    empHome:<EmpShell><EmpHome/></EmpShell>,empJobs:<EmpShell><EmpJobs/></EmpShell>,empPost:<EmpShell><EmpPost/></EmpShell>,empPipeline:<EmpShell><EmpPipeline/></EmpShell>,empCandidate:<EmpShell><EmpCandidate/></EmpShell>,
+    empHome:<EmpShell><EmpHome/></EmpShell>,empJobs:<EmpShell><EmpJobs/></EmpShell>,empPost:<EmpShell><EmpPost/></EmpShell>,empPipeline:<EmpShell><EmpPipeline/></EmpShell>,
+    /* E3: the candidate detail route now renders EmpPipeline too (with its drawer forced open
+       for A.candidateId) rather than the old standalone full-page EmpCandidate, so a deep link
+       to /employer/candidates/:id shows the same kanban-with-drawer experience as opening one
+       from the pipeline itself. */
+    empCandidate:<EmpShell><EmpPipeline/></EmpShell>,
     empContent:<EmpShell><ContentManager scope="employer"/></EmpShell>,
     empArticles:<EmpShell><EmpArticlesPage/></EmpShell>,empTrainings:<EmpShell><EmpTrainingsAdminPage/></EmpShell>,empBlogEdit:_roleWrap(<BlogEditor/>),empTrainEdit:_roleWrap(<TrainingEditor/>),
     empCompany:<EmpShell><EmpCompany/></EmpShell>,empTeam:<EmpShell><EmpTeam/></EmpShell>,empBilling:<EmpShell><EmpBilling/></EmpShell>,empAnalytics:<EmpShell><EmpAnalyticsPage/></EmpShell>,empApi:<EmpShell><EmpApiPage/></EmpShell>,empSso:<EmpShell><EmpSsoPage/></EmpShell>,
+    empWelcome:<EmpShell><EmpPostCheckoutWelcome/></EmpShell>,
     admHome:<AdmShell><AdmHome/></AdmShell>,admUsers:<AdmShell><AdmUsers/></AdmShell>,admEmployers:<AdmShell><AdmEmployers/></AdmShell>,admJobs:<AdmShell><AdmJobs/></AdmShell>,
     account:<AccountMenuPage/>,
     accessibility:<AccessibilityPage/>,pipeda:<PipedaPage/>,credits:<CreditsPage/>,security:<SecurityPage/>,unsubscribe:<UnsubscribePage/>,matchScore:<MatchScorePage/>,offer:<OfferPage/>,verifyEmail:<VerifyEmailPage/>,

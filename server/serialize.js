@@ -115,6 +115,10 @@ export function serializeEmployer(row) {
     owner: row.owner || null,
     ownerName: row.ownerName || null,
     referralCode: row.referral_code || null,
+    // Post-checkout welcome screen (E6): which plan the employer has already been shown the
+    // "here's what you unlocked" tour for. Compared against the CURRENT plan client-side, not
+    // trusted as a boolean - a later upgrade (or a downgrade-then-upgrade) still shows it once.
+    welcomeSeenPlan: row.welcome_seen_plan || null,
   };
 }
 

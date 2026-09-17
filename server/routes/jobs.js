@@ -85,6 +85,34 @@ jobsRouter.get("/reports", requireAuth, requireAdminScope("moderator"), (req, re
   res.json({ reports: rows.map(r => ({ id: r.id, job: r.job_id, jobTitle: r.job_title, reporterName: r.reporter_name || "—", reason: r.reason, status: r.status, at: r.created_at })) });
 });
 
+/* Employer Transformation E2: server-side job-creation draft. One active draft per employer,
+   upserted on every autosave tick (client debounces ~800ms). Must sit ABOVE the "/:id" route
+   below, or Express would treat "draft" as a job id and 404 it there instead. */
+jobsRouter.get("/draft", requireAuth, requireRole("employer"), (req, res) => {
+  const row = db.prepare("SELECT * FROM job_drafts WHERE employer_id = ?").get(req.user.employer_id);
+  if (!row) return res.json({ draft: null });
+  res.json({ draft: { data: JSON.parse(row.data_json || "{}"), step: row.step, updatedAt: row.updated_at } });
+});
+jobsRouter.put("/draft", requireAuth, requireRole("employer"), (req, res) => {
+  const data = req.body?.data;
+  const step = Number(req.body?.step) || 1;
+  if (!data || typeof data !== "object") return res.status(400).json({ error: "Draft data is required." });
+  const existing = db.prepare("SELECT id FROM job_drafts WHERE employer_id = ?").get(req.user.employer_id);
+  if (existing) {
+    db.prepare("UPDATE job_drafts SET data_json = ?, step = ?, updated_at = datetime('now') WHERE id = ?")
+      .run(JSON.stringify(data), step, existing.id);
+  } else {
+    const id = nextId("jd", "job_drafts");
+    db.prepare("INSERT INTO job_drafts (id, employer_id, created_by, data_json, step) VALUES (?, ?, ?, ?, ?)")
+      .run(id, req.user.employer_id, req.user.id, JSON.stringify(data), step);
+  }
+  res.json({ ok: true, updatedAt: new Date().toISOString() });
+});
+jobsRouter.delete("/draft", requireAuth, requireRole("employer"), (req, res) => {
+  db.prepare("DELETE FROM job_drafts WHERE employer_id = ?").run(req.user.employer_id);
+  res.json({ ok: true });
+});
+
 jobsRouter.get("/:id", (req, res) => {
   const row = db.prepare("SELECT * FROM jobs WHERE id = ?").get(req.params.id);
   if (!row) return res.status(404).json({ error: "Job not found." });

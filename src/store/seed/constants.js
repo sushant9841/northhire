@@ -30,14 +30,15 @@ export const CV_TEMPLATES=[
 ];
 
 export const PLANS={
-  Free:{price:0,jobs:1,seats:1,messages:"limited",messagesPerMonth:20,interviews:false,talentPool:false,csvImport:false,analytics:"basic",featured:0,branded:false,articles:false,trainings:false,hrSuite:false,api:false,sso:false,manager:false,customStages:false,bulkActions:false},
-  Growth:{price:149,jobs:10,seats:5,messages:true,messagesPerMonth:Infinity,interviews:true,talentPool:true,csvImport:true,analytics:"full",featured:2,branded:true,articles:true,trainings:true,hrSuite:false,api:false,sso:false,manager:false,customStages:true,bulkActions:true},
-  Enterprise:{price:599,jobs:Infinity,seats:Infinity,messages:true,messagesPerMonth:Infinity,interviews:true,talentPool:true,csvImport:true,analytics:"full",featured:Infinity,branded:true,articles:true,trainings:true,hrSuite:true,api:true,sso:true,manager:true,customStages:true,bulkActions:true}
+  Free:{price:0,jobs:1,seats:1,messages:"limited",messagesPerMonth:20,interviews:false,talentPool:false,csvImport:false,analytics:"basic",analyticsHistoryDays:30,featured:0,branded:false,articles:false,trainings:false,hrSuite:false,api:false,sso:false,manager:false,customStages:false,bulkActions:false},
+  Growth:{price:149,jobs:10,seats:5,messages:true,messagesPerMonth:Infinity,interviews:true,talentPool:true,csvImport:true,analytics:"full",analyticsHistoryDays:90,featured:2,branded:true,articles:true,trainings:true,hrSuite:false,api:false,sso:false,manager:false,customStages:true,bulkActions:true},
+  Enterprise:{price:599,jobs:Infinity,seats:Infinity,messages:true,messagesPerMonth:Infinity,interviews:true,talentPool:true,csvImport:true,analytics:"full",analyticsHistoryDays:Infinity,featured:Infinity,branded:true,articles:true,trainings:true,hrSuite:true,api:true,sso:true,manager:true,customStages:true,bulkActions:true}
 };
 /* Human-readable requirement per feature — used in tooltips */
 export const PLAN_REQUIRES={
   talentPool:"Growth", interviews:"Growth", articles:"Growth", trainings:"Growth",
   csvImport:"Growth", customStages:"Growth", bulkActions:"Growth", branded:"Growth", messages:"Growth",
-  hrSuite:"Enterprise", api:"Enterprise", sso:"Enterprise", manager:"Enterprise"
+  hrSuite:"Enterprise", api:"Enterprise", sso:"Enterprise", manager:"Enterprise",
+  analyticsHistoryDays:"Enterprise",
 };
 export const PLAN_ORDER=["Free","Growth","Enterprise"];

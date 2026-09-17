@@ -275,6 +275,16 @@ employersRouter.get("/team/audit", requireAuth, requireRole("employer"), (req, r
   })) });
 });
 
+// Post-checkout welcome screen (E6): stamped once the employer dismisses or tours the welcome
+// screen for their CURRENT plan, so it never reappears for that same plan again but does show
+// again after any future plan change (up or down).
+employersRouter.post("/welcome-seen", requireAuth, requireRole("employer"), (req, res) => {
+  const employer = db.prepare("SELECT plan FROM employers WHERE id = ?").get(req.user.employer_id);
+  if (!employer) return res.status(404).json({ error: "Employer not found." });
+  db.prepare("UPDATE employers SET welcome_seen_plan = ? WHERE id = ?").run(employer.plan, req.user.employer_id);
+  res.json({ ok: true });
+});
+
 employersRouter.get("/:id", (req, res) => {
   const row = db.prepare(`${WITH_OWNER} WHERE employers.id = ?`).get(req.params.id);
   if (!row) return res.status(404).json({ error: "Employer not found." });

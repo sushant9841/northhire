@@ -475,6 +475,64 @@ export function Stat({label,value,tone=C.text,icon,delta,onClick}){
    {icon&&<I n={icon} s={16}/>}<span className="text-sm text-text-2 font-semibold">{label}</span></div>
   <div className="text-4xl font-extrabold leading-none tracking-tighter" style={{color:tone}}>{value}</div>
   {delta&&<div className="text-xs text-ok mt-2.5 font-semibold">{delta}</div>}</div>;}
+
+/* ═══════════════ SUCCESS CARD ═══════════════
+   Rich confirmation screen for "something important just happened" moments (job published,
+   offer sent, hire completed, application submitted) — originally built inline for the Job
+   Seeker Transformation's apply-confirmation screen (ApplyDone in pages/seeker/apply.jsx) and
+   extracted here so every later "you just did a big thing" moment (Employer Transformation E2's
+   publish success, E4's offer-sent) gets the same big-checkmark + card treatment instead of each
+   page reinventing its own. tone picks the icon's ring/check color (ok=default, brand for a
+   "not final yet, here's next steps" moment). */
+export function SuccessCard({title,subtitle,tone="ok",icon="check",children,actions,style}){
+  const ringBg=tone==="ok"?"bg-ok-bg":"bg-tint", ringBorder=tone==="ok"?"border-ok-ln":"border-line-2", iconColor=tone==="ok"?C.ok:C.brand;
+  return <div>
+    <div className="text-center pt-5 pb-2" style={{animation:"rise .4s ease both"}}>
+      <div className={`w-19 h-19 rounded-full border-2 flex items-center justify-center mx-auto mb-5 ${ringBg} ${ringBorder}`} style={{animation:"pop .45s cubic-bezier(.22,.68,.35,1) both"}}>
+        <I n={icon} s={38} c={iconColor} w={2.6}/></div>
+      <h1 className={`${HERO_QUIET} text-2xl mb-2.5`}>{title}</h1>
+      {subtitle&&<div className="text-sm text-text-2 max-w-md mx-auto leading-snug">{subtitle}</div>}
+    </div>
+    {children&&<Card pad={20} style={{marginTop:16,...style}}>{children}</Card>}
+    {actions&&<div className="flex gap-2.5 justify-center flex-wrap mt-5">{actions}</div>}
+  </div>;
+}
+
+/* ═══════════════ FEATURE BOUNDARY (Employer Transformation E6) ═══════════════
+   Unified plan-gating primitive: renders children when the current employer has access to
+   `feature`, otherwise a contextual locked state that opens the (already-existing, now
+   5-part) UpgradePromptModal on click. This is UX-only — the server-side plan check on every
+   gated endpoint stays the real enforcement boundary (see jobsRouter/employersRouter's
+   employerPlan() checks); this component only prevents the reader from clicking into a dead end
+   with no explanation.
+   - as="inline": a small locked pill/button in place of the action (e.g. a toolbar button).
+   - as="card": a bordered card explaining the lock, for a whole section.
+   - as="banner": a full-width contextual banner (e.g. "Interviews" page, Analytics >90d).
+   requiredPlan/label/icon feed the same UpgradePromptModal payload shape `A.requestUpgrade()`
+   already builds elsewhere, so the copy stays centralized in dashShell.featureBenefits.<feature>. */
+export function FeatureBoundary({A,feature,as="inline",label,icon="lock",requiredPlan,children,fallback}){
+  const has=A?.can?A.can(feature):true;
+  if(has)return children;
+  if(fallback)return fallback;
+  const plan=requiredPlan||(()=>{
+    const plans=Object.entries(A?.PLANS||{}).filter(([_,p])=>{const v=p[feature]; return v===true||typeof v==="number"&&v>0||v==="full"||v===Infinity;});
+    return plans[0]?.[0]||"Growth";
+  })();
+  const open=()=>A?.requestUpgrade?A.requestUpgrade(feature,label,icon):null;
+  if(as==="card")return <Card style={{padding:26,borderRadius:16,textAlign:"center",background:"linear-gradient(135deg,#F5F9FF 0%,#EAF2FF 100%)",border:`1px solid ${C.line2}`}}>
+    <div className="w-14 h-14 rounded-2xl bg-brand text-white flex items-center justify-center mx-auto mb-4"><I n={icon} s={26}/></div>
+    <div className="text-lg font-bold text-text tracking-tight mb-1.5">{label}</div>
+    <p className="text-sm text-text-2 leading-relaxed mx-auto mb-5 max-w-90">Requires {plan}.</p>
+    <Btn kind="primary" onClick={open}>Upgrade to {plan}</Btn>
+  </Card>;
+  if(as==="banner")return <Banner tone="neutral" icon={icon} title={label} action={<Btn kind="primary" size="sm" onClick={open}>Upgrade to {plan}</Btn>}>
+    This is a {plan} feature — upgrade to unlock it.
+  </Banner>;
+  return <button onClick={open} title={`${label} — requires ${plan}`}
+    className="bg-transparent border border-line-soft rounded-lg py-2 px-3 cursor-pointer text-xs text-text-2 hover:bg-bg flex items-center gap-1.5">
+    <I n="lock" s={12}/>{label}
+  </button>;
+}
 export function Modal({open=true,onClose,title,sub,children,footer,width=520}){
  const mob=useMedia("(max-width: 820px)");
  const boxRef=useRef(null);

@@ -32,6 +32,17 @@ function loadOwnedApplication(applicationId, employerId) {
   ).get(applicationId, employerId);
 }
 
+// Effective status for the employer-facing list: the raw DB status is only
+// sent/accepted/declined/withdrawn - "viewed" and "expired" are derived so the pipeline can show
+// the fuller sent -> viewed -> accepted/declined/expired lifecycle the transformation plan asks
+// for without a status value the candidate-side sign flow would need to special-case.
+function effectiveStatus(row) {
+  if (row.status !== "sent") return row.status;
+  if (row.expires_at && row.expires_at < new Date().toISOString().slice(0, 10)) return "expired";
+  if (row.viewed_at) return "viewed";
+  return "sent";
+}
+
 function publicOffer(row, employerName) {
   return {
     id: row.id, status: row.status, body: row.body,
@@ -39,7 +50,7 @@ function publicOffer(row, employerName) {
     startDate: row.start_date, reportingTo: row.reporting_to,
     expiresAt: row.expires_at, employer: employerName,
     signedName: row.signed_name, signedAt: row.signed_at,
-    declineReason: row.decline_reason,
+    declineReason: row.decline_reason, viewedAt: row.viewed_at,
   };
 }
 
@@ -52,6 +63,7 @@ offersRouter.get("/application/:applicationId", requireAuth, requireRole("employ
   res.json({
     offers: rows.map(r => ({
       ...publicOffer(r, null),
+      status: effectiveStatus(r),
       // The employer needs the link to send it; the candidate's copy never exposes other offers'.
       link: `${FRONTEND_URL}/offer/${r.token}`,
       createdAt: sqlTime(r.created_at).getTime(),
@@ -108,6 +120,14 @@ offersRouter.post("/:id/withdraw", requireAuth, requireRole("employer"), (req, r
 offersRouter.get("/token/:token", (req, res) => {
   const row = db.prepare("SELECT * FROM offer_letters WHERE token = ?").get(req.params.token);
   if (!row) return res.status(404).json({ error: "This offer link isn't valid. Ask your contact to resend it." });
+  // Offer tracking (E4): the first time the candidate's link is actually opened while still
+  // 'sent', stamp viewed_at so the employer-side status reads "viewed" rather than staying
+  // indistinguishable from "sent, never opened". Only fires once - a later reload doesn't move
+  // the timestamp - and never fires for a status the candidate has already acted on.
+  if (row.status === "sent" && !row.viewed_at) {
+    db.prepare("UPDATE offer_letters SET viewed_at = datetime('now') WHERE id = ?").run(row.id);
+    row.viewed_at = new Date().toISOString();
+  }
   const employer = db.prepare("SELECT name FROM employers WHERE id = ?").get(row.employer_id);
   const expired = row.status === "sent" && row.expires_at && row.expires_at < new Date().toISOString().slice(0, 10);
   res.json({ offer: { ...publicOffer(row, employer?.name || null), expired } });

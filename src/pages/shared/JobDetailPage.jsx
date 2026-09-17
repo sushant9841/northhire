@@ -16,7 +16,13 @@ import { useTranslation } from "../../i18n/i18n.jsx";
    business data, so it's fine as a per-viewer localStorage convenience (feedback_server_authoritative). */
 const LOCATION_PROMPT_KEY="northhire.locationPromptSeen";
 
-export function JobDetailPage(){
+/* previewJob/preview: Employer Transformation E2's post-wizard Preview step reuses this exact
+   component (rather than an iframe or a hand-maintained second layout) to render an unpublished
+   draft precisely as candidates will see it once published. previewJob is a job-shaped object
+   built from the wizard's in-progress form state (no real id yet); preview=true disables every
+   interactive candidate action (apply/save/share/report/location-prompt) so an employer clicking
+   around their own preview can't accidentally fire a seeker-only flow or navigate away. */
+export function JobDetailPage({previewJob,preview}={}){
   const A=use(); const mob=useMedia("(max-width: 900px)"); const { t } = useTranslation();
   /* All hooks before any early return - a conditional useEffect is a Rules-of-Hooks violation
      that crashes when the job goes from initial-null to loaded (or the other way). */
@@ -24,12 +30,12 @@ export function JobDetailPage(){
   const [scoreDrawerOpen,setScoreDrawerOpen]=useState(false);
   const [locationPrompt,setLocationPrompt]=useState(false); const [whereCity,setWhereCity]=useState("");
   const [appliedTip,setAppliedTip]=useState(null);
-  const job=A.job(A.jobId);
+  const job=previewJob||A.job(A.jobId);
   const e=job?A.emp(job.e):null;
-  useEffect(()=>{ if(e?.id) A.loadEmployerReviews(e.id); },[e?.id]);
+  useEffect(()=>{ if(!preview&&e?.id) A.loadEmployerReviews(e.id); },[e?.id,preview]);
   if(!job) return <Page><Empty icon="briefcase" title={t("shared.jobDetail.notFound")} body={t("shared.jobDetail.notFoundBody")}
     action={<Btn kind="primary" onClick={()=>A.go("search")}>{t("shared.jobDetail.browseJobs")}</Btn>}/></Page>;
-  const applied=A.appliedJobIds.has(job.id); const score=A.score(job);
+  const applied=!preview&&A.appliedJobIds.has(job.id); const score=preview?0:A.score(job);
   const relatedJobs=A.jobs.filter(j=>j.id!==job.id&&j.status==="live"&&(j.cat===job.cat||(j.city===job.city&&j.prov===job.prov))).slice(0,3);
   const employerReviews=A.reviews.filter(r=>r.employer===e.id);
   const Meta=({icon,k,v,onClick})=><div onClick={onClick} className={`flex gap-3 items-start ${onClick?"cursor-pointer":""}`}>
@@ -42,9 +48,9 @@ export function JobDetailPage(){
     {items.map(x=><li key={x} className="flex gap-3 text-base text-text-2 leading-relaxed">
       <span className="text-brand mt-1 shrink-0 flex"><I n="check" s={16} w={2.4}/></span>{x}</li>)}</ul>;
 
-  const apply=()=>{ if(!A.user) return A.go("login"); if(A.user.role!=="seeker") return A.go("denied"); A.beginApply(job.id); };
+  const apply=()=>{ if(preview)return; if(!A.user) return A.go("login"); if(A.user.role!=="seeker") return A.go("denied"); A.beginApply(job.id); };
   const onLocationTap=()=>{
-    if(A.user?.role!=="seeker"||A.user.city)return;
+    if(preview||A.user?.role!=="seeker"||A.user.city)return;
     let seen; try{seen=JSON.parse(localStorage.getItem(LOCATION_PROMPT_KEY)||"{}");}catch{seen={};}
     if(seen[A.user.id])return;
     setWhereCity(""); setLocationPrompt(true);
@@ -57,10 +63,12 @@ export function JobDetailPage(){
   };
 
   return <div className="bg-white min-h-full">
+    {preview&&<div className="sticky top-0 z-50 bg-ink text-white text-center text-xs font-semibold tracking-wide uppercase py-2 px-4">
+      {t("employer.post.previewBannerText")||"Preview — this is exactly how candidates will see this listing once published"}</div>}
 
     <section className={`bg-white border-b border-line-soft ${mob?"pt-5 px-4 pb-8":"pt-9 px-8 pb-11"}`}>
       <div className="max-w-6xl mx-auto">
-        {!mob&&<button onClick={A.back} className="inline-flex items-center gap-2 bg-transparent border-0 p-0 cursor-pointer text-sm text-text-2 mb-6"><I n="arrowL" s={17}/>{t("shared.jobDetail.back")}</button>}
+        {!mob&&!preview&&<button onClick={A.back} className="inline-flex items-center gap-2 bg-transparent border-0 p-0 cursor-pointer text-sm text-text-2 mb-6"><I n="arrowL" s={17}/>{t("shared.jobDetail.back")}</button>}
         <div className={`grid ${mob?"grid-cols-1 gap-5 items-start":"grid-cols-[auto_1fr_auto] gap-6 items-center"}`}>
           <EmpMark e={e} size={mob?64:84} radius={18}/>
           <div className="min-w-0">
@@ -159,8 +167,8 @@ export function JobDetailPage(){
             <Btn kind={applied?"soft":"primary"} size="lg" full disabled={applied} icon={applied?"check":"send"} onClick={apply}>
               {applied?t("shared.jobDetail.applicationSent"):t("shared.jobDetail.applyJob")}</Btn>
             <div className="flex gap-2.5 mt-3">
-              <Btn kind="outline" full onClick={()=>A.toggleSave(job.id)} icon="bookmark">{A.saved.has(job.id)?t("shared.jobDetail.saved"):t("shared.jobDetail.save")}</Btn>
-              <Btn kind="outline" full icon="share" onClick={()=>A.share(job)}>{t("shared.jobDetail.share")}</Btn></div>
+              <Btn kind="outline" full onClick={()=>{if(!preview)A.toggleSave(job.id);}} icon="bookmark">{A.saved.has(job.id)?t("shared.jobDetail.saved"):t("shared.jobDetail.save")}</Btn>
+              <Btn kind="outline" full icon="share" onClick={()=>{if(!preview)A.share(job);}}>{t("shared.jobDetail.share")}</Btn></div>
             <div className="flex justify-between text-xs text-text-3 mt-5 pt-4 border-t border-line-soft">
               <span>{job.views.toLocaleString()} {t("shared.jobDetail.views")}</span><span>{t("shared.jobDetail.posted")} {job.posted}</span></div></div>
           <div className="bg-white rounded-3xl p-6 border border-line">
@@ -212,7 +220,7 @@ export function JobDetailPage(){
           <div className="flex gap-2.5 justify-center flex-wrap">
             <Btn kind={applied?"soft":"primary"} size="lg" iconR={applied?"check":"arrowR"} disabled={applied} onClick={apply}>
               {applied?t("shared.jobDetail.applicationSent"):t("shared.jobDetail.applyRole")}</Btn>
-            <Btn kind="outline" size="lg" onClick={()=>A.toggleSave(job.id)} icon="bookmark">{A.saved.has(job.id)?t("shared.jobDetail.saved"):t("shared.jobDetail.saveForLater")}</Btn>
+            <Btn kind="outline" size="lg" onClick={()=>{if(!preview)A.toggleSave(job.id);}} icon="bookmark">{A.saved.has(job.id)?t("shared.jobDetail.saved"):t("shared.jobDetail.saveForLater")}</Btn>
           </div>
           {A.user?.role==="seeker"&&<button type="button" onClick={()=>{setReportReason("");setReportSent(false);setReporting(true);}}
             className="bg-transparent border-0 p-0 mt-4 text-xs text-text-3 cursor-pointer underline">{t("shared.jobDetail.reportListing")}</button>}
@@ -263,7 +271,7 @@ export function JobDetailPage(){
     <MatchScoreDrawer job={A.user?.role==="seeker"?job:null} open={scoreDrawerOpen} onClose={()=>setScoreDrawerOpen(false)}/>
 
     {mob&&<div className="sticky bottom-0 bg-white/97 backdrop-blur-md border-t border-line py-3 px-4 flex gap-2.5 z-300">
-      <Btn kind="outline" onClick={()=>A.toggleSave(job.id)} icon="bookmark" style={{flexShrink:0}}>{A.saved.has(job.id)?t("shared.jobDetail.saved"):t("shared.jobDetail.save")}</Btn>
+      <Btn kind="outline" onClick={()=>{if(!preview)A.toggleSave(job.id);}} icon="bookmark" style={{flexShrink:0}}>{A.saved.has(job.id)?t("shared.jobDetail.saved"):t("shared.jobDetail.save")}</Btn>
       <Btn kind={applied?"soft":"primary"} full disabled={applied} icon={applied?"check":"send"} onClick={apply}>{applied?t("shared.jobDetail.applied"):t("shared.jobDetail.applyNow")}</Btn></div>}
   </div>;
 }

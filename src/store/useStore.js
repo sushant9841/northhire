@@ -609,6 +609,13 @@ export function useStore(){
       return {ok:true,link:r.offer.link,id:r.offer.id};
     }catch(e){return {ok:false,msg:e.message};}
   };
+  /* E4: offer tracking — sent / viewed / accepted / declined / expired, sourced from the same
+     offer_letters rows the send action writes to (server derives "viewed"/"expired" from
+     viewed_at / expires_at so the client never has to reimplement that logic). */
+  const loadOffers=async applicationId=>{
+    try{ const r=await api.get(`/offers/application/${applicationId}`); return r.offers||[]; }
+    catch{ return []; }
+  };
 
   const saveScoreWeights=async(jobId,weights)=>{
     try{
@@ -969,6 +976,13 @@ export function useStore(){
       if(r.paid&&r.invoice)setEmployerInvoices(l=>l.find(x=>x.id===r.invoice.id)?l:[r.invoice,...l]);
       return r;
     }catch(e){return {paid:false,error:e.message};}
+  };
+  /* E6: post-checkout welcome screen is one-shot per plan - server records which plan the
+     employer has already been shown the tour for, so it survives across devices and correctly
+     re-shows after a later plan change (up OR down) rather than being a purely local dismissal. */
+  const markWelcomeSeen=async()=>{
+    setEmployers(l=>l.map(e=>e.id===company?.id?{...e,welcomeSeenPlan:e.plan}:e));
+    try{await api.post("/employers/welcome-seen",{});}catch{/* best-effort */}
   };
   const addPaymentMethod=async card=>{
     try{
@@ -1384,6 +1398,10 @@ export function useStore(){
   const openTraining=id=>{setTrainingId(id);go("training","Training",id);};
   const openCandidate=id=>{setCandidateId(id);const a=applications.find(x=>x.id===id);
     go("empCandidate",a?person(a.user).name:"Candidate",id);};
+  /* E3: opens the candidate WITHOUT a page navigation - used by the CandidateDrawer on
+     EmpPipeline so the kanban stays mounted behind it instead of being replaced by the
+     full-page EmpCandidate route. */
+  const openCandidateInline=id=>setCandidateId(id);
 
   /* Attribution for source-of-hire analytics. Which surface the seeker came from is only knowable
      here, at the moment they start applying — by submit time the page they arrived from is gone.
@@ -1505,6 +1523,17 @@ export function useStore(){
     const arr=Array.isArray(items)?items:[items];
     api.post("/seeker/autofill/record",{items:arr}).catch(()=>{});
   };
+  /* Employer Transformation E2: server-side job-creation draft, alongside the sessionStorage
+     draft the wizard already writes on every field change (that stays as the pre-server
+     fallback — a network hiccup or offline moment shouldn't lose typing). This is best-effort:
+     failures never surface to the wizard, since sessionStorage is still the real safety net. */
+  const saveJobDraft=async(data,step)=>{
+    try{await api.put("/jobs/draft",{data,step}); return {ok:true};}catch(e){return {ok:false,msg:e.message};}
+  };
+  const loadJobDraft=async()=>{
+    try{const {draft}=await api.get("/jobs/draft"); return draft;}catch{return null;}
+  };
+  const deleteJobDraft=async()=>{ try{await api.del("/jobs/draft");}catch{/* best-effort */} };
   const getJobDistributeUrl=async(jobId,channel)=>{
     try{
       const data=await api.get(`/jobs/${encodeURIComponent(jobId)}/distribute/${encodeURIComponent(channel)}`);
@@ -2116,7 +2145,7 @@ export function useStore(){
   };
 
   const A={pg,go,back,pageTitle,homePg,history:stack,user,authChecked,company,employers,jobs,people,applications,blogs,trainings,cvs,passwords,outbox,savedSearches,messages,interviews,reviews,impersonating,setImpersonating,hireOnboarding,setHireOnboarding,
-    offerToken,sendOfferForSignature,
+    offerToken,sendOfferForSignature,loadOffers,
     hasAccount,upsertPassword,loginWithPassword,verifyLogin2FA,resetPasswordRequest,resetPasswordConfirm,completeEmployerSignup,
     saveSearch,deleteSavedSearch,toggleSearchAlert,updateSavedSearch,editingSavedSearchId,setEditingSavedSearchId,
     salaryInsight,skillsGap,expandQuery,restoreApp,notifyFollowers,
@@ -2124,7 +2153,7 @@ export function useStore(){
     impersonate,stopImpersonating,
     PLANS,PLAN_ORDER,payrollTaxConfig,platformConfig,currentPlan,planName,can,limitOf,planRequires,upgradeModal,setUpgradeModal,requestUpgrade,
     oauthProviders,oauthStart,turnstileSiteKey,
-    paymentMethods,addPaymentMethod,removePaymentMethod,setDefaultPayment,employerInvoices,verifyCheckout,startCheckout,openBillingPortal,
+    paymentMethods,addPaymentMethod,removePaymentMethod,setDefaultPayment,employerInvoices,verifyCheckout,startCheckout,openBillingPortal,markWelcomeSeen,
     twoFactor,enable2FA,disable2FA,
     references,addReference,removeReference,
     addReview,deleteReview,loadEmployerReviews,loadCandidateContact,candidateNotes,saveCandidateNote,loadScorecards,submitScorecard,
@@ -2139,10 +2168,11 @@ export function useStore(){
     jobHiringType,jobHiringLabel,
     completeness,completenessHint,tabBadges,unreadMessages,
     logout,completeSignup,saveProfile,deleteAccount,exportData,setUserSetting,setUserLocale,marketingConsent,setMarketingConsent,
-    toggleSave,followEmployer,openJob,openEmployer,openBlog,openTraining,openCandidate,
+    toggleSave,followEmployer,openJob,openEmployer,openBlog,openTraining,openCandidate,openCandidateInline,
     beginApply,submitApply,withdraw,acceptOffer,moveApp,rejectApp,noCvGateJobId,closeNoCvGate,
     lastAppliedId,focusAppId,setFocusAppId,
     publishJob,getJobDistributeUrl,getAutofillSuggestions,recordAutofill,approveJob,toggleJobStatus,flagJob,reportJob,jobReports,loadJobReports,decideJobReport,setPipelineJob:setPipelineJobFn,saveCompany,verifyEmployer,holdEmployer,toggleSuspend,eraseUser,
+    saveJobDraft,loadJobDraft,deleteJobDraft,
     team,loadTeam,loadTeamAudit,inviteTeammate,revokeInvite,removeTeammate,getInvite,acceptInvite,inviteToken,
     messageTemplates,saveMessageTemplate,deleteMessageTemplate,
     stageAutomations,loadStageAutomations,setStageAutomation,
