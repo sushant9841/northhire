@@ -1262,11 +1262,39 @@ export function EmpCandidate(){
         <Btn kind="ghost" onClick={()=>{setShowMsg(false);setSavingTemplate(false);}}>{t("common.cancel")}</Btn>
         <Btn kind="primary" icon="send" disabled={!msgText.trim()} onClick={()=>{A.sendMessage(u.id,job.id,msgText.trim());setMsgText("");setShowMsg(false);setSavingTemplate(false);}}>{ t("employer.candidate.message")}</Btn></div></Modal>}
 
-    {showSched&&<Modal onClose={()=>setShowSched(false)} title={t("employer.candidate.scheduleInterviewTitle",{name:u.name})}>
+    {showSched&&(()=>{
+      /* E4 timezone honesty: an interview time is always a pair, not a single number.
+         Show both the employer's local time (what they typed) and the candidate's local time
+         (derived from their province if we know it) side by side, so no one accidentally
+         confirms 2 PM ET thinking it's 2 PM PT. */
+      const PROV_TZ={AB:"America/Edmonton",BC:"America/Vancouver",MB:"America/Winnipeg",NB:"America/Moncton",NL:"America/St_Johns",NS:"America/Halifax",ON:"America/Toronto",PE:"America/Halifax",QC:"America/Toronto",SK:"America/Regina",NT:"America/Yellowknife",YT:"America/Whitehorse",NU:"America/Iqaluit"};
+      const empTz=Intl.DateTimeFormat().resolvedOptions().timeZone||"America/Toronto";
+      const candProv=(u.prov||"").toUpperCase();
+      const provCode=Object.keys(PCODE||{}).find(k=>PCODE[k]===candProv)||candProv;
+      const candTz=PROV_TZ[provCode]||empTz;
+      const both=ivDate&&ivTime;
+      let empLine="",candLine="",sameTz=empTz===candTz;
+      if(both){
+        try{
+          const iso=`${ivDate}T${ivTime}:00`;
+          /* Interpret the typed date+time as being in the employer's local zone. Then re-render
+             in the candidate's zone for the second line. */
+          const asEmpDate=new Date(iso);
+          const fmt=(tz)=>new Intl.DateTimeFormat(locale||"en-CA",{weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit",timeZone:tz,timeZoneName:"short"}).format(asEmpDate);
+          empLine=fmt(empTz);
+          if(!sameTz)candLine=fmt(candTz);
+        }catch{ empLine=`${ivDate} at ${ivTime}`; }
+      }
+      return <Modal onClose={()=>setShowSched(false)} title={t("employer.candidate.scheduleInterviewTitle",{name:u.name})}>
       <div className="flex flex-col gap-3.5">
         <div className="grid grid-cols-2 gap-3">
           <Field label={t("employer.candidate.dateLabel")}><Input type="date" value={ivDate} onChange={e=>setIvDate(e.target.value)}/></Field>
           <Field label={t("employer.candidate.timeLabel")}><Input type="time" value={ivTime} onChange={e=>setIvTime(e.target.value)}/></Field></div>
+        {both&&<Banner tone={sameTz?"neutral":"brand"} icon="clock">
+          <div className="text-sm"><span className="font-semibold">{t("employer.candidate.tzYourTime")}:</span> {empLine}</div>
+          {!sameTz&&<div className="text-sm mt-1"><span className="font-semibold">{t("employer.candidate.tzCandidateTime",{name:u.name.split(" ")[0]||u.name})}:</span> {candLine}</div>}
+          {sameTz&&<div className="text-xs text-text-3 mt-1">{t("employer.candidate.tzSameZone")}</div>}
+        </Banner>}
         <Field label={t("employer.candidate.formatLabel")}>
           <div className="grid grid-cols-2 gap-2.5">
             {[["video",t("employer.candidate.videoCall")],["onsite",t("employer.candidate.onsiteInterview")]].map(([v,l])=>{const on=ivMode===v;
@@ -1280,7 +1308,8 @@ export function EmpCandidate(){
             const when=`${ivDate} at ${ivTime}`;
             A.scheduleInterview(a.id,when,ivMode,ivNotes);
             setShowSched(false);setIvDate("");setIvTime("");setIvNotes("");
-          }}>Schedule</Btn></div></div></Modal>}
+          }}>Schedule</Btn></div></div></Modal>;
+    })()}
   </Page>;
 }
 

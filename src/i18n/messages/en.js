@@ -1152,6 +1152,7 @@ export const en = {
       prevCandidate: "Previous candidate", nextCandidate: "Next candidate",
       candidateInStagePos: "{pos} of {total} in {stage}",
       keyboardHint: "A advance · Shift+A back · M message · I interview · N note · R reject · ←/→ neighbour · Esc close",
+      tzYourTime: "Your time", tzCandidateTime: "{name}'s local time", tzSameZone: "You're in the same time zone as this candidate — one time works for both.",
       rejectConfirmTitle: "Reject {name}?", rejectBody: "This withdraws their application. This can't be undone from here.",
       rejectReasonLabel: "Reason (optional)", rejectReasonHint: "Shared with the candidate so they know why.",
       offerSentEmailBody: "We emailed them this link. You can also send it yourself:", copyButton: "Copy",

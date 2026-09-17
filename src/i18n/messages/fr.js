@@ -1154,6 +1154,7 @@ export const fr = {
       prevCandidate: "Candidat·e précédent·e", nextCandidate: "Candidat·e suivant·e",
       candidateInStagePos: "{pos} sur {total} dans {stage}",
       keyboardHint: "A avancer · Maj+A reculer · M message · I entrevue · N note · R rejeter · ←/→ voisin · Échap fermer",
+      tzYourTime: "Votre heure", tzCandidateTime: "Heure locale de {name}", tzSameZone: "Vous êtes dans le même fuseau horaire que ce·tte candidat·e — une seule heure convient aux deux.",
       rejectConfirmTitle: "Rejeter {name} ?", rejectBody: "Ceci retire sa candidature. Ceci ne peut pas être annulé d'ici.",
       rejectReasonLabel: "Raison (facultatif)", rejectReasonHint: "Partagée avec le·la candidat·e afin qu'iel sache pourquoi.",
       offerSentEmailBody: "Nous lui avons envoyé ce lien par courriel. Vous pouvez également l'envoyer vous-même :", copyButton: "Copier",
