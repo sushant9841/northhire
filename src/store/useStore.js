@@ -881,6 +881,25 @@ export function useStore(){
     (d.skills||[]).forEach(s=>items.push({field:"skill",value:s}));
     if(items.length)recordAutofill(items);
   };
+  /* D&I self-ID (Priority-4 #3) - entirely voluntary, seeker-owned, never rendered to the
+     employer as an individual record, only ever aggregated (see loadDiversityAggregate below). */
+  const [demographics,setDemographics]=useState({});
+  const loadDemographics=async()=>{
+    if(user?.role!=="seeker")return;
+    try{const {demographics:d}=await api.get("/seeker/demographics");setDemographics(d);}
+    catch{/* best-effort */}};
+  useEffect(()=>{
+    if(user?.role!=="seeker"){setDemographics({});return;}
+    loadDemographics();
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */},[user?.id,user?.role]);
+  const saveDemographics=async partial=>{
+    setDemographics(d=>({...d,...partial}));
+    try{const {demographics:d}=await api.patch("/seeker/demographics",{demographics:partial});setDemographics(d);return {ok:true};}
+    catch(err){toast(err.message,"danger");return {ok:false,msg:err.message};}};
+  const loadDiversityAggregate=async()=>{
+    try{return await api.get("/employers/me/demographics-aggregate");}
+    catch(err){return {error:err.message};}};
+
   const deleteAccount=()=>{log("account.delete",`Deleted account ${user.name}`,"trash");setUser(null);setCvs([]);_hardNav("home");};
   const exportData=()=>downloadText(`northhire-data-${user.id}.json`,JSON.stringify({profile:user,cvs,applications:myApps,saved:[...saved]},null,2));
   const setUserSetting=(k,v)=>{
@@ -2265,6 +2284,7 @@ export function useStore(){
     messageTemplates,saveMessageTemplate,deleteMessageTemplate,
     stageAutomations,loadStageAutomations,setStageAutomation,
     workflowRules,loadWorkflowRules,saveWorkflowRule,toggleWorkflowRule,deleteWorkflowRule,
+    demographics,saveDemographics,loadDiversityAggregate,
     editBlog,editTraining,saveBlog,saveTraining,deleteBlog,deleteTraining,toggleBlogStatus,toggleTrainingStatus,
     loadContentRevisions,restoreContentRevision,loadArticleAnalytics,
     enrol,confirmPaidEnrol,advanceTraining,paidTrainings,trainingBadgePrompts,dismissTrainingBadgePrompt,publishTrainingBadge,newCv,importResumeToNewCv,editCv,saveCv,duplicateCv,deleteCv,setDefaultCv,

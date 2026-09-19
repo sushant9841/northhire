@@ -575,6 +575,18 @@ export const en = {
     adminAccountSub: "Administrator account", adminRole: "Platform administrator",
     overview: "Overview", users: "Users", employers: "Employers", jobMod: "Job moderation", articles: "Articles",
     trainings: "Trainings", statistics: "Statistics", activityLog: "Activity log",
+    // Priority-4 #3 - D&I voluntary self-ID (seeker profile section)
+    demoTitle: "Optional demographics", demoSub: "Voluntary, confidential, and used only in aggregate — never shown to any employer as your individual answer.",
+    demoDismissBtn: "Hide this section", demoDismissedNote: "Optional demographics are hidden.", demoShowAgain: "Show",
+    demoDisclaimerEn: "English: Providing this information is entirely voluntary. Your individual answers are never shared with employers — they are combined with other respondents' answers and shown only as aggregate statistics, and only once at least 10 people have answered. You can change or remove your answers at any time.",
+    demoDisclaimerFr: "Français : La divulgation de ces renseignements est entièrement volontaire. Vos réponses individuelles ne sont jamais communiquées aux employeurs — elles sont combinées à celles d'autres répondant·e·s et présentées uniquement sous forme de statistiques agrégées, et seulement lorsqu'au moins 10 personnes ont répondu. Vous pouvez modifier ou retirer vos réponses en tout temps.",
+    demoAgeBand: "Age band", demoGender: "Gender identity", demoIndigenous: "Do you identify as Indigenous?",
+    demoRacialized: "Do you identify as racialized / a visible minority?", demoDisability: "Do you identify as a person with a disability?",
+    demoLgbtq: "Do you identify as 2SLGBTQ+?",
+    demoOpt_under_20: "Under 20", demoOpt_20_29: "20-29", demoOpt_30_39: "30-39", demoOpt_40_49: "40-49",
+    demoOpt_50_59: "50-59", demoOpt_60_plus: "60+", demoOpt_prefer_not_to_say: "Prefer not to say",
+    demoOpt_woman: "Woman", demoOpt_man: "Man", demoOpt_non_binary: "Non-binary", demoOpt_other: "Other",
+    demoOpt_yes: "Yes", demoOpt_no: "No",
   },
   shared: {
     offer: {
@@ -1328,6 +1340,13 @@ export const en = {
       medianTimeToHire: "days median time to hire", medianDesc: "Across {hires} completed hire. Median, not mean — one unusually slow role shouldn't move it.",
       avgDaysPerStage: "Average days in each stage", whereHiresCameFrom: "Where hires came from", whichChannelDesc: "Shows which channels actually produced hires once you've made one — a more useful question than which produced the most applications.",
       sitUnused14: "Sitting untouched 14+ days", notEnoughListings: "Not enough live listings across the platform to produce meaningful benchmarks yet.",
+      // Priority-4 #3 - Diversity of your applicant pool
+      diversityTitle: "Diversity of your applicant pool", diversityDesc: "Opt-in aggregate reporting built from candidates who chose to voluntarily self-identify on their profile. Any group under 10 respondents is never shown as a number.",
+      diversityShowBtn: "Show diversity report", diversityLoading: "Loading…",
+      diversityNoApplicants: "No applicants yet on your listings.",
+      diversityRespondents: "{respondents} of {total} applicants have answered at least one optional demographic question.",
+      diversityApplicantsCol: "Applicants", diversityHiresCol: "Hires",
+      diversitySuppressed: "insufficient data — need at least 10 respondents",
     },
     staffing: {
       notEnrolledBadge: "Staffing services · Not yet enrolled",

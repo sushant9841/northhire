@@ -2761,7 +2761,63 @@ export function EmpAnalyticsPage(){
               <div className="text-sm text-text-3 py-2">Not enough live listings across the platform to produce meaningful benchmarks yet.</div>}
           </div>
         </Card>}
+        <_DiversityReport A={A} mob={mob} t={t}/>
       </div>
     </section>
   </div>;
+}
+
+/* ═══════════════ Diversity of your applicant pool (Priority-4 #3) ═══════════════
+   Opt-in: nothing is fetched until the employer explicitly asks to see it, and every bucket the
+   server returns is already suppressed (see server/lib/demographics.js) - there is no raw count
+   under 10 respondents anywhere in this response for the client to accidentally render. */
+const DEMO_FIELD_KEYS=["ageBand","gender","indigenous","racialized","disability","lgbtq"];
+function _DiversityBucketRow({bucket,t}){
+  const label=bucket.suppressed?t("employer.analytics.diversitySuppressed"):null;
+  return <div className="flex justify-between items-center py-1.5 text-sm">
+    <span className="text-text-2">{t(`profile.demoOpt_${String(bucket.value).replace(/-/g,"_")}`)}</span>
+    {bucket.suppressed
+      ? <Tag tone="neutral" sm>{label}</Tag>
+      : <span className="font-semibold text-text tabular-nums">{bucket.count}</span>}
+  </div>;
+}
+function _DiversityReport({A,mob,t}){
+  const [open,setOpen]=useState(false);
+  const [loading,setLoading]=useState(false);
+  const [data,setData]=useState(null);
+  const reveal=async()=>{
+    setOpen(true);
+    if(data)return;
+    setLoading(true);
+    const r=await A.loadDiversityAggregate();
+    setLoading(false);
+    if(!r?.error)setData(r);
+  };
+  return <Card pad={mob?24:32} style={{borderRadius:20,marginTop:16}}>
+    <div className="flex justify-between items-start gap-3 flex-wrap">
+      <div>
+        <Lbl style={{marginBottom:0}}>{t("employer.analytics.diversityTitle")}</Lbl>
+        <p className="text-sm text-text-2 leading-snug mt-1 max-w-160">{t("employer.analytics.diversityDesc")}</p>
+      </div>
+      {!open&&<Btn kind="outline" size="sm" onClick={reveal}>{t("employer.analytics.diversityShowBtn")}</Btn>}
+    </div>
+    {open&&loading&&<div className="text-sm text-text-3 py-4">{t("employer.analytics.diversityLoading")}</div>}
+    {open&&!loading&&data&&(data.totalApplicants===0
+      ? <div className="text-sm text-text-3 py-4">{t("employer.analytics.diversityNoApplicants")}</div>
+      : <div className="mt-4">
+          <div className="text-xs text-text-3 mb-4">{t("employer.analytics.diversityRespondents",{respondents:data.respondentCount,total:data.totalApplicants})}</div>
+          <div className={`grid gap-4 ${mob?"grid-cols-1":"grid-cols-2"}`}>
+            {DEMO_FIELD_KEYS.map(field=>{const f=data.fields?.[field]; if(!f||f.applicants.length===0)return null;
+              return <div key={field} className="border border-line-soft rounded-xl p-3.5">
+                <Lbl style={{marginBottom:6}}>{t(`profile.demo${field.charAt(0).toUpperCase()}${field.slice(1)}`)}</Lbl>
+                <div className="text-xs text-text-3 mb-1">{t("employer.analytics.diversityApplicantsCol")}</div>
+                {f.applicants.map(b=><_DiversityBucketRow key={b.value} bucket={b} t={t}/>)}
+                {f.hires.length>0&&<>
+                  <div className="text-xs text-text-3 mt-3 mb-1">{t("employer.analytics.diversityHiresCol")}</div>
+                  {f.hires.map(b=><_DiversityBucketRow key={b.value} bucket={b} t={t}/>)}
+                </>}
+              </div>;})}
+          </div>
+        </div>)}
+  </Card>;
 }

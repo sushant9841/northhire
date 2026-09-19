@@ -11,6 +11,7 @@ import {
 import { emit as liveEmit } from "../lib/liveBroker.js";
 import { pushNotification } from "../lib/notify.js";
 import { notifStringsForUser, candidateStringsForUser } from "../emailLocale.js";
+import { isValidDemographicValue } from "../lib/demographics.js";
 
 export const seekerMiscRouter = Router();
 
@@ -68,6 +69,29 @@ seekerMiscRouter.get("/hr-access", requireAuth, (req, res) => {
   ).get(req.user.email);
   if (!row) return res.json({ available: false });
   res.json({ available: true, companyName: row.company_name, loginId: row.email });
+});
+
+/* ─── D&I self-ID (Priority-4 #3) ───
+   Entirely voluntary and seeker-owned: a seeker only ever reads/writes their OWN rows here, never
+   another user's, and only the fixed field/value list in lib/demographics.js is accepted - no
+   free text ever lands in a column an aggregate report groups on. */
+seekerMiscRouter.get("/demographics", requireAuth, requireRole("seeker"), (req, res) => {
+  const rows = db.prepare("SELECT field, value FROM user_demographics WHERE user_id = ?").all(req.user.id);
+  res.json({ demographics: Object.fromEntries(rows.map(r => [r.field, r.value])) });
+});
+seekerMiscRouter.patch("/demographics", requireAuth, requireRole("seeker"), (req, res) => {
+  const updates = req.body?.demographics;
+  if (!updates || typeof updates !== "object") return res.status(400).json({ error: "Send a `demographics` object." });
+  for (const [field, value] of Object.entries(updates)) {
+    if (value === null) { db.prepare("DELETE FROM user_demographics WHERE user_id = ? AND field = ?").run(req.user.id, field); continue; }
+    if (!isValidDemographicValue(field, value)) return res.status(400).json({ error: `Invalid value for "${field}".` });
+    db.prepare(
+      `INSERT INTO user_demographics (user_id, field, value, recorded_at) VALUES (?, ?, ?, datetime('now'))
+       ON CONFLICT(user_id, field) DO UPDATE SET value = excluded.value, recorded_at = excluded.recorded_at`
+    ).run(req.user.id, field, value);
+  }
+  const rows = db.prepare("SELECT field, value FROM user_demographics WHERE user_id = ?").all(req.user.id);
+  res.json({ demographics: Object.fromEntries(rows.map(r => [r.field, r.value])) });
 });
 
 /* ─── CVs ─── */

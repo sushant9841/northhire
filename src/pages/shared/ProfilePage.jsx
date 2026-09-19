@@ -210,9 +210,56 @@ export function ProfilePage(){
         {dirty&&<Btn kind="ghost" onClick={()=>setD({...u})}>{t("profile.discardChanges")}</Btn>}
         <Btn kind="primary" icon="check" disabled={!dirty} onClick={()=>A.saveProfile(d)}>{dirty?t("profile.saveChanges"):t("profile.saved")}</Btn></div>
     </Card>
+    <_DemographicsSection A={A} t={t} mob={mob}/>
       </div>
     </section>
   </div>;
+}
+
+/* ═══════════════ D&I self-ID (Priority-4 #3) ═══════════════
+   Entirely voluntary and confidential - never shown to an employer as an individual record, only
+   ever read back by the seeker themselves and folded into an employer's SUPPRESSED aggregate
+   report (see EmpAnalyticsPage's diversity section). Dismissal is a per-viewer UI convenience
+   (like a collapsed panel), stored in localStorage, not a feature - the underlying answers stay
+   fully server-owned via A.demographics / A.saveDemographics. */
+const DEMO_FIELD_DEFS=[
+  {key:"ageBand",labelKey:"demoAgeBand",options:["under-20","20-29","30-39","40-49","50-59","60-plus","prefer-not-to-say"]},
+  {key:"gender",labelKey:"demoGender",options:["woman","man","non-binary","other","prefer-not-to-say"]},
+  {key:"indigenous",labelKey:"demoIndigenous",options:["yes","no","prefer-not-to-say"]},
+  {key:"racialized",labelKey:"demoRacialized",options:["yes","no","prefer-not-to-say"]},
+  {key:"disability",labelKey:"demoDisability",options:["yes","no","prefer-not-to-say"]},
+  {key:"lgbtq",labelKey:"demoLgbtq",options:["yes","no","prefer-not-to-say"]},
+];
+function _DemographicsSection({A,t,mob}){
+  const dismissKey=`northhire.demographics.dismissed.${A.user?.id||""}`;
+  const [dismissed,setDismissed]=useState(()=>{try{return localStorage.getItem(dismissKey)==="1";}catch{return false;}});
+  const dismiss=v=>{setDismissed(v);try{localStorage.setItem(dismissKey,v?"1":"0");}catch{/* per-viewer convenience only - fine if storage is unavailable */}};
+  const set=(field,value)=>A.saveDemographics({[field]:value});
+  if(dismissed)return <div className="flex items-center justify-between gap-3 py-3 px-4 mt-4 border border-line-soft rounded-xl bg-white">
+    <span className="text-sm text-text-2">{t("profile.demoDismissedNote")}</span>
+    <Btn kind="ghost" size="sm" onClick={()=>dismiss(false)}>{t("profile.demoShowAgain")}</Btn>
+  </div>;
+  return <Card pad={mob?24:32} style={{borderRadius:20,marginTop:18}}>
+    <div className="flex justify-between items-start gap-3 flex-wrap mb-1">
+      <H2 sub={t("profile.demoSub")}>{t("profile.demoTitle")}</H2>
+      <Btn kind="ghost" size="sm" onClick={()=>dismiss(true)}>{t("profile.demoDismissBtn")}</Btn>
+    </div>
+    <div className="text-xs text-text-3 leading-relaxed border border-line-soft rounded-xl p-3 mb-5 flex flex-col gap-2">
+      <p className="m-0">{t("profile.demoDisclaimerEn")}</p>
+      <p className="m-0">{t("profile.demoDisclaimerFr")}</p>
+    </div>
+    <div className="flex flex-col gap-5">
+      {DEMO_FIELD_DEFS.map(f=><div key={f.key}>
+        <Lbl>{t(`profile.${f.labelKey}`)}</Lbl>
+        <div className="flex flex-wrap gap-2">
+          {f.options.map(opt=>{const on=A.demographics?.[f.key]===opt;
+            return <button key={opt} type="button" onClick={()=>set(f.key,opt)}
+              className={`py-2 px-3 rounded-lg cursor-pointer text-sm border-2 transition duration-150 ${on?"font-semibold border-brand bg-tint text-brand":"font-medium border-line bg-white text-text-2"}`}>
+              {t(`profile.demoOpt_${opt.replace(/-/g,"_")}`)}</button>;})}
+        </div>
+      </div>)}
+    </div>
+  </Card>;
 }
 
 /* ═══════════════ EMPLOYER SUITE ═══════════════ */

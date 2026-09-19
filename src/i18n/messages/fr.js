@@ -576,6 +576,18 @@ export const fr = {
     adminAccountSub: "Compte administrateur", adminRole: "Administrateur·rice de la plateforme",
     overview: "Aperçu", users: "Utilisateurs·rices", employers: "Employeurs", jobMod: "Modération des emplois", articles: "Articles",
     trainings: "Formations", statistics: "Statistiques", activityLog: "Journal d'activité",
+    // Priorité 4 #3 - Auto-identification volontaire (ÉDI), section du profil du·de la candidat·e
+    demoTitle: "Données démographiques facultatives", demoSub: "Volontaire, confidentiel et utilisé uniquement de façon agrégée — jamais communiqué à un employeur en tant que réponse individuelle.",
+    demoDismissBtn: "Masquer cette section", demoDismissedNote: "Les données démographiques facultatives sont masquées.", demoShowAgain: "Afficher",
+    demoDisclaimerEn: "English: Providing this information is entirely voluntary. Your individual answers are never shared with employers — they are combined with other respondents' answers and shown only as aggregate statistics, and only once at least 10 people have answered. You can change or remove your answers at any time.",
+    demoDisclaimerFr: "Français : La divulgation de ces renseignements est entièrement volontaire. Vos réponses individuelles ne sont jamais communiquées aux employeurs — elles sont combinées à celles d'autres répondant·e·s et présentées uniquement sous forme de statistiques agrégées, et seulement lorsqu'au moins 10 personnes ont répondu. Vous pouvez modifier ou retirer vos réponses en tout temps.",
+    demoAgeBand: "Tranche d'âge", demoGender: "Identité de genre", demoIndigenous: "Vous identifiez-vous comme Autochtone?",
+    demoRacialized: "Vous identifiez-vous comme personne racisée / membre d'une minorité visible?", demoDisability: "Vous identifiez-vous comme personne en situation de handicap?",
+    demoLgbtq: "Vous identifiez-vous comme personne 2SLGBTQ+?",
+    demoOpt_under_20: "Moins de 20 ans", demoOpt_20_29: "20-29 ans", demoOpt_30_39: "30-39 ans", demoOpt_40_49: "40-49 ans",
+    demoOpt_50_59: "50-59 ans", demoOpt_60_plus: "60 ans et plus", demoOpt_prefer_not_to_say: "Préfère ne pas répondre",
+    demoOpt_woman: "Femme", demoOpt_man: "Homme", demoOpt_non_binary: "Non binaire", demoOpt_other: "Autre",
+    demoOpt_yes: "Oui", demoOpt_no: "Non",
   },
   shared: {
     offer: {
@@ -1330,6 +1342,13 @@ export const fr = {
       medianTimeToHire: "jours de délai médian pour embaucher", medianDesc: "Parmi {hires} embauche complétée. Médiane, pas moyenne — un rôle inhabituellement lent ne devrait pas la modifier.",
       avgDaysPerStage: "Jours moyens dans chaque étape", whereHiresCameFrom: "Provenance des embauches", whichChannelDesc: "Montre quels canaux ont réellement produit des embauches une fois que vous en avez faites — une question plus utile que laquelle a produit le plus de candidatures.",
       sitUnused14: "Immobiles depuis 14+ jours", notEnoughListings: "Pas assez d'annonces en direct sur la plateforme pour produire des comparatifs significatifs pour l'instant.",
+      // Priorité 4 #3 - Diversité de votre bassin de candidat·e·s
+      diversityTitle: "Diversité de votre bassin de candidat·e·s", diversityDesc: "Rapport agrégé optionnel construit à partir des candidat·e·s ayant choisi de s'auto-identifier volontairement sur leur profil. Tout groupe de moins de 10 répondant·e·s n'est jamais affiché sous forme de chiffre.",
+      diversityShowBtn: "Afficher le rapport de diversité", diversityLoading: "Chargement…",
+      diversityNoApplicants: "Aucun·e candidat·e pour l'instant sur vos annonces.",
+      diversityRespondents: "{respondents} candidat·e·s sur {total} ont répondu à au moins une question démographique facultative.",
+      diversityApplicantsCol: "Candidat·e·s", diversityHiresCol: "Embauches",
+      diversitySuppressed: "données insuffisantes — au moins 10 répondant·e·s requis",
     },
     staffing: {
       notEnrolledBadge: "Services de personnel · Pas encore inscrit",

@@ -7,6 +7,7 @@ import { getConfig } from "../platformConfig.js";
 import { storeUpload, listUploads, getUpload, deleteUpload } from "../uploads.js";
 import { sendAndLogMail } from "../mail.js";
 import { validateConditions, validateActions, RuleValidationError } from "../lib/workflowRules.js";
+import { DEMOGRAPHIC_FIELDS, suppressedBucket } from "../lib/demographics.js";
 
 export const employersRouter = Router();
 
@@ -369,6 +370,40 @@ employersRouter.get("/me/locations", requireAuth, requireRole("employer"), (req,
     `SELECT DISTINCT city, prov FROM jobs WHERE employer_id = ? AND city IS NOT NULL AND prov IS NOT NULL ORDER BY city`
   ).all(req.user.employer_id);
   res.json({ locations: rows.map(r => ({ city: r.city, province: r.prov })) });
+});
+
+/* Priority-4 #3 - Diversity of your applicant pool, opt-in aggregate reporting. Every bucket is
+   built server-side from user_demographics joined against this employer's own applicants/hires -
+   the server does the suppression (never returns a raw count under SUPPRESSION_FLOOR), so there
+   is no client code path that could ever receive, let alone render, an identifying small number. */
+employersRouter.get("/me/demographics-aggregate", requireAuth, requireRole("employer"), (req, res) => {
+  const employerId = req.user.employer_id;
+  const applicantIds = db.prepare(
+    `SELECT DISTINCT applications.user_id AS id FROM applications
+     JOIN jobs ON jobs.id = applications.job_id WHERE jobs.employer_id = ?`
+  ).all(employerId).map(r => r.id);
+  const hireIds = db.prepare(
+    `SELECT DISTINCT applications.user_id AS id FROM applications
+     JOIN jobs ON jobs.id = applications.job_id WHERE jobs.employer_id = ? AND applications.stage = 'Hired'`
+  ).all(employerId).map(r => r.id);
+
+  const bucketsFor = (ids, field) => {
+    if (ids.length === 0) return [];
+    const placeholders = ids.map(() => "?").join(",");
+    const rows = db.prepare(
+      `SELECT value, COUNT(*) AS n FROM user_demographics WHERE field = ? AND user_id IN (${placeholders}) GROUP BY value`
+    ).all(field, ...ids);
+    return rows.map(r => suppressedBucket(r.value, r.n));
+  };
+
+  const fields = {};
+  for (const field of Object.keys(DEMOGRAPHIC_FIELDS)) {
+    fields[field] = { applicants: bucketsFor(applicantIds, field), hires: bucketsFor(hireIds, field) };
+  }
+  const respondentCount = applicantIds.length
+    ? db.prepare(`SELECT COUNT(DISTINCT user_id) AS n FROM user_demographics WHERE user_id IN (${applicantIds.map(() => "?").join(",")})`).get(...applicantIds).n
+    : 0;
+  res.json({ totalApplicants: applicantIds.length, totalHires: hireIds.length, respondentCount, fields });
 });
 
 employersRouter.get("/:id", (req, res) => {
