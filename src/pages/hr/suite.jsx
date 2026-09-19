@@ -32,10 +32,15 @@ function _PillTabs({items,value,onChange}){
 
 export function HrLoginPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
-  const [company,setCompany]=useState("PCL Construction");
-  const [loginId,setLoginId]=useState("");
+  /* H1: a seeker tapping "Sign in to HR Suite" from the Status page banner arrives with their
+     company + email already known - prefilled once, then cleared so a later, unrelated visit to
+     this page doesn't keep resurfacing someone else's login id. */
+  const prefill=A.hrLoginPrefill;
+  const [company,setCompany]=useState(prefill?.companyName||"PCL Construction");
+  const [loginId,setLoginId]=useState(prefill?.loginId||"");
   const [pw,setPw]=useState("");
   const [err,setErr]=useState(""); const [busy,setBusy]=useState(false);
+  useEffect(()=>{ if(prefill)A.setHrLoginPrefill(null); /* eslint-disable-next-line */ },[]);
 
   const submit=async()=>{setErr(""); setBusy(true);
     const r=await A.hrLogin(company,loginId,pw);
@@ -294,6 +299,14 @@ export function HrProfile(){
   const save=()=>{A.updateEmp(emp.id,d);};
   const dept=A.HR_DEPARTMENTS.find(x=>x.id===emp.dept);
   const publicView=A.hrPublicProfile(emp.id);
+  /* H1: whether this profile's NorthHire seeker account (if any) is opted in to the skills/
+     education sync - fetched lazily since it's only relevant on your own profile. */
+  const [sync,setSync]=useState(null);
+  useEffect(()=>{ let off=false; A.hrSyncStatus(emp.id).then(r=>{if(!off)setSync(r.sync);}); return()=>{off=true;}; },[emp.id]);
+  const setSyncConsent=async(consent)=>{
+    const r=await A.hrSetSyncConsent(emp.id,consent);
+    if(r.ok)setSync(r.sync); else A.toast?.(r.msg,"danger");
+  };
   /* On a hard refresh landing directly on this real URL, hrEmployee/hrCompany can resolve before
      the full hrEmployees roster finishes loading - hrPublicProfile (which looks emp.id up in that
      roster) briefly returns null in that window. Wait rather than crash on publicView.tenureYears. */
@@ -334,7 +347,10 @@ export function HrProfile(){
             <Field label={t("hr.profile.provinceLabel")}><Input value={d.prov} onChange={e=>set("prov",e.target.value)}/></Field>
           </div>
 
-          <Lbl>{t("hr.profile.skillsLabel")}</Lbl>
+          <div className="flex items-center gap-2 mb-1">
+            <Lbl style={{margin:0}}>{t("hr.profile.skillsLabel")}</Lbl>
+            {sync?.consent&&<Tag tone="ok" sm icon="check">{t("hr.profileSync.syncedTag")}</Tag>}
+          </div>
           <div className="mb-5">
             <InlineList value={d.skills||[]} onChange={v=>set("skills",v)} icon="sparkle" placeholder={t("hr.profile.skillsPlaceholder")}/>
           </div>
@@ -406,11 +422,37 @@ export function HrProfile(){
                 </div>)}
               </div>}
         </Card>
+        {sync?.linked&&<_ProfileSyncCard sync={sync} onConsent={setSyncConsent}/>}
         <_PunchPinCard A={A} empId={emp.id}/>
         {emp.manager&&<_OneOnOneLog A={A} managerId={emp.manager} reportId={emp.id} me={emp}/>}
       </div>
     </div>
   </div>;
+}
+
+/* H1 - Recruit -> Hire -> Employee handoff: first-visit (and ongoing) opt-in offer to keep this
+   HR profile's skills linked with the employee's own NorthHire seeker profile. Opt-in only, and
+   one-click to unlink - never assumed just because the two accounts share an email. */
+function _ProfileSyncCard({sync,onConsent}){
+  const {t}=useTranslation();
+  if(sync.consent)return <Card pad={20} style={{borderRadius:16,marginTop:16}}>
+    <div className="flex gap-3 items-start">
+      <div className="w-8 h-8 rounded-lg bg-ok-bg text-ok flex items-center justify-center shrink-0"><I n="check" s={16}/></div>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-semibold text-text">{t("hr.profileSync.linkedTitle")}</div>
+        <div className="text-xs text-text-2 mt-1 leading-relaxed">{t("hr.profileSync.linkedBody")}</div>
+      </div>
+    </div>
+    <Btn kind="ghost" size="sm" style={{marginTop:12}} onClick={()=>onConsent(false)}>{t("hr.profileSync.unlinkBtn")}</Btn>
+  </Card>;
+  return <Card pad={20} style={{borderRadius:16,marginTop:16,background:C.tint,border:`1px solid ${C.line2}`}}>
+    <div className="text-sm font-bold text-brand mb-1.5">{t("hr.profileSync.offerTitle")}</div>
+    <div className="text-xs text-text-2 leading-relaxed mb-3.5">{t("hr.profileSync.offerBody")}</div>
+    <div className="flex gap-2">
+      <Btn kind="primary" size="sm" onClick={()=>onConsent(true)}>{t("hr.profileSync.enableBtn")}</Btn>
+      <Btn kind="ghost" size="sm" onClick={()=>onConsent(false)}>{t("hr.profileSync.notNowBtn")}</Btn>
+    </div>
+  </Card>;
 }
 
 /* Manager 1:1 log for a manager-report pair. The employee viewing their own profile sees

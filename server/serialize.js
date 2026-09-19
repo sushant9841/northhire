@@ -253,6 +253,8 @@ export function serializeHrEmployee(row) {
     erased: !!rest.erased, erasedAt: rest.erased_at,
     visibility: JSON.parse(rest.visibility_json || "{}"),
     joinedDate: rest.hired,
+    notes: rest.notes || "",
+    sync: (() => { try { return JSON.parse(rest.sync_json || "{}"); } catch { return {}; } })(),
   };
 }
 export function serializeHrAttendance(row) {

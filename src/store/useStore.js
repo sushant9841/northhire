@@ -81,6 +81,14 @@ export function useStore(){
   const [interviews,setInterviews]=useState([]);
   const [reviews,setReviews]=useState([]);
   const [outbox,setOutbox]=useState([]);
+  /* HR Suite H1: whether this seeker's email matches an active HR Suite employee record
+     somewhere, so the Status page can offer a durable "you have HR portal access" banner
+     instead of relying on a one-shot notification a refresh could lose. {available,companyName,
+     loginId} - null until fetched, {available:false} once fetched with no match. */
+  const [hrAccess,setHrAccess]=useState(null);
+  /* Transient prefill for HrLoginPage when a seeker taps through from the banner above - in-memory
+     only (same lifetime as `hireOnboarding`/`focusAppId`), cleared once HrLoginPage reads it. */
+  const [hrLoginPrefill,setHrLoginPrefill]=useState(null);
   const [impersonating,setImpersonating]=useState(null);
   const [activity,setActivity]=useState([]);
   const [securitySignals,setSecuritySignals]=useState(null);
@@ -228,6 +236,7 @@ export function useStore(){
       setCvs([]);setSavedSearches([]);setMessages([]);setInterviews([]);setReviews([]);setNotifications([]);
       setSaved(new Set());setFollowing(new Set());setEnrolled(new Set());setTrainingProgress({});
       setReferences([]);setPaymentMethods([]);setTwoFactor({});setInvitedCandidates(new Set());setOutbox([]);setCandidateNotes({});setEmployerInvoices([]);
+      setHrAccess(null);
       return;
     }
     let cancelled=false;
@@ -244,6 +253,7 @@ export function useStore(){
           api.get("/seeker/cvs"),api.get("/seeker/saved-searches"),api.get("/seeker/interviews"),
           api.get("/seeker/saved-jobs"),api.get("/seeker/followed-employers"),api.get("/content/enrolments/mine"),
           api.get("/seeker/references"),api.get("/seeker/payment-methods"),api.get("/seeker/two-factor"),
+          api.get("/seeker/hr-access"),
         );
         if(isEmployer)calls.push(api.get("/seeker/interviews"),api.get("/seeker/invited-candidates"),api.get("/employers/candidate-notes"),api.get("/billing/invoices"));
         const results=await Promise.all(calls);
@@ -265,6 +275,7 @@ export function useStore(){
           setPaymentMethods(results[i++].paymentMethods);
           const tf=results[i++].twoFactor;
           setTwoFactor(tf?{[user.id]:tf}:{});
+          setHrAccess(results[i++]);
         }
         if(isEmployer){
           setInterviews(results[i++].interviews);
@@ -2144,7 +2155,7 @@ export function useStore(){
     try{await api.patch("/seeker/notifications/read-all");}catch{/* best-effort */}
   };
 
-  const A={pg,go,back,pageTitle,homePg,history:stack,user,authChecked,company,employers,jobs,people,applications,blogs,trainings,cvs,passwords,outbox,savedSearches,messages,interviews,reviews,impersonating,setImpersonating,hireOnboarding,setHireOnboarding,
+  const A={pg,go,back,pageTitle,homePg,history:stack,user,authChecked,company,employers,jobs,people,applications,blogs,trainings,cvs,passwords,outbox,savedSearches,messages,interviews,reviews,impersonating,setImpersonating,hireOnboarding,setHireOnboarding,hrAccess,hrLoginPrefill,setHrLoginPrefill,
     offerToken,sendOfferForSignature,loadOffers,
     hasAccount,upsertPassword,loginWithPassword,verifyLogin2FA,resetPasswordRequest,resetPasswordConfirm,completeEmployerSignup,
     saveSearch,deleteSavedSearch,toggleSearchAlert,updateSavedSearch,editingSavedSearchId,setEditingSavedSearchId,

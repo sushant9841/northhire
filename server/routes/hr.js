@@ -141,6 +141,12 @@ function maskHrEmployeeForViewer(emp, viewerHrEmployee) {
   if (v.birthDate === false) masked.birthDate = null;
   if (v.email === false) masked.email = null;
   if (v.manager === false) masked.manager = null;
+  // notes (work-history/education summary carried over at hire) and the seeker-linkage id are
+  // as sensitive as salary/birthDate - a colleague browsing the directory has no reason to see
+  // either, regardless of this employee's visibility toggles (those only cover fields the
+  // employee themself can choose to reveal).
+  masked.notes = "";
+  if (masked.sync) masked.sync = { consent: !!masked.sync.consent, linked: !!masked.sync.seekerId };
   return masked;
 }
 
@@ -158,27 +164,84 @@ hrRouter.post("/employees", requireHrAuth, requireHrPriv, (req, res) => {
   // here needs an explicit `?? null` so an incomplete payload gets whatever the schema allows
   // rather than crashing the request.
   db.prepare(
-    `INSERT INTO hr_employees (id, company_id, name, email, password_hash, password_salt, role, dept, title, hired, seed, phone, city, prov, salary, birth_date, manager, skills_json, badges_json, pay_type, hourly_rate)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+    `INSERT INTO hr_employees (id, company_id, name, email, password_hash, password_salt, role, dept, title, hired, seed, phone, city, prov, salary, birth_date, manager, skills_json, badges_json, pay_type, hourly_rate, notes)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
   ).run(id, req.hrEmployee.company_id, d.name ?? null, d.email ?? null, hash, salt, d.role || "employee", d.dept ?? null, d.title ?? null,
     d.hired || new Date().toISOString().slice(0, 10), d.seed ?? Math.floor(Math.random() * 11), d.phone ?? null, d.city ?? null, d.prov ?? null,
     d.salary ?? null, d.birthDate ?? null, d.manager || null, JSON.stringify(d.skills || []), JSON.stringify(d.badges || []),
-    d.payType === "hourly" ? "hourly" : "salary", d.hourlyRate || null);
-  res.status(201).json({ employee: serializeHrEmployee(db.prepare("SELECT * FROM hr_employees WHERE id = ?").get(id)) });
+    d.payType === "hourly" ? "hourly" : "salary", d.hourlyRate || null, d.notes ?? null);
+
+  // H1 - Recruit -> Hire -> Employee handoff: if this hire came straight from the NorthHire
+  // pipeline (the HireOnboardingModal passes the application id), carry the candidate's CV
+  // over as a genuine document on the new HR record instead of leaving it behind. Verified
+  // against this same company's job so a caller can't pull an arbitrary applicant's CV by guessing
+  // an application id.
+  if (d.applicationId) {
+    const app = db.prepare(
+      `SELECT applications.cv_id AS cv_id FROM applications
+       JOIN jobs ON jobs.id = applications.job_id
+       WHERE applications.id = ? AND jobs.employer_id = ?`
+    ).get(d.applicationId, req.hrEmployee.company_id);
+    const cv = app?.cv_id ? db.prepare("SELECT * FROM cvs WHERE id = ?").get(app.cv_id) : null;
+    if (cv) {
+      const exp = (() => { try { return JSON.parse(cv.exp_json || "[]"); } catch { return []; } })();
+      const edu = (() => { try { return JSON.parse(cv.edu_json || "[]"); } catch { return []; } })();
+      const lines = [
+        `${cv.name0 || d.name || ""} — ${cv.title || d.title || ""}`, "",
+        cv.summary ? cv.summary : null, cv.summary ? "" : null,
+        exp.length ? "Work history:" : null,
+        ...exp.map(x => `- ${x.role || x.title || ""}${x.company ? " at " + x.company : ""}${x.dates ? " (" + x.dates + ")" : ""}`),
+        exp.length ? "" : null,
+        edu.length ? "Education:" : null,
+        ...edu.map(x => `- ${x.degree || x.program || ""}${x.school ? ", " + x.school : ""}${x.year ? " (" + x.year + ")" : ""}`),
+      ].filter(l => l !== null).join("\n");
+      const docId = nextId("doc", "hr_documents");
+      const dataUrl = `data:text/plain;base64,${Buffer.from(lines, "utf8").toString("base64")}`;
+      db.prepare("INSERT INTO hr_documents (id, employee_id, name, data_url, size, uploaded_by) VALUES (?,?,?,?,?,?)")
+        .run(docId, id, `Candidate CV — ${cv.name || "NorthHire profile"}.txt`, dataUrl, Buffer.byteLength(lines, "utf8"), req.hrEmployee.id);
+    }
+  }
 
   // If this new HR employee's email matches an existing NorthHire seeker account (the normal
   // case - they were just hired through the pipeline, not added by hand), let them know their
-  // profile now lives in the company's HR Suite too, live and persisted. requireHrAuth sessions
-  // authenticate an hr_employee, not a platform `users` row, so there's no req.user here to
-  // notify the employer side - they already see the result synchronously from their own click.
+  // profile now lives in the company's HR Suite too, live and persisted, and record the
+  // (not-yet-consented) link so the new HrProfile "sync your profile" banner has something to
+  // offer. requireHrAuth sessions authenticate an hr_employee, not a platform `users` row, so
+  // there's no req.user here to notify the employer side - they already see the result
+  // synchronously from their own click.
   if (d.email) {
     const seekerUser = db.prepare("SELECT id FROM users WHERE email = ? AND role = 'seeker'").get(d.email.toLowerCase().trim());
     if (seekerUser) {
+      db.prepare("UPDATE hr_employees SET sync_json = ? WHERE id = ?").run(
+        JSON.stringify({ seekerId: seekerUser.id, consent: false, linkedFields: ["skills", "edu"], offeredAt: new Date().toISOString() }), id);
       const S = notifStringsForUser(seekerUser.id);
       pushNotification({ for: seekerUser.id, icon: "sparkle", title: S.hrSetupTitle,
         body: S.hrSetupBody, link: "workerDashboard" });
     }
   }
+  res.status(201).json({ employee: serializeHrEmployee(db.prepare("SELECT * FROM hr_employees WHERE id = ?").get(id)) });
+});
+/* Employee's own opt-in to keep their HR profile's skills/education linked with their NorthHire
+   seeker profile (H1). Self-only by design - even an owner/admin cannot consent on someone
+   else's behalf. */
+hrRouter.get("/employees/:id/sync", requireHrAuth, (req, res) => {
+  if (req.params.id !== req.hrEmployee.id && !isPriv(req.hrEmployee)) return res.status(403).json({ error: "You can only view your own sync status." });
+  const row = db.prepare("SELECT sync_json FROM hr_employees WHERE id = ? AND company_id = ?").get(req.params.id, req.hrEmployee.company_id);
+  if (!row) return res.status(404).json({ error: "Employee not found." });
+  let sync = {}; try { sync = JSON.parse(row.sync_json || "{}"); } catch {}
+  res.json({ sync: { consent: !!sync.consent, linked: !!sync.seekerId, linkedFields: sync.linkedFields || [] } });
+});
+hrRouter.post("/employees/:id/sync-consent", requireHrAuth, (req, res) => {
+  if (req.params.id !== req.hrEmployee.id) return res.status(403).json({ error: "Only you can change your own profile-sync consent." });
+  const row = db.prepare("SELECT * FROM hr_employees WHERE id = ? AND company_id = ?").get(req.params.id, req.hrEmployee.company_id);
+  if (!row) return res.status(404).json({ error: "Employee not found." });
+  let sync = {}; try { sync = JSON.parse(row.sync_json || "{}"); } catch {}
+  if (!sync.seekerId) return res.status(400).json({ error: "No linked NorthHire seeker profile was found for your email." });
+  sync.consent = !!(req.body || {}).consent;
+  db.prepare("UPDATE hr_employees SET sync_json = ? WHERE id = ?").run(JSON.stringify(sync), req.params.id);
+  logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, sync.consent ? "profile_sync_enabled" : "profile_sync_disabled",
+    `${row.name} ${sync.consent ? "linked" : "unlinked"} their HR profile with their NorthHire seeker profile`);
+  res.json({ sync: { consent: sync.consent, linked: true, linkedFields: sync.linkedFields || [] } });
 });
 hrRouter.patch("/employees/:id", requireHrAuth, requireHrPriv, (req, res) => {
   const row = db.prepare("SELECT * FROM hr_employees WHERE id = ? AND company_id = ?").get(req.params.id, req.hrEmployee.company_id);
@@ -254,6 +317,21 @@ hrRouter.patch("/employees/:id/badges", requireHrAuth, requireHrPriv, async (req
   db.prepare("UPDATE hr_employees SET badges_json = ? WHERE id = ?").run(JSON.stringify(badges), req.params.id);
   logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, remove ? "badge_removed" : "badge_awarded", `${remove ? "Removed" : "Awarded"} "${badge}" ${remove ? "from" : "to"} ${row.name}`);
   if (!remove && !row.erased) await sendAndLogMail(row.email, `You earned a badge: ${badge}`, `${req.hrEmployee.name} awarded you the "${badge}" badge. Check the badge wall in HR Suite to see it.`);
+  // H1: a badge earned in HR Suite (recognition, or completing a training - HR-03) publishes
+  // onto the employee's public NorthHire seeker profile automatically once they've opted in to
+  // the profile sync (never before consent, and never for a plain removal).
+  if (!remove && !row.erased) {
+    let sync = {}; try { sync = JSON.parse(row.sync_json || "{}"); } catch {}
+    if (sync.consent && sync.seekerId) {
+      const seeker = db.prepare("SELECT badges_json FROM users WHERE id = ?").get(sync.seekerId);
+      if (seeker) {
+        const companyName = db.prepare("SELECT name FROM employers WHERE id = ?").get(req.hrEmployee.company_id)?.name || "your employer";
+        const seekerBadges = (() => { try { return JSON.parse(seeker.badges_json || "[]"); } catch { return []; } })().filter(b => b.name !== badge);
+        seekerBadges.push({ name: badge, awardedAt: new Date().toISOString(), source: "hr", company: companyName });
+        db.prepare("UPDATE users SET badges_json = ? WHERE id = ?").run(JSON.stringify(seekerBadges), sync.seekerId);
+      }
+    }
+  }
   res.json({ employee: serializeHrEmployee(db.prepare("SELECT * FROM hr_employees WHERE id = ?").get(req.params.id)) });
 });
 

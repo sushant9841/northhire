@@ -945,6 +945,20 @@ for (const stmt of [
   // current plan rather than trusting a purely local flag, so it survives across devices/browsers
   // and a plan downgrade-then-upgrade correctly re-shows the tour.
   "ALTER TABLE employers ADD COLUMN welcome_seen_plan TEXT",
+  // HR Suite Transformation H1 - Recruit -> Hire -> Employee handoff. `notes` carries a short
+  // work-history/education summary copied from the candidate at hire time (the candidate object
+  // has no structured work-history table of its own, so this is stored as free text rather than
+  // invented structured rows). `sync_json` records whether this HR employee's NorthHire seeker
+  // account (if any) has opted in to keep skills/education linked between the two profiles -
+  // {seekerId, consent, linkedFields, offeredAt} - and is written once, at hire time, when the
+  // candidate's email matches an existing seeker account.
+  "ALTER TABLE hr_employees ADD COLUMN notes TEXT",
+  "ALTER TABLE hr_employees ADD COLUMN sync_json TEXT DEFAULT '{}'",
+  // A seeker's public NorthHire profile can carry badges published from their employer's HR
+  // Suite (e.g. a training/recognition badge), once the seeker has explicitly consented to the
+  // HR<->seeker profile sync above. Separate from hr_employees.badges_json, which is the
+  // employer-internal badge record and is never itself shown to the public.
+  "ALTER TABLE users ADD COLUMN badges_json TEXT DEFAULT '[]'",
 ]) {
   try { db.exec(stmt); } catch (e) { if (!/duplicate column/i.test(e.message)) console.error("migration:", stmt, e.message); }
 }

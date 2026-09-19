@@ -163,7 +163,20 @@ export function ProfilePage(){
                   <div className="mt-2"><Bar v={p} tone={p>=100?C.ok:C.brand} h={5}/></div>
                   <div className="text-xs text-text-3 mt-1">{p>=100?t("profile.completed"):t("profile.percentComplete",{pct:p})}</div></div>
                 <Btn kind={p>=100?"outline":"primary"} size="sm" onClick={()=>p>=100?A.printCert(trn):A.openTraining(trn.id)}>
-                  {p>=100?t("profile.certificate"):t("profile.continueBtn")}</Btn></div>;})}</div>}</div>}
+                  {p>=100?t("profile.certificate"):t("profile.continueBtn")}</Btn></div>;})}</div>}
+        {/* H1: badges published from an employer's HR Suite once you've opted in to the
+            HR<->NorthHire profile sync (see the "Sync your NorthHire profile?" prompt in HR
+            Suite). Separate from training certificates above - these are employer-awarded
+            recognition, not course completion. */}
+        {(u.badges||[]).length>0&&<div style={{marginTop:24}}>
+          <Lbl>{t("profile.badgesLabel")}</Lbl>
+          <div className="flex flex-wrap gap-2">
+            {[...u.badges].sort((a,b)=>new Date(b.awardedAt||0)-new Date(a.awardedAt||0)).map((b,i)=>
+              <span key={i} title={b.company?t("profile.badgeFromCompany",{company:b.company}):undefined}
+                className="inline-flex items-center gap-1.5 py-1.5 px-3 bg-warn-bg text-warn border border-warn-ln rounded-full text-xs font-semibold">
+                <I n="award" s={13}/>{b.name}</span>)}
+          </div>
+        </div>}</div>}
 
       {tab==="refs"&&<div>
         <H2 sub={t("profile.refSub")} action={<Btn kind="outline" size="sm" icon="plus" onClick={()=>setShowRef(true)}>{t("profile.addRefBtn")}</Btn>}>{t("profile.references")}</H2>

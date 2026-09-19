@@ -40,11 +40,22 @@ export function HireOnboardingModal({payload,onClose}){
     if(!addToHr){onClose(); return;}
     setBusy(true);
     try{
+      /* H1 - Recruit -> Hire -> Employee handoff: carry the candidate's profile forward instead
+         of dropping everything but name/email/comp/start-date. Skills and portrait seed copy
+         directly; years + education level have no matching HR column so they land as a short
+         note (rendered on the employee's profile). applicationId lets the server pull the
+         candidate's attached CV (if any) across as a real document on the new HR record. */
+      const notesParts=[];
+      if(person.years!=null)notesParts.push(t("hireOnboarding.noteYears",{years:person.years}));
+      if(person.edu)notesParts.push(t("hireOnboarding.noteEducation",{edu:person.edu}));
       const employee=await A.addEmployee({
         companyId:company.id,
         name:person.name, email:person.email, role, dept,
         title, manager:manager||null, city:person.city||"", prov:person.prov||"ON",
         phone:person.phone||"", salary, hired:startDate,
+        skills:person.skills||[], seed:person.seed,
+        notes:notesParts.length?t("hireOnboarding.noteHiredVia",{details:notesParts.join(" · ")}):null,
+        applicationId:app?.id||null,
       });
       // Toast + navigate to the new HR record so the employer sees the follow-through.
       A.toast?.(t("hireOnboarding.createdToast",{name:person.name}),"ok");

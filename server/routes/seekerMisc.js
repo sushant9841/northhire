@@ -53,6 +53,23 @@ seekerMiscRouter.post("/autofill/record", requireAuth, (req, res) => {
   res.json({ recorded: n });
 });
 
+/* HR Suite H1 - Recruit -> Hire -> Employee handoff: once an employer hires a NorthHire
+   candidate into their HR Suite, the seeker gets a durable (server-authoritative, not a one-shot
+   notification a refresh could lose) banner on their Status page offering to sign into their new
+   HR portal account. Deliberately minimal - company name and a login hint only, never dept/role/
+   salary/manager, which stay entirely inside HR Suite. */
+seekerMiscRouter.get("/hr-access", requireAuth, (req, res) => {
+  if (req.user.role !== "seeker") return res.json({ available: false });
+  const row = db.prepare(
+    `SELECT hr_employees.email AS email, employers.name AS company_name FROM hr_employees
+     JOIN employers ON employers.id = hr_employees.company_id
+     WHERE lower(hr_employees.email) = lower(?) AND hr_employees.erased = 0 AND hr_employees.status = 'active'
+     ORDER BY hr_employees.created_at DESC LIMIT 1`
+  ).get(req.user.email);
+  if (!row) return res.json({ available: false });
+  res.json({ available: true, companyName: row.company_name, loginId: row.email });
+});
+
 /* ─── CVs ─── */
 seekerMiscRouter.get("/cvs", requireAuth, (req, res) => {
   const rows = db.prepare("SELECT * FROM cvs WHERE user_id = ? ORDER BY updated_at DESC").all(req.user.id);

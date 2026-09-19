@@ -131,6 +131,7 @@ export function StatusPage(){
         <button onClick={()=>setPeriod("all")} className="bg-transparent border-0 p-0 cursor-pointer text-sm font-semibold text-brand underline">{t("seeker.status.showAllTime")}</button>
       </div>}
     <ProfileCompletionNudge/>
+    <HrAccessBanner/>
     <UpcomingInterviewsCard/>
     <div className="grid gap-3 mb-5" style={{gridTemplateColumns:`repeat(auto-fit,minmax(${mob?140:160}px,1fr))`}}>
       <Stat icon="send" label={t("seeker.status.statApplications")} value={mine.length} tone={C.brand}/>
@@ -221,6 +222,28 @@ function ProfileCompletionNudge(){
       <Btn kind="outline" size="sm" onClick={()=>A.go("profile")}>{t("seeker.status.completeProfileBtn")}</Btn>
       <Btn kind="ghost" size="sm" onClick={dismiss}>{t("seeker.status.dismissNudgeBtn")}</Btn></div>}>
     {A.completenessHint}
+  </Banner>;
+}
+
+/* HR Suite H1: durable (server-authoritative) banner once this seeker's email matches an active
+   HR Suite employee record somewhere - "you now have access to your employer's HR portal".
+   Tapping through prefills HrLoginPage with the company + login id rather than making them
+   retype it. Dismissable per-viewer (a plain UI convenience, not app data - the HR account itself
+   isn't affected by dismissing this), same pattern as ProfileCompletionNudge. */
+const HR_ACCESS_DISMISS_KEY="northhire.hrAccessBannerDismissed";
+function HrAccessBanner(){
+  const A=use(); const {t}=useTranslation();
+  const [dismissed,setDismissed]=useState(()=>{
+    try{return localStorage.getItem(HR_ACCESS_DISMISS_KEY)==="1";}catch{return false;}
+  });
+  if(!A.hrAccess?.available||dismissed)return null;
+  const dismiss=()=>{try{localStorage.setItem(HR_ACCESS_DISMISS_KEY,"1");}catch{/* best-effort */} setDismissed(true);};
+  return <Banner tone="brand" icon="sparkle" title={t("seeker.status.hrAccessTitle",{company:A.hrAccess.companyName})} style={{marginBottom:20}}
+    action={<div className="flex gap-2 flex-wrap">
+      <Btn kind="outline" size="sm" onClick={()=>{A.setHrLoginPrefill({companyName:A.hrAccess.companyName,loginId:A.hrAccess.loginId});A.go("hrLogin");}}>
+        {t("seeker.status.hrAccessSignInBtn")}</Btn>
+      <Btn kind="ghost" size="sm" onClick={dismiss}>{t("seeker.status.dismissNudgeBtn")}</Btn></div>}>
+    {t("seeker.status.hrAccessBody")}
   </Banner>;
 }
 

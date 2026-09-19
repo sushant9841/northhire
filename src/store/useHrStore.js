@@ -250,6 +250,16 @@ export function useHrStore(){
     setHrEmployees(l=>[...l,employee]);
     return employee;
   };
+  /* H1 - employee's own opt-in to keep their HR profile's skills/education linked with their
+     NorthHire seeker profile. `hrSyncStatus` is fetched lazily by HrProfile (not part of the bulk
+     initial sync above) since only the signed-in employee's own profile page needs it. */
+  const hrSyncStatus=async(empId)=>{
+    try{return await api.get(`/hr/employees/${empId}/sync`);}catch{return {sync:null};}
+  };
+  const hrSetSyncConsent=async(empId,consent)=>{
+    try{const r=await api.post(`/hr/employees/${empId}/sync-consent`,{consent});return {ok:true,sync:r.sync};}
+    catch(e){return {ok:false,msg:e.message};}
+  };
   const removeEmployee=async(empId)=>{
     await api.del(`/hr/employees/${empId}`);
     const {employees}=await api.get("/hr/employees"); /* refetch - manager reassignment happens server-side */
@@ -649,6 +659,7 @@ return {
     hrPayruns,hrCompanySettings,hrDepartments,hrExpenses,hrAuditLog,
     hrEmp,hrEmpsAtCompany,hrCurrentEmp,hrCurrentCompany,hrLogin,hrLogout,hrAutoLogin,
     hrPublicProfile,updateEmpVisibility,updateEmp,eraseHrEmployee,addEmployee,removeEmployee,
+    hrSyncStatus,hrSetSyncConsent,
     hrSignDocs,hrSignDocsAll,loadSignDocuments,createSignDocument,removeSignDocument,signDocument,loadDocumentSignatures,
     hrShifts,loadShifts,addShift,updateShift,removeShift,
     punchIn,punchOut,requestLeave,decideLeave,

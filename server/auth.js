@@ -133,12 +133,15 @@ export function requireAgencyAuth(req, res, next) {
 
 export function publicUser(row) {
   if (!row) return null;
-  const { password_hash, password_salt, skills_json, types_json, modes_json, visibility_json, ...rest } = row;
+  const { password_hash, password_salt, skills_json, types_json, modes_json, visibility_json, badges_json, ...rest } = row;
   return {
     ...rest,
     skills: JSON.parse(skills_json || "[]"),
     types: JSON.parse(types_json || "[]"),
     modes: JSON.parse(modes_json || "[]"),
     visibility: JSON.parse(visibility_json || "{}"),
+    // HR Suite H1: badges published from an employer's HR Suite once the seeker has consented
+    // to the HR<->seeker profile sync (see hr_employees.sync_json).
+    badges: JSON.parse(badges_json || "[]"),
   };
 }
