@@ -112,6 +112,9 @@ export function useStore(){
   const [candidateId,setCandidateId]=useState(()=>_idFor("candidateId")),[pipelineJob,setPipelineJob]=useState(null);
   const [inviteToken,setInviteToken]=useState(()=>_idFor("inviteToken"));
   const [offerToken,setOfferToken]=useState(()=>_idFor("offerToken"));
+  /* H4 - which HR employee's profile page (/hr/people/:id) is open. Separate from `empId`
+     (the public employer id) and from HR Suite's own signed-in-employee state. */
+  const [hrEmpId,setHrEmpId]=useState(()=>_idFor("hrEmpId"));
   const [applyDraft,setApplyDraft]=useState({job:null,avail:"Within 2 weeks",expect:"",letter:"",meets:"Yes"});
   /* Lightweight prefill for ContactPage — there's no real URL/param passing between pages, so
      this is the same pattern as applyDraft: a small piece of shared state a page reads and
@@ -464,7 +467,7 @@ export function useStore(){
      explicitly (idOverride exists for callers like openJob/openBlog that set the id state and
      navigate in the same tick — reading the id back from state would still see the stale
      pre-update value, since state setters don't apply mid-render). */
-  const _idStateValues={jobId,empId,blogId,trainingId,candidateId,cvId,editId,inviteToken,offerToken};
+  const _idStateValues={jobId,empId,blogId,trainingId,candidateId,cvId,editId,inviteToken,offerToken,hrEmpId};
   /* Per-history-entry scroll memory: keyed by the {depth} every pushState carries, so
      forward navigation (go()) always lands at the top of the new page while native
      back/forward (popstate) restores whatever scroll position that page was at when the
@@ -526,7 +529,7 @@ export function useStore(){
        homePg fallback instead of trying to unwind a history entry that doesn't carry our
        {depth,pg,id} shape (e.g. whatever the browser had before this page ever loaded). */
     if(!window.history.state)window.history.replaceState({depth:0,pg,id:null},"",window.location.pathname+window.location.search);
-    const SETTER_FOR_ID_KEY={jobId:setJobId,empId:setEmpId,blogId:setBlogId,trainingId:setTrainingId,candidateId:setCandidateId,cvId:setCvId,editId:setEditId,inviteToken:setInviteToken,offerToken:setOfferToken};
+    const SETTER_FOR_ID_KEY={jobId:setJobId,empId:setEmpId,blogId:setBlogId,trainingId:setTrainingId,candidateId:setCandidateId,cvId:setCvId,editId:setEditId,inviteToken:setInviteToken,offerToken:setOfferToken,hrEmpId:setHrEmpId};
     const onPopState=()=>{
       const state=window.history.state;
       let pg2,id2;
@@ -1419,6 +1422,12 @@ export function useStore(){
      EmpPipeline so the kanban stays mounted behind it instead of being replaced by the
      full-page EmpCandidate route. */
   const openCandidateInline=id=>setCandidateId(id);
+  /* H4 - opens an HR employee's profile page (About/Attendance/Leave/Tasks/Training/Documents/
+     Salary/Communication tabs) at a real, shareable URL. `tab` is optional deep-link state so a
+     click from an attendance exception or leave-approval row can land straight on the relevant
+     tab instead of always opening on About (see HrProfilePage's use of A.hrProfileDeepLinkTab). */
+  const [hrProfileDeepLinkTab,setHrProfileDeepLinkTab]=useState(null);
+  const openHrEmployeeProfile=(id,tab)=>{setHrEmpId(id);setHrProfileDeepLinkTab(tab||null);go("hrProfileView","Employee profile",id);};
 
   /* Attribution for source-of-hire analytics. Which surface the seeker came from is only knowable
      here, at the moment they start applying — by submit time the page they arrived from is gone.
@@ -2195,7 +2204,7 @@ export function useStore(){
     submitContact,loadContactInbox,resolveContactMessage,listAdmins,setAdminScope,updatePlatformConfig,geocode,
     saved,following,enrolled,trainingProgress,suspended,suspensionInfo,invitedCandidates,notifications,activity,securitySignals,opsHealth,settings,userSettings,search,setSearch,
     toasts,toast,dismissToast,chatDock,setChatDock,
-    jobId,empId,blogId,trainingId,cvId,editId,candidateId,pipelineJob,applyDraft,setApplyDraft,
+    jobId,empId,blogId,trainingId,cvId,editId,candidateId,hrEmpId,setHrEmpId,pipelineJob,applyDraft,setApplyDraft,
     contactPrefill,setContactPrefill,pendingPlan,setPendingPlan,employersPrefill,setEmployersPrefill,
     blogAuthorFilter,setBlogAuthorFilter,filterBlogsByAuthor,
     emp,job,person,score,scoreCandidate,scoreBreakdown,saveScoreWeights,setJobRecruitingCost,DEFAULT_SCORE_WEIGHTS,matchReasons,myApps,appliedJobIds,myNotifications,defaultCv,
@@ -2204,6 +2213,7 @@ export function useStore(){
     completeness,completenessHint,tabBadges,unreadMessages,
     logout,completeSignup,saveProfile,deleteAccount,exportData,setUserSetting,setUserLocale,marketingConsent,setMarketingConsent,
     toggleSave,followEmployer,openJob,openEmployer,openBlog,openTraining,openCandidate,openCandidateInline,
+    openHrEmployeeProfile,hrProfileDeepLinkTab,setHrProfileDeepLinkTab,
     beginApply,submitApply,withdraw,acceptOffer,moveApp,rejectApp,noCvGateJobId,closeNoCvGate,
     lastAppliedId,focusAppId,setFocusAppId,
     publishJob,getJobDistributeUrl,getAutofillSuggestions,recordAutofill,approveJob,toggleJobStatus,flagJob,reportJob,jobReports,loadJobReports,decideJobReport,setPipelineJob:setPipelineJobFn,saveCompany,verifyEmployer,holdEmployer,toggleSuspend,eraseUser,

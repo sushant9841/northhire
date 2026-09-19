@@ -333,6 +333,15 @@ export function Tag({children,tone="neutral",icon,sm}){
  return <span className={`inline-flex items-center gap-1.5 font-semibold border whitespace-nowrap leading-snug rounded-lg text-xs ${sm?"py-1 px-2":"py-1.5 px-2.5"} ${T}`}>
   {icon&&<I n={icon} s={sm?12:13} w={2}/>}{children}</span>;
 }
+/* HR Suite Tranche H4 - the same employment-status pill (Active / On leave / Probation /
+   Terminated) is used on the People Directory cards and on the Employee Profile hero. Kept as
+   one shared primitive so both surfaces always agree on tone + label for a given status, rather
+   than each screen inventing its own mapping. `label` lets a caller pass an already-translated
+   string (this file has no i18n access); the tone mapping stays fixed here. */
+const EMPLOYMENT_STATUS_TONE={active:"ok",onLeave:"warn",probation:"brand",terminated:"neutral"};
+export function EmploymentStatusPill({status,label,sm=true}){
+  return <Tag tone={EMPLOYMENT_STATUS_TONE[status]||"neutral"} sm={sm}>{label||status}</Tag>;
+}
 /* Applied to any div that acts as a click target so it's also keyboard/screen-reader operable
    without changing it to a real <button> — several callers (JobCard, Stat) nest real buttons
    inside, which a <button> wrapper can't legally contain. */

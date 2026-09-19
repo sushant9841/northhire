@@ -7,6 +7,7 @@ import { I } from "../../design/icons.jsx";
 import {
   Btn, Card, Tag, Field, Input, Sel, Area, CheckRow, Banner, Lbl, Modal, Switch, DatePicker,
   SmartPortrait, SmartScene, Empty, ConfirmDialog, usePagination, Pagination, TH_CLASS as TH_CLS, TD_CLASS as TD_CLS,
+  EmploymentStatusPill,
 } from "../../design/primitives.jsx";
 import { _fmtDate } from "../../helpers/utils.js";
 import { invoiceTone } from "../../helpers/statusTone.js";
@@ -19,6 +20,7 @@ import { InlineList } from "../shared/formControls.jsx";
 import { TrainingCard } from "../shared/cards.jsx";
 import { useTranslation } from "../../i18n/i18n.jsx";
 import { formatDate, formatDateTime } from "../../i18n/format.js";
+import { HrTimeline } from "./HrTimeline.jsx";
 
 /* Small pill-style tab bar reused across most HR Suite modules (attendance view,
    leave/tasks/calendar/invoices scope switches). Not string-interpolated into a
@@ -112,6 +114,57 @@ export function HrLoginPage(){
 
 /* ═════ Dashboard — each module gets its own function ═════ */
 
+/* HR Suite Tranche H3 - each attention-queue item key maps to a translated title/body/cta so the
+   selector in useHrStore.js (which has no i18n access) can stay pure data, and this component
+   handles the copy + navigation. Mirrors the destructuring EmpHome's attention stack already does
+   for jobs/candidates - same "ordered list of {icon,tone,n,go}" shape, translated at render time. */
+const HR_ATTENTION_COPY={
+  roleChanges:"roleChanges", leaveOveruse:"leaveOveruse", invoicesDue:"invoicesDue", payrollDue:"payrollDue",
+  pendingInvites:"pendingInvites", attendanceLate:"attendanceLate", attendanceMissedOut:"attendanceMissedOut",
+  leavePending:"leavePending", tasksDueToday:"tasksDueToday", upcomingInterviews:"upcomingInterviews",
+  trainingOverdue:"trainingOverdue", newHires:"newHires", expensesWaiting:"expensesWaiting",
+  registerExportReady:"registerExportReady", myTasksDueToday:"myTasksDueToday", myUpcomingEvents:"myUpcomingEvents",
+  myTrainingProgress:"myTrainingProgress",
+};
+/* hrAttentionQueue (useHrStore.js) hands back plain tone names since it has no design-token
+   access - "danger"/"neutral" aren't literal C.* keys (C has `red`/no neutral swatch at all), so
+   this maps the selector's tone vocabulary onto real tokens at render time. */
+const HR_ATTENTION_TONE={warn:C.warn,danger:C.red,ok:C.ok,neutral:C.text3,brand:C.brand};
+function _HrAttentionStack({A,emp}){
+  const {t}=useTranslation();
+  const items=A.hrAttentionQueue(emp.role,emp.id);
+  if(items.length===0)return <Card style={{marginBottom:20}}>
+    <div className="flex items-center gap-3 py-2">
+      <div className="w-9 h-9 rounded-lg bg-ok-bg text-ok flex items-center justify-center"><I n="check" s={18}/></div>
+      <div className="text-sm text-text-2">{t("hr.attention.allClear")}</div>
+    </div>
+  </Card>;
+  return <Card style={{marginBottom:20}}>
+    <H2sub sub={t("hr.attention.sub")}>{t("hr.attention.title")}</H2sub>
+    <div className="flex flex-col gap-2 mt-2">
+      {items.slice(0,6).map(a=>{const key=HR_ATTENTION_COPY[a.key]||a.key;
+        const tone=HR_ATTENTION_TONE[a.tone]||C.text3;
+        return <button key={a.key} onClick={()=>A.go(a.go)} className="w-full flex gap-3 items-center py-3 px-3 rounded-xl border border-line-soft bg-white hover:bg-bg cursor-pointer text-left transition duration-150">
+          <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{background:`${tone}18`,color:tone}}>
+            <I n={a.icon} s={18}/></div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold text-text">{t(`hr.attention.${key}Title`,{n:a.n})}</div>
+            <div className="text-xs text-text-2 mt-0.5">{t(`hr.attention.${key}Body`)}</div></div>
+          <Tag sm>{t("hr.attention.reviewCta")}</Tag>
+        </button>;})}
+    </div>
+  </Card>;
+}
+/* Lbl-style H2 with a sub-line, matching EmpHome's <H2 sub=...> usage - HR suite's own H2 import
+   (if any) isn't pulled in here, so this local alias just reuses Lbl's typography for the title
+   and adds the muted sub-line underneath, avoiding a new cross-file import for one heading. */
+function H2sub({sub,children}){
+  return <div className="mb-1">
+    <div className="text-base font-bold text-text tracking-tight">{children}</div>
+    {sub&&<div className="text-xs text-text-3 mt-0.5">{sub}</div>}
+  </div>;
+}
+
 export function HrDashboard(){
   const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
@@ -174,6 +227,12 @@ export function HrDashboard(){
           if(emp.role==="finance") return inv?<> • {t(inv===1?"hr.dashboard.openInvoiceSingle":"hr.dashboard.openInvoicePlural",{count:inv})}</>:null;
           return myOpen?<> • {t(myOpen===1?"hr.dashboard.taskSingle":"hr.dashboard.taskPlural",{count:myOpen})}</>:null;})()}</div>
     </div>
+
+    {/* HR Suite Tranche H3 - role-aware action stack. "What requires my attention today?" instead
+       of "what data do I have?", ordered by urgency. Same visual pattern as EmpHome's attention
+       stack (employer transformation E1), composed from A.hrAttentionQueue(role, userId) - a
+       selector over data the store already has loaded, not a new endpoint. */}
+    <_HrAttentionStack A={A} emp={emp}/>
 
     <div className={`grid gap-3 mb-6 ${mob?"grid-cols-2":"grid-cols-4"}`}>
       {kpis.map(k=><Card key={k.label} pad={mob?18:22} style={{borderRadius:16}}>
@@ -429,6 +488,208 @@ export function HrProfile(){
       </div>
     </div>
   </div>;
+}
+
+/* ─── HR Suite Tranche H4: Employee Profile as the central HR object ───
+   Distinct from HrProfile above (which is always MY OWN editable profile). This page views ANY
+   employee (self included) read-only, tabbed, and is the landing spot every module's "open this
+   person" link (attendance exception, leave approval, task assignee, directory card) points at -
+   the plan's "one click -> employee profile, back-nav returns to the module" interconnection. */
+const HR_PROFILE_TABS=(canSalary)=>["about","attendance","leave","tasks","training","documents",...(canSalary?["salary"]:[]),"communication"];
+export function HrProfilePage(){
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
+  const viewer=A.hrCurrentEmp();
+  const targetId=A.hrEmpId||viewer?.id;
+  const [data,setData]=useState(null);
+  const [tab,setTab]=useState(A.hrProfileDeepLinkTab||"about");
+  useEffect(()=>{
+    let off=false;
+    setData(null);
+    A.hrLoadEmployeeProfile(targetId).then(r=>{if(!off)setData(r);});
+    setTab(A.hrProfileDeepLinkTab||"about");
+    A.setHrProfileDeepLinkTab?.(null); // consumed - a later visit to this same page defaults to About again
+    return ()=>{off=true;};
+    /* eslint-disable-next-line */
+  },[targetId]);
+
+  if(!viewer)return null;
+  if(!data)return <div className="text-sm text-text-3 py-8 text-center">{t("hr.employeeProfile.loading")}</div>;
+  if(data.error)return <Banner tone="danger" icon="alert" title={t("hr.employeeProfile.notFoundTitle")}>{data.error}</Banner>;
+
+  const emp=data.employee;
+  const isSelf=emp.id===viewer.id;
+  const tabs=HR_PROFILE_TABS(data.canViewSalary);
+  const TAB_LABEL={about:t("hr.employeeProfile.tabAbout"),attendance:t("hr.employeeProfile.tabAttendance"),
+    leave:t("hr.employeeProfile.tabLeave"),tasks:t("hr.employeeProfile.tabTasks"),training:t("hr.employeeProfile.tabTraining"),
+    documents:t("hr.employeeProfile.tabDocuments"),salary:t("hr.employeeProfile.tabSalary"),communication:t("hr.employeeProfile.tabCommunication")};
+  const TAB_ICON={about:"user",attendance:"clock",leave:"calendar",tasks:"check",training:"cap",documents:"file",salary:"wallet",communication:"mail"};
+
+  const tenureYears=emp.hired?Math.round(((Date.now()-new Date(emp.hired).getTime())/(365.25*24*3600*1000))*10)/10:null;
+
+  return <div>
+    <Card pad={mob?20:26} style={{borderRadius:18,marginBottom:20}}>
+      <div className={`flex gap-4 ${mob?"flex-col":"items-center"}`}>
+        <SmartPortrait seed={emp.seed} size={72} radius={18}/>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="text-xl font-bold text-text tracking-tight">{emp.name}</div>
+            <EmploymentStatusPill status={data.employmentStatus} label={t(`hr.employeeProfile.status.${data.employmentStatus}`)}/>
+            {data.isProbationHeuristic&&<Tag tone="neutral" sm icon="info">{t("hr.employeeProfile.probationHeuristicNote")}</Tag>}
+          </div>
+          <div className="text-sm text-text-2 mt-1">{emp.title}</div>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-3 mt-2">
+            {data.department&&<span>{t("hr.employeeProfile.departmentPrefix")} {data.department.name}</span>}
+            {data.manager&&<button onClick={()=>A.openHrEmployeeProfile(data.manager.id)} className="bg-transparent border-0 p-0 cursor-pointer text-brand font-semibold">{t("hr.employeeProfile.managerPrefix")} {data.manager.name}</button>}
+            {tenureYears!=null&&<span>{t("hr.employeeProfile.tenurePrefix")} {t("hr.profile.tenureYears",{years:tenureYears})}</span>}
+          </div>
+        </div>
+        {isSelf&&<Btn kind="outline" size="sm" icon="edit" onClick={()=>A.go("hrProfile")}>{t("hr.employeeProfile.editMyProfileBtn")}</Btn>}
+      </div>
+    </Card>
+
+    <div className="flex gap-1 mb-5 overflow-x-auto border-b border-line">
+      {tabs.map(k=><button key={k} onClick={()=>setTab(k)}
+        className={`bg-transparent border-0 py-2.5 px-3.5 cursor-pointer text-sm flex gap-1.5 items-center shrink-0 transition-colors duration-150 -mb-px border-b-2 ${tab===k?"font-bold text-brand border-brand":"font-medium text-text-2 border-transparent"}`}>
+        <I n={TAB_ICON[k]} s={15}/>{TAB_LABEL[k]}
+      </button>)}
+    </div>
+
+    {tab==="about"&&<_HrProfileAboutTab A={A} emp={emp} data={data}/>}
+    {tab==="attendance"&&<_HrProfileAttendanceTab A={A} empId={emp.id}/>}
+    {tab==="leave"&&<_HrProfileLeaveTab A={A} empId={emp.id}/>}
+    {tab==="tasks"&&<_HrProfileTasksTab A={A} empId={emp.id}/>}
+    {tab==="training"&&<_HrProfileTrainingTab A={A} empId={emp.id}/>}
+    {tab==="documents"&&<Card pad={22} style={{borderRadius:16}}><_MyDocuments empId={emp.id}/></Card>}
+    {tab==="salary"&&data.canViewSalary&&<_HrProfileSalaryTab emp={emp}/>}
+    {tab==="communication"&&<_HrProfileCommunicationTab A={A} emp={emp} isSelf={isSelf}/>}
+  </div>;
+}
+
+function _HrProfileAboutTab({A,emp,data}){
+  const {t}=useTranslation();
+  return <div className="grid gap-4" style={{gridTemplateColumns:"1.3fr 1fr"}}>
+    <Card pad={22} style={{borderRadius:16}}>
+      <Lbl>{t("hr.employeeProfile.detailsLabel")}</Lbl>
+      <div className="grid grid-cols-2 gap-3 text-sm">
+        <div><div className="text-xs text-text-3">{t("hr.profile.emailLabel")}</div><div className="text-text font-medium mt-0.5">{emp.email||"—"}</div></div>
+        <div><div className="text-xs text-text-3">{t("hr.profile.phoneLabel")}</div><div className="text-text font-medium mt-0.5">{emp.phone||"—"}</div></div>
+        <div><div className="text-xs text-text-3">{t("hr.profile.cityLabel")}</div><div className="text-text font-medium mt-0.5">{emp.city||"—"}</div></div>
+        <div><div className="text-xs text-text-3">{t("hrPeople.manage.thRole")}</div><div className="text-text font-medium mt-0.5">{A.HR_ROLES.find(r=>r.k===emp.role)?.label||emp.role}</div></div>
+      </div>
+      {emp.skills?.length>0&&<div className="mt-4">
+        <div className="text-xs text-text-3 mb-1.5">{t("hr.profile.skillsLabel")}</div>
+        <div className="flex flex-wrap gap-1.5">{emp.skills.map(s=><Tag key={s} sm icon="sparkle">{s}</Tag>)}</div>
+      </div>}
+      {emp.badges?.length>0&&<div className="mt-4">
+        <div className="text-xs text-text-3 mb-1.5">{t("hr.profile.visibilityBadges")}</div>
+        <div className="flex flex-wrap gap-1.5">{emp.badges.map(b=><Tag key={b.name} tone="warn" sm icon="award">{b.name}</Tag>)}</div>
+      </div>}
+    </Card>
+    <Card pad={22} style={{borderRadius:16}}>
+      <Lbl>{t("hr.timeline.title")}</Lbl>
+      <HrTimeline empId={emp.id}/>
+    </Card>
+  </div>;
+}
+
+function _HrProfileAttendanceTab({A,empId}){
+  const {t,locale}=useTranslation();
+  const rows=A.hrAttendance.filter(a=>a.employee===empId).sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const pg=usePagination(rows,15);
+  if(rows.length===0)return <Card pad={22} style={{borderRadius:16}}><Empty icon="clock" title={t("hr.employeeProfile.noAttendance")}/></Card>;
+  return <Card pad={0} style={{borderRadius:16,overflow:"hidden"}}>
+    <div className="overflow-x-auto"><table className="w-full border-collapse">
+      <thead><tr className="border-b-2 border-line text-left">
+        {[t("hr.employeeProfile.thDate"),t("hr.dashboard.attendanceTodayLabel"),t("hrPeople.manage.thStatus")].map(h=><th key={h} className={TH_CLS}>{h}</th>)}
+      </tr></thead>
+      <tbody>{pg.pageItems.map(a=><tr key={a.id} className="border-b border-line-soft">
+        <td className={TD_CLS}>{new Date(a.date).toLocaleDateString(locale==="fr"?"fr-CA":"en-CA",{month:"short",day:"numeric",year:"numeric"})}</td>
+        <td className={`${TD_CLS} text-sm text-text-2`}>{a.clockIn||"—"} → {a.clockOut||"—"}</td>
+        <td className={TD_CLS}>{a.late?<Tag tone="warn" sm>{t("hr.employeeProfile.late")}</Tag>:<Tag tone="ok" sm>{t("hr.employeeProfile.onTime")}</Tag>}</td>
+      </tr>)}</tbody>
+    </table></div>
+    <div className="p-3"><Pagination {...pg}/></div>
+  </Card>;
+}
+
+function _HrProfileLeaveTab({A,empId}){
+  const {t,locale}=useTranslation();
+  const rows=A.hrLeave.filter(l=>l.employee===empId).sort((a,b)=>b.requestedAt-a.requestedAt);
+  if(rows.length===0)return <Card pad={22} style={{borderRadius:16}}><Empty icon="calendar" title={t("hr.employeeProfile.noLeave")}/></Card>;
+  return <Card pad={22} style={{borderRadius:16}}>
+    <div className="flex flex-col gap-2">
+      {rows.map(l=><div key={l.id} className="flex justify-between items-center py-2.5 px-3 bg-bg rounded-lg">
+        <div><div className="text-sm font-semibold text-text">{l.type}</div>
+          <div className="text-xs text-text-3 mt-0.5">{l.from} → {l.to} ({l.days}d)</div></div>
+        <Tag tone={l.status==="approved"?"ok":l.status==="pending"?"warn":"danger"} sm>{l.status}</Tag>
+      </div>)}
+    </div>
+  </Card>;
+}
+
+function _HrProfileTasksTab({A,empId}){
+  const {t}=useTranslation();
+  const rows=A.hrTasks.filter(x=>x.assignee===empId);
+  if(rows.length===0)return <Card pad={22} style={{borderRadius:16}}><Empty icon="check" title={t("hr.dashboard.noOpenTasks")}/></Card>;
+  return <Card pad={22} style={{borderRadius:16}}>
+    <div className="flex flex-col gap-2">
+      {rows.map(task=><div key={task.id} className="flex gap-3 items-center py-2.5 px-3 bg-bg rounded-lg">
+        <Tag tone={task.status==="done"?"ok":"neutral"} sm>{task.status}</Tag>
+        <div className="flex-1 min-w-0"><div className="text-sm font-semibold text-text">{task.title}</div>
+          <div className="text-xs text-text-3 mt-0.5">{t("hr.dashboard.dueLabel")} {task.due}</div></div>
+        <Tag tone={task.priority==="high"?"danger":task.priority==="medium"?"warn":"neutral"} sm>{task.priority}</Tag>
+      </div>)}
+    </div>
+  </Card>;
+}
+
+function _HrProfileTrainingTab({A,empId}){
+  const {t,locale}=useTranslation();
+  const now=Date.now();
+  const rows=(A.hrEvents||[]).filter(ev=>ev.type==="training"&&(ev.invitees==="all"||(ev.invitees||"").split(",").includes(empId)));
+  const upcoming=rows.filter(ev=>new Date(ev.when).getTime()>=now);
+  const completed=rows.filter(ev=>new Date(ev.when).getTime()<now);
+  if(rows.length===0)return <Card pad={22} style={{borderRadius:16}}><Empty icon="cap" title={t("hr.employeeProfile.noTraining")}/></Card>;
+  const Row=ev=><div key={ev.id} className="flex justify-between items-center py-2.5 px-3 bg-bg rounded-lg">
+    <div className="text-sm font-semibold text-text">{ev.title}</div>
+    <div className="text-xs text-text-3">{new Date(ev.when).toLocaleDateString(locale==="fr"?"fr-CA":"en-CA",{month:"short",day:"numeric",year:"numeric"})}</div>
+  </div>;
+  return <div className="flex flex-col gap-4">
+    {upcoming.length>0&&<Card pad={22} style={{borderRadius:16}}><Lbl>{t("hr.employeeProfile.upcomingTraining")}</Lbl>
+      <div className="flex flex-col gap-2">{upcoming.map(Row)}</div></Card>}
+    {completed.length>0&&<Card pad={22} style={{borderRadius:16}}><Lbl>{t("hr.employeeProfile.completedTraining")}</Lbl>
+      <div className="flex flex-col gap-2">{completed.map(Row)}</div></Card>}
+  </div>;
+}
+
+/* Server already strips salary/hourlyRate/benefits from the payload when the viewer isn't
+   allowed to see them (canViewSalary=false) - this tab only ever renders when the caller already
+   checked data.canViewSalary, so there's nothing left to gate here client-side. */
+function _HrProfileSalaryTab({emp}){
+  const {t}=useTranslation();
+  return <Card pad={22} style={{borderRadius:16}}>
+    <div className="grid grid-cols-2 gap-4">
+      <div><div className="text-xs text-text-3">{emp.payType==="hourly"?t("hrPeople.manage.hourlyRateCad"):t("hrPeople.manage.annualSalaryCad")}</div>
+        <div className="text-2xl font-bold text-text mt-1">${(emp.payType==="hourly"?emp.hourlyRate:emp.salary)?.toLocaleString()||"—"}</div></div>
+      {emp.benefitsPlan&&<div><div className="text-xs text-text-3">{t("hrPeople.manage.benefitsPlan")}</div>
+        <div className="text-sm font-semibold text-text mt-1">{emp.benefitsPlan} · {emp.benefitsTier||"Employee"}</div></div>}
+    </div>
+  </Card>;
+}
+
+function _HrProfileCommunicationTab({A,emp,isSelf}){
+  const {t}=useTranslation();
+  const viewer=A.hrCurrentEmp();
+  const existingChat=(A.hrChats||[]).find(c=>c.kind==="dm"&&c.members!=="all"&&c.members.split(",").includes(emp.id)&&c.members.split(",").includes(viewer.id));
+  return <Card pad={22} style={{borderRadius:16}}>
+    {isSelf?<div className="text-sm text-text-3">{t("hr.employeeProfile.thisIsYou")}</div>:<>
+      <p className="text-sm text-text-2 mb-3.5">{t("hr.employeeProfile.communicationBody",{name:emp.name})}</p>
+      <Btn kind="primary" icon="mail" onClick={async()=>{
+        if(!existingChat)await A.createHrChat({kind:"dm",name:emp.name,members:`${viewer.id},${emp.id}`,about:t("hr.chat.directMessageAbout")});
+        A.go("hrChat");
+      }}>{existingChat?t("hr.employeeProfile.openChatBtn"):t("hr.employeeProfile.startChatBtn")}</Btn>
+    </>}
+  </Card>;
 }
 
 /* H1 - Recruit -> Hire -> Employee handoff: first-visit (and ongoing) opt-in offer to keep this

@@ -39,7 +39,7 @@ import {
   EmpStaffing, EmpStaffingTimesheets, EmpStaffingInvoices, EmpStaffingAssignments, EmpStaffingRequests,
 } from "./pages/employer/staffing.jsx";
 import {
-  HrLoginPage, HrDashboard, HrProfile, HrAttendance, HrLeave, HrTasks, HrCalendar, HrChat,
+  HrLoginPage, HrDashboard, HrProfile, HrProfilePage, HrAttendance, HrLeave, HrTasks, HrCalendar, HrChat,
   HrInvoices, HrPayroll, HrTrainings, HrBadges, HrHiring, HrReports, HrSettings, HrIntegrations, HrPolicies, HrRoster,
 } from "./pages/hr/suite.jsx";
 import { HrPeoplePage, HrExpensesPage } from "./pages/hr/people.jsx";
@@ -127,6 +127,7 @@ export default function NorthHire(){
     hrDashboard:<HrShell><HrDashboard/></HrShell>,
     hrDirectory:<HrShell><HrPeoplePage/></HrShell>, /* backward-compat: routes to new merged People */
     hrProfile:<HrShell><HrProfile/></HrShell>,
+    hrProfileView:<HrShell><HrProfilePage/></HrShell>,
     hrAttendance:<HrShell><HrAttendance/></HrShell>,
     hrLeave:<HrShell><HrLeave/></HrShell>,
     hrExpenses:<HrShell><HrExpensesPage/></HrShell>,

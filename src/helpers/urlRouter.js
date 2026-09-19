@@ -9,6 +9,9 @@ export const ID_STATE_FOR_ROUTE = {
   job: "jobId", employer: "empId", blog: "blogId", training: "trainingId",
   empCandidate: "candidateId", cvEdit: "cvId", empBlogEdit: "editId", empTrainEdit: "editId",
   invite: "inviteToken", offer: "offerToken",
+  // H4 - Employee Profile as a real, linkable page (/hr/people/:id), separate from `empId`
+  // (which is already the PUBLIC employer id used by the /employers/:id route).
+  hrProfileView: "hrEmpId",
 };
 
 export function buildPath(routes, pg, id) {

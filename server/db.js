@@ -959,6 +959,12 @@ for (const stmt of [
   // HR<->seeker profile sync above. Separate from hr_employees.badges_json, which is the
   // employer-internal badge record and is never itself shown to the public.
   "ALTER TABLE users ADD COLUMN badges_json TEXT DEFAULT '[]'",
+  // HR Suite Tranche H4 - employee-profile timeline aggregator needs to filter the shared
+  // company-wide audit log down to entries about ONE employee. Previously every audit row only
+  // recorded who performed the action (actor_employee_id), not who it was about - fine for the
+  // company-wide audit log page, useless for "show Daniel's history". Nullable and only populated
+  // going forward; older rows simply won't appear on a profile timeline.
+  "ALTER TABLE hr_audit_log ADD COLUMN target_employee_id TEXT",
 ]) {
   try { db.exec(stmt); } catch (e) { if (!/duplicate column/i.test(e.message)) console.error("migration:", stmt, e.message); }
 }

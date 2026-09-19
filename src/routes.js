@@ -71,6 +71,7 @@ export const ROUTES = {
   hrTrainings:  {titleKey:"routeTitles.hrTrainings", tab:"home", bare:true, path:"/hr/trainings"},
   hrBadges:     {titleKey:"routeTitles.hrBadges", tab:"home", bare:true, path:"/hr/badges"},
   hrPeople:     {titleKey:"routeTitles.hrPeople", tab:"home", bare:true, path:"/hr/people"},
+  hrProfileView:{titleKey:"routeTitles.hrProfileView", tab:"home", bare:true, path:"/hr/people/:id"},
   hrExpenses:   {titleKey:"routeTitles.hrExpenses", tab:"home", bare:true, path:"/hr/expenses"},
   hrHiring:     {titleKey:"routeTitles.hrHiring", tab:"home", bare:true, path:"/hr/hiring"},
   hrInvoices:   {titleKey:"routeTitles.hrInvoices", tab:"home", bare:true, path:"/hr/invoices"},

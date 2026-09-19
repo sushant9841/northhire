@@ -16,9 +16,9 @@ import { notifStringsForUser } from "../emailLocale.js";
 
 export const hrRouter = Router();
 
-function logHrAudit(companyId, actorEmployeeId, action, detail) {
-  db.prepare("INSERT INTO hr_audit_log (id, company_id, actor_employee_id, action, detail) VALUES (?, ?, ?, ?, ?)")
-    .run(nextId("al", "hr_audit_log"), companyId, actorEmployeeId, action, detail);
+function logHrAudit(companyId, actorEmployeeId, action, detail, targetEmployeeId = null) {
+  db.prepare("INSERT INTO hr_audit_log (id, company_id, actor_employee_id, action, detail, target_employee_id) VALUES (?, ?, ?, ?, ?, ?)")
+    .run(nextId("al", "hr_audit_log"), companyId, actorEmployeeId, action, detail, targetEmployeeId);
 }
 
 /* â”€â”€â”€ Auth â”€â”€â”€ */
@@ -166,6 +166,15 @@ function maskHrEmployeeForViewer(emp, viewerHrEmployee) {
   return masked;
 }
 
+// H4 - the Salary tab on an employee's profile must be gated by ROLE, not by that employee's own
+// visibility toggle (visibility.salary only controls what a colleague sees via the general
+// masking path above, and "hr" counts as isPriv() there for unrelated reasons - approving leave,
+// managing badges, etc). The transformation charter is explicit: Salary is Finance/Owner only,
+// full stop. Self is allowed to see their own number, same as the existing Manage-table behaviour.
+function canViewSalary(viewerHrEmployee, targetEmployeeId) {
+  return viewerHrEmployee.id === targetEmployeeId || ["owner", "finance"].includes(viewerHrEmployee.role);
+}
+
 /* â”€â”€â”€ Employees â”€â”€â”€ */
 hrRouter.get("/employees", requireHrAuth, (req, res) => {
   const rows = db.prepare("SELECT * FROM hr_employees WHERE company_id = ?").all(req.hrEmployee.company_id);
@@ -274,10 +283,17 @@ hrRouter.patch("/employees/:id", requireHrAuth, requireHrPriv, (req, res) => {
   }
   if (setCols.length) db.prepare(`UPDATE hr_employees SET ${setCols.join(", ")} WHERE id = ?`).run(...params, req.params.id);
   if (d.salary !== undefined && d.salary !== row.salary) {
-    logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "salary_change", `${row.name}'s salary changed from $${row.salary?.toLocaleString() ?? "â€”"} to $${d.salary.toLocaleString()}`);
+    logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "salary_change", `${row.name}'s salary changed from $${row.salary?.toLocaleString() ?? "â€”"} to $${d.salary.toLocaleString()}`, row.id);
   }
   if (d.role !== undefined && d.role !== row.role) {
-    logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "role_change", `${row.name}'s role changed from ${row.role} to ${d.role}`);
+    logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "role_change", `${row.name}'s role changed from ${row.role} to ${d.role}`, row.id);
+  }
+  // H4 timeline aggregator - a department move is as much a career-timeline event as a role
+  // change, so it gets its own audit action rather than silently disappearing into the update.
+  if (d.dept !== undefined && d.dept !== row.dept) {
+    const fromDept = db.prepare("SELECT name FROM hr_departments WHERE id = ?").get(row.dept)?.name || row.dept || "no department";
+    const toDept = db.prepare("SELECT name FROM hr_departments WHERE id = ?").get(d.dept)?.name || d.dept || "no department";
+    logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "dept_change", `${row.name} moved from ${fromDept} to ${toDept}`, row.id);
   }
   res.json({ employee: serializeHrEmployee(db.prepare("SELECT * FROM hr_employees WHERE id = ?").get(req.params.id)) });
 });
@@ -331,7 +347,7 @@ hrRouter.patch("/employees/:id/badges", requireHrAuth, requireHrPriv, async (req
   const badges = JSON.parse(row.badges_json || "[]").filter(b => b.name !== badge);
   if (!remove) badges.push({ name: badge, awardedAt: new Date().toISOString() });
   db.prepare("UPDATE hr_employees SET badges_json = ? WHERE id = ?").run(JSON.stringify(badges), req.params.id);
-  logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, remove ? "badge_removed" : "badge_awarded", `${remove ? "Removed" : "Awarded"} "${badge}" ${remove ? "from" : "to"} ${row.name}`);
+  logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, remove ? "badge_removed" : "badge_awarded", `${remove ? "Removed" : "Awarded"} "${badge}" ${remove ? "from" : "to"} ${row.name}`, row.id);
   if (!remove && !row.erased) await sendAndLogMail(row.email, `You earned a badge: ${badge}`, `${req.hrEmployee.name} awarded you the "${badge}" badge. Check the badge wall in HR Suite to see it.`);
   // H1: a badge earned in HR Suite (recognition, or completing a training - HR-03) publishes
   // onto the employee's public NorthHire seeker profile automatically once they've opted in to
@@ -349,6 +365,65 @@ hrRouter.patch("/employees/:id/badges", requireHrAuth, requireHrPriv, async (req
     }
   }
   res.json({ employee: serializeHrEmployee(db.prepare("SELECT * FROM hr_employees WHERE id = ?").get(req.params.id)) });
+});
+
+// H4 - Employee Profile as the central HR object: one endpoint that returns everything the
+// tabbed profile page's "About" hero needs (department/manager names, tenure, employment status,
+// whether they're on leave today) plus a hard `canViewSalary` flag so the client never has to
+// guess whether to render the Salary tab - and even if it guessed wrong, the salary/hourlyRate/
+// benefits fields below are stripped server-side regardless of what maskHrEmployeeForViewer
+// would otherwise have allowed through for an owner/admin/hr "isPriv" viewer.
+hrRouter.get("/employees/:id/profile", requireHrAuth, (req, res) => {
+  const row = db.prepare("SELECT * FROM hr_employees WHERE id = ? AND company_id = ?").get(req.params.id, req.hrEmployee.company_id);
+  if (!row) return res.status(404).json({ error: "Employee not found." });
+  const canSalary = canViewSalary(req.hrEmployee, row.id);
+  let employee = maskHrEmployeeForViewer(serializeHrEmployee(row), req.hrEmployee);
+  if (!canSalary) employee = { ...employee, salary: null, hourlyRate: null, benefitsPerPay: null, benefitsPlan: null, benefitsTier: null };
+  const dept = row.dept ? db.prepare("SELECT id, name, color FROM hr_departments WHERE id = ?").get(row.dept) : null;
+  const manager = row.manager ? db.prepare("SELECT id, name, title, seed FROM hr_employees WHERE id = ?").get(row.manager) : null;
+  const today = new Date().toISOString().slice(0, 10);
+  const onLeaveToday = !!db.prepare(
+    `SELECT 1 FROM hr_leave WHERE employee_id = ? AND status = 'approved' AND from_date <= ? AND to_date >= ? LIMIT 1`
+  ).get(row.id, today, today);
+  // No probation field exists in the schema - a real "on probation" status is approximated from
+  // hire date (< 90 days). Flagged in the response as a heuristic (isProbationHeuristic) so the
+  // client can label it distinctly rather than implying it's an authoritative HR-set status.
+  const daysSinceHire = row.hired ? Math.floor((Date.now() - sqlTime(row.hired).getTime()) / 86400000) : null;
+  const employmentStatus = row.status === "terminated" ? "terminated" : onLeaveToday ? "onLeave" : (daysSinceHire != null && daysSinceHire < 90) ? "probation" : "active";
+  res.json({
+    employee, canViewSalary: canSalary, department: dept || null, manager: manager || null,
+    employmentStatus, isProbationHeuristic: employmentStatus === "probation",
+  });
+});
+
+// H4 - Timeline aggregator: role changes, department moves, salary changes (only surfaced if this
+// viewer is allowed to see salary at all - see canViewSalary), leave events and badge/training
+// completions, chronological and paginated. Simple offset pagination is enough here (audit rows
+// and leave/events for one employee are a small, slow-growing set; no need for cursor tokens).
+hrRouter.get("/employees/:id/timeline", requireHrAuth, (req, res) => {
+  const row = db.prepare("SELECT * FROM hr_employees WHERE id = ? AND company_id = ?").get(req.params.id, req.hrEmployee.company_id);
+  if (!row) return res.status(404).json({ error: "Employee not found." });
+  const canSalary = canViewSalary(req.hrEmployee, row.id);
+  const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 100);
+  const offset = Math.max(Number(req.query.offset) || 0, 0);
+
+  const auditRows = db.prepare(
+    `SELECT id, action, detail, created_at FROM hr_audit_log WHERE target_employee_id = ? ${canSalary ? "" : "AND action != 'salary_change'"} ORDER BY created_at DESC`
+  ).all(row.id);
+  const leaveRows = db.prepare(
+    `SELECT id, type, from_date, to_date, status, requested_at FROM hr_leave WHERE employee_id = ? AND status = 'approved' ORDER BY requested_at DESC`
+  ).all(row.id);
+  const invitees = db.prepare(`SELECT id, title, event_date, type, invitees FROM hr_events WHERE company_id = ? AND type = 'training'`).all(row.company_id)
+    .filter(ev => ev.invitees === "all" || (ev.invitees || "").split(",").includes(row.id))
+    .filter(ev => ev.event_date && new Date(ev.event_date).getTime() < Date.now()); // "completed" heuristic: the training's date has passed
+
+  const entries = [
+    ...auditRows.map(a => ({ id: `audit-${a.id}`, kind: a.action, label: a.detail, at: sqlTime(a.created_at).getTime() })),
+    ...leaveRows.map(l => ({ id: `leave-${l.id}`, kind: "leave", label: `${l.type} leave: ${l.from_date} → ${l.to_date}`, at: sqlTime(l.requested_at).getTime() })),
+    ...invitees.map(ev => ({ id: `training-${ev.id}`, kind: "training_completed", label: `Completed training: ${ev.title}`, at: new Date(ev.event_date).getTime() })),
+  ].sort((a, b) => b.at - a.at);
+
+  res.json({ entries: entries.slice(offset, offset + limit), total: entries.length, nextOffset: offset + limit < entries.length ? offset + limit : null });
 });
 
 /* â”€â”€â”€ Documents â”€â”€â”€ */

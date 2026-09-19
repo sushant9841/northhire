@@ -634,6 +634,84 @@ export function useHrStore(){
       priorHRSystem:{connected:true,vendor,lastImport:new Date().toISOString()}}});
   };
 
+  /* --- H4: Employee Profile as central object --- */
+  const hrLoadEmployeeProfile=async(empId)=>{
+    try{return await api.get(`/hr/employees/${empId}/profile`);}
+    catch(e){return {error:e.message};}
+  };
+  const hrLoadEmployeeTimeline=async(empId,{limit=20,offset=0}={})=>{
+    try{return await api.get(`/hr/employees/${empId}/timeline?limit=${limit}&offset=${offset}`);}
+    catch(e){return {entries:[],total:0,nextOffset:null};}
+  };
+
+  /* --- H3: role-aware "what needs my attention today?" ---
+     A single selector composing store data already loaded (hrLeave/hrTasks/hrAttendance/
+     hrEvents/hrInvoices/hrPayruns/hrExpenses) rather than a new endpoint - matches the pattern
+     already used on EmpHome's attention stack. Kept as a plain function (not useMemo) since the
+     caller (HrDashboard) already re-renders on every store update these depend on; memoising here
+     would just be a second, easily-stale cache of the same computation. */
+  const hrAttentionQueue=(role,userId)=>{
+    const items=[];
+    const now=Date.now(); const dayMs=86400000;
+    const today=_fmtDateISO(new Date());
+    if(role==="owner"){
+      const pendingRoleChanges=hrAuditLog.filter(a=>a.action==="role_change"&&(now-new Date(a.at||a.createdAt||now).getTime())<7*dayMs);
+      if(pendingRoleChanges.length)items.push({key:"roleChanges",icon:"users",tone:"warn",n:pendingRoleChanges.length,go:"hrRoster"});
+      const overuseLeave=hrLeave.filter(l=>l.status==="pending");
+      if(overuseLeave.length)items.push({key:"leaveOveruse",icon:"calendar",tone:"warn",n:overuseLeave.length,go:"hrLeave"});
+      const openInvoices=hrInvoices.filter(i=>i.status==="pending"||i.status==="overdue");
+      if(openInvoices.length)items.push({key:"invoicesDue",icon:"wallet",tone:openInvoices.some(i=>i.status==="overdue")?"danger":"neutral",n:openInvoices.length,go:"hrInvoices"});
+      const scheduledPayruns=hrPayruns.filter(p=>p.status==="scheduled");
+      if(scheduledPayruns.length)items.push({key:"payrollDue",icon:"wallet",tone:"neutral",n:scheduledPayruns.length,go:"hrPayroll"});
+    }else if(role==="admin"){
+      const pendingInvites=hrEmployees.filter(e=>e.status==="pending");
+      if(pendingInvites.length)items.push({key:"pendingInvites",icon:"user",tone:"neutral",n:pendingInvites.length,go:"hrPeople"});
+      const roleChangesToReview=hrAuditLog.filter(a=>a.action==="role_change"&&(now-new Date(a.at||a.createdAt||now).getTime())<7*dayMs);
+      if(roleChangesToReview.length)items.push({key:"roleChanges",icon:"shield",tone:"warn",n:roleChangesToReview.length,go:"hrRoster"});
+      const pendingLeave=hrLeave.filter(l=>l.status==="pending");
+      if(pendingLeave.length)items.push({key:"leaveOveruse",icon:"calendar",tone:"warn",n:pendingLeave.length,go:"hrLeave"});
+    }else if(role==="hr"){
+      const lateToday=hrAttendance.filter(a=>a.date===today&&a.late);
+      if(lateToday.length)items.push({key:"attendanceLate",icon:"clock",tone:"warn",n:lateToday.length,go:"hrAttendance"});
+      const missedClockOut=hrAttendance.filter(a=>{
+        const yesterday=_fmtDateISO(new Date(now-dayMs));
+        return a.date===yesterday&&!a.clockOut;
+      });
+      if(missedClockOut.length)items.push({key:"attendanceMissedOut",icon:"alert",tone:"danger",n:missedClockOut.length,go:"hrAttendance"});
+      const pendingLeave=hrLeave.filter(l=>l.status==="pending");
+      if(pendingLeave.length)items.push({key:"leavePending",icon:"calendar",tone:"warn",n:pendingLeave.length,go:"hrLeave"});
+      const tasksDueToday=hrTasks.filter(t=>t.status!=="done"&&t.due===today);
+      if(tasksDueToday.length)items.push({key:"tasksDueToday",icon:"check",tone:"neutral",n:tasksDueToday.length,go:"hrTasks"});
+      const upcomingInterviews=(hrEvents||[]).filter(ev=>ev.type==="interview"&&new Date(ev.when||ev.event_date||0).getTime()>=now-6*3600*1000&&new Date(ev.when||ev.event_date||0).getTime()<=now+24*3600*1000);
+      if(upcomingInterviews.length)items.push({key:"upcomingInterviews",icon:"calendar",tone:"neutral",n:upcomingInterviews.length,go:"hrCalendar"});
+      const overdueTraining=(hrEvents||[]).filter(ev=>ev.type==="training"&&new Date(ev.when||ev.event_date||0).getTime()<now);
+      if(overdueTraining.length)items.push({key:"trainingOverdue",icon:"cap",tone:"warn",n:overdueTraining.length,go:"hrTrainings"});
+      const newHires=hrEmployees.filter(e=>e.status==="active"&&(now-new Date(e.hired||now).getTime())<14*dayMs);
+      if(newHires.length)items.push({key:"newHires",icon:"sparkle",tone:"ok",n:newHires.length,go:"hrPeople"});
+    }else if(role==="finance"){
+      const scheduledPayruns=hrPayruns.filter(p=>p.status==="scheduled");
+      if(scheduledPayruns.length)items.push({key:"payrollDue",icon:"wallet",tone:"neutral",n:scheduledPayruns.length,go:"hrPayroll"});
+      const invoicesDue=hrInvoices.filter(i=>i.status==="pending"||i.status==="overdue");
+      if(invoicesDue.length)items.push({key:"invoicesDue",icon:"file",tone:invoicesDue.some(i=>i.status==="overdue")?"danger":"neutral",n:invoicesDue.length,go:"hrInvoices"});
+      const expensesWaiting=hrExpenses.filter(x=>x.status==="submitted");
+      if(expensesWaiting.length)items.push({key:"expensesWaiting",icon:"check",tone:"neutral",n:expensesWaiting.length,go:"hrExpenses"});
+      const paidRuns=hrPayruns.filter(p=>p.status==="paid");
+      if(paidRuns.length)items.push({key:"registerExportReady",icon:"download",tone:"ok",n:paidRuns.length,go:"hrPayroll"});
+    }else{ // employee
+      const myTasksToday=hrTasks.filter(t=>t.status!=="done"&&t.assignee===userId&&t.due===today);
+      if(myTasksToday.length)items.push({key:"myTasksDueToday",icon:"check",tone:"neutral",n:myTasksToday.length,go:"hrTasks"});
+      const myUpcomingEvents=hrEvents.filter(ev=>new Date(ev.when||ev.event_date||0).getTime()>=now&&new Date(ev.when||ev.event_date||0).getTime()<=now+7*dayMs&&(ev.invitees==="all"||(ev.invitees||"").split(",").includes(userId)));
+      if(myUpcomingEvents.length)items.push({key:"myUpcomingEvents",icon:"calendar",tone:"neutral",n:myUpcomingEvents.length,go:"hrCalendar"});
+      const myOpenTraining=hrEvents.filter(ev=>ev.type==="training"&&new Date(ev.when||ev.event_date||0).getTime()>now&&(ev.invitees==="all"||(ev.invitees||"").split(",").includes(userId)));
+      if(myOpenTraining.length)items.push({key:"myTrainingProgress",icon:"cap",tone:"neutral",n:myOpenTraining.length,go:"hrTrainings"});
+      const myLeaveDecided=hrLeave.filter(l=>l.employee===userId&&l.status!=="pending");
+      // Not urgent by itself - the employee's own dashboard already surfaces clock-in state and
+      // leave balance in the KPI tiles; the attention stack only needs items that require action.
+    }
+    return items;
+  };
+  const _fmtDateISO=d=>d.toISOString().slice(0,10);
+
   /* --- Role-gated module visibility --- */
   const modulesForRole=(role)=>{
     const base=["dashboard","directory","profile","chat","calendar","tasks","expenses","policies","roster"];
@@ -677,6 +755,7 @@ return {
     connectPunchMachine,connectPriorSystem,
     loadEmployeeDocuments,uploadEmployeeDocument,downloadEmployeeDocument,deleteEmployeeDocument,
     modulesForRole,canAccessModule,
+    hrLoadEmployeeProfile,hrLoadEmployeeTimeline,hrAttentionQueue,
     HR_DEPARTMENTS,HR_ROLES,PUNCH_VENDORS,PRIOR_HR_VENDORS,
   };
 }

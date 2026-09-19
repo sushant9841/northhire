@@ -3,7 +3,7 @@ import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C, SH } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
-import { Btn, Card, Tag, Field, Input, Sel, Area, Banner, Modal, SmartPortrait, Empty, Stat, ConfirmDialog, Lbl, Switch, usePagination, Pagination, TH_CLASS, TD_CLASS } from "../../design/primitives.jsx";
+import { Btn, Card, Tag, Field, Input, Sel, Area, Banner, Modal, SmartPortrait, Empty, Stat, ConfirmDialog, Lbl, Switch, usePagination, Pagination, TH_CLASS, TD_CLASS, EmploymentStatusPill } from "../../design/primitives.jsx";
 import { _fmtDate } from "../../helpers/utils.js";
 import { HR_ROLES } from "../../store/seed/hrCompanySettings.js";
 import { HR_DEPARTMENTS } from "../../store/seed/hrDepartments.js";
@@ -43,16 +43,42 @@ export function HrPeoplePage(){
   </div>;
 }
 
+/* HR Suite Tranche H4 - Directory redesign: same employment-status vocabulary as the profile
+   hero (active/onLeave/probation/terminated). Client-side approximation mirrors the server's
+   heuristic in GET /hr/employees/:id/profile (probation = hired < 90 days ago) since the bulk
+   /hr/employees list the Directory already has loaded doesn't carry a computed status - only a
+   raw active/terminated flag. "On leave" checks today's date against this employee's own
+   approved leave rows already in the store (A.hrLeave), no extra fetch needed. */
+function _employmentStatus(e,hrLeave){
+  if(e.status==="terminated")return "terminated";
+  const today=new Date().toISOString().slice(0,10);
+  const onLeave=hrLeave.some(l=>l.employee===e.id&&l.status==="approved"&&l.from<=today&&l.to>=today);
+  if(onLeave)return "onLeave";
+  const daysSinceHire=e.hired?Math.floor((Date.now()-new Date(e.hired).getTime())/86400000):null;
+  if(daysSinceHire!=null&&daysSinceHire<90)return "probation";
+  return "active";
+}
+const EMPLOYMENT_STATUS_LABEL_KEY={active:"hrPeople.directory.statusActive",onLeave:"hrPeople.directory.statusOnLeave",
+  probation:"hrPeople.directory.statusProbation",terminated:"hrPeople.directory.statusTerminated"};
+
 /* ─── Directory: searchable list of everyone ─── */
 function HrPeople_Directory(){
   const A=use(); const mob=useMedia("(max-width: 900px)"); const {t}=useTranslation();
   const [q,setQ]=useState(""); const [deptFilter,setDeptFilter]=useState("all");
+  const [roleFilter,setRoleFilter]=useState("all"); const [locFilter,setLocFilter]=useState("all");
+  const [statusFilter,setStatusFilter]=useState("all");
   const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
   if(!emp||!company)return null;
-  const all=A.hrEmpsAtCompany(company.id).filter(e=>e.status==="active");
+  const all=A.hrEmpsAtCompany(company.id);
   const depts=A.hrDeptsAtCompany?.(company.id)||A.HR_DEPARTMENTS;
+  const locations=[...new Set(all.map(e=>e.city).filter(Boolean))].sort();
   const filtered=all.filter(e=>{
     if(deptFilter!=="all"&&e.dept!==deptFilter)return false;
+    if(roleFilter!=="all"&&e.role!==roleFilter)return false;
+    if(locFilter!=="all"&&e.city!==locFilter)return false;
+    const status=_employmentStatus(e,A.hrLeave);
+    if(statusFilter!=="all"&&status!==statusFilter)return false;
+    if(statusFilter==="all"&&status==="terminated")return false; // terminated hidden unless explicitly filtered for
     if(!q.trim())return true;
     const s=q.toLowerCase();
     return e.name.toLowerCase().includes(s)||e.title?.toLowerCase().includes(s)||e.email.toLowerCase().includes(s);
@@ -69,9 +95,21 @@ function HrPeople_Directory(){
   return <div>
     <div className="flex gap-2.5 mb-4 flex-wrap">
       <Input icon="search" placeholder={t("hrPeople.directory.searchPlaceholder")} value={q} onChange={e=>setQ(e.target.value)} style={{flex:"1 1 260px"}}/>
-      <Sel value={deptFilter} onChange={e=>setDeptFilter(e.target.value)} style={{minWidth:180}}>
+      <Sel value={deptFilter} onChange={e=>setDeptFilter(e.target.value)} style={{minWidth:170}}>
         <option value="all">{t("hrPeople.directory.allDepartments")}</option>
         {depts.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}
+      </Sel>
+      <Sel value={roleFilter} onChange={e=>setRoleFilter(e.target.value)} style={{minWidth:150}}>
+        <option value="all">{t("hrPeople.directory.allRoles")}</option>
+        {A.HR_ROLES.map(r=><option key={r.k} value={r.k}>{r.label}</option>)}
+      </Sel>
+      <Sel value={locFilter} onChange={e=>setLocFilter(e.target.value)} style={{minWidth:150}}>
+        <option value="all">{t("hrPeople.directory.allLocations")}</option>
+        {locations.map(loc=><option key={loc} value={loc}>{loc}</option>)}
+      </Sel>
+      <Sel value={statusFilter} onChange={e=>setStatusFilter(e.target.value)} style={{minWidth:150}}>
+        <option value="all">{t("hrPeople.directory.allStatuses")}</option>
+        {["active","onLeave","probation","terminated"].map(s=><option key={s} value={s}>{t(EMPLOYMENT_STATUS_LABEL_KEY[s])}</option>)}
       </Sel>
       <Btn kind="outline" size="sm" icon="download" onClick={exportDirectory}>{filtered.length<all.length?t("hrPeople.directory.exportFiltered",{n:filtered.length}):t("hrPeople.directory.exportCsv")}</Btn>
       <Btn kind="outline" size="sm" icon="file" onClick={()=>window.print()}>{t("hrPeople.directory.printDirectory")}</Btn>
@@ -79,7 +117,9 @@ function HrPeople_Directory(){
     <div className="print-target grid gap-3" style={{gridTemplateColumns:mob?"1fr":"repeat(auto-fill,minmax(280px,1fr))"}}>
       {pg.pageItems.map(e=>{const d=depts.find(x=>x.id===e.dept);
         const mgr=A.hrEmp(e.manager);
+        const status=_employmentStatus(e,A.hrLeave);
         return <Card key={e.id} pad={16} style={{borderRadius:12,cursor:"pointer",transition:"all .15s"}}
+          onClick={()=>A.openHrEmployeeProfile(e.id)}
           onMouseEnter={ev=>{ev.currentTarget.style.borderColor=C.brand;ev.currentTarget.style.boxShadow=SH.sm;}}
           onMouseLeave={ev=>{ev.currentTarget.style.borderColor=C.line;ev.currentTarget.style.boxShadow="none";}}>
           <div className="flex gap-3 items-center mb-2.5">
@@ -92,6 +132,7 @@ function HrPeople_Directory(){
           <div className="flex gap-1.5 flex-wrap mb-2.5">
             {d&&<Tag sm style={{background:d.color+"22",color:d.color,border:"1px solid "+d.color+"55"}}>{d.name}</Tag>}
             <Tag sm tone="neutral">{A.HR_ROLES.find(r=>r.k===e.role)?.label||e.role}</Tag>
+            <EmploymentStatusPill status={status} label={t(EMPLOYMENT_STATUS_LABEL_KEY[status])}/>
           </div>
           <div className="text-xs text-text-3 leading-snug">
             <div>📧 {e.email}</div>
