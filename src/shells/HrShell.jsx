@@ -190,15 +190,25 @@ export function HrShell({children}){
     </div>
   </div>;
 
+  /* H6 - "Viewing as Finance" indicator (FI-01): a small badge when the CURRENT VIEW exposes
+     financial data, independent of the viewer's own role - an Owner or Admin opening Payroll or
+     Invoices sees the exact same badge Isaac (Finance) does, so nobody mistakes "I can see this"
+     for "this is my normal, day-to-day view". */
+  const viewingFinanceData=["hrPayroll","hrInvoices"].includes(A.pg);
+
   const topbar=<div className={`bg-white border-b border-line flex gap-3 items-center sticky top-0 z-20 ${mob?"py-3 px-4":"py-3.5 px-7"}`}>
     {mob&&<button onClick={()=>setNavOpen(!navOpen)} aria-label={t("dashShell.menuAria")} className="bg-transparent border-0 cursor-pointer p-1.5 text-text flex">
       <I n="menu" s={22}/></button>}
     {!mob&&<div className="min-w-0 shrink-0">
-      <div className="text-base font-bold text-text tracking-tight">
-        {(()=>{const m=HR_MODULES.find(m=>m.k===A.pg);
-          return m?t(HR_MODULE_LABEL_KEY[m.k]||m.label):(A.pageTitle||(ROUTES[A.pg]?.titleKey&&t(ROUTES[A.pg].titleKey))||t("hrShell.hrSuiteTag"));})()}</div>
+      <div className="flex items-center gap-2">
+        <div className="text-base font-bold text-text tracking-tight">
+          {(()=>{const m=HR_MODULES.find(m=>m.k===A.pg);
+            return m?t(HR_MODULE_LABEL_KEY[m.k]||m.label):(A.pageTitle||(ROUTES[A.pg]?.titleKey&&t(ROUTES[A.pg].titleKey))||t("hrShell.hrSuiteTag"));})()}</div>
+        {viewingFinanceData&&<Tag tone="violet" sm icon="wallet">{t("hrShell.viewingAsFinance")}</Tag>}
+      </div>
       <div className="text-xs text-text-3 mt-0.5">{company?.name} • {emp?.title}</div>
     </div>}
+    {mob&&viewingFinanceData&&<Tag tone="violet" sm icon="wallet">{t("hrShell.viewingAsFinance")}</Tag>}
     <HrGlobalSearch/>
     <button onClick={()=>A.go("hrProfile")} className="flex gap-2.5 items-center bg-bg border border-line rounded-full py-1.5 pr-3 pl-1.5 cursor-pointer shrink-0">
       <SmartPortrait seed={emp.seed} size={32}/>

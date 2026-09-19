@@ -965,6 +965,15 @@ for (const stmt of [
   // company-wide audit log page, useless for "show Daniel's history". Nullable and only populated
   // going forward; older rows simply won't appear on a profile timeline.
   "ALTER TABLE hr_audit_log ADD COLUMN target_employee_id TEXT",
+  // HR Suite Tranche H6 - "invoice-to-staffing-placement link where applicable". HR Suite
+  // invoices (hr_invoices) belong to an Enterprise company's own billing of ITS clients; the
+  // staffing_placements table belongs to a separate business (a staffing agency's own workers
+  // placed with ITS clients, keyed off staffing_clients) - there's no real foreign-key
+  // relationship between the two in this schema, so this is a soft, free-text reference an
+  // invoice-issuer can fill in themselves when a given invoice does correspond to a placement
+  // they know about (e.g. a construction company invoicing for a role that a staffing agency
+  // helped fill), rather than a fabricated cross-tenant join.
+  "ALTER TABLE hr_invoices ADD COLUMN placement_ref TEXT",
 ]) {
   try { db.exec(stmt); } catch (e) { if (!/duplicate column/i.test(e.message)) console.error("migration:", stmt, e.message); }
 }

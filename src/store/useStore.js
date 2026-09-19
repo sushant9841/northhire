@@ -1429,6 +1429,23 @@ export function useStore(){
   const [hrProfileDeepLinkTab,setHrProfileDeepLinkTab]=useState(null);
   const openHrEmployeeProfile=(id,tab)=>{setHrEmpId(id);setHrProfileDeepLinkTab(tab||null);go("hrProfileView","Employee profile",id);};
 
+  /* H5 - "Message {employee} about their leave" style deep-link from any employee context
+     (attendance exception row, leave row, employee profile) straight into HR Chat with the right
+     1:1 thread pre-selected, optionally with a starter message already typed (not yet sent - the
+     sender still reviews/edits before it goes). Reuses whatever DM already exists between the two
+     people rather than spawning a duplicate thread every time. */
+  const [hrChatPrefill,setHrChatPrefill]=useState(null); /* {chatId,text} - consumed once by HrChat */
+  const openHrChatWith=async(empId,prefillText)=>{
+    const me=HR.hrCurrentEmp(); if(!me||empId===me.id)return;
+    let chat=HR.hrChats.find(c=>c.kind==="dm"&&c.members.split(",").includes(me.id)&&c.members.split(",").includes(empId));
+    if(!chat){
+      const other=HR.hrEmp(empId);
+      chat=await HR.createHrChat({kind:"dm",name:other?.name||"Direct message",members:`${me.id},${empId}`,about:"Direct message"});
+    }
+    setHrChatPrefill({chatId:chat.id,text:prefillText||""});
+    go("hrChat");
+  };
+
   /* Attribution for source-of-hire analytics. Which surface the seeker came from is only knowable
      here, at the moment they start applying — by submit time the page they arrived from is gone.
      invitedCandidates is the real record of an employer having reached out, so an application from
@@ -2213,7 +2230,7 @@ export function useStore(){
     completeness,completenessHint,tabBadges,unreadMessages,
     logout,completeSignup,saveProfile,deleteAccount,exportData,setUserSetting,setUserLocale,marketingConsent,setMarketingConsent,
     toggleSave,followEmployer,openJob,openEmployer,openBlog,openTraining,openCandidate,openCandidateInline,
-    openHrEmployeeProfile,hrProfileDeepLinkTab,setHrProfileDeepLinkTab,
+    openHrEmployeeProfile,hrProfileDeepLinkTab,setHrProfileDeepLinkTab,openHrChatWith,hrChatPrefill,setHrChatPrefill,
     beginApply,submitApply,withdraw,acceptOffer,moveApp,rejectApp,noCvGateJobId,closeNoCvGate,
     lastAppliedId,focusAppId,setFocusAppId,
     publishJob,getJobDistributeUrl,getAutofillSuggestions,recordAutofill,approveJob,toggleJobStatus,flagJob,reportJob,jobReports,loadJobReports,decideJobReport,setPipelineJob:setPipelineJobFn,saveCompany,verifyEmployer,holdEmployer,toggleSuspend,eraseUser,

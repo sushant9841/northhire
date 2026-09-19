@@ -11,3 +11,19 @@ export function defaultMessageTemplates(t){
     {id:"builtin_rejection",name:t("employer.messageTemplates.rejectionName"),body:t("employer.messageTemplates.rejectionBody")},
   ];
 }
+
+/* HR Suite Tranche H5 - "Templates" button reused from the employer console (E4) inside HR Chat.
+   Presentation-only, same builtin_* convention as above - never sent to the server, just merged
+   into the picker so an HR user isn't starting every welcome/approval/assignment message from a
+   blank box. `name` interpolates into the body at pick-time by the caller (HrChat), same pattern
+   DockedChat already uses for its own four. */
+export function defaultHrMessageTemplates(t,name){
+  const who=name||t("hr.chat.templates.fallbackName");
+  return [
+    {id:"builtin_hr_welcome",name:t("hr.chat.templates.welcomeName"),body:t("hr.chat.templates.welcomeBody",{name:who})},
+    {id:"builtin_hr_leaveApproved",name:t("hr.chat.templates.leaveApprovedName"),body:t("hr.chat.templates.leaveApprovedBody",{name:who})},
+    {id:"builtin_hr_taskAssigned",name:t("hr.chat.templates.taskAssignedName"),body:t("hr.chat.templates.taskAssignedBody",{name:who})},
+    {id:"builtin_hr_birthday",name:t("hr.chat.templates.birthdayName"),body:t("hr.chat.templates.birthdayBody",{name:who})},
+    {id:"builtin_hr_anniversary",name:t("hr.chat.templates.anniversaryName"),body:t("hr.chat.templates.anniversaryBody",{name:who})},
+  ];
+}

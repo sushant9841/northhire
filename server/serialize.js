@@ -282,7 +282,7 @@ export function serializeHrInvoice(row) {
   if (!row) return null;
   return { id: row.id, number: row.number, client: row.client, amount: row.amount, subtotal: row.subtotal, hst: row.hst,
     taxLabel: row.tax_label, po: row.po, status: row.status, issued: row.issued, due: row.due, paid: row.paid,
-    createdBy: row.created_by, items: JSON.parse(row.items_json || "[]") };
+    createdBy: row.created_by, items: JSON.parse(row.items_json || "[]"), placementRef: row.placement_ref || null };
 }
 export function serializeHrDepartment(row) {
   if (!row) return null;
@@ -305,7 +305,14 @@ export function serializeHrPayrun(row) {
     // paidAt is what a T4 year is keyed to (CRA keys the slip to when the employee was actually
     // paid, not the period worked), so it has to survive serialization.
     approvedAt: row.approved_at, paidAt: row.paid_at,
-    lines: JSON.parse(row.lines_json || "[]") };
+    // H6 - per-employee pay-stub status (Draft / Sent / Viewed / Downloaded / Disputed), derived
+    // from the run's own status plus whatever the employee has done with their own line (viewedAt/
+    // downloadedAt/disputed, written by PATCH /hr/payruns/:id/lines/:employeeId/*). A dispute
+    // always wins regardless of what else happened first; otherwise the furthest-along action wins.
+    lines: JSON.parse(row.lines_json || "[]").map(l => ({
+      ...l,
+      stubStatus: l.disputed ? "disputed" : l.downloadedAt ? "downloaded" : l.viewedAt ? "viewed" : row.status === "paid" ? "sent" : "draft",
+    })) };
 }
 export function serializeHrChat(row) {
   if (!row) return null;

@@ -17,6 +17,7 @@ import { vacationBalance, usedDaysByYear } from "../../helpers/leaveAccrual.js";
 import { HR_ROLES, HR_COMPANY_SETTINGS_DEFAULT, PUNCH_VENDORS, PRIOR_HR_VENDORS, HR_MODULES } from "../../store/seed/hrCompanySettings.js";
 import { HR_DEPARTMENTS } from "../../store/seed/hrDepartments.js";
 import { InlineList } from "../shared/formControls.jsx";
+import { defaultHrMessageTemplates } from "../../helpers/messageTemplates.js";
 import { TrainingCard } from "../shared/cards.jsx";
 import { useTranslation } from "../../i18n/i18n.jsx";
 import { formatDate, formatDateTime } from "../../i18n/format.js";
@@ -168,6 +169,11 @@ function H2sub({sub,children}){
 export function HrDashboard(){
   const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
+  /* H5 attendance idempotency (client half): the server now rejects a second punch-in while one
+     is already open, but a slow tap-happy double-click still fired two overlapping requests
+     before the first response landed. Disabling the button for the duration of the in-flight
+     request closes that window without waiting on the network round trip to self-correct. */
+  const [punching,setPunching]=useState(false);
   if(!emp) return null;
   const myTasks=A.hrTasks.filter(t=>t.assignee===emp.id&&t.status!=="done");
   /* An overnight shift's open punch carries yesterday's date, so an open record (any date) takes
@@ -253,11 +259,11 @@ export function HrDashboard(){
           </div>
           {!todayAttendance?<div>
             <p className="text-sm text-text-2 mb-3.5 leading-relaxed">{t("hr.dashboard.punchInPrompt")}</p>
-            <Btn kind="primary" icon="clock" onClick={async()=>{const r=await A.punchIn(emp.id,"web"); if(!r.ok)A.toast(r.msg,"danger");}}>{t("hr.dashboard.punchInBtn")}</Btn>
+            <Btn kind="primary" icon="clock" disabled={punching} onClick={async()=>{setPunching(true); const r=await A.punchIn(emp.id,"web"); setPunching(false); if(!r.ok)A.toast(r.msg,"danger");}}>{t("hr.dashboard.punchInBtn")}</Btn>
           </div>:!todayAttendance.clockOut?<div>
             <div className="text-base text-text mb-2">{t("hr.dashboard.punchedInAt")} <strong>{todayAttendance.clockIn}</strong></div>
             <p className="text-sm text-text-2 mb-3.5">{t("hr.dashboard.punchOutReminder")}</p>
-            <Btn kind="outline" icon="clock" onClick={async()=>{const r=await A.punchOut(emp.id); if(!r.ok)A.toast(r.msg,"danger"); else if(r.earlyLeave)A.toast(t("hr.dashboard.punchOutEarlyLeave"),"warn");}}>{t("hr.dashboard.punchOutBtn")}</Btn>
+            <Btn kind="outline" icon="clock" disabled={punching} onClick={async()=>{setPunching(true); const r=await A.punchOut(emp.id); setPunching(false); if(!r.ok)A.toast(r.msg,"danger"); else if(r.earlyLeave)A.toast(t("hr.dashboard.punchOutEarlyLeave"),"warn");}}>{t("hr.dashboard.punchOutBtn")}</Btn>
           </div>:<div>
             <div className="text-sm text-text">{t("hr.dashboard.attendanceSummary",{in:todayAttendance.clockIn,out:todayAttendance.clockOut,hours:todayAttendance.hours})}</div>
             <p className="text-sm text-text-2 mt-2">{t("hr.dashboard.goodWorkToday")}</p></div>}
@@ -831,6 +837,7 @@ export function HrAttendance(){
   const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
   const canSeeAll=emp.role==="owner"||emp.role==="admin"||emp.role==="hr";
   const [view,setView]=useState(canSeeAll?"team":"mine");
+  const [punching,setPunching]=useState(false); /* H5: disable clock-in/out while the request is inflight */
   const [empFilter,setEmpFilter]=useState("all");
   const [fromDate,setFromDate]=useState(""); const [toDate,setToDate]=useState("");
   const [shown,setShown]=useState(50);
@@ -866,11 +873,11 @@ export function HrAttendance(){
         <Tag tone={todayRecord?"ok":"neutral"} sm>{todayRecord?(todayRecord.clockOut?t("hr.dashboard.statusSignedOut"):t("hr.dashboard.statusWorking")):t("hr.dashboard.statusNotClockedIn")}</Tag>
       </div>
       {!todayRecord?
-        <Btn kind="primary" size="lg" icon="clock" onClick={async()=>{const r=await A.punchIn(emp.id,"web"); if(!r.ok)A.toast(r.msg,"danger");}}>{t("hr.attendance.punchInNowBtn")}</Btn>
+        <Btn kind="primary" size="lg" icon="clock" disabled={punching} onClick={async()=>{setPunching(true); const r=await A.punchIn(emp.id,"web"); setPunching(false); if(!r.ok)A.toast(r.msg,"danger");}}>{t("hr.attendance.punchInNowBtn")}</Btn>
         :!todayRecord.clockOut?
         <div className="flex gap-3 flex-wrap items-center">
           <div className="text-base text-text-2">{t("hr.attendance.punchedInAtVia",{time:todayRecord.clockIn,source:todayRecord.source})}</div>
-          <Btn kind="outline" icon="clock" onClick={async()=>{const r=await A.punchOut(emp.id); if(!r.ok)A.toast(r.msg,"danger"); else if(r.earlyLeave)A.toast(t("hr.attendance.punchOutEarlyLeave"),"warn");}}>{t("hr.attendance.punchOutBtn")}</Btn>
+          <Btn kind="outline" icon="clock" disabled={punching} onClick={async()=>{setPunching(true); const r=await A.punchOut(emp.id); setPunching(false); if(!r.ok)A.toast(r.msg,"danger"); else if(r.earlyLeave)A.toast(t("hr.attendance.punchOutEarlyLeave"),"warn");}}>{t("hr.attendance.punchOutBtn")}</Btn>
         </div>
         :
         <div className="text-base text-text-2">{t("hr.attendance.attendanceSummary",{in:todayRecord.clockIn,out:todayRecord.clockOut,hours:todayRecord.hours})}</div>}
@@ -912,18 +919,26 @@ export function HrAttendance(){
             <th className={TH_CLS}>{t("hr.attendance.outHeader")}</th>
             <th className={TH_CLS}>{t("hr.attendance.hoursHeader")}</th>
             <th className={TH_CLS}>{t("hr.attendance.sourceHeader")}</th>
+            {view==="team"&&<th className={TH_CLS}/>}
           </tr></thead>
           <tbody>
-            {sorted.slice(0,shown).map(r=>{const who=A.hrEmp(r.employee);
+            {sorted.slice(0,shown).map(r=>{const who=A.hrEmp(r.employee); const exception=r.late||!r.clockOut;
               return <tr key={r.id} className="border-b border-line-soft transition-colors duration-150 hover:bg-bg">
                 <td className={`${TD_CLS} text-sm text-text`}>{r.date}</td>
-                {view==="team"&&<td className={`${TD_CLS} text-sm text-text`}>{who?.name||t("hr.attendance.dash")}</td>}
+                {/* H5 focus-scroll: an exception row (late, or a missed clock-out) jumps straight to
+                   this person's Employee Profile, Attendance tab pre-selected - the manager doesn't
+                   have to separately search the directory to follow up. */}
+                {view==="team"&&<td className={`${TD_CLS} text-sm text-text`}>
+                  {who?<button onClick={()=>A.openHrEmployeeProfile(r.employee,"attendance")} className="bg-transparent border-0 p-0 cursor-pointer text-text hover:text-brand hover:underline">{who.name}</button>:t("hr.attendance.dash")}</td>}
                 <td className={`${TD_CLS} text-sm text-text`}>{r.clockIn||t("hr.attendance.dash")}{r.late&&<Tag tone="warn" sm style={{marginLeft:6}}>{t("hr.attendance.lateTag")}</Tag>}</td>
                 <td className={`${TD_CLS} text-sm text-text-2`}>{r.clockOut||t("hr.attendance.dash")}</td>
                 <td className={`${TD_CLS} text-sm text-brand font-semibold`}>{r.hours||0}h</td>
                 <td className={`${TD_CLS} text-xs text-text-3`}>{r.source}</td>
+                {view==="team"&&<td className={TD_CLS}>{exception&&who&&who.id!==emp.id&&
+                  <Btn kind="ghost" size="xs" icon="mail" title={t("hr.attendance.messageAboutAttendanceBtn",{name:who.name.split(" ")[0]})}
+                    onClick={()=>A.openHrChatWith(r.employee,t(r.late?"hr.attendance.latePrefill":"hr.attendance.missedOutPrefill",{name:who.name.split(" ")[0],date:r.date}))}/>}</td>}
               </tr>;})}
-            {sorted.length===0&&<tr><td colSpan={view==="team"?6:5} className="p-5"><Empty icon="clock" title={t("hr.attendance.noAttendanceRecords")} body={t("hr.attendance.punchInHistory")}/></td></tr>}
+            {sorted.length===0&&<tr><td colSpan={view==="team"?7:5} className="p-5"><Empty icon="clock" title={t("hr.attendance.noAttendanceRecords")} body={t("hr.attendance.punchInHistory")}/></td></tr>}
           </tbody>
         </table>
       </div>
@@ -1022,12 +1037,19 @@ export function HrLeave(){
         : <div className="flex flex-col gap-2">
             {sorted.map(r=>{const who=A.hrEmp(r.employee);
               return <div key={r.id} className="flex gap-3.5 items-center py-3 px-3.5 bg-bg rounded-xl border border-line flex-wrap">
-                <SmartPortrait seed={who?.seed||0} size={38} radius={10}/>
+                <button onClick={()=>A.openHrEmployeeProfile(r.employee,"leave")} className="bg-transparent border-0 p-0 cursor-pointer shrink-0">
+                  <SmartPortrait seed={who?.seed||0} size={38} radius={10}/></button>
                 <div className="grow shrink basis-50 min-w-0">
-                  <div className="text-sm font-semibold text-text">{who?.name} • {r.type}</div>
+                  {/* H4/H5 interconnection: click the name to jump to this person's Employee Profile,
+                     pre-scrolled to their Leave tab - the same focus-scroll pattern the seeker side
+                     already uses, so approving from here doesn't lose the reviewer's place. */}
+                  <button onClick={()=>A.openHrEmployeeProfile(r.employee,"leave")} className="bg-transparent border-0 p-0 cursor-pointer text-sm font-semibold text-text hover:text-brand hover:underline">{who?.name}</button>
+                  <span className="text-sm font-semibold text-text"> • {r.type}</span>
                   <div className="text-xs text-text-3 mt-0.5">{r.from} → {r.to} ({r.days} {r.days===1?t("hr.leave.daySingular"):t("hr.leave.dayPlural")})</div>
                   {r.reason&&<div className="text-xs text-text-2 mt-1 italic">"{r.reason}"</div>}
                 </div>
+                {r.employee!==emp.id&&<Btn kind="ghost" size="xs" icon="mail" title={t("hr.leave.messageAboutLeaveBtn",{name:who?.name?.split(" ")[0]||""})}
+                  onClick={()=>A.openHrChatWith(r.employee,t("hr.leave.messageAboutLeavePrefill",{name:who?.name?.split(" ")[0]||"",type:r.type,from:r.from,to:r.to}))}/>}
                 {r.status==="pending"&&canApprove&&r.employee!==emp.id?<div className="flex gap-1.5">
                   <Btn kind="dangerSoft" size="xs" onClick={()=>A.decideLeave(r.id,"denied",emp.id)}>{t("hr.leave.denyBtn")}</Btn>
                   <Btn kind="primary" size="xs" onClick={()=>A.decideLeave(r.id,"approved",emp.id)}>{t("hr.leave.approveBtn")}</Btn>
@@ -1224,8 +1246,11 @@ export function HrCalendar(){
   const submit=()=>{if(!ne.title.trim()||!ne.when)return;
     A.addEvent({...ne,title:ne.title.trim()}); setNe({title:"",when:"",time:"09:00",duration:60,type:"meeting",location:"",invitees:"all",description:""}); setShowAdd(false);};
 
-  const typeIcon={meeting:"users",training:"cap",social:"heart",other:"calendar"};
-  const typeTone={meeting:"brand",training:"warn",social:"ok",other:"neutral"};
+  {/* H5 interconnection - "leave" and "task" events are written server-side (an approved leave
+     request, or a task with a due date) and only ever appear here, never created from this
+     modal's Type dropdown below (which still only offers what a human picks by hand). */}
+  const typeIcon={meeting:"users",training:"cap",social:"heart",other:"calendar",leave:"calendar",task:"check"};
+  const typeTone={meeting:"brand",training:"warn",social:"ok",other:"neutral",leave:"violet",task:"neutral"};
 
   return <div>
     <div className="flex justify-between items-center mb-4 flex-wrap gap-2.5">
@@ -1298,8 +1323,19 @@ export function HrChat(){
   const [msg,setMsg]=useState("");
   const [showNew,setShowNew]=useState(false);
   const [showThreads,setShowThreads]=useState(!mob);
+  const [showTemplates,setShowTemplates]=useState(false);
   useEffect(()=>{if(!mob)setShowThreads(true);},[mob]);
   useEffect(()=>{if(selected)A.markHrChatRead(selected);},[selected]);
+  /* H5 - "Message {employee} about their leave" deep-link: A.openHrChatWith (useStore.js) already
+     resolved/created the right 1:1 thread and stashed {chatId,text} here before navigating - land
+     directly on that thread with the starter message pre-typed (not yet sent), consumed once so a
+     later, unrelated visit to Chat doesn't keep reopening it. */
+  useEffect(()=>{
+    if(!A.hrChatPrefill)return;
+    setSelected(A.hrChatPrefill.chatId); setMsg(A.hrChatPrefill.text||""); if(mob)setShowThreads(false);
+    A.setHrChatPrefill(null);
+    /* eslint-disable-next-line */
+  },[A.hrChatPrefill]);
   const selectChat=id=>{setSelected(id); if(mob)setShowThreads(false);};
 
   const myChats=A.hrChats.filter(c=>{
@@ -1364,7 +1400,18 @@ export function HrChat(){
               </div>;})}
       </div>
 
-      <div className="p-3.5 border-t border-line-soft flex gap-2">
+      <div className="p-3.5 border-t border-line-soft flex gap-2 items-end">
+        {/* H5 - "Templates" button reused from the employer console (E4): welcome new hire / leave
+           approved / task assigned / birthday / anniversary, one tap fills the box (still editable,
+           still requires a separate Send). */}
+        <div className="relative">
+          <Btn kind="ghost" size="sm" icon="sparkle" onClick={()=>setShowTemplates(s=>!s)} title={t("hr.chat.templatesBtn")}/>
+          {showTemplates&&<div className="absolute bottom-full left-0 mb-1.5 bg-white border border-line rounded-xl shadow-lg p-1.5 z-20" style={{minWidth:240,maxHeight:220,overflowY:"auto"}}>
+            {defaultHrMessageTemplates(t,A.hrEmp(chat?.members?.split(",").find(m=>m!==emp.id))?.name?.split(" ")[0]).map(tm=>
+              <button key={tm.id} onClick={()=>{setMsg(tm.body); setShowTemplates(false);}}
+                className="block w-full text-left py-2 px-2.5 rounded-lg border-0 bg-transparent cursor-pointer text-sm text-text hover:bg-bg">{tm.name}</button>)}
+          </div>}
+        </div>
         <div className="flex-1"><Input value={msg} onChange={e=>setMsg(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault(); send();}}} placeholder={t("hr.chat.typeMessagePlaceholder")}/></div>
         <Btn kind="primary" icon="send" onClick={send} disabled={!msg.trim()}>{t("hr.chat.send")}</Btn>
       </div>
@@ -1426,7 +1473,7 @@ export function HrInvoices(){
   const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
   const [showAdd,setShowAdd]=useState(false);
   const [detail,setDetail]=useState(null);
-  const [nInv,setNInv]=useState({client:"",prov:company?.prov||"ON",amount:0,due:"",po:"",items:[{desc:"",qty:1,unitPrice:0}]});
+  const [nInv,setNInv]=useState({client:"",prov:company?.prov||"ON",amount:0,due:"",po:"",placementRef:"",items:[{desc:"",qty:1,unitPrice:0}]});
   const [tab,setTab]=useState("all");
   const list=tab==="all"?A.hrInvoices:A.hrInvoices.filter(i=>i.status===tab);
   const canManage=["owner","admin","finance"].includes(emp.role);
@@ -1445,7 +1492,7 @@ export function HrInvoices(){
   const submit=()=>{
     if(!nInv.client||!nInv.due||itemsTotal<=0)return;
     A.addInvoice({...nInv,amount:invTotal,subtotal:itemsTotal,hst,taxLabel:salesTaxLabel(nInv.prov),items:nInv.items.filter(it=>it.desc&&it.qty*it.unitPrice>0)});
-    setNInv({client:"",prov:company?.prov||"ON",amount:0,due:"",po:"",items:[{desc:"",qty:1,unitPrice:0}]});
+    setNInv({client:"",prov:company?.prov||"ON",amount:0,due:"",po:"",placementRef:"",items:[{desc:"",qty:1,unitPrice:0}]});
     setShowAdd(false);
   };
 
@@ -1496,6 +1543,11 @@ export function HrInvoices(){
           <Field label={t("hr.invoices.dueDateLabel")} required><Input type="date" value={nInv.due} onChange={e=>setNInv({...nInv,due:e.target.value})} min={_fmtDate(new Date())}/></Field>
           <Field label={t("hr.invoices.poNumberLabel")}><Input value={nInv.po} onChange={e=>setNInv({...nInv,po:e.target.value})} placeholder={t("hr.invoices.poNumberPlaceholder")}/></Field>
         </div>
+        {/* H6 - "invoice-to-staffing-placement link where applicable": a soft, free-text reference
+           (no real cross-tenant FK exists between HR Suite invoices and a staffing agency's own
+           placements - see the db.js migration comment), shown on the invoice once set. */}
+        <Field label={t("hr.invoices.placementRefLabel")} hint={t("hr.invoices.placementRefHint")}>
+          <Input value={nInv.placementRef} onChange={e=>setNInv({...nInv,placementRef:e.target.value})} placeholder={t("hr.invoices.placementRefPlaceholder")}/></Field>
         <Field label={t("hr.invoices.clientProvinceLabel")} hint={t("hr.invoices.clientProvinceHint")}>
           <Sel value={nInv.prov} onChange={e=>setNInv({...nInv,prov:e.target.value})}>
             {["ON","QC","BC","AB","MB","SK","NS","NB","NL","PE","NT","NU","YT"].map(code=><option key={code} value={code}>{t("hr.invoices.provinces."+code)}</option>)}
@@ -1561,6 +1613,7 @@ function InvoiceDetailModal({invoice:inv,company,onClose,canManage,onMarkPaid,on
           <div className="text-xs text-text-3 font-bold tracking-wide uppercase mb-1.5">{t("hr.invoices.billTo")}</div>
           <div className="text-base font-semibold text-text">{inv.client}</div>
           {inv.po&&<div className="text-xs text-text-3 mt-1">{t("hr.invoices.poLabel",{po:inv.po})}</div>}
+          {inv.placementRef&&<div className="text-xs text-text-3 mt-1">{t("hr.invoices.placementRefDisplay",{ref:inv.placementRef})}</div>}
         </div>
       </div>
 
@@ -1726,6 +1779,56 @@ function _YearEndSlips({A,mob,isEmployee,isPayrollMgr}){
   </Card>;
 }
 
+/* H6 - per-employee pay-stub status (FI-02): Draft while the run hasn't been executed yet, Sent
+   once it's paid, Viewed the first time this employee opens their own stub list, Downloaded once
+   they actually pull the PDF, Disputed (final, until HR/Finance follows up outside this flow) if
+   they flag it. The employee only ever marks their OWN line - see the server route comments. */
+const STUB_STATUS_TONE={draft:"neutral",sent:"brand",viewed:"ok",downloaded:"ok",disputed:"danger"};
+function _MyPayslips({A,mob,emp,company}){
+  const {t}=useTranslation();
+  const slips=A.myPayslips();
+  const [disputing,setDisputing]=useState(null); /* run.id while the dispute-reason box is open */
+  const [reason,setReason]=useState("");
+  // Marking "viewed" the moment this list renders with at least one sent-not-yet-viewed stub -
+  // matches how the rest of the app treats "opened the page that shows it" as viewed (chat reads,
+  // notification bell), not a separate click the employee has to remember to make.
+  useEffect(()=>{
+    slips.forEach(({run,line})=>{ if(line.stubStatus==="sent") A.markPayslipViewed(run.id); });
+    /* eslint-disable-next-line */
+  },[slips.map(s=>s.run.id+s.line.stubStatus).join(",")]);
+  if(slips.length===0)return <Card pad={mob?16:20} style={{borderRadius:14,marginTop:16}}>
+    <Lbl>{t("hr.payroll.myPayslips")}</Lbl>
+    <Empty icon="wallet" title={t("hr.payroll.noPayslips")} body={t("hr.payroll.noPayslipsBody")}/>
+  </Card>;
+  return <Card pad={mob?16:20} style={{borderRadius:14,marginTop:16}}>
+    <Lbl>{t("hr.payroll.myPayslips")}</Lbl>
+    <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:520}}>
+      <thead><tr className="border-b-2 border-line text-left">
+        {[t("hr.payroll.periodColumnHeader"),t("hr.payroll.payDateColumnHeader"),t("hr.payroll.grossColumnHeader"),t("hr.payroll.netColumnHeader"),t("hr.payroll.stubStatusHeader"),t("hr.payroll.actions")].map(h=><th key={h} className={TH_CLS}>{h}</th>)}
+      </tr></thead>
+      <tbody>{slips.map(({run,line})=><tr key={run.id} className="border-b border-line-soft">
+        <td className="py-3 px-3 text-sm text-text font-semibold">{run.period}</td>
+        <td className="py-3 px-3 text-xs text-text-3">{run.runDate}</td>
+        <td className="py-3 px-3 text-sm text-text">${line.gross.toLocaleString()}</td>
+        <td className="py-3 px-3 text-sm text-brand font-semibold">${line.net.toLocaleString()}</td>
+        <td className="py-3 px-3"><Tag tone={STUB_STATUS_TONE[line.stubStatus]||"neutral"} sm>{t("hr.payroll.stubStatus."+line.stubStatus)}</Tag></td>
+        <td className="py-3 px-3"><div className="flex gap-1.5">
+          <Btn kind="outline" size="xs" icon="download" onClick={()=>{A.markPayslipDownloaded(run.id);A.printPayslip(run,line,emp,company);}}>{t("hr.payroll.payslipBtn")}</Btn>
+          {!line.disputed&&<Btn kind="ghost" size="xs" onClick={()=>{setDisputing(run.id);setReason("");}}>{t("hr.payroll.disputeBtn")}</Btn>}
+        </div></td>
+      </tr>)}</tbody>
+    </table></div>
+    {disputing&&<Modal onClose={()=>setDisputing(null)} title={t("hr.payroll.disputeModalTitle")}>
+      <Field label={t("hr.payroll.disputeReasonLabel")} required hint={t("hr.payroll.disputeReasonHint")}>
+        <Area rows={3} value={reason} onChange={e=>setReason(e.target.value)} placeholder={t("hr.payroll.disputeReasonPlaceholder")}/></Field>
+      <div className="flex gap-2.5 justify-end mt-4">
+        <Btn kind="ghost" onClick={()=>setDisputing(null)}>{t("hr.invoices.cancelBtn")}</Btn>
+        <Btn kind="danger" disabled={!reason.trim()} onClick={async()=>{const r=await A.disputePayslip(disputing,reason.trim()); if(r.ok){A.toast(t("hr.payroll.disputeSubmittedToast"),"ok");setDisputing(null);}else A.toast(r.msg,"danger");}}>{t("hr.payroll.disputeSubmitBtn")}</Btn>
+      </div>
+    </Modal>}
+  </Card>;
+}
+
 export function HrPayroll(){
   const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
@@ -1836,24 +1939,7 @@ export function HrPayroll(){
       </table></div>
     </Card>
 
-    {isEmployee&&<Card pad={mob?16:20} style={{borderRadius:14,marginTop:16}}>
-      <Lbl>{t("hr.payroll.myPayslips")}</Lbl>
-      {(()=>{const slips=A.myPayslips();
-        if(slips.length===0)return <Empty icon="wallet" title={t("hr.payroll.noPayslips")} body={t("hr.payroll.noPayslipsBody")}/>;
-        return <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:460}}>
-          <thead><tr className="border-b-2 border-line text-left">
-            {[t("hr.payroll.periodColumnHeader"),t("hr.payroll.payDateColumnHeader"),t("hr.payroll.grossColumnHeader"),t("hr.payroll.netColumnHeader"),t("hr.payroll.actions")].map(h=><th key={h} className={TH_CLS}>{h}</th>)}
-          </tr></thead>
-          <tbody>{slips.map(({run,line})=><tr key={run.id} className="border-b border-line-soft">
-            <td className="py-3 px-3 text-sm text-text font-semibold">{run.period}</td>
-            <td className="py-3 px-3 text-xs text-text-3">{run.runDate}</td>
-            <td className="py-3 px-3 text-sm text-text">${line.gross.toLocaleString()}</td>
-            <td className="py-3 px-3 text-sm text-brand font-semibold">${line.net.toLocaleString()}</td>
-            <td className="py-3 px-3"><Btn kind="outline" size="xs" icon="download" onClick={()=>A.printPayslip(run,line,emp,company)}>{t("hr.payroll.payslipBtn")}</Btn></td>
-          </tr>)}</tbody>
-        </table></div>;
-      })()}
-    </Card>}
+    {isEmployee&&<_MyPayslips A={A} mob={mob} emp={emp} company={company}/>}
 
     {showNew&&<Modal onClose={()=>setShowNew(false)} title={t("hr.payroll.createPayrollRunBtn")}>
       <div className="flex flex-col gap-3.5">
@@ -1911,7 +1997,7 @@ function PayrollDetailModal({run,onClose,canApprove,onApprove,onExecute,onRevers
       <div className="overflow-y-auto border border-line rounded-lg" style={{maxHeight:400}}>
         <table className="w-full border-collapse text-xs">
           <thead style={{position:"sticky",top:0,background:C.bg,zIndex:1}}><tr>
-            {[t("hr.payroll.employee"),t("hr.payroll.gross"),t("hr.payroll.unpaidHeader"),t("hr.payroll.cppHeader"),t("hr.payroll.eiHeader"),t("hr.payroll.fedHeader"),t("hr.payroll.provHeader"),t("hr.payroll.reimb"),t("hr.payroll.net")].map(h=>
+            {[t("hr.payroll.employee"),t("hr.payroll.gross"),t("hr.payroll.unpaidHeader"),t("hr.payroll.cppHeader"),t("hr.payroll.eiHeader"),t("hr.payroll.fedHeader"),t("hr.payroll.provHeader"),t("hr.payroll.reimb"),t("hr.payroll.net"),t("hr.payroll.stubStatusHeader")].map(h=>
               <th key={h} className="py-2.5 px-2.5 text-left font-bold text-text-3 tracking-wide uppercase border-b border-line" style={{fontSize:10.5}}>{h}</th>)}
           </tr></thead>
           <tbody>{run.lines.map(l=>{const hb=l.hourlyBreakdown;
@@ -1929,6 +2015,8 @@ function PayrollDetailModal({run,onClose,canApprove,onApprove,onExecute,onRevers
             <td className="py-2.5 px-2.5 text-text-3">-${l.provTax.toLocaleString()}</td>
             <td className="py-2.5 px-2.5" style={{color:l.reimb>0?C.ok:C.text3}}>{l.reimb>0?`+$${l.reimb.toLocaleString()}`:"—"}</td>
             <td className="py-2.5 px-2.5 text-brand font-bold">${l.net.toLocaleString()}</td>
+            {/* H6 FI-02 - per-employee pay-stub status, computed server-side (serializeHrPayrun) */}
+            <td className="py-2.5 px-2.5"><Tag tone={STUB_STATUS_TONE[l.stubStatus]||"neutral"} sm>{t("hr.payroll.stubStatus."+l.stubStatus)}</Tag></td>
           </tr>;})}</tbody>
         </table>
       </div>
@@ -1957,9 +2045,54 @@ function PayrollDetailModal({run,onClose,canApprove,onApprove,onExecute,onRevers
 
 
 /* ─── Trainings ─── */
+/* H5 - "Training assignment -> task + notification + progress". Picking employees + a due date
+   here calls POST /hr/trainings/:id/assign (assignTraining in useHrStore.js), which creates one
+   task per employee (shows up on their task list, due-dated on the calendar the same as any other
+   task) and sends one email each - see that route's comment for why. */
+function _AssignTrainingModal({training,onClose}){
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t}=useTranslation();
+  const company=A.hrCurrentCompany();
+  const [selected,setSelected]=useState([]);
+  const [due,setDue]=useState("");
+  const [busy,setBusy]=useState(false); const [err,setErr]=useState("");
+  const all=A.hrEmpsAtCompany(company.id).filter(e=>e.status==="active");
+  const toggle=id=>setSelected(s=>s.includes(id)?s.filter(x=>x!==id):[...s,id]);
+  const submit=async()=>{
+    if(!selected.length||!due)return;
+    setBusy(true); setErr("");
+    const r=await A.assignTraining(training.id,selected,due);
+    setBusy(false);
+    if(r.ok){A.toast(t("hr.trainings.assignedToast",{count:selected.length,title:training.title}),"ok");onClose();}
+    else setErr(r.msg);
+  };
+  return <Modal onClose={onClose} title={t("hr.trainings.assignModalTitle",{title:training.title})}>
+    <div className="flex flex-col gap-3.5">
+      {err&&<Banner tone="danger" icon="alert">{err}</Banner>}
+      <Field label={t("hr.trainings.dueDateLabel")} required><DatePicker value={due} onChange={setDue} min={_fmtDate(new Date())}/></Field>
+      <div>
+        <Lbl>{t("hr.trainings.selectEmployeesLabel")}</Lbl>
+        <div className="border border-line rounded-lg overflow-y-auto" style={{maxHeight:280}}>
+          {all.map(e=><label key={e.id} className="flex gap-2.5 items-center py-2.5 px-3.5 border-b border-line-soft cursor-pointer">
+            <input type="checkbox" checked={selected.includes(e.id)} onChange={()=>toggle(e.id)}/>
+            <SmartPortrait seed={e.seed} size={30} radius={8}/>
+            <div className="flex-1 min-w-0"><div className="text-sm font-semibold text-text">{e.name}</div>
+              <div className="text-xs text-text-3">{e.title}</div></div>
+          </label>)}
+        </div>
+      </div>
+      <div className="flex gap-2.5 justify-end">
+        <Btn kind="ghost" onClick={onClose}>{t("hr.tasks.cancelBtn")}</Btn>
+        <Btn kind="primary" icon="check" disabled={busy||!selected.length||!due} onClick={submit}>{busy?t("hr.tasks.postingBtn"):t("hr.trainings.assignBtn")}</Btn>
+      </div>
+    </div>
+  </Modal>;
+}
 export function HrTrainings(){
   const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
+  const emp=A.hrCurrentEmp();
+  const canAssign=["owner","admin","hr"].includes(emp.role);
   const list=A.trainings.filter(training=>training.status==="published");
+  const [assigning,setAssigning]=useState(null);
   return <div>
     <Card pad={mob?20:24} style={{borderRadius:14,marginBottom:16,background:`linear-gradient(135deg,${C.tint} 0%,#F0F7FF 100%)`,border:`1px solid ${C.line2}`}}>
       <div className="flex gap-3.5 items-center flex-wrap">
@@ -1971,8 +2104,13 @@ export function HrTrainings(){
       </div>
     </Card>
     <div className="grid gap-3.5" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:300}px,1fr))`}}>
-      {list.map(training=><TrainingCard key={training.id} t={training}/>)}
+      {list.map(training=><div key={training.id} className="relative">
+        <TrainingCard t={training}/>
+        {canAssign&&<Btn kind="primary" size="xs" icon="plus" style={{position:"absolute",bottom:14,right:14}}
+          onClick={e=>{e.stopPropagation();setAssigning(training);}}>{t("hr.trainings.assignBtn")}</Btn>}
+      </div>)}
     </div>
+    {assigning&&<_AssignTrainingModal training={assigning} onClose={()=>setAssigning(null)}/>}
   </div>;
 }
 

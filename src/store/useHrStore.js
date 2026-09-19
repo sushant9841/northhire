@@ -313,6 +313,35 @@ export function useHrStore(){
   };
   const deleteEvent=async(id)=>{await api.del(`/hr/events/${id}`);setHrEvents(l=>l.filter(e=>e.id!==id));};
 
+  /* --- H5: training assignment -> task + notification --- */
+  const assignTraining=async(trainingId,employeeIds,due)=>{
+    try{const {tasks}=await api.post(`/hr/trainings/${trainingId}/assign`,{employeeIds,due});
+      setHrTasks(l=>[...tasks,...l]);
+      const {events}=await api.get("/hr/events"); setHrEvents(events);
+      return {ok:true,tasks};
+    }catch(e){return {ok:false,msg:e.message};}
+  };
+
+  /* --- H6: per-employee pay-stub status (Draft/Sent/Viewed/Downloaded/Disputed) ---
+     All three only ever touch the caller's own line - see server route comments. Best-effort:
+     a failed "mark viewed" shouldn't block someone from reading their own pay stub. */
+  const markPayslipViewed=async runId=>{
+    try{await api.patch(`/hr/payruns/${runId}/lines/mine/viewed`);
+      const {payslips}=await api.get("/hr/payslips/mine"); setMyPayslipsList(payslips);
+    }catch{/* best-effort */}
+  };
+  const markPayslipDownloaded=async runId=>{
+    try{await api.patch(`/hr/payruns/${runId}/lines/mine/downloaded`);
+      const {payslips}=await api.get("/hr/payslips/mine"); setMyPayslipsList(payslips);
+    }catch{/* best-effort */}
+  };
+  const disputePayslip=async(runId,reason)=>{
+    try{await api.patch(`/hr/payruns/${runId}/lines/mine/dispute`,{reason});
+      const {payslips}=await api.get("/hr/payslips/mine"); setMyPayslipsList(payslips);
+      return {ok:true};
+    }catch(e){return {ok:false,msg:e.message};}
+  };
+
   /* --- Invoices --- */
   const addInvoice=async(data)=>{
     const {invoice}=await api.post("/hr/invoices",data);
@@ -743,7 +772,7 @@ return {
     punchIn,punchOut,requestLeave,decideLeave,
     addTask,updateTaskStatus,deleteTask,addEvent,deleteEvent,
     addInvoice,markInvoicePaid,sendInvoice,printHrInvoice,reverseInvoice,
-    myPayslips,printPayslip,
+    myPayslips,printPayslip,assignTraining,markPayslipViewed,markPayslipDownloaded,disputePayslip,
     hrTaxSlipYears,hrTaxSlips,hrMyTaxSlip,hrRoe,printT4,printRoe,
     hrKioskDevices,hrCreateKioskDevice,hrRevokeKioskDevice,hrSetPunchPin,
     hrTaskComments,hrAddTaskComment,hrDeleteTaskComment,hrExpenseCategories,hrSaveExpenseCategories,

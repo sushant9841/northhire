@@ -640,6 +640,12 @@ hrRouter.post("/attendance/punch-in", requireHrAuth, (req, res) => {
   // (which feeds directly into lateness/payroll deductions).
   const empId = req.hrEmployee.id;
   const today = new Date().toISOString().slice(0, 10);
+  // H5 attendance idempotency: this used to only check TODAY's row, so an overnight shift that
+  // crossed midnight (still open from yesterday, clock_out IS NULL) didn't block a second
+  // punch-in - a double-click, a second tab, or a replayed request could open two concurrent
+  // shifts for the same person. Any still-open shift (any date) now blocks a new one outright.
+  const open = db.prepare("SELECT * FROM hr_attendance WHERE employee_id = ? AND clock_out IS NULL ORDER BY date DESC LIMIT 1").get(empId);
+  if (open) return res.status(409).json({ error: `You're already clocked in since ${open.date} ${open.clock_in} - clock out first.` });
   const existing = db.prepare("SELECT * FROM hr_attendance WHERE employee_id = ? AND date = ?").get(empId, today);
   if (existing) return res.status(409).json({ error: `Already punched in today at ${existing.clock_in}` });
   const now = new Date(); const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
@@ -707,7 +713,20 @@ hrRouter.patch("/leave/:id/decide", requireHrAuth, async (req, res) => {
   }
   db.prepare("UPDATE hr_leave SET status = ?, approved_by = ? WHERE id = ?").run(decision, req.hrEmployee.id, req.params.id);
   const emp = db.prepare("SELECT name, email, erased FROM hr_employees WHERE id = ?").get(row.employee_id);
+  // H5 interconnection: an approved leave request auto-updates the calendar so the rest of the
+  // company can see the absence without HR separately re-entering it as an event, and closes the
+  // window for someone to assign that person a task due inside the leave window (enforced below,
+  // in POST /hr/tasks). Exactly one calendar event per approved request, never one per day of it.
+  if (decision === "approved") {
+    db.prepare(
+      `INSERT INTO hr_events (id, company_id, title, event_date, time, duration, type, location, invitees, organiser, description)
+       VALUES (?, ?, ?, ?, '00:00', 0, 'leave', '', ?, ?, ?)`
+    ).run(nextId("ev", "hr_events"), req.hrEmployee.company_id, `${emp?.name || "Employee"} - ${row.type} leave`,
+      row.from_date, row.employee_id, req.hrEmployee.id, `${row.type} leave, ${row.from_date} to ${row.to_date} (${row.days} day${row.days === 1 ? "" : "s"})`);
+  }
   if (emp && !emp.erased) {
+    // Exactly one notification for this action - the email below is it. The calendar write above
+    // and the task-assignment block in POST /hr/tasks are silent side effects, not separate pings.
     await sendAndLogMail(emp.email, `Your ${row.type} leave request was ${req.body?.decision}`,
       `Your leave request for ${row.from_date} to ${row.to_date} was ${req.body?.decision} by ${req.hrEmployee.name}.`);
   }
@@ -721,25 +740,90 @@ hrRouter.get("/tasks", requireHrAuth, (req, res) => {
 });
 hrRouter.post("/tasks", requireHrAuth, async (req, res) => {
   const d = req.body || {};
+  // H5 interconnection: a task can't be assigned due inside a date range the assignee already has
+  // approved leave for - previously nothing stopped double-booking someone who was already off.
+  if (d.assignee && d.due) {
+    const clash = db.prepare(
+      `SELECT * FROM hr_leave WHERE employee_id = ? AND status = 'approved' AND from_date <= ? AND to_date >= ? LIMIT 1`
+    ).get(d.assignee, d.due, d.due);
+    if (clash) return res.status(409).json({ error: `This person is on approved ${clash.type.toLowerCase()} leave on ${d.due} (${clash.from_date} → ${clash.to_date}) - pick another date or assignee.` });
+  }
   const id = nextId("tk", "hr_tasks");
   db.prepare("INSERT INTO hr_tasks (id, company_id, title, assignee, assigned_by, due, priority, tags_json) VALUES (?,?,?,?,?,?,?,?)")
     .run(id, req.hrEmployee.company_id, d.title, d.assignee, req.hrEmployee.id, d.due, d.priority || "medium", JSON.stringify(d.tags || []));
+  // H5 interconnection: a task with a due date also lands on the calendar, so "what's happening
+  // this week" doesn't require checking Tasks and Calendar separately. One event per task.
+  if (d.due) {
+    db.prepare(
+      `INSERT INTO hr_events (id, company_id, title, event_date, time, duration, type, location, invitees, organiser, description)
+       VALUES (?, ?, ?, ?, '09:00', 0, 'task', '', ?, ?, ?)`
+    ).run(nextId("ev", "hr_events"), req.hrEmployee.company_id, `Due: ${d.title}`, d.due, d.assignee || "all", req.hrEmployee.id, "");
+  }
   const assignee = d.assignee ? db.prepare("SELECT name, email, erased FROM hr_employees WHERE id = ?").get(d.assignee) : null;
   if (assignee && !assignee.erased && d.assignee !== req.hrEmployee.id) {
+    // Exactly one notification for this action - the calendar write above is a silent side effect.
     await sendAndLogMail(assignee.email, `New task: ${d.title}`, `${req.hrEmployee.name} assigned you a task${d.due ? `, due ${d.due}` : ""}: ${d.title}`);
   }
   res.status(201).json({ task: serializeHrTask(db.prepare("SELECT * FROM hr_tasks WHERE id = ?").get(id)) });
 });
-hrRouter.patch("/tasks/:id/status", requireHrAuth, (req, res) => {
+hrRouter.patch("/tasks/:id/status", requireHrAuth, async (req, res) => {
   const task = db.prepare("SELECT * FROM hr_tasks WHERE id = ?").get(req.params.id);
   if (!task || task.company_id !== req.hrEmployee.company_id) return res.status(404).json({ error: "Task not found." });
   const { status } = req.body || {};
   db.prepare("UPDATE hr_tasks SET status = ?, completed_at = CASE WHEN ? = 'done' THEN datetime('now') ELSE NULL END WHERE id = ?").run(status, status, req.params.id);
+  // H5 interconnection: completing a task notifies whoever assigned it (if that's someone else) -
+  // exactly one notification, only on the todo/in-progress -> done transition, never on every move.
+  if (status === "done" && task.status !== "done" && task.assigned_by && task.assigned_by !== req.hrEmployee.id) {
+    const assigner = db.prepare("SELECT name, email, erased FROM hr_employees WHERE id = ?").get(task.assigned_by);
+    if (assigner && !assigner.erased) {
+      await sendAndLogMail(assigner.email, `Task completed: ${task.title}`, `${req.hrEmployee.name} marked "${task.title}" as done.`);
+    }
+  }
   res.json({ task: serializeHrTask(db.prepare("SELECT * FROM hr_tasks WHERE id = ?").get(req.params.id)) });
 });
 hrRouter.delete("/tasks/:id", requireHrAuth, (req, res) => {
   db.prepare("DELETE FROM hr_tasks WHERE id = ? AND company_id = ?").run(req.params.id, req.hrEmployee.company_id);
   res.json({ ok: true });
+});
+
+/* H5 - Training assignment -> task + notification + progress (charter interconnection). Reads the
+   public `trainings` catalog (owned by the content router, not HR-scoped) purely to pull a title,
+   then writes into HR's own tables: one hr_tasks row per assigned employee (so it shows up on
+   their task list and due-date calendar the same way any other task does) plus one shared
+   hr_events calendar entry covering everyone invited. One email per assigned employee - each is a
+   distinct person who needs to personally know they now owe a training, not a repeat ping for the
+   same action. */
+hrRouter.post("/trainings/:id/assign", requireHrAuth, requireHrPriv, async (req, res) => {
+  const training = db.prepare("SELECT id, title FROM trainings WHERE id = ? AND status = 'published'").get(req.params.id);
+  if (!training) return res.status(404).json({ error: "Training not found or not published." });
+  const employeeIds = Array.isArray(req.body?.employeeIds) ? req.body.employeeIds.filter(Boolean) : [];
+  const due = req.body?.due;
+  if (!employeeIds.length) return res.status(400).json({ error: "Pick at least one employee." });
+  if (!due) return res.status(400).json({ error: "A due date is required." });
+  const employees = db.prepare(
+    `SELECT * FROM hr_employees WHERE company_id = ? AND status = 'active' AND id IN (${employeeIds.map(() => "?").join(",")})`
+  ).all(req.hrEmployee.company_id, ...employeeIds);
+  if (!employees.length) return res.status(404).json({ error: "None of those employees were found at your company." });
+
+  const createdTasks = [];
+  for (const emp of employees) {
+    const taskId = nextId("tk", "hr_tasks");
+    db.prepare("INSERT INTO hr_tasks (id, company_id, title, assignee, assigned_by, due, priority, tags_json) VALUES (?,?,?,?,?,?,?,?)")
+      .run(taskId, req.hrEmployee.company_id, `Complete training: ${training.title}`, emp.id, req.hrEmployee.id, due, "medium", JSON.stringify(["training"]));
+    createdTasks.push(serializeHrTask(db.prepare("SELECT * FROM hr_tasks WHERE id = ?").get(taskId)));
+  }
+  // One calendar entry for the whole assignment, not one per invitee.
+  db.prepare(
+    `INSERT INTO hr_events (id, company_id, title, event_date, time, duration, type, location, invitees, organiser, description)
+     VALUES (?, ?, ?, ?, '09:00', 60, 'training', '', ?, ?, ?)`
+  ).run(nextId("ev", "hr_events"), req.hrEmployee.company_id, training.title, due, employees.map(e => e.id).join(","), req.hrEmployee.id, "Assigned via HR Suite.");
+  for (const emp of employees) {
+    if (emp.erased) continue;
+    await sendAndLogMail(emp.email, `New training assigned: ${training.title}`,
+      `${req.hrEmployee.name} assigned you "${training.title}", due ${due}. It's on your task list and calendar in HR Suite.`);
+  }
+  logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "training_assigned", `Assigned "${training.title}" to ${employees.length} employee${employees.length === 1 ? "" : "s"}, due ${due}`);
+  res.status(201).json({ tasks: createdTasks });
 });
 
 /* â”€â”€â”€ Events â”€â”€â”€ */
@@ -771,10 +855,10 @@ hrRouter.post("/invoices", requireHrAuth, requireHrMoney, (req, res) => {
   const next = 1042 + db.prepare("SELECT COUNT(*) AS n FROM hr_invoices WHERE company_id = ?").get(req.hrEmployee.company_id).n + 1;
   const id = nextId("inv", "hr_invoices");
   db.prepare(
-    `INSERT INTO hr_invoices (id, company_id, number, client, amount, subtotal, hst, tax_label, po, status, issued, due, created_by, items_json)
-     VALUES (?,?,?,?,?,?,?,?,?, 'draft', date('now'), ?, ?, ?)`
+    `INSERT INTO hr_invoices (id, company_id, number, client, amount, subtotal, hst, tax_label, po, status, issued, due, created_by, items_json, placement_ref)
+     VALUES (?,?,?,?,?,?,?,?,?, 'draft', date('now'), ?, ?, ?, ?)`
   ).run(id, req.hrEmployee.company_id, `INV-2026-${next}`, d.client, d.amount, d.subtotal, d.hst, d.taxLabel, d.po || "",
-    d.due, req.hrEmployee.id, JSON.stringify(items));
+    d.due, req.hrEmployee.id, JSON.stringify(items), (d.placementRef || "").trim().slice(0, 200) || null);
   res.status(201).json({ invoice: serializeHrInvoice(db.prepare("SELECT * FROM hr_invoices WHERE id = ?").get(id)) });
 });
 function resolveOwnHrInvoice(req, res) {
@@ -910,6 +994,39 @@ hrRouter.get("/payslips/mine", requireHrAuth, (req, res) => {
     .map(r => { const run = serializeHrPayrun(r); const line = run.lines.find(l => l.employee === req.hrEmployee.id); return line ? { run: { ...run, lines: undefined }, line } : null; })
     .filter(Boolean);
   res.json({ payslips: slips });
+});
+
+/* H6 - per-employee pay-stub status (Draft / Sent / Viewed / Downloaded / Disputed). All three
+   writes below only touch the caller's OWN line inside lines_json - nobody can mark a colleague's
+   stub as viewed, downloaded, or disputed on their behalf. viewed/downloaded are idempotent
+   (calling twice just keeps the first timestamp); dispute requires a reason and can't be re-filed
+   once open (a payroll manager will follow up, this isn't itself an approval workflow). */
+function patchOwnPayslipLine(req, res, patch) {
+  const run = db.prepare("SELECT * FROM hr_payruns WHERE id = ? AND company_id = ?").get(req.params.id, req.hrEmployee.company_id);
+  if (!run) return res.status(404).json({ error: "Payroll run not found." });
+  const lines = JSON.parse(run.lines_json || "[]");
+  const idx = lines.findIndex(l => l.employee === req.hrEmployee.id);
+  if (idx === -1) return res.status(404).json({ error: "You aren't on this payroll run." });
+  const next = patch(lines[idx]);
+  if (!next) return res.json({ ok: true }); // no-op (already set)
+  lines[idx] = next;
+  db.prepare("UPDATE hr_payruns SET lines_json = ? WHERE id = ?").run(JSON.stringify(lines), req.params.id);
+  return res.json({ ok: true, line: { ...next, stubStatus: next.disputed ? "disputed" : next.downloadedAt ? "downloaded" : next.viewedAt ? "viewed" : run.status === "paid" ? "sent" : "draft" } });
+}
+hrRouter.patch("/payruns/:id/lines/mine/viewed", requireHrAuth, (req, res) => {
+  patchOwnPayslipLine(req, res, l => l.viewedAt ? null : { ...l, viewedAt: new Date().toISOString() });
+});
+hrRouter.patch("/payruns/:id/lines/mine/downloaded", requireHrAuth, (req, res) => {
+  patchOwnPayslipLine(req, res, l => ({ ...l, viewedAt: l.viewedAt || new Date().toISOString(), downloadedAt: new Date().toISOString() }));
+});
+hrRouter.patch("/payruns/:id/lines/mine/dispute", requireHrAuth, (req, res) => {
+  const reason = (req.body?.reason || "").trim();
+  if (!reason) return res.status(400).json({ error: "A reason is required to dispute a pay stub." });
+  const run = db.prepare("SELECT company_id, lines_json FROM hr_payruns WHERE id = ? AND company_id = ?").get(req.params.id, req.hrEmployee.company_id);
+  if (!run) return res.status(404).json({ error: "Payroll run not found." });
+  const alreadyDisputed = JSON.parse(run.lines_json || "[]").find(l => l.employee === req.hrEmployee.id)?.disputed;
+  patchOwnPayslipLine(req, res, l => l.disputed ? null : { ...l, disputed: true, disputeReason: reason, disputedAt: new Date().toISOString() });
+  if (!alreadyDisputed) logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "payslip_disputed", `${req.hrEmployee.name} disputed their pay stub for run ${req.params.id}: ${reason}`);
 });
 /* â”€â”€â”€ Year-end tax slips (T4) and Records of Employment â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    Both are computed from the payroll runs that were actually paid, never from a parallel set of
