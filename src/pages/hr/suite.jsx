@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { DndContext, useDraggable, useDroppable, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
@@ -508,12 +508,19 @@ export function HrProfilePage(){
   const targetId=A.hrEmpId||viewer?.id;
   const [data,setData]=useState(null);
   const [tab,setTab]=useState(A.hrProfileDeepLinkTab||"about");
+  /* H5 tail - focus-scroll: an attendance exception or leave request row passed its own record id
+     through A.openHrEmployeeProfile; carry it into local state so the tab component below can
+     scroll to and highlight that exact row (same pattern as seeker StatusPage's focusAppId), then
+     consume it once so a later, unrelated visit to this profile doesn't re-trigger it. */
+  const [focusRecordId,setFocusRecordId]=useState(A.hrProfileFocusRecordId||null);
   useEffect(()=>{
     let off=false;
     setData(null);
     A.hrLoadEmployeeProfile(targetId).then(r=>{if(!off)setData(r);});
     setTab(A.hrProfileDeepLinkTab||"about");
+    setFocusRecordId(A.hrProfileFocusRecordId||null);
     A.setHrProfileDeepLinkTab?.(null); // consumed - a later visit to this same page defaults to About again
+    A.setHrProfileFocusRecordId?.(null);
     return ()=>{off=true;};
     /* eslint-disable-next-line */
   },[targetId]);
@@ -561,8 +568,8 @@ export function HrProfilePage(){
     </div>
 
     {tab==="about"&&<_HrProfileAboutTab A={A} emp={emp} data={data}/>}
-    {tab==="attendance"&&<_HrProfileAttendanceTab A={A} empId={emp.id}/>}
-    {tab==="leave"&&<_HrProfileLeaveTab A={A} empId={emp.id}/>}
+    {tab==="attendance"&&<_HrProfileAttendanceTab A={A} empId={emp.id} focusId={focusRecordId} onFocusConsumed={()=>setFocusRecordId(null)}/>}
+    {tab==="leave"&&<_HrProfileLeaveTab A={A} empId={emp.id} focusId={focusRecordId} onFocusConsumed={()=>setFocusRecordId(null)}/>}
     {tab==="tasks"&&<_HrProfileTasksTab A={A} empId={emp.id}/>}
     {tab==="training"&&<_HrProfileTrainingTab A={A} empId={emp.id}/>}
     {tab==="documents"&&<Card pad={22} style={{borderRadius:16}}><_MyDocuments empId={emp.id}/></Card>}
@@ -598,17 +605,44 @@ function _HrProfileAboutTab({A,emp,data}){
   </div>;
 }
 
-function _HrProfileAttendanceTab({A,empId}){
+/* H5 tail - focus-scroll into a specific row of this tab, same mechanism as seeker StatusPage's
+   focusAppId: poll briefly for the row to mount (pagination/tab switch may still be settling),
+   scroll it into view, hold a brief highlight, then tell the caller to clear the id so a later
+   visit to this profile doesn't re-trigger it. */
+function _useRowFocusScroll(focusId,onConsumed){
+  const rowRefs=useRef({});
+  const [highlightId,setHighlightId]=useState(null);
+  useEffect(()=>{
+    if(!focusId)return;
+    let tries=0;
+    const iv=setInterval(()=>{
+      tries++;
+      const el=rowRefs.current[focusId];
+      if(el){
+        clearInterval(iv);
+        el.scrollIntoView({behavior:"smooth",block:"center"});
+        setHighlightId(focusId);
+        setTimeout(()=>{setHighlightId(null);onConsumed?.();},2500);
+      }else if(tries>20)clearInterval(iv);
+    },50);
+    return ()=>clearInterval(iv);
+    /* eslint-disable-next-line */
+  },[focusId]);
+  return {rowRefs,highlightId};
+}
+
+function _HrProfileAttendanceTab({A,empId,focusId,onFocusConsumed}){
   const {t,locale}=useTranslation();
   const rows=A.hrAttendance.filter(a=>a.employee===empId).sort((a,b)=>new Date(b.date)-new Date(a.date));
   const pg=usePagination(rows,15);
+  const {rowRefs,highlightId}=_useRowFocusScroll(focusId,onFocusConsumed);
   if(rows.length===0)return <Card pad={22} style={{borderRadius:16}}><Empty icon="clock" title={t("hr.employeeProfile.noAttendance")}/></Card>;
   return <Card pad={0} style={{borderRadius:16,overflow:"hidden"}}>
     <div className="overflow-x-auto"><table className="w-full border-collapse">
       <thead><tr className="border-b-2 border-line text-left">
         {[t("hr.employeeProfile.thDate"),t("hr.dashboard.attendanceTodayLabel"),t("hrPeople.manage.thStatus")].map(h=><th key={h} className={TH_CLS}>{h}</th>)}
       </tr></thead>
-      <tbody>{pg.pageItems.map(a=><tr key={a.id} className="border-b border-line-soft">
+      <tbody>{pg.pageItems.map(a=><tr key={a.id} ref={el=>{rowRefs.current[a.id]=el;}} className="border-b border-line-soft transition-colors duration-500" style={highlightId===a.id?{background:C.tint}:undefined}>
         <td className={TD_CLS}>{new Date(a.date).toLocaleDateString(locale==="fr"?"fr-CA":"en-CA",{month:"short",day:"numeric",year:"numeric"})}</td>
         <td className={`${TD_CLS} text-sm text-text-2`}>{a.clockIn||"—"} → {a.clockOut||"—"}</td>
         <td className={TD_CLS}>{a.late?<Tag tone="warn" sm>{t("hr.employeeProfile.late")}</Tag>:<Tag tone="ok" sm>{t("hr.employeeProfile.onTime")}</Tag>}</td>
@@ -618,13 +652,14 @@ function _HrProfileAttendanceTab({A,empId}){
   </Card>;
 }
 
-function _HrProfileLeaveTab({A,empId}){
+function _HrProfileLeaveTab({A,empId,focusId,onFocusConsumed}){
   const {t,locale}=useTranslation();
   const rows=A.hrLeave.filter(l=>l.employee===empId).sort((a,b)=>b.requestedAt-a.requestedAt);
+  const {rowRefs,highlightId}=_useRowFocusScroll(focusId,onFocusConsumed);
   if(rows.length===0)return <Card pad={22} style={{borderRadius:16}}><Empty icon="calendar" title={t("hr.employeeProfile.noLeave")}/></Card>;
   return <Card pad={22} style={{borderRadius:16}}>
     <div className="flex flex-col gap-2">
-      {rows.map(l=><div key={l.id} className="flex justify-between items-center py-2.5 px-3 bg-bg rounded-lg">
+      {rows.map(l=><div key={l.id} ref={el=>{rowRefs.current[l.id]=el;}} className="flex justify-between items-center py-2.5 px-3 bg-bg rounded-lg transition-colors duration-500" style={highlightId===l.id?{background:C.tint,boxShadow:`0 0 0 2px ${C.brand}`}:undefined}>
         <div><div className="text-sm font-semibold text-text">{l.type}</div>
           <div className="text-xs text-text-3 mt-0.5">{l.from} → {l.to} ({l.days}d)</div></div>
         <Tag tone={l.status==="approved"?"ok":l.status==="pending"?"warn":"danger"} sm>{l.status}</Tag>
@@ -929,7 +964,7 @@ export function HrAttendance(){
                    this person's Employee Profile, Attendance tab pre-selected - the manager doesn't
                    have to separately search the directory to follow up. */}
                 {view==="team"&&<td className={`${TD_CLS} text-sm text-text`}>
-                  {who?<button onClick={()=>A.openHrEmployeeProfile(r.employee,"attendance")} className="bg-transparent border-0 p-0 cursor-pointer text-text hover:text-brand hover:underline">{who.name}</button>:t("hr.attendance.dash")}</td>}
+                  {who?<button onClick={()=>A.openHrEmployeeProfile(r.employee,"attendance",r.id)} className="bg-transparent border-0 p-0 cursor-pointer text-text hover:text-brand hover:underline">{who.name}</button>:t("hr.attendance.dash")}</td>}
                 <td className={`${TD_CLS} text-sm text-text`}>{r.clockIn||t("hr.attendance.dash")}{r.late&&<Tag tone="warn" sm style={{marginLeft:6}}>{t("hr.attendance.lateTag")}</Tag>}</td>
                 <td className={`${TD_CLS} text-sm text-text-2`}>{r.clockOut||t("hr.attendance.dash")}</td>
                 <td className={`${TD_CLS} text-sm text-brand font-semibold`}>{r.hours||0}h</td>
@@ -1037,13 +1072,13 @@ export function HrLeave(){
         : <div className="flex flex-col gap-2">
             {sorted.map(r=>{const who=A.hrEmp(r.employee);
               return <div key={r.id} className="flex gap-3.5 items-center py-3 px-3.5 bg-bg rounded-xl border border-line flex-wrap">
-                <button onClick={()=>A.openHrEmployeeProfile(r.employee,"leave")} className="bg-transparent border-0 p-0 cursor-pointer shrink-0">
+                <button onClick={()=>A.openHrEmployeeProfile(r.employee,"leave",r.id)} className="bg-transparent border-0 p-0 cursor-pointer shrink-0">
                   <SmartPortrait seed={who?.seed||0} size={38} radius={10}/></button>
                 <div className="grow shrink basis-50 min-w-0">
                   {/* H4/H5 interconnection: click the name to jump to this person's Employee Profile,
                      pre-scrolled to their Leave tab - the same focus-scroll pattern the seeker side
                      already uses, so approving from here doesn't lose the reviewer's place. */}
-                  <button onClick={()=>A.openHrEmployeeProfile(r.employee,"leave")} className="bg-transparent border-0 p-0 cursor-pointer text-sm font-semibold text-text hover:text-brand hover:underline">{who?.name}</button>
+                  <button onClick={()=>A.openHrEmployeeProfile(r.employee,"leave",r.id)} className="bg-transparent border-0 p-0 cursor-pointer text-sm font-semibold text-text hover:text-brand hover:underline">{who?.name}</button>
                   <span className="text-sm font-semibold text-text"> • {r.type}</span>
                   <div className="text-xs text-text-3 mt-0.5">{r.from} → {r.to} ({r.days} {r.days===1?t("hr.leave.daySingular"):t("hr.leave.dayPlural")})</div>
                   {r.reason&&<div className="text-xs text-text-2 mt-1 italic">"{r.reason}"</div>}

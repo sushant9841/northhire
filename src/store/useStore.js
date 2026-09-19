@@ -1425,9 +1425,13 @@ export function useStore(){
   /* H4 - opens an HR employee's profile page (About/Attendance/Leave/Tasks/Training/Documents/
      Salary/Communication tabs) at a real, shareable URL. `tab` is optional deep-link state so a
      click from an attendance exception or leave-approval row can land straight on the relevant
-     tab instead of always opening on About (see HrProfilePage's use of A.hrProfileDeepLinkTab). */
+     tab instead of always opening on About (see HrProfilePage's use of A.hrProfileDeepLinkTab).
+     `recordId` (H5 tail) is the specific attendance/leave row that triggered the click - the same
+     focus-scroll pattern the seeker Status page uses for focusAppId: the profile tab scrolls to
+     and briefly highlights that one row, then clears it, instead of just landing on the tab. */
   const [hrProfileDeepLinkTab,setHrProfileDeepLinkTab]=useState(null);
-  const openHrEmployeeProfile=(id,tab)=>{setHrEmpId(id);setHrProfileDeepLinkTab(tab||null);go("hrProfileView","Employee profile",id);};
+  const [hrProfileFocusRecordId,setHrProfileFocusRecordId]=useState(null);
+  const openHrEmployeeProfile=(id,tab,recordId)=>{setHrEmpId(id);setHrProfileDeepLinkTab(tab||null);setHrProfileFocusRecordId(recordId||null);go("hrProfileView","Employee profile",id);};
 
   /* H5 - "Message {employee} about their leave" style deep-link from any employee context
      (attendance exception row, leave row, employee profile) straight into HR Chat with the right
@@ -2230,7 +2234,7 @@ export function useStore(){
     completeness,completenessHint,tabBadges,unreadMessages,
     logout,completeSignup,saveProfile,deleteAccount,exportData,setUserSetting,setUserLocale,marketingConsent,setMarketingConsent,
     toggleSave,followEmployer,openJob,openEmployer,openBlog,openTraining,openCandidate,openCandidateInline,
-    openHrEmployeeProfile,hrProfileDeepLinkTab,setHrProfileDeepLinkTab,openHrChatWith,hrChatPrefill,setHrChatPrefill,
+    openHrEmployeeProfile,hrProfileDeepLinkTab,setHrProfileDeepLinkTab,hrProfileFocusRecordId,setHrProfileFocusRecordId,openHrChatWith,hrChatPrefill,setHrChatPrefill,
     beginApply,submitApply,withdraw,acceptOffer,moveApp,rejectApp,noCvGateJobId,closeNoCvGate,
     lastAppliedId,focusAppId,setFocusAppId,
     publishJob,getJobDistributeUrl,getAutofillSuggestions,recordAutofill,approveJob,toggleJobStatus,flagJob,reportJob,jobReports,loadJobReports,decideJobReport,setPipelineJob:setPipelineJobFn,saveCompany,verifyEmployer,holdEmployer,toggleSuspend,eraseUser,
