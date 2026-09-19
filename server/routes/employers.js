@@ -285,6 +285,16 @@ employersRouter.post("/welcome-seen", requireAuth, requireRole("employer"), (req
   res.json({ ok: true });
 });
 
+// Cities/provinces this employer has actually posted a job in before, so the location
+// autocomplete can surface "your own past locations" above the generic gazette - registered
+// before the generic "/:id" route or "me" would be swallowed as an employer id lookup.
+employersRouter.get("/me/locations", requireAuth, requireRole("employer"), (req, res) => {
+  const rows = db.prepare(
+    `SELECT DISTINCT city, prov FROM jobs WHERE employer_id = ? AND city IS NOT NULL AND prov IS NOT NULL ORDER BY city`
+  ).all(req.user.employer_id);
+  res.json({ locations: rows.map(r => ({ city: r.city, province: r.prov })) });
+});
+
 employersRouter.get("/:id", (req, res) => {
   const row = db.prepare(`${WITH_OWNER} WHERE employers.id = ?`).get(req.params.id);
   if (!row) return res.status(404).json({ error: "Employer not found." });

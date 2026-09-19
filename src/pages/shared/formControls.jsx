@@ -1,21 +1,36 @@
 import { useState, useEffect, useRef } from "react";
 import { C, SH } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
-import { Btn, Tag, Input } from "../../design/primitives.jsx";
+import { Btn, Tag, Input, Card } from "../../design/primitives.jsx";
 import { uid } from "../../helpers/utils.js";
 import { useTranslation } from "../../i18n/i18n.jsx";
+import { api } from "../../helpers/api.js";
+import { CATM, PCODE } from "../../store/seed/constants.js";
+import { CANADIAN_CITIES } from "../../store/seed/canadianCities.js";
+import { use } from "../../store/context.js";
 
-/* Canadian cities for LocationInput autocomplete */
-const CA_LOCATIONS=[
-  "Toronto, ON","Vancouver, BC","Montreal, QC","Calgary, AB","Edmonton, AB","Ottawa, ON","Winnipeg, MB",
-  "Quebec City, QC","Hamilton, ON","Kitchener, ON","London, ON","Victoria, BC","Halifax, NS","Oshawa, ON",
-  "Windsor, ON","Saskatoon, SK","Regina, SK","Sherbrooke, QC","St. John's, NL","Barrie, ON","Kelowna, BC",
-  "Abbotsford, BC","Kingston, ON","Sudbury, ON","Trois-Rivières, QC","Guelph, ON","Moncton, NB","Brantford, ON",
-  "Saint John, NB","Peterborough, ON","Thunder Bay, ON","Charlottetown, PE","Fredericton, NB","Chilliwack, BC",
-  "Red Deer, AB","Lethbridge, AB","Nanaimo, BC","Kamloops, BC","Sarnia, ON","North Bay, ON","Prince George, BC",
-  "Medicine Hat, AB","Fort McMurray, AB","Brampton, ON","Mississauga, ON","Markham, ON","Vaughan, ON","Surrey, BC",
-  "Burnaby, BC","Richmond, BC","Laval, QC","Longueuil, QC","Gatineau, QC","Whitehorse, YT","Yellowknife, NT","Iqaluit, NU"
-];
+/* Canadian cities for LocationInput autocomplete, generated from the full gazette
+   (src/store/seed/canadianCities.js, 500+ real municipalities) rather than a short hardcoded
+   sample - "City, PROV_CODE" strings to match what the rest of the app expects to parse/store. */
+const CA_LOCATIONS = CANADIAN_CITIES.map(c => `${c.name}, ${PCODE[c.province] || c.province}`);
+
+/* An employer's own previously-used posting locations, fetched once per session and merged
+   ahead of the gazette in the autocomplete - the "you've hired in Calgary before" shortcut.
+   Silently no-ops for anyone who isn't a signed-in employer (403/401 from the API). */
+let _employerLocationsCache = null;
+function useEmployerLocations() {
+  const A = use();
+  const [locs, setLocs] = useState(_employerLocationsCache || []);
+  useEffect(() => {
+    if (A?.user?.role !== "employer" || _employerLocationsCache) return;
+    api.get("/employers/me/locations").then(r => {
+      const list = (r.locations || []).map(l => `${l.city}, ${PCODE[l.province] || l.province}`);
+      _employerLocationsCache = list;
+      setLocs(list);
+    }).catch(() => {});
+  }, [A?.user?.role]);
+  return locs;
+}
 
 /* Cloudflare Turnstile bot-check widget. Loads the vendor script once (module-level flag, so
    multiple mounts across a session don't re-inject it), then renders CF's real challenge into a
@@ -63,9 +78,13 @@ export function LocationInput({value,onChange,placeholder,required,onLocate}){
   const [idx,setIdx]=useState(-1);
   const listRef=useRef(null);
   const placeholderText=placeholder||t("formControls.locationPlaceholder");
+  const employerLocs=useEmployerLocations();
   useEffect(()=>{setQ(value||"");},[value]);
   const matches=q.length>=2
-    ? CA_LOCATIONS.filter(l=>l.toLowerCase().includes(q.toLowerCase())).slice(0,8)
+    ? [...new Set([
+        ...employerLocs.filter(l=>l.toLowerCase().includes(q.toLowerCase())),
+        ...CA_LOCATIONS.filter(l=>l.toLowerCase().includes(q.toLowerCase())),
+      ])].slice(0,8)
     : [];
   const pick=(loc)=>{setQ(loc); onChange(loc); setOpen(false); setIdx(-1);};
   const useGeoloc=()=>{
@@ -108,6 +127,39 @@ export function LocationInput({value,onChange,placeholder,required,onLocate}){
     </div>}
     {q.length>=2&&open&&matches.length===0&&<div className="absolute left-0 right-0 bg-white border border-line rounded-xl shadow-md z-200 py-3 px-3.5 text-sm text-text-3" style={{top:"calc(100% + 4px)"}}>{t("formControls.noCityFound")}</div>}
   </div>;
+}
+
+/* Anonymised pay benchmark card - queries GET /jobs/benchmark for the platform's own live
+   listings matching this category + province + experience shape. Used on the post-job wizard
+   (employer, while setting pay) and the public job detail page (signed-in seekers). Renders
+   nothing until cat+prov+exp are all picked, and nothing (rather than a scary "no data" box)
+   when the sample is below the 5-listing suppression floor - just a plain "not enough yet" line. */
+export function SalaryBenchmarkCard({ cat, provCode, exp, unit = "hr", provLabel }) {
+  const { t } = useTranslation();
+  const [data, setData] = useState(null);
+  useEffect(() => {
+    if (!cat || !provCode || !exp) { setData(null); return; }
+    let cancelled = false;
+    const qs = new URLSearchParams({ cat, prov: provCode, exp, unit }).toString();
+    api.get(`/jobs/benchmark?${qs}`).then(d => { if (!cancelled) setData(d); }).catch(() => { if (!cancelled) setData(null); });
+    return () => { cancelled = true; };
+  }, [cat, provCode, exp, unit]);
+  if (!cat || !provCode || !exp) return null;
+  if (!data) return null;
+  const catLabel = CATM[cat]?.label || cat;
+  return <Card pad={18} style={{ borderRadius: 16, background: C.tint, border: `1px solid ${C.line2}` }}>
+    <div className="flex items-center gap-2 mb-1">
+      <I n="trend" s={16} c={C.brand} />
+      <div className="text-sm font-semibold text-text">
+        {t("employer.post.benchmarkTitle", { cat: catLabel, prov: provLabel || provCode })}
+      </div>
+    </div>
+    {data.suppressed
+      ? <div className="text-xs text-text-3">{t("employer.post.benchmarkNotEnough")}</div>
+      : <div className="text-sm text-text-2">
+          {t("employer.post.benchmarkBody", { p25: data.p25, p75: data.p75, median: data.median, count: data.count })}
+        </div>}
+  </Card>;
 }
 
 /* InlineList — chips with inline add + delete. Used for skills, benefits, tags */

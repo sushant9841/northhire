@@ -7,6 +7,7 @@ import { Btn, Tag, Ring, Empty, Lbl, Banner, Page, Modal, Field, Area, Input, To
 import { pay, payUnit, annual, dlText, money } from "../../helpers/utils.js";
 import { EmpMark, HiringTypeBadge, JobCard } from "./cards.jsx";
 import { MatchScoreDrawer } from "./MatchScoreDrawer.jsx";
+import { SalaryBenchmarkCard } from "./formControls.jsx";
 import { AI_DISCLOSURE_TEXT, VACANCY_CONFIRMED_TEXT } from "../../helpers/jobPostingLaw.js";
 import { useTranslation } from "../../i18n/i18n.jsx";
 
@@ -115,6 +116,9 @@ export function JobDetailPage({previewJob,preview}={}){
               {pay(job)} <span className={`font-semibold opacity-75 ${mob?"text-lg":"text-xl"}`}>{payUnit(job)}</span></div>
             {job.unit!=="yr"&&<div className="text-sm text-text-2 mt-2.5">
               {t("shared.jobDetail.annualizedNote",{annual:money(annual(job))})}</div>}</div>
+          {A.user?.role==="seeker"&&(job.unit==="hr"||job.unit==="yr")&&<div className="mb-8">
+            <SalaryBenchmarkCard cat={job.cat} provCode={job.prov} exp={job.exp} unit={job.unit} provLabel={job.prov}/>
+          </div>}
           <div className="grid gap-6 mb-9" style={{gridTemplateColumns:`repeat(auto-fit,minmax(${mob?150:200}px,1fr))`}}>
             <Meta icon="users" k={t("shared.jobDetail.vacancies")} v={`${job.vac} ${job.vac===1?t("shared.jobDetail.position"):t("shared.jobDetail.positions")}`}/>
             <Meta icon="pin" k={t("shared.jobDetail.location")} v={`${job.city}, ${job.prov}`} onClick={onLocationTap}/>

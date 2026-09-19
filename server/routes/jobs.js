@@ -76,6 +76,39 @@ jobsRouter.get("/", (req, res) => {
   res.json({ jobs: rows.map(serializeJob) });
 });
 
+// Anonymised pay benchmark for a given category + province + experience shape, computed live
+// from the platform's own listings (not a fixed table) so it tracks the real market as postings
+// churn. A count below 5 could otherwise fingerprint a single employer's pay in a thin category/
+// province combo, so anything under that floor comes back as `null` with just the raw count.
+function computeBenchmark({ cat, prov, exp, unit }) {
+  const u = unit === "yr" ? "yr" : "hr";
+  const clauses = ["status = 'live'", "pay_unit = ?"];
+  const params = [u];
+  if (cat) { clauses.push("cat = ?"); params.push(cat); }
+  if (prov) { clauses.push("prov = ?"); params.push(prov); }
+  if (exp) { clauses.push("experience = ?"); params.push(exp); }
+  const rows = db.prepare(
+    `SELECT pay_lo, pay_hi FROM jobs WHERE ${clauses.join(" AND ")} AND pay_lo IS NOT NULL AND pay_hi IS NOT NULL AND pay_hi > 0`
+  ).all(...params);
+  const values = rows
+    .map(r => (Number(r.pay_lo) + Number(r.pay_hi)) / 2)
+    .filter(v => Number.isFinite(v) && v > 0)
+    .sort((a, b) => a - b);
+  const count = values.length;
+  const pct = (p) => {
+    if (!count) return null;
+    const idx = Math.min(count - 1, Math.max(0, Math.round((p / 100) * (count - 1))));
+    return Math.round(values[idx] * 100) / 100;
+  };
+  if (count < 5) return { count, unit: u, median: null, p25: null, p75: null, suppressed: true };
+  return { count, unit: u, median: pct(50), p25: pct(25), p75: pct(75), suppressed: false };
+}
+
+jobsRouter.get("/benchmark", (req, res) => {
+  const { cat, prov, exp, unit } = req.query;
+  res.json(computeBenchmark({ cat, prov, exp, unit }));
+});
+
 jobsRouter.get("/reports", requireAuth, requireAdminScope("moderator"), (req, res) => {
   const rows = db.prepare(
     `SELECT job_reports.*, jobs.title AS job_title, users.name AS reporter_name

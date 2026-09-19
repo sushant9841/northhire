@@ -17,7 +17,7 @@ import { sanitizeHtml } from "../../helpers/sanitize.js";
 import { PROVS, PCODE, CATS, CATM } from "../../store/seed/constants.js";
 import { jobTone, jobStatusLabel } from "../../helpers/statusTone.js";
 import { applicationStageLabel } from "../../helpers/enumLabels.js";
-import { LocationInput, InlineList, QuestionBuilder, aiSuggestJD } from "../shared/formControls.jsx";
+import { LocationInput, InlineList, QuestionBuilder, aiSuggestJD, SalaryBenchmarkCard } from "../shared/formControls.jsx";
 import { useTranslation } from "../../i18n/i18n.jsx";
 import { formatNumber, formatDate, formatDateTime } from "../../i18n/format.js";
 import { JobDetailPage } from "../shared/JobDetailPage.jsx";
@@ -620,6 +620,9 @@ export function EmpPost(){
           hint={t("employer.post.locationHint")}>
           <LocationInput value={f.location} onChange={setLocation}
             placeholder={t("employer.post.locationPlaceholder")}/></Field>
+
+        <SalaryBenchmarkCard cat={f.cat} provCode={PCODE[f.prov]} exp={f.exp}
+          unit={f.payPeriod==="yr"?"yr":"hr"} provLabel={f.prov}/>
 
         <Field label={t("employer.post.payStructure")}>
           <div className="grid grid-cols-2 gap-2.5 mb-3">

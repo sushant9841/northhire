@@ -421,6 +421,7 @@ export const fr = {
     disabledTitle: "Désactivé pour votre entreprise",
     disabledBody: "Un·e administrateur·rice a désactivé ce module pour tout le monde. Demandez à un·e propriétaire ou administrateur·rice de le réactiver dans les Paramètres.",
     deniedBackBtn: "Retour à l'aperçu",
+    viewingAsFinance: "Vue Finances",
   },
   agencyShell: {
     sectionOperations: "Opérations", sectionPayrollBilling: "Paie et facturation", sectionInsights: "Aperçus",
@@ -1107,6 +1108,10 @@ export const fr = {
       niceToHavePlaceholder: "Tapez une compétence bonus et appuyez sur Entrée",
       experienceRequired: "Expérience requise", educationRequired: "Formation requise",
       payLocationSub: "Les annonces qui publient un salaire reçoivent environ trois fois plus de candidatures",
+      benchmarkTitle: "Postes similaires ({cat}) en {prov}",
+      benchmarkBody: "paient {p25} $–{p75} $/h — médiane {median} $ — n={count}",
+      benchmarkNotEnough: "Pas encore assez d'annonces en ligne pour ce secteur, cette province et ce niveau d'expérience pour afficher un repère.",
+      benchmarkPickFieldsFirst: "Choisissez un secteur, une province et un niveau d'expérience pour voir les repères de rémunération.",
       location: "Emplacement", locationHint: "Tapez au moins 2 lettres pour rechercher des villes canadiennes, ou utilisez votre position actuelle.",
       locationPlaceholder: "Commencez à taper une ville...",
       payStructure: "Structure de paie", payRange: "Fourchette (min – max)", payFixed: "Montant fixe",

@@ -420,6 +420,7 @@ export const en = {
     disabledTitle: "Turned off for your company",
     disabledBody: "An admin has disabled this module for everyone. Ask an Owner or Admin to turn it back on in Settings.",
     deniedBackBtn: "Back to Overview",
+    viewingAsFinance: "Viewing as Finance",
   },
   agencyShell: {
     sectionOperations: "Operations", sectionPayrollBilling: "Payroll & Billing", sectionInsights: "Insights",
@@ -1105,6 +1106,10 @@ export const en = {
       niceToHavePlaceholder: "Type a bonus skill and press Enter",
       experienceRequired: "Experience required", educationRequired: "Education required",
       payLocationSub: "Listings that publish a salary get roughly three times more applications",
+      benchmarkTitle: "Similar {cat} roles in {prov}",
+      benchmarkBody: "pay ${p25}–${p75}/hr — median ${median} — n={count}",
+      benchmarkNotEnough: "Not enough live listings for this sector, province and experience level yet to show a benchmark.",
+      benchmarkPickFieldsFirst: "Pick a sector, province and experience level to see pay benchmarks.",
       location: "Location", locationHint: "Type at least 2 letters to search Canadian cities, or use your current location.",
       locationPlaceholder: "Start typing a city...",
       payStructure: "Pay structure", payRange: "Range (min – max)", payFixed: "Fixed amount",
