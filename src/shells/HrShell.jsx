@@ -191,10 +191,14 @@ export function HrShell({children}){
   </div>;
 
   /* H6 - "Viewing as Finance" indicator (FI-01): a small badge when the CURRENT VIEW exposes
-     financial data, independent of the viewer's own role - an Owner or Admin opening Payroll or
-     Invoices sees the exact same badge Isaac (Finance) does, so nobody mistakes "I can see this"
-     for "this is my normal, day-to-day view". */
-  const viewingFinanceData=["hrPayroll","hrInvoices"].includes(A.pg);
+     financial data (payroll / invoices / expenses). Scoped to Owner and Finance viewers only -
+     those are the two roles who can actually see the money-wide view (all salaries, every
+     invoice, every claim) rather than just their own line, so this is exactly where "am I looking
+     at this the way Finance does, or is this my own stuff" confusion happens. Admin/HR never reach
+     these routes (server + nav already gate that - see docs/PERMISSIONS.md) and an employee on
+     their own Payroll page is looking at their own payslip, not the Finance-wide view, so the badge
+     would be actively misleading there. */
+  const viewingFinanceData=["owner","finance"].includes(emp.role)&&["hrPayroll","hrInvoices","hrExpenses"].includes(A.pg);
 
   const topbar=<div className={`bg-white border-b border-line flex gap-3 items-center sticky top-0 z-20 ${mob?"py-3 px-4":"py-3.5 px-7"}`}>
     {mob&&<button onClick={()=>setNavOpen(!navOpen)} aria-label={t("dashShell.menuAria")} className="bg-transparent border-0 cursor-pointer p-1.5 text-text flex">

@@ -276,13 +276,16 @@ export function HrDashboard(){
           </div>
           {myTasks.length===0?<div className="py-4 text-text-3 text-sm">{t("hr.dashboard.noOpenTasks")}</div>
             :<div className="flex flex-col gap-2">
-              {myTasks.slice(0,5).map(task=><div key={task.id} className="flex gap-3 items-center py-3 px-3.5 bg-bg rounded-lg border border-line">
+              {/* H6 mobile pass: the whole row toggles the task, not just the 20px checkbox - a
+                 phone thumb needs the full row's ~52px height as its target, not a fiddly 20px
+                 square. */}
+              {myTasks.slice(0,5).map(task=><label key={task.id} className="flex gap-3 items-center py-3 px-3.5 bg-bg rounded-lg border border-line cursor-pointer" style={{minHeight:44}}>
                 <input type="checkbox" checked={task.status==="done"} onChange={()=>A.updateTaskStatus(task.id,task.status==="done"?"todo":"done")} className="w-5 h-5 cursor-pointer shrink-0"/>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-semibold text-text">{task.title}</div>
                   <div className="text-xs text-text-3 mt-0.5">{t("hr.dashboard.dueLabel")} {task.due}</div></div>
                 <Tag tone={task.priority==="high"?"danger":task.priority==="medium"?"warn":"neutral"} sm>{task.priority}</Tag>
-              </div>)}</div>}
+              </label>)}</div>}
         </Card>
       </div>
 
@@ -420,10 +423,19 @@ export function HrProfile(){
             <InlineList value={d.skills||[]} onChange={v=>set("skills",v)} icon="sparkle" placeholder={t("hr.profile.skillsPlaceholder")}/>
           </div>
 
-          <div className="flex gap-2.5 justify-end pt-5 border-t border-line-soft">
-            {dirty&&<Btn kind="ghost" onClick={()=>setD({...emp})}>{t("hr.profile.discardBtn")}</Btn>}
-            <Btn kind="primary" icon="check" disabled={!dirty} onClick={save}>{dirty?t("hr.profile.saveChangesBtn"):t("hr.profile.savedBtn")}</Btn>
-          </div>
+          {/* H6 mobile pass: on a phone this is the primary CTA of the whole page, so once it's
+             dirty it moves into the thumb zone (a fixed bottom bar) instead of staying wherever
+             scroll happened to leave it at the bottom of a long card. Desktop keeps the inline
+             footer - nothing to fix there, the button was already right where the eye lands. */}
+          {mob&&dirty
+            ? <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-line flex gap-2.5 p-3.5 z-50" style={{paddingBottom:"calc(14px + env(safe-area-inset-bottom, 0px))"}}>
+                <Btn kind="ghost" onClick={()=>setD({...emp})} style={{minHeight:44}}>{t("hr.profile.discardBtn")}</Btn>
+                <Btn kind="primary" icon="check" full onClick={save} style={{minHeight:44}}>{t("hr.profile.saveChangesBtn")}</Btn>
+              </div>
+            : <div className="flex gap-2.5 justify-end pt-5 border-t border-line-soft">
+                {dirty&&<Btn kind="ghost" onClick={()=>setD({...emp})}>{t("hr.profile.discardBtn")}</Btn>}
+                <Btn kind="primary" icon="check" disabled={!dirty} onClick={save}>{dirty?t("hr.profile.saveChangesBtn"):t("hr.profile.savedBtn")}</Btn>
+              </div>}
         </Card>
 
         <Card pad={mob?20:26} style={{borderRadius:16,marginBottom:16}}>
@@ -431,13 +443,18 @@ export function HrProfile(){
           <Banner tone="brand" icon="info" title={t("hr.profile.publicProfileHowWorks")} style={{marginBottom:16}}>
             {t("hr.profile.publicProfileDescription")}</Banner>
           <div className="flex flex-col gap-0.5">
+            {/* H6 mobile pass: the whole row toggles, not just the 48x28 switch itself - on a
+               phone that's the difference between a comfortable >=44px tap target and a fiddly
+               one, and it costs nothing on desktop where the switch was already easy to hit. */}
             {visItems.map(item=>{const on=d.visibility?.[item.k]!==false;
-              return <div key={item.k} className="flex gap-3 items-center py-3 px-3 rounded-lg transition-colors duration-150 hover:bg-bg">
+              return <div key={item.k} role="button" tabIndex={0} onClick={()=>setVis(item.k,!on)}
+                onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();setVis(item.k,!on);}}}
+                className="flex gap-3 items-center py-3 px-3 rounded-lg transition-colors duration-150 hover:bg-bg w-full text-left cursor-pointer" style={{minHeight:44}}>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-semibold text-text">{item.l}</div>
                   <div className="text-xs text-text-3 mt-0.5">{on?t("hr.profile.visiblePublicly"):t("hr.profile.hiddenFromPublic")}{item.v?t("hr.profile.visibilitySuffix")+item.v:""}</div>
                 </div>
-                <Switch on={on} onChange={v=>setVis(item.k,v)}/>
+                <div onClick={e=>e.stopPropagation()}><Switch on={on} onChange={v=>setVis(item.k,v)}/></div>
               </div>;})}
           </div>
         </Card>
@@ -493,6 +510,7 @@ export function HrProfile(){
         {emp.manager&&<_OneOnOneLog A={A} managerId={emp.manager} reportId={emp.id} me={emp}/>}
       </div>
     </div>
+    {mob&&dirty&&<div style={{height:76}}/>}
   </div>;
 }
 
@@ -1064,7 +1082,10 @@ export function HrLeave(){
     <Card pad={mob?16:20} style={{borderRadius:14}}>
       <div className="flex justify-between items-center mb-3.5 flex-wrap gap-2.5">
         <_PillTabs items={[["mine",t("hr.leave.myRequestsTab")],...(canApprove?[["pending",t("hr.leave.pendingTabPrefix")+pending.length+t("hr.leave.pendingTabSuffix")],["all",t("hr.leave.allTab")]]:[])]} value={tab} onChange={setTab}/>
-        <Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowReq(true)}>{t("hr.leave.requestLeaveBtn")}</Btn>
+        {/* H6 mobile pass: "Request leave" is the one action every employee actually comes to this
+           page to do - on a phone it moves to a fixed thumb-zone bar instead of a small top-right
+           button that's a stretch to reach one-handed. Desktop is unaffected. */}
+        {!mob&&<Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowReq(true)}>{t("hr.leave.requestLeaveBtn")}</Btn>}
       </div>
 
       {sorted.length===0
@@ -1093,6 +1114,13 @@ export function HrLeave(){
           </div>}
     </Card>
 
+    {mob&&<>
+      <div style={{height:76}}/>
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-line p-3.5 z-50" style={{paddingBottom:"calc(14px + env(safe-area-inset-bottom, 0px))"}}>
+        <Btn kind="primary" icon="plus" full onClick={()=>setShowReq(true)} style={{minHeight:44}}>{t("hr.leave.requestLeaveBtn")}</Btn>
+      </div>
+    </>}
+
     {showReq&&<Modal onClose={()=>setShowReq(false)} title={t("hr.leave.requestLeaveModalTitle")}>
       <div className="flex flex-col gap-3.5">
         <Field label={t("hr.leave.typeLabel")} required><Sel value={req.type} onChange={e=>setReq({...req,type:e.target.value})}>
@@ -1114,8 +1142,14 @@ export function HrLeave(){
 
 /* ─── Tasks: kanban board, real drag-and-drop via @dnd-kit on top of the existing ←/→ buttons
    (kept as the accessible, no-pointer-required path). ─── */
-function _TaskCard({t: task,col,cols,emp,A,onComments}){
+function _TaskCard({t: task,col,cols,emp,A,onComments,mob}){
   const {t}=useTranslation();
+  /* H6 mobile pass: these are the only way to advance a task without dragging, which is the
+     realistic mobile path (a phone tap-and-hold drag across a whole stacked kanban column is
+     exactly the kind of interaction the plan's mobile pass exists to replace) - so on mobile they
+     get a real >=44px target instead of the xs (~32px) size that's fine on desktop where a mouse
+     is precise. */
+  const touchStyle=mob?{minHeight:44,minWidth:44}:undefined;
   const {attributes,listeners,setNodeRef,transform,isDragging}=useDraggable({id:task.id});
   const style=transform?{transform:`translate3d(${transform.x}px,${transform.y}px,0)`,zIndex:50,opacity:0.9}:undefined;
   const assn=A.hrEmp(task.assignee);
@@ -1133,10 +1167,10 @@ function _TaskCard({t: task,col,cols,emp,A,onComments}){
       {assn&&<span>• {assn.name.split(" ")[0]}</span>}
     </div>
     <div className="flex gap-1" onPointerDown={e=>e.stopPropagation()}>
-      {col.k!=="todo"&&<Btn kind="ghost" size="xs" aria-label={t("hr.tasks.moveBackAriaLabel",{title:task.title,column:cols[cols.findIndex(c=>c.k===col.k)-1].label})} onClick={()=>A.updateTaskStatus(task.id,cols[cols.findIndex(c=>c.k===col.k)-1].k)}>←</Btn>}
-      {col.k!=="done"&&<Btn kind="ghost" size="xs" aria-label={t("hr.tasks.moveForwardAriaLabel",{title:task.title,column:cols[cols.findIndex(c=>c.k===col.k)+1].label})} onClick={()=>A.updateTaskStatus(task.id,cols[cols.findIndex(c=>c.k===col.k)+1].k)}>→</Btn>}
-      <Btn kind="ghost" size="xs" aria-label={t("hr.tasks.commentsAriaLabel",{title:task.title})} onClick={()=>onComments&&onComments(task)}>💬</Btn>
-      {(task.assignedBy===emp.id||emp.role==="owner"||emp.role==="admin")&&<Btn kind="ghost" size="xs" icon="trash" aria-label={t("hr.tasks.deleteTaskAriaLabel",{title:task.title})} onClick={()=>A.deleteTask(task.id)}/>}
+      {col.k!=="todo"&&<Btn kind="ghost" size="xs" style={touchStyle} aria-label={t("hr.tasks.moveBackAriaLabel",{title:task.title,column:cols[cols.findIndex(c=>c.k===col.k)-1].label})} onClick={()=>A.updateTaskStatus(task.id,cols[cols.findIndex(c=>c.k===col.k)-1].k)}>←</Btn>}
+      {col.k!=="done"&&<Btn kind="ghost" size="xs" style={touchStyle} aria-label={t("hr.tasks.moveForwardAriaLabel",{title:task.title,column:cols[cols.findIndex(c=>c.k===col.k)+1].label})} onClick={()=>A.updateTaskStatus(task.id,cols[cols.findIndex(c=>c.k===col.k)+1].k)}>→</Btn>}
+      <Btn kind="ghost" size="xs" style={touchStyle} aria-label={t("hr.tasks.commentsAriaLabel",{title:task.title})} onClick={()=>onComments&&onComments(task)}>💬</Btn>
+      {(task.assignedBy===emp.id||emp.role==="owner"||emp.role==="admin")&&<Btn kind="ghost" size="xs" style={touchStyle} icon="trash" aria-label={t("hr.tasks.deleteTaskAriaLabel",{title:task.title})} onClick={()=>A.deleteTask(task.id)}/>}
     </div>
   </div>;
 }
@@ -1182,7 +1216,7 @@ function _TaskCommentsModal({task,emp,A,onClose}){
     </div>
   </Modal>;
 }
-function _TaskColumn({col,tasks,cols,emp,A,onComments}){
+function _TaskColumn({col,tasks,cols,emp,A,onComments,mob}){
   const {t}=useTranslation();
   const {setNodeRef,isOver}=useDroppable({id:col.k});
   return <div ref={setNodeRef} className="bg-bg rounded-2xl p-3 transition-colors duration-150" style={{minHeight:200,outline:isOver?`2px solid ${C.brand}`:"none"}}>
@@ -1194,7 +1228,7 @@ function _TaskColumn({col,tasks,cols,emp,A,onComments}){
       <Tag tone="neutral" sm>{tasks.length}</Tag>
     </div>
     <div className="flex flex-col gap-2">
-      {[...tasks].sort((a,b)=>a.due.localeCompare(b.due)).map(task=><_TaskCard key={task.id} t={task} col={col} cols={cols} emp={emp} A={A} onComments={onComments}/>)}
+      {[...tasks].sort((a,b)=>a.due.localeCompare(b.due)).map(task=><_TaskCard key={task.id} t={task} col={col} cols={cols} emp={emp} A={A} onComments={onComments} mob={mob}/>)}
       {tasks.length===0&&<div className="p-5 text-center text-xs text-text-3">{t("hr.tasks.noTasksHere")}</div>}
     </div>
   </div>;
@@ -1208,7 +1242,7 @@ function _TaskBoard({cols,source,emp,A,mob,onComments}){
   };
   return <DndContext sensors={sensors} onDragEnd={onDragEnd}>
     <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-3"}`}>
-      {cols.map(col=><_TaskColumn key={col.k} col={col} tasks={source.filter(t=>t.status===col.k)} cols={cols} emp={emp} A={A} onComments={onComments}/>)}
+      {cols.map(col=><_TaskColumn key={col.k} col={col} tasks={source.filter(t=>t.status===col.k)} cols={cols} emp={emp} A={A} onComments={onComments} mob={mob}/>)}
     </div>
   </DndContext>;
 }
@@ -1239,11 +1273,21 @@ export function HrTasks(){
           {A.hrEmpsAtCompany(company.id).filter(e=>e.status==="active").map(e=><option key={e.id} value={e.id}>{e.name}</option>)}
         </Sel>}
       </div>
-      <Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowAdd(true)}>{t("hr.tasks.newTaskBtn")}</Btn>
+      {/* H6 mobile pass: same thumb-zone treatment as Request Leave - "add a task" is the primary
+         action here, so it drops out of the cramped header row and into a fixed bottom bar on
+         mobile instead of staying a small top-right button. */}
+      {!mob&&<Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowAdd(true)}>{t("hr.tasks.newTaskBtn")}</Btn>}
     </div>
 
     <_TaskBoard cols={cols} source={source} emp={emp} A={A} mob={mob} onComments={setTaskComments}/>
     {taskComments&&<_TaskCommentsModal task={taskComments} emp={emp} A={A} onClose={()=>setTaskComments(null)}/>}
+
+    {mob&&<>
+      <div style={{height:76}}/>
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-line p-3.5 z-50" style={{paddingBottom:"calc(14px + env(safe-area-inset-bottom, 0px))"}}>
+        <Btn kind="primary" icon="plus" full onClick={()=>setShowAdd(true)} style={{minHeight:44}}>{t("hr.tasks.newTaskBtn")}</Btn>
+      </div>
+    </>}
 
     {showAdd&&<Modal onClose={()=>setShowAdd(false)} title={t("hr.tasks.newTaskModalTitle")}>
       <div className="flex flex-col gap-3.5">
