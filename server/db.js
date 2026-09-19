@@ -974,6 +974,35 @@ for (const stmt of [
   // they know about (e.g. a construction company invoicing for a role that a staffing agency
   // helped fill), rather than a fabricated cross-tenant join.
   "ALTER TABLE hr_invoices ADD COLUMN placement_ref TEXT",
+  // Priority-4 #1 - Performance review cycles. A cycle is a company-wide review period (e.g.
+  // "H2 2026 review"); each cycle spawns one or more perf_reviews rows, one per
+  // (employee, reviewer, reviewer_role) triple - self/manager always created, peer optional and
+  // added ad hoc. reviewer_role distinguishes the three so an employee's self-review and their
+  // manager's review of them (same cycle, same employee_id) don't collide.
+  `CREATE TABLE IF NOT EXISTS perf_cycles (
+     id TEXT PRIMARY KEY,
+     company_id TEXT NOT NULL REFERENCES employers(id),
+     name TEXT NOT NULL,
+     period_start TEXT NOT NULL,
+     period_end TEXT NOT NULL,
+     status TEXT NOT NULL DEFAULT 'draft',
+     created_by TEXT REFERENCES hr_employees(id),
+     created_at TEXT NOT NULL DEFAULT (datetime('now'))
+   )`,
+  `CREATE TABLE IF NOT EXISTS perf_reviews (
+     id TEXT PRIMARY KEY,
+     cycle_id TEXT NOT NULL REFERENCES perf_cycles(id),
+     employee_id TEXT NOT NULL REFERENCES hr_employees(id),
+     reviewer_id TEXT NOT NULL REFERENCES hr_employees(id),
+     reviewer_role TEXT NOT NULL DEFAULT 'manager',
+     rating INTEGER,
+     notes_json TEXT NOT NULL DEFAULT '{}',
+     submitted_at TEXT,
+     created_at TEXT NOT NULL DEFAULT (datetime('now'))
+   )`,
+  "CREATE INDEX IF NOT EXISTS idx_perf_reviews_cycle ON perf_reviews(cycle_id)",
+  "CREATE INDEX IF NOT EXISTS idx_perf_reviews_employee ON perf_reviews(employee_id)",
+  "CREATE INDEX IF NOT EXISTS idx_perf_reviews_reviewer ON perf_reviews(reviewer_id)",
 ]) {
   try { db.exec(stmt); } catch (e) { if (!/duplicate column/i.test(e.message)) console.error("migration:", stmt, e.message); }
 }

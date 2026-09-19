@@ -11,7 +11,7 @@ export const HR_ROLES=[
 
 /* Company-level HR settings — feature toggles per module */
 export const HR_COMPANY_SETTINGS_DEFAULT={
-  modules:{directory:true,attendance:true,leave:true,tasks:true,calendar:true,chat:true,invoices:true,payroll:true,trainings:true,badges:true},
+  modules:{directory:true,attendance:true,leave:true,tasks:true,calendar:true,chat:true,invoices:true,payroll:true,trainings:true,badges:true,perfReviews:true},
   attendance:{allowRemotePunch:true,workingHoursStart:"08:00",workingHoursEnd:"17:00",lateThresholdMin:15},
   leave:{annualVacationDays:15,sickDays:10,personalDays:3,requireApproval:true,advanceNoticeDays:14,
     /* Year-boundary carryover. Defaults to the common Canadian arrangement (a small capped
@@ -78,4 +78,5 @@ export const HR_MODULES=[
   {k:"hrIntegrations",label:"Integrations",icon:"hex",module:"integrations"},
   {k:"hrPolicies",label:"Policies & sign-off",icon:"shield",module:"policies"},
   {k:"hrRoster",label:"Shift roster",icon:"calendar",module:"roster"},
+  {k:"hrPerfReviews",label:"Performance reviews",icon:"trend",module:"perfReviews"},
 ];

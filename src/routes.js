@@ -81,6 +81,7 @@ export const ROUTES = {
   hrIntegrations:{titleKey:"routeTitles.hrIntegrations", tab:"home", bare:true, path:"/hr/integrations"},
   hrPolicies:   {titleKey:"routeTitles.hrPolicies", tab:"home", bare:true, path:"/hr/policies"},
   hrRoster:     {titleKey:"routeTitles.hrRoster", tab:"home", bare:true, path:"/hr/roster"},
+  hrPerfReviews:{titleKey:"routeTitles.hrPerfReviews", tab:"home", bare:true, path:"/hr/perf-reviews"},
 
   /* ─── Staffing agency console ─── */
   agencyLogin:      {titleKey:"routeTitles.agencyLogin", tab:"home", bare:true, path:"/staffing/login"},

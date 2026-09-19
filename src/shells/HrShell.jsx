@@ -19,7 +19,7 @@ const HR_MODULE_LABEL_KEY={hrDashboard:"account.dashboard",hrPeople:"tabs.people
   hrTasks:"hrShell.tasks",hrCalendar:"hrShell.calendar",hrChat:"hrShell.chat",hrTrainings:"nav.trainings",
   hrBadges:"hrShell.badges",hrHiring:"hrShell.hiring",hrInvoices:"hrShell.invoices",hrPayroll:"dashShell.modHrPayroll",
   hrReports:"dashShell.modHrReports",hrSettings:"account.settings",hrIntegrations:"hrShell.integrations",
-  hrPolicies:"hrShell.policies",hrRoster:"hrShell.roster"};
+  hrPolicies:"hrShell.policies",hrRoster:"hrShell.roster",hrPerfReviews:"hrShell.perfReviews"};
 const HR_ROLE_LABEL_KEY={owner:"hrShell.roleOwner",admin:"hrShell.roleAdmin",hr:"hrShell.roleHr",
   finance:"hrShell.roleFinance",employee:"hrShell.roleEmployee"};
 
@@ -29,11 +29,11 @@ const HR_ROLE_LABEL_KEY={owner:"hrShell.roleOwner",admin:"hrShell.roleAdmin",hr:
    docs/PERMISSIONS.md - e.g. Linda (HR) sees Attendance/Leave/Tasks near the top, Isaac (Finance)
    sees Payroll/Invoices near the top, instead of everyone getting the same owner-centric order. */
 const HR_NAV_PRIORITY={
-  owner:["hrDashboard","hrPeople","hrAttendance","hrLeave","hrTrainings","hrPayroll","hrInvoices","hrReports","hrSettings","hrIntegrations"],
-  admin:["hrDashboard","hrPeople","hrAttendance","hrLeave","hrTasks","hrCalendar","hrTrainings","hrChat","hrSettings","hrRoster"],
-  hr:["hrDashboard","hrPeople","hrAttendance","hrLeave","hrTasks","hrCalendar","hrTrainings","hrChat","hrHiring"],
+  owner:["hrDashboard","hrPeople","hrAttendance","hrLeave","hrTrainings","hrPerfReviews","hrPayroll","hrInvoices","hrReports","hrSettings","hrIntegrations"],
+  admin:["hrDashboard","hrPeople","hrAttendance","hrLeave","hrTasks","hrCalendar","hrTrainings","hrPerfReviews","hrChat","hrSettings","hrRoster"],
+  hr:["hrDashboard","hrPeople","hrAttendance","hrLeave","hrTasks","hrCalendar","hrTrainings","hrPerfReviews","hrChat","hrHiring"],
   finance:["hrDashboard","hrPayroll","hrInvoices","hrExpenses","hrReports"],
-  employee:["hrDashboard","hrProfile","hrAttendance","hrLeave","hrTasks","hrCalendar","hrTrainings","hrChat"],
+  employee:["hrDashboard","hrProfile","hrAttendance","hrLeave","hrTasks","hrCalendar","hrTrainings","hrPerfReviews","hrChat"],
 };
 function orderModulesForRole(modules,role){
   const order=HR_NAV_PRIORITY[role]||[];

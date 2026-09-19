@@ -1493,3 +1493,145 @@ hrRouter.put("/expense-categories", requireHrAuth, requireHrPriv, (req, res) => 
   logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "expense_categories_updated", `Updated expense categories (${clean.length})`);
   res.json({ ok: true, categories: clean });
 });
+
+/* ═══════════════ Priority-4 #1: Performance review cycles ═══════════════
+   A cycle is a company-wide review period. Launching a cycle stamps out one review row per
+   active employee for self + manager (peer reviews are added ad hoc afterwards). Manager-role
+   employees can only see/act on reviews for their own direct reports (+ their own); HR/Owner see
+   everything company-wide, enforced here rather than trusted to the client. */
+function serializePerfCycle(r) {
+  return { id: r.id, name: r.name, periodStart: r.period_start, periodEnd: r.period_end, status: r.status, createdBy: r.created_by, createdAt: r.created_at };
+}
+function serializePerfReview(r) {
+  return {
+    id: r.id, cycleId: r.cycle_id, employeeId: r.employee_id, reviewerId: r.reviewer_id,
+    reviewerRole: r.reviewer_role, rating: r.rating,
+    notes: JSON.parse(r.notes_json || "{}"), submittedAt: r.submitted_at, createdAt: r.created_at,
+  };
+}
+// Can this hr employee see/act on a review about `employeeId`? Priv sees everyone; anyone else
+// only their own record or a direct report's (via hr_employees.manager, the real reporting line).
+function canSeePerfSubject(me, employeeId) {
+  if (isPriv(me)) return true;
+  if (me.id === employeeId) return true;
+  const target = db.prepare("SELECT manager, company_id FROM hr_employees WHERE id = ?").get(employeeId);
+  return !!target && target.company_id === me.company_id && target.manager === me.id;
+}
+
+hrRouter.get("/perf-cycles", requireHrAuth, (req, res) => {
+  const rows = db.prepare("SELECT * FROM perf_cycles WHERE company_id = ? ORDER BY period_start DESC").all(req.hrEmployee.company_id);
+  res.json({ cycles: rows.map(serializePerfCycle) });
+});
+
+hrRouter.post("/perf-cycles", requireHrAuth, requireHrPriv, (req, res) => {
+  const { name, periodStart, periodEnd } = req.body || {};
+  if (!name || !periodStart || !periodEnd) return res.status(400).json({ error: "name, periodStart and periodEnd are required." });
+  if (periodEnd < periodStart) return res.status(400).json({ error: "periodEnd can't be before periodStart." });
+  const id = nextId("pc", "perf_cycles");
+  db.prepare("INSERT INTO perf_cycles (id, company_id, name, period_start, period_end, status, created_by) VALUES (?,?,?,?,?,?,?)")
+    .run(id, req.hrEmployee.company_id, String(name).slice(0, 120), periodStart, periodEnd, "draft", req.hrEmployee.id);
+  logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "perf_cycle_created", `Created review cycle "${name}"`);
+  res.status(201).json({ cycle: serializePerfCycle(db.prepare("SELECT * FROM perf_cycles WHERE id = ?").get(id)) });
+});
+
+function resolveOwnPerfCycle(req, res) {
+  const cycle = db.prepare("SELECT * FROM perf_cycles WHERE id = ? AND company_id = ?").get(req.params.id, req.hrEmployee.company_id);
+  if (!cycle) { res.status(404).json({ error: "Cycle not found." }); return null; }
+  return cycle;
+}
+
+hrRouter.patch("/perf-cycles/:id", requireHrAuth, requireHrPriv, (req, res) => {
+  const cycle = resolveOwnPerfCycle(req, res); if (!cycle) return;
+  const { name, periodStart, periodEnd, status } = req.body || {};
+  if (status && !["draft", "active", "closed"].includes(status)) return res.status(400).json({ error: "Invalid status." });
+  db.prepare("UPDATE perf_cycles SET name = ?, period_start = ?, period_end = ?, status = ? WHERE id = ?")
+    .run(String(name || cycle.name).slice(0, 120), periodStart || cycle.period_start, periodEnd || cycle.period_end, status || cycle.status, cycle.id);
+  if (status && status !== cycle.status) logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "perf_cycle_status_changed", `Cycle "${cycle.name}" → ${status}`);
+  res.json({ cycle: serializePerfCycle(db.prepare("SELECT * FROM perf_cycles WHERE id = ?").get(cycle.id)) });
+});
+
+// Stamps out self + manager review rows for every active employee not already in this cycle.
+// Idempotent - re-running only fills gaps (e.g. an employee hired after the first launch).
+hrRouter.post("/perf-cycles/:id/launch", requireHrAuth, requireHrPriv, (req, res) => {
+  const cycle = resolveOwnPerfCycle(req, res); if (!cycle) return;
+  const employees = db.prepare("SELECT * FROM hr_employees WHERE company_id = ? AND status = 'active'").all(req.hrEmployee.company_id);
+  const existing = db.prepare("SELECT employee_id, reviewer_role FROM perf_reviews WHERE cycle_id = ?").all(cycle.id);
+  const has = (empId, role) => existing.some(e => e.employee_id === empId && e.reviewer_role === role);
+  let created = 0;
+  const insert = db.prepare("INSERT INTO perf_reviews (id, cycle_id, employee_id, reviewer_id, reviewer_role) VALUES (?,?,?,?,?)");
+  for (const emp of employees) {
+    if (!has(emp.id, "self")) { insert.run(nextId("pr", "perf_reviews"), cycle.id, emp.id, emp.id, "self"); created++; }
+    if (emp.manager && !has(emp.id, "manager")) { insert.run(nextId("pr", "perf_reviews"), cycle.id, emp.id, emp.manager, "manager"); created++; }
+  }
+  if (cycle.status === "draft") db.prepare("UPDATE perf_cycles SET status = 'active' WHERE id = ?").run(cycle.id);
+  logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "perf_cycle_launched", `Launched cycle "${cycle.name}" (${created} review(s) created)`);
+  res.json({ ok: true, created });
+});
+
+// Add an ad-hoc peer reviewer to an employee's review in this cycle.
+hrRouter.post("/perf-cycles/:id/peer-review", requireHrAuth, (req, res) => {
+  const cycle = resolveOwnPerfCycle(req, res); if (!cycle) return;
+  const { employeeId, reviewerId } = req.body || {};
+  if (!employeeId || !reviewerId) return res.status(400).json({ error: "employeeId and reviewerId are required." });
+  if (!canSeePerfSubject(req.hrEmployee, employeeId)) return res.status(403).json({ error: "Not allowed for this employee." });
+  const reviewer = db.prepare("SELECT id FROM hr_employees WHERE id = ? AND company_id = ?").get(reviewerId, req.hrEmployee.company_id);
+  if (!reviewer) return res.status(404).json({ error: "Reviewer not found." });
+  const dup = db.prepare("SELECT id FROM perf_reviews WHERE cycle_id = ? AND employee_id = ? AND reviewer_id = ? AND reviewer_role = 'peer'").get(cycle.id, employeeId, reviewerId);
+  if (dup) return res.status(409).json({ error: "That peer reviewer is already on this review." });
+  const id = nextId("pr", "perf_reviews");
+  db.prepare("INSERT INTO perf_reviews (id, cycle_id, employee_id, reviewer_id, reviewer_role) VALUES (?,?,?,?,'peer')").run(id, cycle.id, employeeId, reviewerId);
+  res.status(201).json({ review: serializePerfReview(db.prepare("SELECT * FROM perf_reviews WHERE id = ?").get(id)) });
+});
+
+hrRouter.get("/perf-reviews", requireHrAuth, (req, res) => {
+  const { cycleId, employeeId } = req.query;
+  const me = req.hrEmployee;
+  let rows = db.prepare(
+    `SELECT perf_reviews.* FROM perf_reviews JOIN perf_cycles ON perf_cycles.id = perf_reviews.cycle_id
+     WHERE perf_cycles.company_id = ?${cycleId ? " AND perf_reviews.cycle_id = ?" : ""}${employeeId ? " AND perf_reviews.employee_id = ?" : ""}
+     ORDER BY perf_reviews.created_at DESC`
+  ).all(...[me.company_id, ...(cycleId ? [cycleId] : []), ...(employeeId ? [employeeId] : [])]);
+  if (!isPriv(me)) {
+    rows = rows.filter(r => r.reviewer_id === me.id || r.employee_id === me.id || canSeePerfSubject(me, r.employee_id));
+  }
+  res.json({ reviews: rows.map(serializePerfReview) });
+});
+
+hrRouter.patch("/perf-reviews/:id", requireHrAuth, (req, res) => {
+  const row = db.prepare(
+    "SELECT perf_reviews.*, perf_cycles.company_id AS cycle_company_id FROM perf_reviews JOIN perf_cycles ON perf_cycles.id = perf_reviews.cycle_id WHERE perf_reviews.id = ?"
+  ).get(req.params.id);
+  if (!row || row.cycle_company_id !== req.hrEmployee.company_id) return res.status(404).json({ error: "Review not found." });
+  const me = req.hrEmployee;
+  const isOwnReview = row.reviewer_id === me.id;
+  const { rating, notes, calibrationNote, submit } = req.body || {};
+  if (!isOwnReview && !isPriv(me)) return res.status(403).json({ error: "You can only fill out your own assigned review." });
+  const current = JSON.parse(row.notes_json || "{}");
+  if (isOwnReview) {
+    if (row.submitted_at) return res.status(400).json({ error: "This review is already submitted." });
+    if (rating != null) {
+      const r = Number(rating);
+      if (!Number.isInteger(r) || r < 1 || r > 5) return res.status(400).json({ error: "rating must be an integer 1-5." });
+      current.rating = r;
+    }
+    if (notes != null) current.body = String(notes).slice(0, 6000);
+  }
+  // Calibration notes are HR/owner-only, layered on top of any reviewer's own notes - used to
+  // reconcile ratings across managers/teams before a cycle closes.
+  if (calibrationNote != null && isPriv(me)) current.calibration = String(calibrationNote).slice(0, 4000);
+  const willSubmit = isOwnReview && submit && current.rating != null;
+  db.prepare("UPDATE perf_reviews SET rating = ?, notes_json = ?, submitted_at = ? WHERE id = ?")
+    .run(current.rating ?? row.rating, JSON.stringify(current), willSubmit ? new Date().toISOString() : row.submitted_at, row.id);
+  if (willSubmit) logHrAudit(req.hrEmployee.company_id, me.id, "perf_review_submitted", `Submitted ${row.reviewer_role} review`, row.employee_id);
+  res.json({ review: serializePerfReview(db.prepare("SELECT * FROM perf_reviews WHERE id = ?").get(row.id)) });
+});
+
+hrRouter.delete("/perf-reviews/:id", requireHrAuth, requireHrPriv, (req, res) => {
+  const row = db.prepare(
+    "SELECT perf_reviews.*, perf_cycles.company_id AS cycle_company_id FROM perf_reviews JOIN perf_cycles ON perf_cycles.id = perf_reviews.cycle_id WHERE perf_reviews.id = ?"
+  ).get(req.params.id);
+  if (!row || row.cycle_company_id !== req.hrEmployee.company_id) return res.status(404).json({ error: "Review not found." });
+  if (row.submitted_at) return res.status(400).json({ error: "Can't remove an already-submitted review." });
+  db.prepare("DELETE FROM perf_reviews WHERE id = ?").run(row.id);
+  res.json({ ok: true });
+});

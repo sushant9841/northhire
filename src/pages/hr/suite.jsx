@@ -2910,6 +2910,249 @@ export function HrRoster(){
   </div>;
 }
 
+/* Priority-4 #1 - Performance review cycles. A cycle spawns self + manager reviews for every
+   active employee on launch; peer reviews are added ad hoc. Manager-role employees only ever see
+   reviews about their own reports (server-enforced in server/routes/hr.js), so the client trusts
+   whatever /hr/perf-reviews returns rather than re-filtering. */
+// Date-only strings ("2026-01-01") must not go through formatDate() - that parses via `new
+// Date(str)` (UTC midnight) and Intl then renders it in the browser's local timezone, which
+// silently shows the previous day west of UTC. Appending T00:00 forces local-time parsing
+// instead, the same fix HrRoster already uses for its date-only strings.
+function _fmtDateOnly(d,locale){
+  if(!d)return "";
+  return new Intl.DateTimeFormat(locale==="fr"||locale==="fr-CA"?"fr-CA":"en-CA",{year:"numeric",month:"long",day:"numeric"}).format(new Date(d+"T00:00"));
+}
+
+function _RatingStars({value,onChange,readOnly}){
+  return <div className="flex gap-1">
+    {[1,2,3,4,5].map(n=><button key={n} type="button" disabled={readOnly}
+      onClick={()=>onChange?.(n)}
+      className={`w-8 h-8 rounded-lg border flex items-center justify-center ${readOnly?"cursor-default":"cursor-pointer"} ${value>=n?"bg-warn text-white border-warn":"bg-bg text-text-3 border-line"}`}>
+      <I n="star" s={15}/>
+    </button>)}
+  </div>;
+}
+
+function _PerfReviewRow({A,review,me,priv,onChange,onDelete}){
+  const {t,locale}=useTranslation();
+  const [rating,setRating]=useState(review.rating||0);
+  const [notes,setNotes]=useState(review.notes?.body||"");
+  const [calNote,setCalNote]=useState(review.notes?.calibration||"");
+  const emp=A.hrEmp(review.employeeId); const reviewer=A.hrEmp(review.reviewerId);
+  const isMine=review.reviewerId===me.id;
+  const roleKey={self:"roleSelf",manager:"roleManager",peer:"rolePeer"}[review.reviewerRole]||review.reviewerRole;
+  const submitted=!!review.submittedAt;
+  const saveDraft=async()=>{
+    try{const r=await A.hrApiPatch(`/hr/perf-reviews/${review.id}`,{rating:rating||null,notes,submit:false});
+      onChange(r.review);
+    }catch(e){A.toast?.(e.message,"danger");}
+  };
+  const saveCalibration=async()=>{
+    try{const r=await A.hrApiPatch(`/hr/perf-reviews/${review.id}`,{calibrationNote:calNote});
+      onChange(r.review); A.toast?.(t("hr.perfReviews.saveCalibrationBtn"),"ok");
+    }catch(e){A.toast?.(e.message,"danger");}
+  };
+  return <Card pad={18} style={{borderRadius:14}}>
+    <div className="flex justify-between items-start gap-2 flex-wrap mb-2">
+      <div className="flex items-center gap-2.5 min-w-0">
+        <SmartPortrait seed={emp?.seed||0} size={28} radius={8}/>
+        <div className="min-w-0">
+          <div className="text-sm font-semibold text-text">{t("hr.perfReviews.aboutLabel",{name:emp?.name||"—"})}</div>
+          <div className="text-xs text-text-3">{t("hr.perfReviews.byLabel",{name:reviewer?.name||"—",role:t(`hr.perfReviews.${roleKey}`)})}</div>
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <Tag tone={submitted?"ok":"neutral"} sm>{submitted?t("hr.perfReviews.submittedTag"):t("hr.perfReviews.pendingTag")}</Tag>
+        {priv&&!submitted&&<Btn kind="ghost" size="xs" icon="trash" onClick={()=>onDelete(review.id)}/>}
+      </div>
+    </div>
+    {(isMine||submitted)&&<div className="mt-2">
+      <Lbl style={{marginBottom:4}}>{t("hr.perfReviews.ratingLabel")}</Lbl>
+      <div className="flex items-center gap-2.5 mb-2">
+        <_RatingStars value={rating} onChange={isMine&&!submitted?setRating:undefined} readOnly={!isMine||submitted}/>
+        <span className="text-xs text-text-3">{t("hr.perfReviews.ratingScaleHint")}</span>
+      </div>
+      {isMine&&!submitted
+        ? <Area rows={3} value={notes} onChange={e=>setNotes(e.target.value)} placeholder={t("hr.perfReviews.notesPlaceholder")}/>
+        : (review.notes?.body&&<div className="text-sm text-text-2 whitespace-pre-wrap p-2.5 bg-bg rounded-lg">{review.notes.body}</div>)}
+      {isMine&&!submitted&&<div className="flex justify-end gap-2 mt-2.5">
+        <Btn kind="ghost" size="sm" onClick={saveDraft}>{t("hr.perfReviews.saveDraftBtn")}</Btn>
+        <Btn kind="primary" size="sm" disabled={!rating} onClick={async()=>{
+          try{const r=await A.hrApiPatch(`/hr/perf-reviews/${review.id}`,{rating,notes,submit:true});
+            onChange(r.review); A.toast?.(t("hr.perfReviews.submitBtn"),"ok");
+          }catch(e){A.toast?.(e.message,"danger");}
+        }}>{t("hr.perfReviews.submitBtn")}</Btn>
+      </div>}
+      {submitted&&<div className="text-xs text-text-3 mt-1.5">{t("hr.perfReviews.submittedAt",{date:formatDate(review.submittedAt,locale)})}</div>}
+    </div>}
+    {priv&&<div className="mt-3 pt-3 border-t border-line-soft">
+      <Lbl style={{marginBottom:4}}>{t("hr.perfReviews.calibrationLabel")}</Lbl>
+      <Area rows={2} value={calNote} onChange={e=>setCalNote(e.target.value)} placeholder={t("hr.perfReviews.calibrationPlaceholder")}/>
+      <div className="flex justify-end mt-2"><Btn kind="ghost" size="sm" onClick={saveCalibration}>{t("hr.perfReviews.saveCalibrationBtn")}</Btn></div>
+    </div>}
+  </Card>;
+}
+
+export function HrPerfReviews(){
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
+  const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
+  const priv=["owner","admin","hr"].includes(emp.role);
+  const [cycles,setCycles]=useState(null);
+  const [selectedCycle,setSelectedCycle]=useState(null);
+  const [reviews,setReviews]=useState(null);
+  const [showNewCycle,setShowNewCycle]=useState(false);
+  const [nc,setNc]=useState({name:"",periodStart:"",periodEnd:""});
+  const [peerFor,setPeerFor]=useState(null);
+  const [peerReviewerId,setPeerReviewerId]=useState("");
+  const [confirmLaunch,setConfirmLaunch]=useState(null);
+  const [confirmDelete,setConfirmDelete]=useState(null);
+
+  const loadCycles=async()=>{try{const r=await A.hrApiGet("/hr/perf-cycles"); setCycles(r.cycles||[]);}catch{setCycles([]);}};
+  useEffect(()=>{loadCycles();/* eslint-disable-next-line */},[]);
+  const loadReviews=async(cycleId)=>{try{const r=await A.hrApiGet(`/hr/perf-reviews?cycleId=${cycleId}`); setReviews(r.reviews||[]);}catch{setReviews([]);}};
+  useEffect(()=>{if(selectedCycle)loadReviews(selectedCycle);/* eslint-disable-next-line */},[selectedCycle]);
+
+  const cycle=cycles?.find(c=>c.id===selectedCycle);
+
+  const createCycle=async()=>{
+    if(!nc.name||!nc.periodStart||!nc.periodEnd)return;
+    try{const r=await A.hrApiPost("/hr/perf-cycles",nc);
+      setShowNewCycle(false); setNc({name:"",periodStart:"",periodEnd:""});
+      await loadCycles(); setSelectedCycle(r.cycle.id);
+    }catch(e){A.toast?.(e.message,"danger");}
+  };
+  const launchCycle=async(id)=>{
+    try{const r=await A.hrApiPost(`/hr/perf-cycles/${id}/launch`,{});
+      A.toast?.(t("hr.perfReviews.launchedToast",{n:r.created}),"ok");
+      await loadCycles(); await loadReviews(id);
+    }catch(e){A.toast?.(e.message,"danger");}
+    setConfirmLaunch(null);
+  };
+  const setCycleStatus=async(id,status)=>{
+    try{await A.hrApiPatch(`/hr/perf-cycles/${id}`,{status}); await loadCycles();}
+    catch(e){A.toast?.(e.message,"danger");}
+  };
+  const addPeer=async()=>{
+    if(!peerFor||!peerReviewerId)return;
+    try{await A.hrApiPost(`/hr/perf-cycles/${selectedCycle}/peer-review`,{employeeId:peerFor,reviewerId:peerReviewerId});
+      setPeerFor(null); setPeerReviewerId(""); await loadReviews(selectedCycle);
+    }catch(e){A.toast?.(e.message,"danger");}
+  };
+  const deleteReview=async(id)=>{
+    try{await A.hrApiDel(`/hr/perf-reviews/${id}`); await loadReviews(selectedCycle);}
+    catch(e){A.toast?.(e.message,"danger");}
+    setConfirmDelete(null);
+  };
+  const updateReviewInList=r=>setReviews(list=>list.map(x=>x.id===r.id?r:x));
+
+  if(cycles===null)return <div className="text-sm text-text-3 py-4">{t("common.loading")||"Loading…"}</div>;
+
+  if(!selectedCycle){
+    const employeesById=Object.fromEntries(A.hrEmpsAtCompany(company.id).map(e=>[e.id,e]));
+    return <div>
+      <div className="flex justify-between items-center gap-2 mb-4 flex-wrap">
+        <div>
+          <Lbl style={{marginBottom:2}}>{t("hr.perfReviews.title")}</Lbl>
+          <div className="text-xs text-text-3">{t("hr.perfReviews.description")}</div>
+        </div>
+        {priv&&<Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowNewCycle(true)}>{t("hr.perfReviews.newCycleBtn")}</Btn>}
+      </div>
+      {cycles.length===0
+        ? <Empty icon="trend" title={t("hr.perfReviews.noCycles")}/>
+        : <div className="flex flex-col gap-2.5">
+          {cycles.map(c=><button key={c.id} onClick={()=>setSelectedCycle(c.id)}
+            className="flex justify-between items-center gap-2 py-3.5 px-4 bg-white border border-line rounded-xl cursor-pointer text-left hover:border-brand">
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-text">{c.name}</div>
+              <div className="text-xs text-text-3 mt-0.5">{t("hr.perfReviews.periodRange",{start:_fmtDateOnly(c.periodStart,locale),end:_fmtDateOnly(c.periodEnd,locale)})}</div>
+            </div>
+            <Tag tone={c.status==="active"?"ok":c.status==="closed"?"neutral":"warn"} sm>{t(`hr.perfReviews.status${c.status.charAt(0).toUpperCase()+c.status.slice(1)}`)}</Tag>
+          </button>)}
+        </div>}
+      {showNewCycle&&<Modal onClose={()=>setShowNewCycle(false)} title={t("hr.perfReviews.cycleModalTitle")}>
+        <div className="flex flex-col gap-3.5">
+          <Field label={t("hr.perfReviews.nameLabel")} required><Input value={nc.name} onChange={e=>setNc({...nc,name:e.target.value})} placeholder={t("hr.perfReviews.namePlaceholder")}/></Field>
+          <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
+            <Field label={t("hr.perfReviews.periodStartLabel")} required><Input type="date" value={nc.periodStart} onChange={e=>setNc({...nc,periodStart:e.target.value})}/></Field>
+            <Field label={t("hr.perfReviews.periodEndLabel")} required><Input type="date" value={nc.periodEnd} onChange={e=>setNc({...nc,periodEnd:e.target.value})}/></Field>
+          </div>
+          <div className="flex gap-2.5 justify-end">
+            <Btn kind="ghost" onClick={()=>setShowNewCycle(false)}>{t("hr.perfReviews.cancelBtn")}</Btn>
+            <Btn kind="primary" onClick={createCycle}>{t("hr.perfReviews.createBtn")}</Btn>
+          </div>
+        </div>
+      </Modal>}
+    </div>;
+  }
+
+  const myReviews=(reviews||[]).filter(r=>r.reviewerId===emp.id);
+  const activeEmployees=A.hrEmpsAtCompany(company.id).filter(e=>e.status==="active");
+
+  return <div>
+    <div className="flex items-center gap-2 mb-1">
+      <Btn kind="ghost" size="xs" icon="chevL" onClick={()=>{setSelectedCycle(null); setReviews(null);}}>{t("hr.perfReviews.backToCycles")}</Btn>
+    </div>
+    <div className="flex justify-between items-center gap-2 mb-4 flex-wrap">
+      <div>
+        <Lbl style={{marginBottom:2}}>{cycle?.name}</Lbl>
+        <div className="text-xs text-text-3">{cycle&&t("hr.perfReviews.periodRange",{start:_fmtDateOnly(cycle.periodStart,locale),end:_fmtDateOnly(cycle.periodEnd,locale)})} · {t("hr.perfReviews.reviewCountLabel",{n:(reviews||[]).length})}</div>
+      </div>
+      {priv&&cycle&&<div className="flex gap-2">
+        {cycle.status==="draft"&&<Btn kind="primary" size="sm" icon="check" onClick={()=>setConfirmLaunch(cycle.id)}>{t("hr.perfReviews.launchBtn")}</Btn>}
+        {cycle.status==="active"&&<>
+          <Btn kind="outline" size="sm" onClick={()=>setConfirmLaunch(cycle.id)}>{t("hr.perfReviews.launchBtn")}</Btn>
+          <Btn kind="ghost" size="sm" onClick={()=>setCycleStatus(cycle.id,"closed")}>{t("hr.perfReviews.closeBtn")}</Btn>
+        </>}
+        {cycle.status==="closed"&&<Btn kind="ghost" size="sm" onClick={()=>setCycleStatus(cycle.id,"active")}>{t("hr.perfReviews.reopenBtn")}</Btn>}
+      </div>}
+    </div>
+
+    {myReviews.length>0&&<div className="mb-5">
+      <div className="text-xs font-semibold text-text-3 uppercase tracking-wide mb-2">{t("hr.perfReviews.myReviewsTitle")}</div>
+      <div className="flex flex-col gap-2.5">
+        {myReviews.map(r=><_PerfReviewRow key={r.id} A={A} review={r} me={emp} priv={priv} onChange={updateReviewInList} onDelete={id=>setConfirmDelete(id)}/>)}
+      </div>
+    </div>}
+
+    <div className="flex justify-between items-center mb-2">
+      <div className="text-xs font-semibold text-text-3 uppercase tracking-wide">{t("hr.perfReviews.reviewsSectionTitle")}</div>
+      <Sel value="" onChange={e=>{if(e.target.value)setPeerFor(e.target.value);}} style={{width:220}}>
+        <option value="">{t("hr.perfReviews.addPeerBtn")}</option>
+        {activeEmployees.map(e=><option key={e.id} value={e.id}>{e.name}</option>)}
+      </Sel>
+    </div>
+    {reviews===null?<div className="text-sm text-text-3 py-2">{t("common.loading")||"Loading…"}</div>
+      :reviews.length===0?<Empty icon="trend" title={t("hr.perfReviews.noReviewsInCycle")}/>
+      :<div className="flex flex-col gap-2.5">
+        {reviews.filter(r=>!myReviews.some(m=>m.id===r.id)).map(r=>
+          <_PerfReviewRow key={r.id} A={A} review={r} me={emp} priv={priv} onChange={updateReviewInList} onDelete={id=>setConfirmDelete(id)}/>)}
+      </div>}
+
+    {peerFor&&<Modal onClose={()=>setPeerFor(null)} title={t("hr.perfReviews.peerModalTitle")}>
+      <div className="flex flex-col gap-3.5">
+        <Field label={t("hr.perfReviews.peerForLabel")}><Input value={A.hrEmp(peerFor)?.name||""} disabled/></Field>
+        <Field label={t("hr.perfReviews.peerReviewerLabel")}><Sel value={peerReviewerId} onChange={e=>setPeerReviewerId(e.target.value)}>
+          <option value=""></option>
+          {activeEmployees.filter(e=>e.id!==peerFor).map(e=><option key={e.id} value={e.id}>{e.name}</option>)}
+        </Sel></Field>
+        <div className="flex gap-2.5 justify-end">
+          <Btn kind="ghost" onClick={()=>setPeerFor(null)}>{t("hr.perfReviews.cancelBtn")}</Btn>
+          <Btn kind="primary" disabled={!peerReviewerId} onClick={addPeer}>{t("hr.perfReviews.addBtn")}</Btn>
+        </div>
+      </div>
+    </Modal>}
+
+    <ConfirmDialog open={!!confirmLaunch} onClose={()=>setConfirmLaunch(null)} onConfirm={()=>launchCycle(confirmLaunch)}
+      title={t("hr.perfReviews.launchConfirmTitle")} kind="primary" confirmLabel={t("hr.perfReviews.launchBtn")}>
+      {t("hr.perfReviews.launchConfirmBody")}
+    </ConfirmDialog>
+    <ConfirmDialog open={!!confirmDelete} onClose={()=>setConfirmDelete(null)} onConfirm={()=>deleteReview(confirmDelete)}
+      title={t("hr.perfReviews.deleteReviewTitle")} confirmLabel={t("hr.perfReviews.deleteBtn")}>
+      {t("hr.perfReviews.deleteReviewBody")}
+    </ConfirmDialog>
+  </div>;
+}
+
 export function HrIntegrations(){
   const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const company=A.hrCurrentCompany();
