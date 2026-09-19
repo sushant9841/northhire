@@ -744,7 +744,11 @@ export function useHrStore(){
   /* --- Role-gated module visibility --- */
   const modulesForRole=(role)=>{
     const base=["dashboard","directory","profile","chat","calendar","tasks","expenses","policies","roster"];
-    const employee=[...base,"attendance","leave","payslips"];
+    /* H5/H6 QA finding: the transformation plan's Employee nav explicitly includes "My Training"
+       (assigned trainings show up as a task + calendar entry - see POST /hr/trainings/:id/assign
+       - but with "trainings" missing here an employee could never actually open the Trainings
+       page to view or progress the training itself, only the task shell around it). */
+    const employee=[...base,"attendance","leave","payslips","trainings"];
     const hr=[...employee,"people","hiring","trainings","badges","reports"];
     const finance=[...base,"invoices","payroll","reports","attendance"];
     const admin=[...hr,"invoices","payroll","settings","integrations","reports"];
