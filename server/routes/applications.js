@@ -7,6 +7,7 @@ import { sendAndLogMail } from "../mail.js";
 import { emit as liveEmit, emitMany as liveEmitMany } from "../lib/liveBroker.js";
 import { pushNotification } from "../lib/notify.js";
 import { notifStringsForUser, candidateStringsForUser } from "../emailLocale.js";
+import { runWorkflowRules } from "../lib/workflowRules.js";
 
 /* Every user attached to a given employer_id — the employer account owner plus any teammates.
    Used so a stage move made by one team member instantly refreshes the pipeline on their
@@ -184,6 +185,11 @@ applicationsRouter.post("/", requireAuth, requireRole("seeker"), (req, res) => {
       ].filter(Boolean).join("\n");
       sendAndLogMail(job.forward_email, `New application: ${job.title}`, body).catch(() => {});
     }
+    // Workflow rules engine (Priority-4 #2): evaluate this employer's rules against the freshly
+    // created application - e.g. auto-tagging a strong match or moving straight to Reviewed.
+    // No actorUserId here - the actor is the applying seeker, not an employer teammate, so the
+    // per-action confirmation notification (aimed at the employer side) is skipped on this path.
+    runWorkflowRules(ownerJob.employer_id, id, {});
   }
 });
 
@@ -281,6 +287,10 @@ applicationsRouter.patch("/:id/stage", requireAuth, requireRole("employer"), (re
         .run(nextId("m", "messages"), req.user.id, app.user_id, app.job_id, body);
     }
   } catch (e) { console.error("stage automation:", e.message); }
+
+  // Workflow rules engine (Priority-4 #2): runs alongside the single-rule automation above,
+  // not instead of it - existing per-stage template bindings keep working unchanged.
+  runWorkflowRules(req.user.employer_id, req.params.id, { actorUserId: req.user.id });
 });
 
 async function notifyStageChange(userId, application, stage, note) {

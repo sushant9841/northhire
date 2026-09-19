@@ -6,6 +6,7 @@ import { serializeEmployer } from "../serialize.js";
 import { getConfig } from "../platformConfig.js";
 import { storeUpload, listUploads, getUpload, deleteUpload } from "../uploads.js";
 import { sendAndLogMail } from "../mail.js";
+import { validateConditions, validateActions, RuleValidationError } from "../lib/workflowRules.js";
 
 export const employersRouter = Router();
 
@@ -207,6 +208,81 @@ employersRouter.put("/automations/:stage", requireAuth, requireRole("employer"),
     `INSERT INTO stage_automations (employer_id, stage, template_id, enabled) VALUES (?, ?, ?, ?)
      ON CONFLICT(employer_id, stage) DO UPDATE SET template_id = excluded.template_id, enabled = excluded.enabled`
   ).run(req.user.employer_id, stage, templateId, enabled ? 1 : 0);
+  res.json({ ok: true });
+});
+
+/* ─── Workflow rules engine (Priority-4 #2) ───
+   A general IF/THEN rule builder that supersedes the single-rule-per-stage automation above for
+   anything more elaborate than "send this template on this stage" - stage_automations keeps
+   firing unaltered so nobody's existing binding silently breaks. Creating/editing/deleting rules
+   is restricted to the account owner, same as pipeline-stage customisation - these rules can move
+   candidates and send mail on their behalf, which is not something a regular teammate seat should
+   be able to set up unilaterally. */
+function serializeWorkflowRule(row) {
+  return {
+    id: row.id, name: row.name,
+    conditions: JSON.parse(row.conditions_json || '{"type":"group","op":"and","children":[]}'),
+    actions: JSON.parse(row.actions_json || "[]"),
+    enabled: !!row.enabled,
+    createdAt: sqlTime(row.created_at).getTime(), updatedAt: sqlTime(row.updated_at).getTime(),
+  };
+}
+employersRouter.get("/workflow-rules", requireAuth, requireRole("employer"), (req, res) => {
+  const rows = db.prepare("SELECT * FROM workflow_rules WHERE employer_id = ? ORDER BY created_at DESC").all(req.user.employer_id);
+  res.json({ rules: rows.map(serializeWorkflowRule) });
+});
+employersRouter.post("/workflow-rules", requireAuth, requireRole("employer"), (req, res) => {
+  if (req.user.employer_role !== "owner") return res.status(403).json({ error: "Only the account owner can create workflow rules." });
+  const { name, conditions, actions, enabled = true } = req.body || {};
+  if (!name?.trim()) return res.status(400).json({ error: "Name is required." });
+  try {
+    const cleanConditions = validateConditions(conditions);
+    const cleanActions = validateActions(actions);
+    const id = nextId("wr", "workflow_rules");
+    db.prepare(
+      "INSERT INTO workflow_rules (id, employer_id, name, conditions_json, actions_json, enabled) VALUES (?, ?, ?, ?, ?, ?)"
+    ).run(id, req.user.employer_id, name.trim(), JSON.stringify(cleanConditions), JSON.stringify(cleanActions), enabled ? 1 : 0);
+    const row = db.prepare("SELECT * FROM workflow_rules WHERE id = ?").get(id);
+    res.status(201).json({ rule: serializeWorkflowRule(row) });
+  } catch (e) {
+    if (e instanceof RuleValidationError) return res.status(400).json({ error: e.message });
+    throw e;
+  }
+});
+employersRouter.put("/workflow-rules/:id", requireAuth, requireRole("employer"), (req, res) => {
+  if (req.user.employer_role !== "owner") return res.status(403).json({ error: "Only the account owner can edit workflow rules." });
+  const row = db.prepare("SELECT * FROM workflow_rules WHERE id = ?").get(req.params.id);
+  if (!row || row.employer_id !== req.user.employer_id) return res.status(404).json({ error: "Rule not found." });
+  const { name, conditions, actions, enabled } = req.body || {};
+  if (!name?.trim()) return res.status(400).json({ error: "Name is required." });
+  try {
+    const cleanConditions = validateConditions(conditions);
+    const cleanActions = validateActions(actions);
+    db.prepare(
+      "UPDATE workflow_rules SET name = ?, conditions_json = ?, actions_json = ?, enabled = ?, updated_at = datetime('now') WHERE id = ?"
+    ).run(name.trim(), JSON.stringify(cleanConditions), JSON.stringify(cleanActions), enabled === false ? 0 : 1, req.params.id);
+    const updated = db.prepare("SELECT * FROM workflow_rules WHERE id = ?").get(req.params.id);
+    res.json({ rule: serializeWorkflowRule(updated) });
+  } catch (e) {
+    if (e instanceof RuleValidationError) return res.status(400).json({ error: e.message });
+    throw e;
+  }
+});
+employersRouter.patch("/workflow-rules/:id/enabled", requireAuth, requireRole("employer"), (req, res) => {
+  if (req.user.employer_role !== "owner") return res.status(403).json({ error: "Only the account owner can change workflow rules." });
+  const row = db.prepare("SELECT * FROM workflow_rules WHERE id = ?").get(req.params.id);
+  if (!row || row.employer_id !== req.user.employer_id) return res.status(404).json({ error: "Rule not found." });
+  db.prepare("UPDATE workflow_rules SET enabled = ?, updated_at = datetime('now') WHERE id = ?").run(req.body?.enabled ? 1 : 0, req.params.id);
+  res.json({ ok: true });
+});
+employersRouter.delete("/workflow-rules/:id", requireAuth, requireRole("employer"), (req, res) => {
+  if (req.user.employer_role !== "owner") return res.status(403).json({ error: "Only the account owner can delete workflow rules." });
+  const row = db.prepare("SELECT * FROM workflow_rules WHERE id = ?").get(req.params.id);
+  if (!row || row.employer_id !== req.user.employer_id) return res.status(404).json({ error: "Rule not found." });
+  // Tasks a deleted rule already created are real work items, not orphans to cascade-delete -
+  // detach them from the (now gone) rule rather than losing the FK integrity check on delete.
+  db.prepare("UPDATE workflow_tasks SET rule_id = NULL WHERE rule_id = ?").run(req.params.id);
+  db.prepare("DELETE FROM workflow_rules WHERE id = ?").run(req.params.id);
   res.json({ ok: true });
 });
 

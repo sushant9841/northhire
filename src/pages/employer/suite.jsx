@@ -1980,6 +1980,7 @@ export function EmpCompany(){
         <Btn kind="primary" icon="check" disabled={!dirty} onClick={()=>A.saveCompany(d)}>{dirty?t("employer.company.saveChanges"):t("employer.company.saved")}</Btn></div></Card>
     <_PipelineStageEditor A={A} mob={mob}/>
     <_StageAutomationsEditor A={A} mob={mob}/>
+    <_WorkflowRulesEditor A={A} mob={mob}/>
     <ConfirmDialog open={confirmDiscard} onClose={()=>setConfirmDiscard(false)} confirmLabel={t("employer.company.discard")}
       title={t("employer.company.discardTitle")} onConfirm={()=>setD({...A.company})}>
       {t("employer.company.discardBody")}
@@ -2075,6 +2076,188 @@ function _StageAutomationsEditor({A,mob}){
             </div>
             {cur&&<Tag tone="ok" sm>Enabled</Tag>}
           </div>;})}</div>}
+  </Card>;
+}
+
+/* ═══════════════ Workflow rules engine (Priority-4 #2) ═══════════════
+   A general IF/THEN rule builder that sits alongside the single-rule stage automation above:
+   a condition tree (AND/OR/NOT over application fields) gates a list of actions, evaluated
+   server-side on application create and every stage change. Kept as its own Card so the simple
+   one-binding-per-stage tool above stays the fast path for the common case, while this covers
+   anything more elaborate. */
+const RULE_FIELD_KEYS=["stage","score","daysInStage","source","tags","skillsMatch","location","employmentType"];
+const RULE_FIELD_VALUES=["stage","score","days-in-stage","source","tags","skills-match","location","employment-type"];
+const RULE_OP_KEYS=["opIs","opIsNot","opGreaterThan","opLessThan","opAtLeast","opAtMost","opIsOneOf","opContains"];
+const RULE_OP_VALUES=["eq","ne","gt","lt","gte","lte","in","contains"];
+const RULE_ACTION_KEYS=["actionMoveStage","actionSendEmail","actionAddTag","actionCreateTask","actionNotifyTeammate"];
+const RULE_ACTION_VALUES=["move_stage","send_email","add_tag","create_task","notify_user"];
+const ruleFieldOptions=t=>RULE_FIELD_VALUES.map((v,i)=>({v,l:t(`employer.workflowRules.field_${RULE_FIELD_KEYS[i]}`)}));
+const ruleOpOptions=t=>RULE_OP_VALUES.map((v,i)=>({v,l:t(`employer.workflowRules.${RULE_OP_KEYS[i]}`)}));
+const ruleActionOptions=t=>RULE_ACTION_VALUES.map((v,i)=>({v,l:t(`employer.workflowRules.${RULE_ACTION_KEYS[i]}`)}));
+const emptyGroup=()=>({type:"group",op:"and",children:[]});
+const emptyCondition=()=>({type:"condition",field:"stage",op:"eq",value:""});
+
+function _ConditionNode({node,onChange,onRemove,stages,depth,t}){
+  const fieldOptions=ruleFieldOptions(t), opOptions=ruleOpOptions(t);
+  if(node.type==="group"){
+    const setOp=op=>onChange({...node,op,children:op==="not"?node.children.slice(0,1):node.children});
+    const updateChild=(i,child)=>onChange({...node,children:node.children.map((c,k)=>k===i?child:c)});
+    const removeChild=i=>onChange({...node,children:node.children.filter((_,k)=>k!==i)});
+    const addCondition=()=>onChange({...node,children:[...node.children,emptyCondition()]});
+    const addGroup=()=>onChange({...node,children:[...node.children,emptyGroup()]});
+    return <div className="rounded-xl border border-line-soft p-3" style={{background:depth%2?C.bg:"#fff"}}>
+      <div className="flex items-center gap-2 mb-2 flex-wrap">
+        <Sel value={node.op} onChange={e=>setOp(e.target.value)} style={{width:100}}>
+          <option value="and">{t("employer.workflowRules.opAnd")}</option>
+          <option value="or">{t("employer.workflowRules.opOr")}</option>
+          <option value="not">{t("employer.workflowRules.opNot")}</option>
+        </Sel>
+        <span className="text-xs text-text-3">{node.op==="not"?t("employer.workflowRules.groupOfNot"):t("employer.workflowRules.groupOfMatch")}</span>
+        {onRemove&&<Btn kind="ghost" size="xs" icon="trash" style={{marginLeft:"auto"}} onClick={onRemove}>{t("employer.workflowRules.removeGroup")}</Btn>}
+      </div>
+      <div className="flex flex-col gap-2 pl-3" style={{borderLeft:`2px solid ${C.line}`}}>
+        {node.children.map((child,i)=><_ConditionNode key={i} node={child} depth={depth+1} t={t}
+          onChange={c=>updateChild(i,c)} onRemove={()=>removeChild(i)} stages={stages}/>)}
+        {node.children.length===0&&<div className="text-xs text-text-3 italic py-1">{t("employer.workflowRules.noConditionsAlways")}</div>}
+      </div>
+      {(node.op!=="not"||node.children.length===0)&&<div className="flex gap-2 mt-2">
+        <Btn kind="outline" size="xs" icon="plus" onClick={addCondition}>{t("employer.workflowRules.addCondition")}</Btn>
+        {depth<3&&<Btn kind="outline" size="xs" icon="plus" onClick={addGroup}>{t("employer.workflowRules.addGroup")}</Btn>}
+      </div>}
+    </div>;
+  }
+  const isStage=node.field==="stage";
+  return <div className="flex gap-2 items-center flex-wrap py-1">
+    <Sel value={node.field} onChange={e=>onChange({...node,field:e.target.value,value:""})} style={{width:150}}>
+      {fieldOptions.map(f=><option key={f.v} value={f.v}>{f.l}</option>)}
+    </Sel>
+    <Sel value={node.op} onChange={e=>onChange({...node,op:e.target.value})} style={{width:180}}>
+      {opOptions.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}
+    </Sel>
+    {isStage&&(node.op==="eq"||node.op==="ne")
+      ?<Sel value={node.value} onChange={e=>onChange({...node,value:e.target.value})} style={{minWidth:140}}>
+          <option value="">{t("employer.workflowRules.chooseEllipsis")}</option>{stages.map(s=><option key={s} value={s}>{s}</option>)}</Sel>
+      :<Input value={node.value} onChange={e=>onChange({...node,value:e.target.value})} style={{minWidth:140,flex:1}} placeholder={t("employer.workflowRules.valuePlaceholder")}/>}
+    <Btn kind="ghost" size="xs" icon="trash" onClick={onRemove}/>
+  </div>;
+}
+
+function _ActionRow({action,onChange,onRemove,templates,members,t}){
+  const actionOptions=ruleActionOptions(t);
+  const setType=type=>onChange(type==="move_stage"?{type,stage:""}:type==="send_email"?{type,templateId:""}
+    :type==="add_tag"?{type,tag:""}:type==="create_task"?{type,title:"",assigneeUserId:""}:{type,userId:"",message:""});
+  return <div className="flex gap-2 items-center flex-wrap p-2.5 border border-line-soft rounded-lg">
+    <Sel value={action.type} onChange={e=>setType(e.target.value)} style={{width:170}}>
+      {actionOptions.map(a=><option key={a.v} value={a.v}>{a.l}</option>)}
+    </Sel>
+    {action.type==="move_stage"&&<Input value={action.stage||""} onChange={e=>onChange({...action,stage:e.target.value})} placeholder={t("employer.workflowRules.targetStagePlaceholder")} style={{flex:1,minWidth:140}}/>}
+    {action.type==="send_email"&&<Sel value={action.templateId||""} onChange={e=>onChange({...action,templateId:e.target.value})} style={{flex:1,minWidth:140}}>
+      <option value="">{t("employer.workflowRules.chooseTemplateOption")}</option>{templates.map(tp=><option key={tp.id} value={tp.id}>{tp.name}</option>)}</Sel>}
+    {action.type==="add_tag"&&<Input value={action.tag||""} onChange={e=>onChange({...action,tag:e.target.value})} placeholder={t("employer.workflowRules.tagTextPlaceholder")} style={{flex:1,minWidth:140}}/>}
+    {action.type==="create_task"&&<>
+      <Input value={action.title||""} onChange={e=>onChange({...action,title:e.target.value})} placeholder={t("employer.workflowRules.taskTitlePlaceholder")} style={{flex:1,minWidth:140}}/>
+      <Sel value={action.assigneeUserId||""} onChange={e=>onChange({...action,assigneeUserId:e.target.value})} style={{minWidth:130}}>
+        <option value="">{t("employer.workflowRules.unassigned")}</option>{members.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</Sel></>}
+    {action.type==="notify_user"&&<>
+      <Sel value={action.userId||""} onChange={e=>onChange({...action,userId:e.target.value})} style={{minWidth:130}}>
+        <option value="">{t("employer.workflowRules.chooseTeammateOption")}</option>{members.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</Sel>
+      <Input value={action.message||""} onChange={e=>onChange({...action,message:e.target.value})} placeholder={t("employer.workflowRules.messageOptionalPlaceholder")} style={{flex:1,minWidth:140}}/></>}
+    <Btn kind="ghost" size="xs" icon="trash" onClick={onRemove}/>
+  </div>;
+}
+
+function _WorkflowRuleModal({A,rule,stages,onClose,t}){
+  const [d,setD]=useState(rule?{...rule}:{name:"",conditions:emptyGroup(),actions:[],enabled:true});
+  const [err,setErr]=useState(""); const [saving,setSaving]=useState(false);
+  const templates=A.messageTemplates; const members=A.team.members||[];
+  const addAction=()=>setD(p=>({...p,actions:[...p.actions,{type:"move_stage",stage:""}]}));
+  const save=async()=>{
+    setErr("");
+    if(!d.name.trim()){setErr(t("employer.workflowRules.nameRequired"));return;}
+    if(d.actions.length===0){setErr(t("employer.workflowRules.needAction"));return;}
+    setSaving(true);
+    const r=await A.saveWorkflowRule(d);
+    setSaving(false);
+    if(!r.ok){setErr(r.msg);return;}
+    onClose();
+  };
+  return <Modal onClose={onClose} title={rule?t("employer.workflowRules.editRuleTitle"):t("employer.workflowRules.newRuleTitle")} width={640}>
+    <div className="flex flex-col gap-4">
+      <Field label={t("employer.workflowRules.ruleNameLabel")} required><Input value={d.name} onChange={e=>setD({...d,name:e.target.value})} placeholder={t("employer.workflowRules.ruleNamePlaceholder")}/></Field>
+      <div>
+        <Lbl>{t("employer.workflowRules.ifLabel")}</Lbl>
+        <_ConditionNode node={d.conditions} depth={0} stages={stages} t={t} onChange={c=>setD({...d,conditions:c})}/>
+      </div>
+      <div>
+        <Lbl>{t("employer.workflowRules.thenLabel")}</Lbl>
+        <div className="flex flex-col gap-2">
+          {d.actions.map((a,i)=><_ActionRow key={i} action={a} templates={templates} members={members} t={t}
+            onChange={na=>setD({...d,actions:d.actions.map((x,k)=>k===i?na:x)})}
+            onRemove={()=>setD({...d,actions:d.actions.filter((_,k)=>k!==i)})}/>)}
+          <div><Btn kind="outline" size="sm" icon="plus" onClick={addAction}>{t("employer.workflowRules.addAction")}</Btn></div>
+        </div>
+      </div>
+      {err&&<Banner tone="danger" icon="alert">{err}</Banner>}
+      <div className="flex gap-2.5 justify-end pt-3 border-t border-line-soft">
+        <Btn kind="ghost" onClick={onClose}>{t("employer.workflowRules.cancelBtn")}</Btn>
+        <Btn kind="primary" icon="check" disabled={saving} onClick={save}>{saving?t("employer.workflowRules.savingBtn"):t("employer.workflowRules.saveRuleBtn")}</Btn>
+      </div>
+    </div>
+  </Modal>;
+}
+
+function _WorkflowRulesEditor({A,mob}){
+  const {t}=useTranslation();
+  const stages=A.stagesFor(A.company.id);
+  const isOwner=A.user?.employerRole==="owner";
+  const [editing,setEditing]=useState(null); // null=closed, {}=new, rule=edit
+  const [confirmDelete,setConfirmDelete]=useState(null);
+  useEffect(()=>{A.loadWorkflowRules();
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */},[]);
+  const fieldOptions=ruleFieldOptions(t), opOptions=ruleOpOptions(t), actionOptions=ruleActionOptions(t);
+  const summarize=node=>{
+    if(!node)return t("employer.workflowRules.alwaysMatches");
+    if(node.type==="group"){
+      if(node.children.length===0)return t("employer.workflowRules.alwaysMatches");
+      const parts=node.children.map(summarize);
+      return node.op==="not"?`${t("employer.workflowRules.opNot")} (${parts.join(", ")})`:parts.join(` ${t(`employer.workflowRules.op${node.op==="and"?"And":"Or"}`)} `);
+    }
+    const f=fieldOptions.find(x=>x.v===node.field)?.l||node.field;
+    const o=opOptions.find(x=>x.v===node.op)?.l||node.op;
+    return `${f} ${o} "${node.value}"`;
+  };
+  return <Card pad={mob?20:26} style={{marginTop:16}}>
+    <div className="flex justify-between items-start flex-wrap gap-2 mb-1">
+      <div>
+        <Lbl style={{marginBottom:0}}>{t("employer.workflowRules.title")}</Lbl>
+        <div className="text-sm text-text-2 leading-relaxed mt-1 max-w-160">{t("employer.workflowRules.subtitle")}</div>
+      </div>
+      {isOwner&&<Btn kind="primary" size="sm" icon="plus" onClick={()=>setEditing({})}>{t("employer.workflowRules.newRule")}</Btn>}
+    </div>
+    {!isOwner&&<div className="text-xs text-text-3 mt-3">{t("employer.workflowRules.ownerOnly")}</div>}
+    <div className="flex flex-col gap-2.5 mt-4">
+      {(A.workflowRules||[]).length===0&&<div className="text-sm text-text-3 py-2">{t("employer.workflowRules.noRules")}</div>}
+      {(A.workflowRules||[]).map(rule=><div key={rule.id} className="flex gap-3 items-start p-3 border border-line-soft rounded-xl">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-semibold text-text">{rule.name}</span>
+            <Tag tone={rule.enabled?"ok":"neutral"} sm>{rule.enabled?t("employer.workflowRules.enabled"):t("employer.workflowRules.disabled")}</Tag>
+          </div>
+          <div className="text-xs text-text-3 mt-1">{t("employer.workflowRules.ifPrefix")} {summarize(rule.conditions)}</div>
+          <div className="text-xs text-text-3">{t("employer.workflowRules.thenPrefix")} {rule.actions.map((a,i)=><span key={i}>{i>0?", ":""}{actionOptions.find(x=>x.v===a.type)?.l}</span>)}</div>
+        </div>
+        {isOwner&&<div className="flex gap-1.5 shrink-0">
+          <Btn kind="ghost" size="xs" onClick={()=>A.toggleWorkflowRule(rule.id,!rule.enabled)}>{rule.enabled?t("employer.workflowRules.disable"):t("employer.workflowRules.enable")}</Btn>
+          <Btn kind="ghost" size="xs" icon="pencil" onClick={()=>setEditing(rule)}/>
+          <Btn kind="ghost" size="xs" icon="trash" onClick={()=>setConfirmDelete(rule)}/>
+        </div>}
+      </div>)}
+    </div>
+    {editing&&<_WorkflowRuleModal A={A} rule={editing.id?editing:null} stages={stages} t={t} onClose={()=>setEditing(null)}/>}
+    <ConfirmDialog open={!!confirmDelete} onClose={()=>setConfirmDelete(null)} confirmLabel={t("employer.workflowRules.deleteRule")}
+      title={t("employer.workflowRules.deleteConfirmTitle",{name:confirmDelete?.name})} onConfirm={()=>{A.deleteWorkflowRule(confirmDelete.id);setConfirmDelete(null);}}>
+      {t("employer.workflowRules.deleteConfirmBody")}
+    </ConfirmDialog>
   </Card>;
 }
 

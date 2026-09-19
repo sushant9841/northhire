@@ -1745,6 +1745,28 @@ export function useStore(){
     if(user?.role!=="employer"){setMessageTemplates([]);return;}
     loadMessageTemplates();
   },[user?.id,user?.role]);
+  /* Workflow rules engine (Priority-4 #2): a general condition-tree rule builder that runs
+     alongside the single stage-automation binding above, not instead of it. Loaded lazily like
+     templates/automations - only employers that open the Settings rule builder pay the round trip. */
+  const [workflowRules,setWorkflowRules]=useState([]);
+  const loadWorkflowRules=async()=>{
+    try{const {rules}=await api.get("/employers/workflow-rules");setWorkflowRules(rules);}
+    catch{/* best-effort */}};
+  const saveWorkflowRule=async(rule)=>{
+    try{
+      const body={name:rule.name,conditions:rule.conditions,actions:rule.actions,enabled:rule.enabled!==false};
+      const {rule:saved}=rule.id
+        ?await api.put(`/employers/workflow-rules/${rule.id}`,body)
+        :await api.post("/employers/workflow-rules",body);
+      setWorkflowRules(list=>rule.id?list.map(r=>r.id===rule.id?saved:r):[saved,...list]);
+      return {ok:true,rule:saved};
+    }catch(err){toast(err.message,"danger");return {ok:false,msg:err.message};}};
+  const toggleWorkflowRule=async(id,enabled)=>{
+    try{await api.patch(`/employers/workflow-rules/${id}/enabled`,{enabled});setWorkflowRules(list=>list.map(r=>r.id===id?{...r,enabled}:r));}
+    catch(err){toast(err.message,"danger");}};
+  const deleteWorkflowRule=async id=>{
+    try{await api.del(`/employers/workflow-rules/${id}`);setWorkflowRules(list=>list.filter(r=>r.id!==id));}
+    catch(err){toast(err.message,"danger");}};
   const verifyEmployer=async(id,v)=>{
     try{
       const {employer}=await api.patch(`/employers/${id}`,{verified:v});
@@ -2242,6 +2264,7 @@ export function useStore(){
     team,loadTeam,loadTeamAudit,inviteTeammate,revokeInvite,removeTeammate,getInvite,acceptInvite,inviteToken,
     messageTemplates,saveMessageTemplate,deleteMessageTemplate,
     stageAutomations,loadStageAutomations,setStageAutomation,
+    workflowRules,loadWorkflowRules,saveWorkflowRule,toggleWorkflowRule,deleteWorkflowRule,
     editBlog,editTraining,saveBlog,saveTraining,deleteBlog,deleteTraining,toggleBlogStatus,toggleTrainingStatus,
     loadContentRevisions,restoreContentRevision,loadArticleAnalytics,
     enrol,confirmPaidEnrol,advanceTraining,paidTrainings,trainingBadgePrompts,dismissTrainingBadgePrompt,publishTrainingBadge,newCv,importResumeToNewCv,editCv,saveCv,duplicateCv,deleteCv,setDefaultCv,

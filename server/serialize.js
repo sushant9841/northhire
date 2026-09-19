@@ -145,6 +145,8 @@ export function serializeApplication(row) {
     history: JSON.parse(row.history_json || "[]"),
     previousStage: row.previous_stage,
     withdrawnAt: row.withdrawn_at,
+    // Priority-4 #2 - free-form tags the workflow rules engine (or a person) attached.
+    tags: JSON.parse(row.tags_json || "[]"),
   };
 }
 

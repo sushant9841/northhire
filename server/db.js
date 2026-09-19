@@ -1003,6 +1003,52 @@ for (const stmt of [
   "CREATE INDEX IF NOT EXISTS idx_perf_reviews_cycle ON perf_reviews(cycle_id)",
   "CREATE INDEX IF NOT EXISTS idx_perf_reviews_employee ON perf_reviews(employee_id)",
   "CREATE INDEX IF NOT EXISTS idx_perf_reviews_reviewer ON perf_reviews(reviewer_id)",
+  // Priority-4 #2 - Workflow rules engine. Generalises the old one-rule-per-stage
+  // stage_automations into a real IF/THEN rule builder: a condition tree (AND/OR/NOT groups
+  // over application fields) and an ordered list of actions, evaluated on application create and
+  // every stage change. stage_automations keeps firing unchanged alongside this - both paths run,
+  // so nobody's existing per-stage template binding silently stops working the day this ships.
+  `CREATE TABLE IF NOT EXISTS workflow_rules (
+     id TEXT PRIMARY KEY,
+     employer_id TEXT NOT NULL REFERENCES employers(id),
+     name TEXT NOT NULL,
+     conditions_json TEXT NOT NULL DEFAULT '{"type":"group","op":"and","children":[]}',
+     actions_json TEXT NOT NULL DEFAULT '[]',
+     enabled INTEGER NOT NULL DEFAULT 1,
+     created_at TEXT NOT NULL DEFAULT (datetime('now')),
+     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+   )`,
+  "CREATE INDEX IF NOT EXISTS idx_workflow_rules_employer ON workflow_rules(employer_id)",
+  // Free-form tags an employer's own automations (or a person) can attach to an application - the
+  // rule engine's "add tag" action and "tags" condition field both read/write this. Independent
+  // of hr_tasks.tags_json / candidate_notes.tags_json, which are different entities entirely.
+  "ALTER TABLE applications ADD COLUMN tags_json TEXT DEFAULT '[]'",
+  // Workflow rules engine "create task" action - a lightweight follow-up item tied to one
+  // application and (optionally) assigned to a specific teammate, distinct from hr_tasks (which
+  // belongs to the separate HR Suite / hr_employees login space, not the employer console).
+  `CREATE TABLE IF NOT EXISTS workflow_tasks (
+     id TEXT PRIMARY KEY,
+     employer_id TEXT NOT NULL REFERENCES employers(id),
+     application_id TEXT NOT NULL REFERENCES applications(id),
+     rule_id TEXT REFERENCES workflow_rules(id),
+     title TEXT NOT NULL,
+     assignee_user_id TEXT REFERENCES users(id),
+     status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','done')),
+     created_at TEXT NOT NULL DEFAULT (datetime('now'))
+   )`,
+  "CREATE INDEX IF NOT EXISTS idx_workflow_tasks_employer ON workflow_tasks(employer_id)",
+  // Priority-4 #3 - D&I voluntary self-ID collection. One row per (user, field) so a seeker can
+  // fill in some fields and skip others, and can update a single field later without resending
+  // the whole form. Values are free-text banded strings (e.g. "30-39", "prefer-not-to-say") that
+  // the client renders from a fixed option list - never free-typed - so aggregate reporting can
+  // group on exact string equality.
+  `CREATE TABLE IF NOT EXISTS user_demographics (
+     user_id TEXT NOT NULL REFERENCES users(id),
+     field TEXT NOT NULL,
+     value TEXT NOT NULL,
+     recorded_at TEXT NOT NULL DEFAULT (datetime('now')),
+     PRIMARY KEY (user_id, field)
+   )`,
 ]) {
   try { db.exec(stmt); } catch (e) { if (!/duplicate column/i.test(e.message)) console.error("migration:", stmt, e.message); }
 }
