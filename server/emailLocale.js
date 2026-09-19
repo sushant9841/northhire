@@ -120,3 +120,66 @@ export function notifStrings(locale) {
 export function notifStringsForUser(userId) {
   return notifStrings(localeForUserId(userId));
 }
+
+/* Candidate-facing persisted freeform text: the application `note` column, the stage-change
+   email, and other strings that get written straight into a DB row and rendered verbatim on the
+   seeker's Status page. These are NOT re-translatable client-side once written (there is no
+   locale tag on the note column), so the string has to be picked in the candidate's locale at the
+   moment it's generated - same Bill 96 obligation as the email/notification tables above. */
+const CANDIDATE_STRINGS = {
+  "en-CA": {
+    stageNote: {
+      Reviewed: "Employer reviewed your profile",
+      Shortlisted: "Shortlisted by the employer",
+      Interview: "Interview stage — expect scheduling details",
+      Offer: "Offer extended — check your notifications",
+      Hired: "Welcome to the team! Onboarding details coming.",
+    },
+    stageNoteCustom: stage => `Moved to ${stage}`,
+    stageChangeSubject: jobTitle => `Update on your application — ${jobTitle || "your application"}`,
+    stageChangeBody: (name, employerName, jobTitle, stage, note, statusLink) =>
+      [`Hi ${name},`, "",
+        `${employerName || "The employer"} moved your application for ${jobTitle || "a role"} to "${stage}".`,
+        note ? `\n${note}` : "",
+        "", `See the full status: ${statusLink}`,
+        "", "You can turn these updates off in Settings → Notifications."].filter(Boolean).join("\n"),
+    rejectNoteWithReason: reason => `The employer has decided not to move forward with your application at this time: ${reason}`,
+    rejectNoteNoReason: "The employer has decided not to move forward with your application at this time.",
+    withdrawNoteWithReason: reason => `You withdrew this application: ${reason}`,
+    withdrawNoteNoReason: "You withdrew this application",
+    interviewStageNote: (mode, when) => `Interview ${mode === "video" ? "video call" : "in-person"} scheduled for ${when}`,
+    offerAcceptedNote: signedName => `Offer accepted and signed by ${signedName}`,
+    offerAcceptedShort: date => `Offer accepted ${date}`,
+  },
+  "fr-CA": {
+    stageNote: {
+      Reviewed: "L'employeur a examiné votre profil",
+      Shortlisted: "Présélectionné·e par l'employeur",
+      Interview: "Étape d'entrevue — les détails de planification suivront",
+      Offer: "Offre transmise — consultez vos notifications",
+      Hired: "Bienvenue dans l'équipe! Les détails d'intégration arrivent.",
+    },
+    stageNoteCustom: stage => `Déplacé·e vers ${stage}`,
+    stageChangeSubject: jobTitle => `Mise à jour de votre candidature — ${jobTitle || "votre candidature"}`,
+    stageChangeBody: (name, employerName, jobTitle, stage, note, statusLink) =>
+      [`Bonjour ${name},`, "",
+        `${employerName || "L'employeur"} a déplacé votre candidature pour le poste de ${jobTitle || "un poste"} vers « ${stage} ».`,
+        note ? `\n${note}` : "",
+        "", `Voir le statut complet : ${statusLink}`,
+        "", "Vous pouvez désactiver ces mises à jour dans Paramètres → Notifications."].filter(Boolean).join("\n"),
+    rejectNoteWithReason: reason => `L'employeur a décidé de ne pas donner suite à votre candidature pour le moment : ${reason}`,
+    rejectNoteNoReason: "L'employeur a décidé de ne pas donner suite à votre candidature pour le moment.",
+    withdrawNoteWithReason: reason => `Vous avez retiré cette candidature : ${reason}`,
+    withdrawNoteNoReason: "Vous avez retiré cette candidature",
+    interviewStageNote: (mode, when) => `Entrevue ${mode === "video" ? "par appel vidéo" : "en personne"} planifiée pour le ${when}`,
+    offerAcceptedNote: signedName => `Offre acceptée et signée par ${signedName}`,
+    offerAcceptedShort: date => `Offre acceptée le ${date}`,
+  },
+};
+
+export function candidateStrings(locale) {
+  return CANDIDATE_STRINGS[locale] || CANDIDATE_STRINGS["en-CA"];
+}
+export function candidateStringsForUser(userId) {
+  return candidateStrings(localeForUserId(userId));
+}

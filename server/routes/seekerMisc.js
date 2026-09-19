@@ -10,7 +10,7 @@ import {
 } from "../serialize.js";
 import { emit as liveEmit } from "../lib/liveBroker.js";
 import { pushNotification } from "../lib/notify.js";
-import { notifStringsForUser } from "../emailLocale.js";
+import { notifStringsForUser, candidateStringsForUser } from "../emailLocale.js";
 
 export const seekerMiscRouter = Router();
 
@@ -221,7 +221,7 @@ seekerMiscRouter.post("/interviews", requireAuth, requireRole("employer"), (req,
     `INSERT INTO interviews (id, application_id, candidate_id, job_id, employer_id, when_text, mode, notes, status)
      VALUES (?,?,?,?,?,?,?,?, 'scheduled')`
   ).run(id, applicationId, app.user_id, app.job_id, req.user.employer_id, when, mode, notes || "");
-  const stageNote = `Interview ${mode === "video" ? "video call" : "in-person"} scheduled for ${when}`;
+  const stageNote = candidateStringsForUser(app.user_id).interviewStageNote(mode, when);
   db.prepare("UPDATE applications SET stage = 'Interview', note = ? WHERE id = ?").run(stageNote, applicationId);
   const interview = serializeInterview(db.prepare("SELECT * FROM interviews WHERE id = ?").get(id));
   res.status(201).json({ interview });

@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 import { db, nextId, sqlTime } from "../db.js";
 import { requireAuth, requireRole } from "../auth.js";
 import { sendAndLogMail } from "../mail.js";
-import { localeForEmail, emailStrings } from "../emailLocale.js";
+import { localeForEmail, emailStrings, candidateStringsForUser } from "../emailLocale.js";
 
 export const offersRouter = Router();
 
@@ -155,10 +155,11 @@ offersRouter.post("/token/:token/sign", (req, res) => {
   // without anyone having to remember to drag a card.
   const app = db.prepare("SELECT * FROM applications WHERE id = ?").get(row.application_id);
   if (app) {
+    const CS = candidateStringsForUser(app.user_id);
     const history = JSON.parse(app.history_json || "[]");
-    history.push({ stage: "Hired", note: `Offer accepted and signed by ${signedName}`, at: new Date().toISOString() });
+    history.push({ stage: "Hired", note: CS.offerAcceptedNote(signedName), at: new Date().toISOString() });
     db.prepare("UPDATE applications SET stage = 'Hired', note = ?, history_json = ? WHERE id = ?")
-      .run(`Offer accepted ${new Date().toISOString().slice(0, 10)}`, JSON.stringify(history), app.id);
+      .run(CS.offerAcceptedShort(new Date().toISOString().slice(0, 10)), JSON.stringify(history), app.id);
   }
   res.json({ ok: true, status: "accepted", signedName });
 });

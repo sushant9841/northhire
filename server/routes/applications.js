@@ -6,7 +6,7 @@ import { emitWebhook } from "../webhooks.js";
 import { sendAndLogMail } from "../mail.js";
 import { emit as liveEmit, emitMany as liveEmitMany } from "../lib/liveBroker.js";
 import { pushNotification } from "../lib/notify.js";
-import { notifStringsForUser } from "../emailLocale.js";
+import { notifStringsForUser, candidateStringsForUser } from "../emailLocale.js";
 
 /* Every user attached to a given employer_id — the employer account owner plus any teammates.
    Used so a stage move made by one team member instantly refreshes the pipeline on their
@@ -187,13 +187,6 @@ applicationsRouter.post("/", requireAuth, requireRole("seeker"), (req, res) => {
   }
 });
 
-const STAGE_NOTE = {
-  Reviewed: "Employer reviewed your profile",
-  Shortlisted: "Shortlisted by the employer",
-  Interview: "Interview stage — expect scheduling details",
-  Offer: "Offer extended — check your notifications",
-  Hired: "Welcome to the team! Onboarding details coming.",
-};
 const DEFAULT_STAGES = ["Applied", "Reviewed", "Shortlisted", "Interview", "Offer", "Hired"];
 
 /* Which stages this employer's board actually has. Validating against a hardcoded list broke the
@@ -220,8 +213,11 @@ applicationsRouter.patch("/:id/stage", requireAuth, requireRole("employer"), (re
   }
 
   // A custom stage has no pre-written candidate-facing note, so it gets a plain factual one
-  // rather than borrowing the wording of whichever default stage it sits near.
-  const note = STAGE_NOTE[stage] || `Moved to ${stage}`;
+  // rather than borrowing the wording of whichever default stage it sits near. Picked in the
+  // candidate's own locale (Bill 96) since this note is persisted verbatim, not re-translated
+  // client-side.
+  const CS = candidateStringsForUser(app.user_id);
+  const note = CS.stageNote[stage] || CS.stageNoteCustom(stage);
   const history = appendHistory(app, stage, note);
   db.prepare("UPDATE applications SET stage = ?, note = ?, history_json = ? WHERE id = ?").run(stage, note, history, req.params.id);
 
@@ -295,21 +291,18 @@ async function notifyStageChange(userId, application, stage, note) {
   if (!user) return;
   const job = db.prepare("SELECT jobs.title, employers.name AS employer FROM jobs JOIN employers ON employers.id = jobs.employer_id WHERE jobs.id = ?")
     .get(application.job_id);
-  await sendAndLogMail(user.email, `Update on your application — ${job?.title || "your application"}`,
-    [`Hi ${user.name},`, "",
-      `${job?.employer || "The employer"} moved your application for ${job?.title || "a role"} to "${stage}".`,
-      note ? `\n${note}` : "",
-      "", `See the full status: ${process.env.FRONTEND_URL || "http://localhost:5173"}/status`,
-      "", "You can turn these updates off in Settings → Notifications."].filter(Boolean).join("\n"));
+  const CS = candidateStringsForUser(userId);
+  const statusLink = `${process.env.FRONTEND_URL || "http://localhost:5173"}/status`;
+  await sendAndLogMail(user.email, CS.stageChangeSubject(job?.title),
+    CS.stageChangeBody(user.name, job?.employer, job?.title, stage, note, statusLink));
 }
 
 applicationsRouter.patch("/:id/reject", requireAuth, requireRole("employer"), (req, res) => {
   const app = loadOwnedApplication(req.params.id, req, res, "employer");
   if (!app) return;
   const reason = (req.body?.reason || "").trim();
-  const note = reason
-    ? `The employer has decided not to move forward with your application at this time: ${reason}`
-    : "The employer has decided not to move forward with your application at this time.";
+  const CS = candidateStringsForUser(app.user_id);
+  const note = reason ? CS.rejectNoteWithReason(reason) : CS.rejectNoteNoReason;
   const history = appendHistory(app, "Withdrawn", note);
   db.prepare("UPDATE applications SET stage = 'Withdrawn', note = ?, history_json = ? WHERE id = ?").run(note, history, req.params.id);
   const row = db.prepare("SELECT * FROM applications WHERE id = ?").get(req.params.id);
@@ -323,7 +316,8 @@ applicationsRouter.patch("/:id/withdraw", requireAuth, requireRole("seeker"), (r
   const app = loadOwnedApplication(req.params.id, req, res, "seeker");
   if (!app) return;
   const reason = (req.body?.reason || "").trim();
-  const note = reason ? `You withdrew this application: ${reason}` : "You withdrew this application";
+  const CS = candidateStringsForUser(app.user_id);
+  const note = reason ? CS.withdrawNoteWithReason(reason) : CS.withdrawNoteNoReason;
   const history = appendHistory(app, "Withdrawn", note);
   const withdrawnAt = new Date().toISOString();
   db.prepare(
