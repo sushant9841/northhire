@@ -71,6 +71,12 @@ export function useStore(){
   const [enrolled,setEnrolled]=useState(new Set());
   const [paidTrainings,setPaidTrainings]=useState(()=>new Set());
   const [trainingProgress,setTrainingProgress]=useState({});
+  /* H1 tail: training completion -> optional publish-to-seeker-profile prompt. Session-only
+     (not persisted) - if declined, the prompt simply doesn't reappear until the next distinct
+     completion event, since advanceTraining only ever fires the 100% transition once per
+     training. Only ever populated when the completing user is also bridged into an HR employee
+     record (HR.hrCurrentEmp), since there is nothing to publish to otherwise. */
+  const [trainingBadgePrompts,setTrainingBadgePrompts]=useState([]); /* [{trainingId,title}] */
   const [suspended,setSuspended]=useState(new Set());
   const [suspensionInfo,setSuspensionInfo]=useState({}); /* {[userId]: {reason, at}} */
   const [invitedCandidates,setInvitedCandidates]=useState(new Set()); /* `${jobId}:${candidateId}` */
@@ -1839,8 +1845,26 @@ export function useStore(){
     try{
       await api.patch(`/content/trainings/${id}/progress`,{progress:nx});
       setTrainingProgress(p=>({...p,[id]:nx}));
-      if(nx>=100&&cur<100)notify({icon:"award",title:`Completed ${t.title}`,body:"Your certificate is ready to download.",for:user?.id,link:"profile"});
+      if(nx>=100&&cur<100){
+        notify({icon:"award",title:`Completed ${t.title}`,body:"Your certificate is ready to download.",for:user?.id,link:"profile"});
+        /* H1 tail (HR-03): if this person is also signed into the HR Suite as an employee,
+           offer to publish "Certified in X" as an HR badge - which, if their profile is already
+           sync-consented (server-enforced in the badges route), also republishes to this same
+           seeker profile. Only ever an opt-in prompt; never auto-awarded. */
+        const empNow=HR.hrCurrentEmp?.();
+        if(empNow)setTrainingBadgePrompts(p=>p.some(x=>x.trainingId===id)?p:[...p,{trainingId:id,title:t.title}]);
+      }
     }catch(err){toast(err.message,"danger");}
+  };
+  const dismissTrainingBadgePrompt=id=>setTrainingBadgePrompts(p=>p.filter(x=>x.trainingId!==id));
+  const publishTrainingBadge=async id=>{
+    const prompt=trainingBadgePrompts.find(x=>x.trainingId===id); if(!prompt)return;
+    const empNow=HR.hrCurrentEmp?.(); if(!empNow)return;
+    try{
+      await HR.awardBadge(empNow.id,`Certified in ${prompt.title}`);
+      toast(`Published "Certified in ${prompt.title}" to your profile.`,"success");
+    }catch(err){toast(err.message,"danger");}
+    dismissTrainingBadgePrompt(id);
   };
 
   /* CVs */
@@ -2189,7 +2213,7 @@ export function useStore(){
     stageAutomations,loadStageAutomations,setStageAutomation,
     editBlog,editTraining,saveBlog,saveTraining,deleteBlog,deleteTraining,toggleBlogStatus,toggleTrainingStatus,
     loadContentRevisions,restoreContentRevision,loadArticleAnalytics,
-    enrol,confirmPaidEnrol,advanceTraining,paidTrainings,newCv,importResumeToNewCv,editCv,saveCv,duplicateCv,deleteCv,setDefaultCv,
+    enrol,confirmPaidEnrol,advanceTraining,paidTrainings,trainingBadgePrompts,dismissTrainingBadgePrompt,publishTrainingBadge,newCv,importResumeToNewCv,editCv,saveCv,duplicateCv,deleteCv,setDefaultCv,
     printCv,printCert,printInvoice,printOfferLetter,exportApplicants,exportLog,exportUsers,exportEmployers,share,choosePlan,updateCard,setSetting,
     readNotif,markAllRead,logActivity:log,
     ...HR,

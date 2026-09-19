@@ -414,6 +414,11 @@ export const en = {
     searchPlaceholder: "Search people, tasks, leave, expenses…", noMatches: "No matches.",
     sectionPeople: "People", sectionTasks: "Tasks", sectionLeave: "Leave", sectionExpenses: "Expenses", sectionInvoices: "Invoices",
     unknownPerson: "Unknown",
+    deniedTitle: "Not available for your role",
+    deniedBody: "Your role doesn't include this module. If you think this is wrong, ask an Owner or Admin.",
+    disabledTitle: "Turned off for your company",
+    disabledBody: "An admin has disabled this module for everyone. Ask an Owner or Admin to turn it back on in Settings.",
+    deniedBackBtn: "Back to Overview",
   },
   agencyShell: {
     sectionOperations: "Operations", sectionPayrollBilling: "Payroll & Billing", sectionInsights: "Insights",
@@ -1626,6 +1631,12 @@ export const en = {
       linkedTitle: "Linked to your NorthHire profile",
       linkedBody: "Skills stay linked between your HR profile and your NorthHire seeker profile.",
       unlinkBtn: "Unlink",
+    },
+    trainingBadge: {
+      offerTitle: "You completed \"{title}\"",
+      offerBody: "Publish this to your NorthHire profile? A \"Certified in {title}\" badge will show on your public profile.",
+      publishBtn: "Publish badge",
+      notNowBtn: "Not now",
     },
     oneOnOne: {
       logTitle: "1:1 log with {manager}",

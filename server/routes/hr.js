@@ -1,4 +1,4 @@
-import { Router } from "express";
+﻿import { Router } from "express";
 import crypto from "node:crypto";
 import { db, nextId, sqlTime } from "../db.js";
 import { calcNetPay, calcHourlyGross } from "../../src/helpers/payrollTax.js";
@@ -21,7 +21,7 @@ function logHrAudit(companyId, actorEmployeeId, action, detail) {
     .run(nextId("al", "hr_audit_log"), companyId, actorEmployeeId, action, detail);
 }
 
-/* ─── Auth ─── */
+/* â”€â”€â”€ Auth â”€â”€â”€ */
 const HR_LOGIN_LOCKOUT_MAX_ATTEMPTS = 5;
 const HR_LOGIN_LOCKOUT_WINDOW_MIN = 15;
 hrRouter.post("/login", (req, res) => {
@@ -34,7 +34,7 @@ hrRouter.post("/login", (req, res) => {
     `SELECT COUNT(*) AS n FROM failed_logins WHERE email = ? AND kind = 'hr' AND created_at >= datetime('now', ?)`
   ).get(lockoutKey, `-${HR_LOGIN_LOCKOUT_WINDOW_MIN} minutes`).n;
   if (recentFails >= HR_LOGIN_LOCKOUT_MAX_ATTEMPTS) {
-    return res.status(429).json({ error: `Too many failed attempts — try again in ${HR_LOGIN_LOCKOUT_WINDOW_MIN} minutes.` });
+    return res.status(429).json({ error: `Too many failed attempts â€” try again in ${HR_LOGIN_LOCKOUT_WINDOW_MIN} minutes.` });
   }
   const fail = () => db.prepare("INSERT INTO failed_logins (id, email, kind) VALUES (?, ?, 'hr')").run(nextId("fl", "failed_logins"), lockoutKey);
 
@@ -74,6 +74,14 @@ hrRouter.get("/me", requireHrAuth, (req, res) => {
 
 function isPriv(emp) { return ["owner", "admin", "hr"].includes(emp.role); }
 function requireHrPriv(req, res, next) { if (!isPriv(req.hrEmployee)) return res.status(403).json({ error: "Not allowed for your role." }); next(); }
+// H2 permissions audit: money routes (payroll, invoices, tax slips, ROE, paying an expense claim)
+// were gated by requireHrPriv, which only covers owner/admin/hr - the Finance role itself was
+// silently 403'd from the payroll and invoicing endpoints its whole job is built around (the exact
+// UI-shows-it-but-server-401s anti-pattern this audit exists to catch: the client nav already let
+// Isaac click into Payroll/Invoices, the page just failed to load anything). Finance and the
+// existing privileged roles can both reach these; nobody else can.
+function isMoneyRole(emp) { return isPriv(emp) || emp.role === "finance"; }
+function requireHrMoney(req, res, next) { if (!isMoneyRole(req.hrEmployee)) return res.status(403).json({ error: "Not allowed for your role." }); next(); }
 // A plain "employee"-role manager can approve their own direct reports' leave/expenses -
 // previously only owner/admin/hr could approve anyone's, bypassing the real reporting chain
 // (hr_employees.manager) entirely.
@@ -134,6 +142,14 @@ export function requiresDualApproval(companyId, workflow, amount) {
 // everything; anyone else gets exactly what that person chose to show.
 function maskHrEmployeeForViewer(emp, viewerHrEmployee) {
   if (isPriv(viewerHrEmployee) || emp.id === viewerHrEmployee.id) return emp;
+  // H2 permissions audit: the charter calls for Finance to get an "everyone-view" of People -
+  // name + department only, no personal data - which is stricter than the general colleague view
+  // below (that one still respects each employee's own visibility opt-outs, which cover public-
+  // profile fields, not "hide my salary from a Finance role that processes payroll anyway"). A
+  // hard, role-based floor here, independent of anyone's visibility toggles.
+  if (viewerHrEmployee.role === "finance") {
+    return { id: emp.id, name: emp.name, title: emp.title, dept: emp.dept, seed: emp.seed, status: emp.status, role: emp.role };
+  }
   const v = emp.visibility || {};
   const masked = { ...emp };
   if (v.salary === false) masked.salary = null;
@@ -150,7 +166,7 @@ function maskHrEmployeeForViewer(emp, viewerHrEmployee) {
   return masked;
 }
 
-/* ─── Employees ─── */
+/* â”€â”€â”€ Employees â”€â”€â”€ */
 hrRouter.get("/employees", requireHrAuth, (req, res) => {
   const rows = db.prepare("SELECT * FROM hr_employees WHERE company_id = ?").all(req.hrEmployee.company_id);
   res.json({ employees: rows.map(r => maskHrEmployeeForViewer(serializeHrEmployee(r), req.hrEmployee)) });
@@ -187,7 +203,7 @@ hrRouter.post("/employees", requireHrAuth, requireHrPriv, (req, res) => {
       const exp = (() => { try { return JSON.parse(cv.exp_json || "[]"); } catch { return []; } })();
       const edu = (() => { try { return JSON.parse(cv.edu_json || "[]"); } catch { return []; } })();
       const lines = [
-        `${cv.name0 || d.name || ""} — ${cv.title || d.title || ""}`, "",
+        `${cv.name0 || d.name || ""} â€” ${cv.title || d.title || ""}`, "",
         cv.summary ? cv.summary : null, cv.summary ? "" : null,
         exp.length ? "Work history:" : null,
         ...exp.map(x => `- ${x.role || x.title || ""}${x.company ? " at " + x.company : ""}${x.dates ? " (" + x.dates + ")" : ""}`),
@@ -198,7 +214,7 @@ hrRouter.post("/employees", requireHrAuth, requireHrPriv, (req, res) => {
       const docId = nextId("doc", "hr_documents");
       const dataUrl = `data:text/plain;base64,${Buffer.from(lines, "utf8").toString("base64")}`;
       db.prepare("INSERT INTO hr_documents (id, employee_id, name, data_url, size, uploaded_by) VALUES (?,?,?,?,?,?)")
-        .run(docId, id, `Candidate CV — ${cv.name || "NorthHire profile"}.txt`, dataUrl, Buffer.byteLength(lines, "utf8"), req.hrEmployee.id);
+        .run(docId, id, `Candidate CV â€” ${cv.name || "NorthHire profile"}.txt`, dataUrl, Buffer.byteLength(lines, "utf8"), req.hrEmployee.id);
     }
   }
 
@@ -258,7 +274,7 @@ hrRouter.patch("/employees/:id", requireHrAuth, requireHrPriv, (req, res) => {
   }
   if (setCols.length) db.prepare(`UPDATE hr_employees SET ${setCols.join(", ")} WHERE id = ?`).run(...params, req.params.id);
   if (d.salary !== undefined && d.salary !== row.salary) {
-    logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "salary_change", `${row.name}'s salary changed from $${row.salary?.toLocaleString() ?? "—"} to $${d.salary.toLocaleString()}`);
+    logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "salary_change", `${row.name}'s salary changed from $${row.salary?.toLocaleString() ?? "â€”"} to $${d.salary.toLocaleString()}`);
   }
   if (d.role !== undefined && d.role !== row.role) {
     logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "role_change", `${row.name}'s role changed from ${row.role} to ${d.role}`);
@@ -335,7 +351,7 @@ hrRouter.patch("/employees/:id/badges", requireHrAuth, requireHrPriv, async (req
   res.json({ employee: serializeHrEmployee(db.prepare("SELECT * FROM hr_employees WHERE id = ?").get(req.params.id)) });
 });
 
-/* ─── Documents ─── */
+/* â”€â”€â”€ Documents â”€â”€â”€ */
 // No file-hosting backend exists, so an upload embeds the file as a base64 data: URI in the DB -
 // the same "honest ceiling" the RichText image-insert and print-to-PDF helpers already settled
 // on elsewhere in this app. Capped well under SQLite's practical row-size comfort zone.
@@ -360,7 +376,7 @@ hrRouter.post("/employees/:id/documents", requireHrAuth, requireHrPriv, (req, re
   if (!emp) return res.status(404).json({ error: "Employee not found." });
   const { name, dataUrl } = req.body || {};
   if (!name?.trim() || !dataUrl) return res.status(400).json({ error: "A file name and file are required." });
-  if (dataUrl.length > MAX_DOC_BYTES * 1.4) return res.status(413).json({ error: "File is too large — please use one under 3 MB." });
+  if (dataUrl.length > MAX_DOC_BYTES * 1.4) return res.status(413).json({ error: "File is too large â€” please use one under 3 MB." });
   // Only accept a data: URI whose declared MIME type is on the allowlist - a real content
   // sniff isn't practical without a file-inspection library, but this at least blocks storing
   // (and later force-downloading with the browser choosing how to open) text/html content.
@@ -382,10 +398,10 @@ hrRouter.delete("/documents/:id", requireHrAuth, requireHrPriv, (req, res) => {
   res.json({ ok: true });
 });
 
-/* ─── Attendance ─── */
-/* ─── Shift/roster scheduling - forward-looking, distinct from attendance (after-the-fact
+/* â”€â”€â”€ Attendance â”€â”€â”€ */
+/* â”€â”€â”€ Shift/roster scheduling - forward-looking, distinct from attendance (after-the-fact
    clock records against no plan). A manager/HR/admin/owner assigns a shift; every employee sees
-   their own upcoming shifts, privileged roles see the whole company's roster. ─── */
+   their own upcoming shifts, privileged roles see the whole company's roster. â”€â”€â”€ */
 hrRouter.get("/shifts", requireHrAuth, (req, res) => {
   const { from, to } = req.query;
   const clauses = ["company_id = ?"]; const params = [req.hrEmployee.company_id];
@@ -432,10 +448,10 @@ hrRouter.get("/attendance", requireHrAuth, (req, res) => {
   ).all(req.hrEmployee.company_id);
   res.json({ attendance: rows.map(serializeHrAttendance) });
 });
-/* ─── Shared-terminal time clock (kiosk) ───────────────────────────────────────────────────
+/* â”€â”€â”€ Shared-terminal time clock (kiosk) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    A tablet at the site entrance that accepts punches for one company. Two separate secrets are
    needed: the DEVICE holds a token proving it's an authorised terminal, and the EMPLOYEE keys in
-   a short PIN. Neither alone is enough, and a PIN can never sign anyone into the HR Suite — it's
+   a short PIN. Neither alone is enough, and a PIN can never sign anyone into the HR Suite â€” it's
    punch-only, because people type it in front of colleagues.
 
    A 4-6 digit PIN is inherently weak, so attempts are rate-limited per device using the same
@@ -483,7 +499,7 @@ hrRouter.put("/employees/:id/punch-pin", requireHrAuth, (req, res) => {
   if (!/^\d{4,6}$/.test(pin)) return res.status(400).json({ error: "A punch PIN is 4 to 6 digits." });
   // Reject PINs that are trivially guessable on a shared terminal in front of colleagues.
   if (/^(\d)\1+$/.test(pin) || "0123456789".includes(pin) || "9876543210".includes(pin)) {
-    return res.status(400).json({ error: "Choose a less predictable PIN — no repeated digits or straight runs." });
+    return res.status(400).json({ error: "Choose a less predictable PIN â€” no repeated digits or straight runs." });
   }
   const { hash, salt } = hashPassword(pin);
   db.prepare("UPDATE hr_employees SET punch_pin_hash = ?, punch_pin_salt = ? WHERE id = ?").run(hash, salt, target.id);
@@ -501,7 +517,7 @@ hrRouter.post("/kiosk/punch", (req, res) => {
     `SELECT COUNT(*) AS n FROM failed_logins WHERE email = ? AND kind = 'hr' AND created_at >= datetime('now', ?)`
   ).get(lockoutKey, `-${KIOSK_WINDOW_MIN} minutes`).n;
   if (recentFails >= KIOSK_MAX_ATTEMPTS) {
-    return res.status(429).json({ error: `Too many incorrect PINs on this terminal — wait ${KIOSK_WINDOW_MIN} minutes.` });
+    return res.status(429).json({ error: `Too many incorrect PINs on this terminal â€” wait ${KIOSK_WINDOW_MIN} minutes.` });
   }
 
   const pin = String(req.body?.pin ?? "");
@@ -557,9 +573,9 @@ hrRouter.post("/attendance/punch-in", requireHrAuth, (req, res) => {
   const att = settings?.attendance || { workingHoursStart: "08:00", lateThresholdMin: 15, allowRemotePunch: true };
   const source = req.body?.source || "web";
   // The app itself only ever punches in over the web (there's no separate office-terminal
-  // client) — so with remote punch-in disabled, a "web" source is exactly what should be blocked.
+  // client) â€” so with remote punch-in disabled, a "web" source is exactly what should be blocked.
   if (att.allowRemotePunch === false && source === "web") {
-    return res.status(403).json({ error: "Remote punch-in is disabled for this company — use the office time clock." });
+    return res.status(403).json({ error: "Remote punch-in is disabled for this company â€” use the office time clock." });
   }
   const [sh, sm] = att.workingHoursStart.split(":").map(Number);
   const late = (now.getHours() * 60 + now.getMinutes()) > (sh * 60 + sm + (att.lateThresholdMin || 0));
@@ -584,7 +600,7 @@ hrRouter.post("/attendance/punch-out", requireHrAuth, (req, res) => {
   res.json({ hours, earlyLeave, record: serializeHrAttendance(db.prepare("SELECT * FROM hr_attendance WHERE id = ?").get(existing.id)) });
 });
 
-/* ─── Leave ─── */
+/* â”€â”€â”€ Leave â”€â”€â”€ */
 hrRouter.get("/leave", requireHrAuth, (req, res) => {
   const rows = db.prepare(
     `SELECT hr_leave.* FROM hr_leave JOIN hr_employees ON hr_employees.id = hr_leave.employee_id
@@ -623,7 +639,7 @@ hrRouter.patch("/leave/:id/decide", requireHrAuth, async (req, res) => {
   res.json({ leave: serializeHrLeave(db.prepare("SELECT * FROM hr_leave WHERE id = ?").get(req.params.id)) });
 });
 
-/* ─── Tasks ─── */
+/* â”€â”€â”€ Tasks â”€â”€â”€ */
 hrRouter.get("/tasks", requireHrAuth, (req, res) => {
   const rows = db.prepare("SELECT * FROM hr_tasks WHERE company_id = ? ORDER BY created_at DESC").all(req.hrEmployee.company_id);
   res.json({ tasks: rows.map(serializeHrTask) });
@@ -651,7 +667,7 @@ hrRouter.delete("/tasks/:id", requireHrAuth, (req, res) => {
   res.json({ ok: true });
 });
 
-/* ─── Events ─── */
+/* â”€â”€â”€ Events â”€â”€â”€ */
 hrRouter.get("/events", requireHrAuth, (req, res) => {
   const rows = db.prepare("SELECT * FROM hr_events WHERE company_id = ? ORDER BY event_date").all(req.hrEmployee.company_id);
   res.json({ events: rows.map(serializeHrEvent) });
@@ -668,12 +684,12 @@ hrRouter.delete("/events/:id", requireHrAuth, (req, res) => {
   res.json({ ok: true });
 });
 
-/* ─── Invoices ─── */
+/* â”€â”€â”€ Invoices â”€â”€â”€ */
 hrRouter.get("/invoices", requireHrAuth, (req, res) => {
   const rows = db.prepare("SELECT * FROM hr_invoices WHERE company_id = ? ORDER BY issued DESC").all(req.hrEmployee.company_id);
   res.json({ invoices: rows.map(serializeHrInvoice) });
 });
-hrRouter.post("/invoices", requireHrAuth, requireHrPriv, (req, res) => {
+hrRouter.post("/invoices", requireHrAuth, requireHrMoney, (req, res) => {
   const d = req.body || {};
   const items = (d.items || []).filter(it => (it.qty || 0) >= 0 && (it.unitPrice || 0) >= 0);
   if (items.length !== (d.items || []).length) return res.status(400).json({ error: "Invoice line items can't have a negative quantity or price." });
@@ -691,19 +707,19 @@ function resolveOwnHrInvoice(req, res) {
   if (!inv || inv.company_id !== req.hrEmployee.company_id) { res.status(404).json({ error: "Invoice not found." }); return null; }
   return inv;
 }
-hrRouter.patch("/invoices/:id/send", requireHrAuth, requireHrPriv, (req, res) => {
+hrRouter.patch("/invoices/:id/send", requireHrAuth, requireHrMoney, (req, res) => {
   if (!resolveOwnHrInvoice(req, res)) return;
   db.prepare("UPDATE hr_invoices SET status = 'pending' WHERE id = ?").run(req.params.id);
   res.json({ invoice: serializeHrInvoice(db.prepare("SELECT * FROM hr_invoices WHERE id = ?").get(req.params.id)) });
 });
-hrRouter.patch("/invoices/:id/paid", requireHrAuth, requireHrPriv, (req, res) => {
+hrRouter.patch("/invoices/:id/paid", requireHrAuth, requireHrMoney, (req, res) => {
   if (!resolveOwnHrInvoice(req, res)) return;
   db.prepare("UPDATE hr_invoices SET status = 'paid', paid = date('now') WHERE id = ?").run(req.params.id);
   res.json({ invoice: serializeHrInvoice(db.prepare("SELECT * FROM hr_invoices WHERE id = ?").get(req.params.id)) });
 });
 // A real reversal path (standard accounting practice: flip status + a logged reason, rather than
 // deleting or silently editing the paid record) instead of no undo path at all.
-hrRouter.patch("/invoices/:id/reverse", requireHrAuth, requireHrPriv, (req, res) => {
+hrRouter.patch("/invoices/:id/reverse", requireHrAuth, requireHrMoney, (req, res) => {
   const inv = resolveOwnHrInvoice(req, res); if (!inv) return;
   if (inv.status !== "paid") return res.status(400).json({ error: "Only a paid invoice can be reversed." });
   const reason = (req.body?.reason || "").trim();
@@ -713,7 +729,7 @@ hrRouter.patch("/invoices/:id/reverse", requireHrAuth, requireHrPriv, (req, res)
   res.json({ invoice: serializeHrInvoice(db.prepare("SELECT * FROM hr_invoices WHERE id = ?").get(req.params.id)) });
 });
 
-/* ─── Departments ─── */
+/* â”€â”€â”€ Departments â”€â”€â”€ */
 hrRouter.get("/departments", requireHrAuth, (req, res) => {
   const rows = db.prepare("SELECT * FROM hr_departments WHERE company_id = ?").all(req.hrEmployee.company_id);
   res.json({ departments: rows.map(serializeHrDepartment) });
@@ -744,7 +760,7 @@ hrRouter.delete("/departments/:id", requireHrAuth, requireHrPriv, (req, res) => 
   res.json({ ok: true });
 });
 
-/* ─── Expenses ─── */
+/* â”€â”€â”€ Expenses â”€â”€â”€ */
 hrRouter.get("/expenses/mine", requireHrAuth, (req, res) => {
   const rows = db.prepare("SELECT * FROM hr_expenses WHERE employee_id = ? ORDER BY submitted_at DESC").all(req.hrEmployee.id);
   res.json({ expenses: rows.map(serializeHrExpense) });
@@ -759,7 +775,7 @@ hrRouter.get("/expenses/team", requireHrAuth, (req, res) => {
   ).all(req.hrEmployee.id);
   res.json({ expenses: rows.map(serializeHrExpense) });
 });
-hrRouter.get("/expenses/company", requireHrAuth, requireHrPriv, (req, res) => {
+hrRouter.get("/expenses/company", requireHrAuth, requireHrMoney, (req, res) => {
   const rows = db.prepare(
     `SELECT hr_expenses.* FROM hr_expenses JOIN hr_employees ON hr_employees.id = hr_expenses.employee_id
      WHERE hr_employees.company_id = ? ORDER BY hr_expenses.submitted_at DESC`
@@ -795,7 +811,7 @@ hrRouter.patch("/expenses/:id/decide", requireHrAuth, (req, res) => {
     .run(decision, req.hrEmployee.id, decision, reason || null, req.params.id);
   res.json({ expense: serializeHrExpense(db.prepare("SELECT * FROM hr_expenses WHERE id = ?").get(req.params.id)) });
 });
-hrRouter.patch("/expenses/:id/pay", requireHrAuth, requireHrPriv, (req, res) => {
+hrRouter.patch("/expenses/:id/pay", requireHrAuth, requireHrMoney, (req, res) => {
   const row = db.prepare(
     `SELECT hr_expenses.* FROM hr_expenses JOIN hr_employees ON hr_employees.id = hr_expenses.employee_id
      WHERE hr_expenses.id = ? AND hr_employees.company_id = ?`
@@ -805,8 +821,8 @@ hrRouter.patch("/expenses/:id/pay", requireHrAuth, requireHrPriv, (req, res) => 
   res.json({ expense: serializeHrExpense(db.prepare("SELECT * FROM hr_expenses WHERE id = ?").get(req.params.id)) });
 });
 
-/* ─── Payroll ─── */
-hrRouter.get("/payruns", requireHrAuth, requireHrPriv, (req, res) => {
+/* â”€â”€â”€ Payroll â”€â”€â”€ */
+hrRouter.get("/payruns", requireHrAuth, requireHrMoney, (req, res) => {
   const rows = db.prepare("SELECT * FROM hr_payruns WHERE company_id = ? ORDER BY run_date DESC").all(req.hrEmployee.company_id);
   res.json({ payruns: rows.map(serializeHrPayrun) });
 });
@@ -820,17 +836,17 @@ hrRouter.get("/payslips/mine", requireHrAuth, (req, res) => {
     .filter(Boolean);
   res.json({ payslips: slips });
 });
-/* ─── Year-end tax slips (T4) and Records of Employment ────────────────────────────────────
+/* â”€â”€â”€ Year-end tax slips (T4) and Records of Employment â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    Both are computed from the payroll runs that were actually paid, never from a parallel set of
    numbers. See src/helpers/taxSlips.js for what is and isn't modelled - these generate a real,
    printable slip, they do not file anything with CRA or Service Canada. */
 
-hrRouter.get("/tax-slips/years", requireHrAuth, requireHrPriv, (req, res) => {
+hrRouter.get("/tax-slips/years", requireHrAuth, requireHrMoney, (req, res) => {
   const runs = db.prepare("SELECT * FROM hr_payruns WHERE company_id = ?").all(req.hrEmployee.company_id).map(serializeHrPayrun);
   res.json({ years: payrollYears(runs) });
 });
 
-hrRouter.get("/tax-slips/:year", requireHrAuth, requireHrPriv, (req, res) => {
+hrRouter.get("/tax-slips/:year", requireHrAuth, requireHrMoney, (req, res) => {
   const year = Number(req.params.year);
   if (!Number.isInteger(year)) return res.status(400).json({ error: "Invalid year." });
   const companyId = req.hrEmployee.company_id;
@@ -862,7 +878,7 @@ hrRouter.get("/tax-slips/:year/mine", requireHrAuth, (req, res) => {
   res.json({ year, slip, employer: { name: employer?.name, businessNumber: employer?.business_number || null } });
 });
 
-hrRouter.get("/roe/:employeeId", requireHrAuth, requireHrPriv, (req, res) => {
+hrRouter.get("/roe/:employeeId", requireHrAuth, requireHrMoney, (req, res) => {
   const companyId = req.hrEmployee.company_id;
   const row = db.prepare("SELECT * FROM hr_employees WHERE id = ? AND company_id = ?").get(req.params.employeeId, companyId);
   if (!row) return res.status(404).json({ error: "Employee not found." });
@@ -874,7 +890,7 @@ hrRouter.get("/roe/:employeeId", requireHrAuth, requireHrPriv, (req, res) => {
   res.json({ roe, employer: { name: employer?.name, businessNumber: employer?.business_number || null, city: employer?.city, prov: employer?.prov } });
 });
 
-hrRouter.post("/payruns", requireHrAuth, requireHrPriv, (req, res) => {
+hrRouter.post("/payruns", requireHrAuth, requireHrMoney, (req, res) => {
   const { periodStart, periodEnd } = req.body || {};
   const taxConfig = getConfig("payrollTax");
   const otPolicy = getConfig("overtimePolicy");
@@ -963,7 +979,7 @@ function resolveOwnHrPayrun(req, res) {
   if (!run || run.company_id !== req.hrEmployee.company_id) { res.status(404).json({ error: "Not found." }); return null; }
   return run;
 }
-hrRouter.patch("/payruns/:id/approve", requireHrAuth, requireHrPriv, (req, res) => {
+hrRouter.patch("/payruns/:id/approve", requireHrAuth, requireHrMoney, (req, res) => {
   const run = resolveOwnHrPayrun(req, res); if (!run) return;
   if (run.status !== "draft") return res.status(400).json({ error: "Only a draft run can be approved." });
   db.prepare("UPDATE hr_payruns SET status = 'approved', approved_at = datetime('now') WHERE id = ?").run(req.params.id);
@@ -971,7 +987,7 @@ hrRouter.patch("/payruns/:id/approve", requireHrAuth, requireHrPriv, (req, res) 
 });
 // Must come from 'approved' specifically - without this, calling execute twice (a double-click,
 // or a replayed request) would re-run the expense-reimbursement side effect below a second time.
-hrRouter.patch("/payruns/:id/execute", requireHrAuth, requireHrPriv, (req, res) => {
+hrRouter.patch("/payruns/:id/execute", requireHrAuth, requireHrMoney, (req, res) => {
   const run = resolveOwnHrPayrun(req, res); if (!run) return;
   if (run.status !== "approved") return res.status(400).json({ error: "Only an approved run can be executed." });
   db.prepare("UPDATE hr_payruns SET status = 'paid', paid_at = datetime('now') WHERE id = ?").run(req.params.id);
@@ -984,7 +1000,7 @@ hrRouter.patch("/payruns/:id/execute", requireHrAuth, requireHrPriv, (req, res) 
       ).run(line.employee);
     }
   }
-  logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "payroll_executed", `Executed payroll for ${run.period_start} → ${run.period_end} (${lines.length} employees, $${run.total_net?.toLocaleString()} net)`);
+  logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "payroll_executed", `Executed payroll for ${run.period_start} â†’ ${run.period_end} (${lines.length} employees, $${run.total_net?.toLocaleString()} net)`);
   res.json({ ok: true });
   // Notification emails happen after responding, not awaited in the request path - a payroll run
   // for a real-sized company (dozens to hundreds of employees) sending each email sequentially
@@ -1001,7 +1017,7 @@ hrRouter.patch("/payruns/:id/execute", requireHrAuth, requireHrPriv, (req, res) 
 // Same reversal pattern as invoices above - flip status + a logged, required reason. Also undoes
 // the expense side-effect execute() applied, so a reversed run doesn't leave those claims stuck
 // showing "paid" for reimbursements that (in a reversal) didn't happen.
-hrRouter.patch("/payruns/:id/reverse", requireHrAuth, requireHrPriv, (req, res) => {
+hrRouter.patch("/payruns/:id/reverse", requireHrAuth, requireHrMoney, (req, res) => {
   const run = resolveOwnHrPayrun(req, res); if (!run) return;
   if (run.status !== "paid") return res.status(400).json({ error: "Only an executed (paid) payroll run can be reversed." });
   const reason = (req.body?.reason || "").trim();
@@ -1015,7 +1031,7 @@ hrRouter.patch("/payruns/:id/reverse", requireHrAuth, requireHrPriv, (req, res) 
       ).run(line.employee);
     }
   }
-  logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "payroll_reversed", `Reversed payroll for ${run.period_start} → ${run.period_end} ($${run.total_net?.toLocaleString()} net): ${reason}`);
+  logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "payroll_reversed", `Reversed payroll for ${run.period_start} â†’ ${run.period_end} ($${run.total_net?.toLocaleString()} net): ${reason}`);
   res.json({ ok: true });
 });
 /* Manager 1:1s - the manager and the report can both read and write; HR/owner can read
@@ -1065,10 +1081,10 @@ hrRouter.delete("/one-on-ones/:id", requireHrAuth, (req, res) => {
 hrRouter.get("/audit-log", requireHrAuth, (req, res) => {
   if (!isPriv(req.hrEmployee) && req.hrEmployee.role !== "finance") return res.status(403).json({ error: "Not allowed for your role." });
   const rows = db.prepare("SELECT hr_audit_log.*, hr_employees.name AS actor_name FROM hr_audit_log LEFT JOIN hr_employees ON hr_employees.id = hr_audit_log.actor_employee_id WHERE hr_audit_log.company_id = ? ORDER BY hr_audit_log.created_at DESC LIMIT 500").all(req.hrEmployee.company_id);
-  res.json({ auditLog: rows.map(r => ({ ...serializeHrAuditEntry(r), actorName: r.actor_name || "—" })) });
+  res.json({ auditLog: rows.map(r => ({ ...serializeHrAuditEntry(r), actorName: r.actor_name || "â€”" })) });
 });
 
-/* ─── Chat ─── */
+/* â”€â”€â”€ Chat â”€â”€â”€ */
 hrRouter.get("/chats", requireHrAuth, (req, res) => {
   const rows = db.prepare("SELECT * FROM hr_chats WHERE company_id = ?").all(req.hrEmployee.company_id);
   res.json({ chats: rows.map(row => {
@@ -1121,7 +1137,7 @@ hrRouter.post("/chats/:id/messages", requireHrAuth, (req, res) => {
   res.status(201).json({ message: serializeHrChatMessage(db.prepare("SELECT * FROM hr_chat_messages WHERE id = ?").get(id)) });
 });
 
-/* ─── Company settings ─── */
+/* â”€â”€â”€ Company settings â”€â”€â”€ */
 hrRouter.get("/company-settings", requireHrAuth, (req, res) => {
   const row = db.prepare("SELECT settings_json FROM hr_company_settings WHERE company_id = ?").get(req.hrEmployee.company_id);
   res.json({ settings: row ? JSON.parse(row.settings_json) : null });
@@ -1137,7 +1153,7 @@ hrRouter.patch("/company-settings", requireHrAuth, requireHrPriv, (req, res) => 
   res.json({ settings: merged });
 });
 
-/* ─── Policies & e-signature (real click-wrap acknowledgment, see db.js for the design note) ─── */
+/* â”€â”€â”€ Policies & e-signature (real click-wrap acknowledgment, see db.js for the design note) â”€â”€â”€ */
 function docAppliesTo(doc, employeeId) {
   return doc.requiredFor.includes("all") || doc.requiredFor.includes(employeeId);
 }
@@ -1201,7 +1217,7 @@ hrRouter.post("/sign-documents/:id/sign", requireHrAuth, (req, res) => {
   res.status(201).json({ signature: serializeHrSignature(db.prepare("SELECT * FROM hr_signatures WHERE id = ?").get(id)) });
 });
 
-/* ─── Task comments ─────────────────────────────────────────────────────────────────────────
+/* â”€â”€â”€ Task comments â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    Discussion belongs with the work. Anyone who can see the task can comment; a comment can be
    removed by its author or by a privileged role, since a task board that nobody can tidy fills
    up with mistakes. */
@@ -1240,7 +1256,7 @@ hrRouter.delete("/task-comments/:id", requireHrAuth, (req, res) => {
   res.json({ ok: true });
 });
 
-/* ─── Expense categories ────────────────────────────────────────────────────────────────────
+/* â”€â”€â”€ Expense categories â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    Was a hardcoded list, so a company whose chart of accounts didn't match had no correct option
    to file an expense under. A company with no rows gets the platform defaults, so nothing has to
    be configured before expenses work. */

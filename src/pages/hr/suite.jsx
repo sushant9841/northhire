@@ -379,6 +379,7 @@ export function HrProfile(){
       </div>
 
       <div className="flex flex-col gap-3.5">
+        <_TrainingBadgeOfferCard prompts={A.trainingBadgePrompts||[]} onPublish={A.publishTrainingBadge} onDismiss={A.dismissTrainingBadgePrompt}/>
         <Card pad={20} style={{borderRadius:16,background:`linear-gradient(135deg,${C.tint} 0%,#F0F7FF 100%)`,border:`1px solid ${C.line2}`}}>
           <div className="text-xs font-bold text-brand tracking-wide uppercase mb-2.5">{t("hr.profile.publicProfilePreview")}</div>
           <div className="flex gap-3 items-center mb-3.5">
@@ -452,6 +453,28 @@ function _ProfileSyncCard({sync,onConsent}){
       <Btn kind="primary" size="sm" onClick={()=>onConsent(true)}>{t("hr.profileSync.enableBtn")}</Btn>
       <Btn kind="ghost" size="sm" onClick={()=>onConsent(false)}>{t("hr.profileSync.notNowBtn")}</Btn>
     </div>
+  </Card>;
+}
+
+/* H1 tail (HR-03): training completion -> optional publish-to-seeker-profile prompt. Only ever
+   shown for the just-completed training(s) in this session; consenting awards an HR badge
+   "Certified in X" (which republishes to the linked seeker profile server-side, if that profile
+   is already sync-consented). Declining just dismisses - never auto-awarded. */
+function _TrainingBadgeOfferCard({prompts,onPublish,onDismiss}){
+  const {t}=useTranslation();
+  if(!prompts.length)return null;
+  return <Card pad={20} style={{borderRadius:16,marginBottom:16,background:"#FFF5EB",border:`1px solid ${C.warnLn}`}}>
+    {prompts.map(p=><div key={p.trainingId} className="flex gap-3 items-start pb-3 mb-3 border-b border-warn-ln last:border-0 last:pb-0 last:mb-0">
+      <div className="w-8 h-8 rounded-lg bg-warn-bg text-warn flex items-center justify-center shrink-0"><I n="award" s={16}/></div>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-semibold text-text">{t("hr.trainingBadge.offerTitle",{title:p.title})}</div>
+        <div className="text-xs text-text-2 mt-1 leading-relaxed">{t("hr.trainingBadge.offerBody")}</div>
+        <div className="flex gap-2 mt-2.5">
+          <Btn kind="primary" size="sm" icon="award" style={{background:C.warn,borderColor:C.warn}} onClick={()=>onPublish(p.trainingId)}>{t("hr.trainingBadge.publishBtn")}</Btn>
+          <Btn kind="ghost" size="sm" onClick={()=>onDismiss(p.trainingId)}>{t("hr.trainingBadge.notNowBtn")}</Btn>
+        </div>
+      </div>
+    </div>)}
   </Card>;
 }
 

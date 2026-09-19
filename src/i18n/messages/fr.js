@@ -415,6 +415,11 @@ export const fr = {
     searchPlaceholder: "Rechercher personnes, tâches, congés, dépenses…", noMatches: "Aucun résultat.",
     sectionPeople: "Personnes", sectionTasks: "Tâches", sectionLeave: "Congés", sectionExpenses: "Dépenses", sectionInvoices: "Factures",
     unknownPerson: "Inconnu·e",
+    deniedTitle: "Non accessible pour votre rôle",
+    deniedBody: "Votre rôle ne comprend pas ce module. Si vous pensez qu'il s'agit d'une erreur, communiquez avec un·e propriétaire ou administrateur·rice.",
+    disabledTitle: "Désactivé pour votre entreprise",
+    disabledBody: "Un·e administrateur·rice a désactivé ce module pour tout le monde. Demandez à un·e propriétaire ou administrateur·rice de le réactiver dans les Paramètres.",
+    deniedBackBtn: "Retour à l'aperçu",
   },
   agencyShell: {
     sectionOperations: "Opérations", sectionPayrollBilling: "Paie et facturation", sectionInsights: "Aperçus",
@@ -1745,6 +1750,12 @@ export const fr = {
       linkedTitle: "Lié à votre profil NorthHire",
       linkedBody: "Les compétences restent liées entre votre profil RH et votre profil de chercheur·euse d'emploi NorthHire.",
       unlinkBtn: "Délier",
+    },
+    trainingBadge: {
+      offerTitle: "Vous avez terminé « {title} »",
+      offerBody: "Publier ceci sur votre profil NorthHire? Un badge « Certifié en {title} » apparaîtra sur votre profil public.",
+      publishBtn: "Publier le badge",
+      notNowBtn: "Pas maintenant",
     },
     oneOnOne: {
       logTitle: "Journal 1:1 avec {manager}",

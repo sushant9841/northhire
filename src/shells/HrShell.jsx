@@ -3,7 +3,7 @@ import { use } from "../store/context.js";
 import { useMedia } from "../helpers/hooks.js";
 import { C } from "../design/tokens.js";
 import { I } from "../design/icons.jsx";
-import { SmartPortrait, Tag, Input } from "../design/primitives.jsx";
+import { SmartPortrait, Tag, Input, Card, Btn } from "../design/primitives.jsx";
 import { HR_COMPANY_SETTINGS_DEFAULT, HR_MODULES } from "../store/seed/hrCompanySettings.js";
 import { ROUTES } from "../routes.js";
 import { useStickyNavScroll } from "../helpers/scrollRegion.js";
@@ -22,6 +22,28 @@ const HR_MODULE_LABEL_KEY={hrDashboard:"account.dashboard",hrPeople:"tabs.people
   hrPolicies:"hrShell.policies",hrRoster:"hrShell.roster"};
 const HR_ROLE_LABEL_KEY={owner:"hrShell.roleOwner",admin:"hrShell.roleAdmin",hr:"hrShell.roleHr",
   finance:"hrShell.roleFinance",employee:"hrShell.roleEmployee"};
+
+/* H2 - role-scoped nav priority. HR_MODULES is filtered by canAccessModule already (server-side
+   modulesForRole is the source of truth for WHICH modules a role can reach); this only reorders
+   the ones a role can already see so each role's own priorities lead the list, per
+   docs/PERMISSIONS.md - e.g. Linda (HR) sees Attendance/Leave/Tasks near the top, Isaac (Finance)
+   sees Payroll/Invoices near the top, instead of everyone getting the same owner-centric order. */
+const HR_NAV_PRIORITY={
+  owner:["hrDashboard","hrPeople","hrAttendance","hrLeave","hrTrainings","hrPayroll","hrInvoices","hrReports","hrSettings","hrIntegrations"],
+  admin:["hrDashboard","hrPeople","hrAttendance","hrLeave","hrTasks","hrCalendar","hrTrainings","hrChat","hrSettings","hrRoster"],
+  hr:["hrDashboard","hrPeople","hrAttendance","hrLeave","hrTasks","hrCalendar","hrTrainings","hrChat","hrHiring"],
+  finance:["hrDashboard","hrPayroll","hrInvoices","hrExpenses","hrReports"],
+  employee:["hrDashboard","hrProfile","hrAttendance","hrLeave","hrTasks","hrCalendar","hrTrainings","hrChat"],
+};
+function orderModulesForRole(modules,role){
+  const order=HR_NAV_PRIORITY[role]||[];
+  return [...modules].sort((a,b)=>{
+    const ia=order.indexOf(a.k),ib=order.indexOf(b.k);
+    if(ia===-1&&ib===-1)return 0;
+    if(ia===-1)return 1; if(ib===-1)return -1;
+    return ia-ib;
+  });
+}
 
 /* Org-wide search - previously only per-module search boxes existed (directory, tasks), so
    finding "that one leave request" or "the invoice for X" meant guessing which module to open
@@ -81,6 +103,23 @@ function HrGlobalSearch(){
   </div>;
 }
 
+/* H2 - visible "Permission denied" / "Disabled by admin" state, replacing the previous silent
+   bounce-to-dashboard. Two of the charter's 6 states; distinct copy for each so a role doesn't
+   read "ask your admin" when the real answer is "this isn't for your role at all". */
+function _HrModuleDenied({reason,onBack}){
+  const {t}=useTranslation();
+  const denied=reason==="role";
+  return <Card pad={32} style={{borderRadius:16,textAlign:"center",maxWidth:440,margin:"48px auto 0"}}>
+    <div className="w-14 h-14 rounded-2xl bg-bg text-text-3 flex items-center justify-center mx-auto mb-4">
+      <I n={denied?"lock":"shield"} s={26}/></div>
+    <div className="text-lg font-bold text-text tracking-tight mb-1.5">
+      {denied?t("hrShell.deniedTitle"):t("hrShell.disabledTitle")}</div>
+    <p className="text-sm text-text-2 leading-relaxed mb-5">
+      {denied?t("hrShell.deniedBody"):t("hrShell.disabledBody")}</p>
+    <Btn kind="primary" onClick={onBack}>{t("hrShell.deniedBackBtn")}</Btn>
+  </Card>;
+}
+
 export function HrShell({children}){
   const A=use(); const mob=useMedia("(max-width: 900px)"); const {t}=useTranslation();
   /* Left nav keeps its scroll position + auto-scrolls the active item into view. Must come
@@ -93,13 +132,18 @@ export function HrShell({children}){
   useEffect(()=>{setNavOpen(!mob);},[mob]);
 
   const currentModuleEntry=HR_MODULES.find(m=>m.k===A.pg);
-  const moduleBlocked=!!(emp&&currentModuleEntry&&
-    (!A.canAccessModule(emp.role,currentModuleEntry.module) || settings.modules[currentModuleEntry.module]===false));
-
-  /* Sidebar already hides modules a role can't reach, but the URL/route to a page it maps to
-     was never actually gated - typing/pasting the path (or having it in history) let anyone
-     render a module's full page regardless of role. Bounce back to the dashboard instead. */
-  useEffect(()=>{if(moduleBlocked)A.go("hrDashboard");},[moduleBlocked]);
+  /* H2 - one of the charter's 6 states: "Permission denied" (role can't reach this module) is
+     distinct from "Disabled by admin" (company turned the module off for everyone). Sidebar
+     already hides modules a role can't reach, but the URL/route to a page it maps to was never
+     actually gated - typing/pasting the path (or having it in history) rendered the full page
+     regardless of role, or silently bounced to the dashboard with no explanation (the same
+     charter anti-pattern this audit targets, just moved client-side instead of a raw 403). Now
+     it renders an actual denied state instead of either. */
+  const moduleDeniedReason=emp&&currentModuleEntry
+    ?(!A.canAccessModule(emp.role,currentModuleEntry.module)?"role"
+      :settings.modules[currentModuleEntry.module]===false?"disabled":null)
+    :null;
+  const moduleBlocked=!!moduleDeniedReason;
 
   /* Not signed into HR — route to HR login instead of crashing, unless a bridge login from
      the employer console is in flight, or the initial /hr/me check hasn't resolved yet, in
@@ -112,9 +156,9 @@ export function HrShell({children}){
     return null;
   }
 
-  const visibleModules=HR_MODULES.filter(m=>
+  const visibleModules=orderModulesForRole(HR_MODULES.filter(m=>
     A.canAccessModule(emp.role,m.module) && settings.modules[m.module]!==false
-  );
+  ),emp.role);
 
   const sidebar=<div className={`w-64 bg-ink text-white flex flex-col border-r border-white/8 h-screen ${mob?"fixed":"sticky"} top-0 left-0 ${mob?"z-900":"z-10"} transition-transform duration-300 ${navOpen?"translate-x-0":"-translate-x-full"}`}>
     <div className="py-5 px-6 border-b border-white/8">
@@ -168,7 +212,9 @@ export function HrShell({children}){
     {sidebar}
     <div className="flex-1 min-w-0 flex flex-col">
       {topbar}
-      <main data-scroll-region className={`w-full max-w-wide mx-auto ${mob?"pt-5 px-4 pb-10":"pt-8 px-8 pb-15"}`}>{moduleBlocked?null:children}</main>
+      <main data-scroll-region className={`w-full max-w-wide mx-auto ${mob?"pt-5 px-4 pb-10":"pt-8 px-8 pb-15"}`}>
+        {moduleBlocked?<_HrModuleDenied reason={moduleDeniedReason} onBack={()=>A.go("hrDashboard")}/>:children}
+      </main>
     </div>
   </div>;
 }
