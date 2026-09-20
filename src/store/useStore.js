@@ -1140,6 +1140,24 @@ export function useStore(){
   const listAdmins=async()=>{
     try{const {admins}=await api.get("/users/admins");return admins;}catch{return [];}
   };
+  /* Priority-5 admin CRUD sweep: silver-medalist matches (system-generated, Read + manual delete,
+     plus a refresh button for the existing weekly-batch endpoint) and a manual daily-snapshot
+     re-capture. Lazy-load-into-local-state, same shape as loadJobReports/loadContactInbox above. */
+  const loadAdminSilverMedalistMatches=async()=>{
+    try{const {matches}=await api.get("/admin/silver-medalist-matches");return matches;}catch(err){toast(err.message,"danger");return [];}
+  };
+  const deleteAdminSilverMedalistMatch=async id=>{
+    try{await api.del(`/admin/silver-medalist-matches/${id}`);return {ok:true};}
+    catch(err){return {ok:false,msg:err.message};}
+  };
+  const refreshSilverMedalistMatches=async()=>{
+    try{const r=await api.post("/admin/silver-medalist-matches/refresh",{});return {ok:true,...r};}
+    catch(err){return {ok:false,msg:err.message};}
+  };
+  const recaptureSnapshot=async()=>{
+    try{const r=await api.post("/admin/snapshots/recapture",{});return {ok:true,...r};}
+    catch(err){return {ok:false,msg:err.message};}
+  };
   const setAdminScope=async(id,scope)=>{
     try{await api.patch(`/users/${id}/admin-scope`,{scope});return {ok:true};}
     catch(err){return {ok:false,msg:err.message};}
@@ -2323,6 +2341,7 @@ export function useStore(){
     references,addReference,removeReference,
     addReview,deleteReview,loadEmployerReviews,loadCandidateContact,candidateNotes,saveCandidateNote,loadScorecards,submitScorecard,
     submitContact,loadContactInbox,resolveContactMessage,listAdmins,setAdminScope,updatePlatformConfig,geocode,
+    loadAdminSilverMedalistMatches,deleteAdminSilverMedalistMatch,refreshSilverMedalistMatches,recaptureSnapshot,
     saved,following,enrolled,trainingProgress,suspended,suspensionInfo,invitedCandidates,notifications,activity,securitySignals,opsHealth,settings,userSettings,search,setSearch,
     toasts,toast,dismissToast,chatDock,setChatDock,
     jobId,empId,blogId,trainingId,cvId,editId,candidateId,hrEmpId,setHrEmpId,pipelineJob,applyDraft,setApplyDraft,

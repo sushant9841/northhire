@@ -540,7 +540,53 @@ export function AdmStats(){
     <Card><H2 sub={t("admin.stats.revenueByPlanSub",{revenue:`$${formatNumber(totalRevenue,locale)}`,n:A.employers.length})}>{t("admin.stats.revenueByPlan")}</H2>
       {byPlan.map(p=><BarRow key={p.name} label={`${p.name} (${p.n})`} value={p.revenue} max={Math.max(1,totalRevenue)} tone={p.name==="Enterprise"?C.violet:p.name==="Growth"?C.brand:C.text3} total={totalRevenue}/>)}
     </Card>
+    <_SilverMedalistAdmin A={A} mob={mob} t={t}/>
   </Page>;
+}
+
+/* Priority-5 admin CRUD sweep: silver-medalist matches are entirely system-generated (weekly
+   batch), so this is Read + manual delete + the existing refresh endpoint surfaced as a button -
+   no admin Create/Update. Also exposes a manual daily-snapshot re-capture (system-generated,
+   Read + re-capture; no Update). */
+function _SilverMedalistAdmin({A,mob,t}){
+  const [matches,setMatches]=useState(null);
+  const [busy,setBusy]=useState(false);
+  const load=async()=>setMatches(await A.loadAdminSilverMedalistMatches());
+  useEffect(()=>{load();},[]);
+  const refresh=async()=>{setBusy(true);
+    const r=await A.refreshSilverMedalistMatches();
+    A.toast(r.ok?t("admin.stats.silverMedalistRefreshedToast",{n:r.created??0}):r.msg,r.ok?"ok":"danger");
+    await load(); setBusy(false);};
+  const remove=async id=>{
+    const r=await A.deleteAdminSilverMedalistMatch(id);
+    if(r.ok){setMatches(l=>l.filter(m=>m.id!==id));A.toast(t("admin.stats.silverMedalistDeletedToast"),"ok");}
+    else A.toast(r.msg,"danger");};
+  const recapture=async()=>{setBusy(true);
+    const r=await A.recaptureSnapshot();
+    A.toast(r.ok?t("admin.stats.snapshotRecapturedToast",{date:r.date}):r.msg,r.ok?"ok":"danger");
+    setBusy(false);};
+  return <Card style={{marginTop:16}}>
+    <H2 sub={t("admin.stats.silverMedalistSub")}
+      action={<div className="flex gap-2">
+        <Btn kind="outline" size="sm" icon="file" disabled={busy} onClick={recapture}>{t("admin.stats.recaptureSnapshot")}</Btn>
+        <Btn kind="primary" size="sm" icon="refresh" disabled={busy} onClick={refresh}>{t("admin.stats.refreshMatches")}</Btn></div>}>
+      {t("admin.stats.silverMedalistTitle")}</H2>
+    {matches===null?<div className="text-sm text-text-3 py-3 text-center">{t("admin.stats.loading")}</div>
+      :matches.length===0?<div className="text-sm text-text-3 py-3 text-center">{t("admin.stats.noSilverMedalistMatches")}</div>
+      :<div className="flex flex-col gap-2" style={{maxHeight:340,overflowY:"auto"}}>
+        {matches.map(m=>{const seeker=A.person(m.seekerId); const job=A.job(m.jobId); const emp=A.emp(m.employerId);
+          return <div key={m.id} className="flex items-center gap-3 py-2.5 px-3 bg-bg rounded-lg flex-wrap">
+            <div className="grow shrink basis-60 min-w-0 text-sm">
+              <span className="font-semibold text-text">{seeker?.name||m.seekerId}</span>
+              <span className="text-text-3"> → </span>
+              <span className="text-text-2">{job?.t||m.jobId}</span>
+              <span className="text-text-3"> · {emp?.name||m.employerId}</span></div>
+            <Tag tone="brand" sm>{t("admin.stats.overlapScore",{n:m.overlapScore})}</Tag>
+            {m.dismissedAt&&<Tag tone="neutral" sm>{t("admin.stats.dismissed")}</Tag>}
+            <Btn kind="dangerSoft" size="xs" icon="trash" onClick={()=>remove(m.id)}>{t("admin.users.erase")}</Btn>
+          </div>;})}
+      </div>}
+  </Card>;
 }
 
 const adminScopeInfo=t=>({

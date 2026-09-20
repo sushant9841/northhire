@@ -864,6 +864,11 @@ export const fr = {
       flaggedListings: "Annonces signalées", suspendedUsers: "Utilisateurs·rices suspendu·e·s",
       trainingEnrolments: "Inscriptions aux formations", revenueByPlanSub: "{revenue}/mois sur {n} comptes employeurs",
       revenueByPlan: "Revenu par forfait",
+      silverMedalistTitle: "Correspondances « médaille d'argent »", silverMedalistSub: "Générées par le traitement hebdomadaire — actualisez maintenant ou retirez une correspondance périmée.",
+      refreshMatches: "Actualiser maintenant", recaptureSnapshot: "Recapturer l'instantané d'aujourd'hui", loading: "Chargement…",
+      noSilverMedalistMatches: "Aucune correspondance pour l'instant.", overlapScore: "Chevauchement {n}", dismissed: "Ignorée",
+      silverMedalistRefreshedToast: "Actualisation terminée — {n} nouvelle(s) correspondance(s).", silverMedalistDeletedToast: "Correspondance retirée.",
+      snapshotRecapturedToast: "Instantané du {date} recapturé.",
     },
     admins: {
       subtitle: "Chaque compte administrateur et la section de la console qu'il peut atteindre. Les changements de portée prennent effet immédiatement.",
