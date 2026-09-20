@@ -98,6 +98,7 @@ export const ROUTES = {
   agencyMargins:    {titleKey:"routeTitles.agencyMargins", tab:"home", bare:true, root:true, path:"/staffing/margins"},
   agencyCompliance: {titleKey:"routeTitles.agencyCompliance", tab:"home", bare:true, root:true, path:"/staffing/compliance"},
   agencyBranches:   {titleKey:"routeTitles.agencyBranches", tab:"home", bare:true, root:true, path:"/staffing/branches"},
+  agencySettings:   {titleKey:"routeTitles.agencySettings", tab:"home", bare:true, root:true, path:"/staffing/settings"},
 
   /* ─── Worker view (seeker who opted in) ─── */
   workerDashboard:  {titleKey:"routeTitles.workerDashboard", tab:"profile", roles:["seeker"], path:"/worker"},

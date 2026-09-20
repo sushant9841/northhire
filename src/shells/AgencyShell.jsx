@@ -15,7 +15,7 @@ const AGENCY_MODULE_LABEL_KEY={agencyDashboard:"agencyShell.modDashboard",agency
   agencyBench:"agencyShell.modBench",agencyAssignments:"agencyShell.modAssignments",agencyTimesheets:"agencyShell.modTimesheets",
   agencyPayroll:"agencyShell.modPayroll",agencyInvoicing:"agencyShell.modInvoicing",agencyPlacements:"agencyShell.modPlacements",
   agencyClients:"agencyShell.modClients",agencyWorkers:"agencyShell.modWorkers",agencyMargins:"agencyShell.modMargins",
-  agencyCompliance:"agencyShell.modCompliance",agencyBranches:"agencyShell.modBranches"};
+  agencyCompliance:"agencyShell.modCompliance",agencyBranches:"agencyShell.modBranches",agencySettings:"agencyShell.modSettings"};
 
 export function AgencyShell({children}){
   const A=use(); const mob=useMedia("(max-width: 900px)"); const {t}=useTranslation();

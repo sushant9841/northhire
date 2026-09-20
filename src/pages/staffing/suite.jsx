@@ -13,6 +13,7 @@ import { SEED_AGENCY_LICENSE } from "../../store/seed/agency.js";
 import { useTranslation } from "../../i18n/i18n.jsx";
 import { invoiceTone, timesheetTone } from "../../helpers/statusTone.js";
 import { parseCsvLine } from "../../helpers/csv.js";
+import { IntegrationsPanel } from "../shared/IntegrationsPanel.jsx";
 
 /* Quick-action tile tones — literal lookup (not string-interpolated into a className)
    so Tailwind's static scanner can see every class it needs to generate. */
@@ -1925,5 +1926,19 @@ export function AgencyCompliance(){
         </tr>)}</tbody>
       </table></div>}
     </Card>
+  </div>;
+}
+
+/* Priority-5 item 2: same integrations marketplace panel mounted for employer (EmpTeam) and hr
+   (HrSettings), here for the staffing agency scope. Agency-wide settings landing page; more
+   agency-level preferences (branding, notification defaults, etc.) can grow here later. */
+export function AgencySettings(){
+  const {t}=useTranslation();
+  return <div>
+    <div className="mb-4">
+      <div className="text-lg font-bold text-text">{t("staffing.settings.title")}</div>
+      <div className="text-sm text-text-3 mt-0.5">{t("staffing.settings.desc")}</div>
+    </div>
+    <IntegrationsPanel scope="staffing"/>
   </div>;
 }

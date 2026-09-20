@@ -4,9 +4,45 @@
    are a fixed allowlist so a bad client can't inject arbitrary rows. */
 import express from "express";
 import { db } from "../db.js";
-import { requireAuth, requireRole } from "../auth.js";
+import { userFromRequest, hrEmployeeFromRequest, agencyStaffFromRequest } from "../auth.js";
 
 export const integrationsRouter = express.Router();
+
+/* Single fixed owner id for the staffing scope - the app models exactly one staffing agency
+   (see agency_staff, which has no agency_id column at all: every other staffing route is
+   single-tenant the same way, gating purely on requireAgencyAuth). */
+const STAFFING_OWNER_ID = "agency";
+
+const HR_PRIV_ROLES = ["owner", "admin", "hr"];
+
+/* Each scope authenticates against its OWN session kind - the main account session (employer),
+   the HR Suite employee session (hr), or the agency staff session (staffing). These are three
+   independent cookies/session kinds (see auth.js) - reusing the main-account requireAuth for
+   all three, as the original Priority-4 #7 shell did, silently 401'd every hr/staffing caller
+   since neither session type is a `users` row. Also gates mutations (install/disconnect) to a
+   privileged role per scope - any signed-in company employee could otherwise toggle company-
+   wide integrations. */
+function authForScope(req, res, { mutate }) {
+  const scope = req.params.scope;
+  if (scope === "employer") {
+    const user = userFromRequest(req);
+    if (!user || user.role !== "employer") { res.status(401).json({ error: "Not signed in." }); return null; }
+    return { ownerId: user.employer_id || null };
+  }
+  if (scope === "hr") {
+    const emp = hrEmployeeFromRequest(req);
+    if (!emp) { res.status(401).json({ error: "Not signed in to HR Suite." }); return null; }
+    if (mutate && !HR_PRIV_ROLES.includes(emp.role)) { res.status(403).json({ error: "Not allowed for your role." }); return null; }
+    return { ownerId: emp.company_id || null };
+  }
+  if (scope === "staffing") {
+    const staff = agencyStaffFromRequest(req);
+    if (!staff) { res.status(401).json({ error: "Not signed in to the agency console." }); return null; }
+    if (mutate && staff.role !== "owner") { res.status(403).json({ error: "Not allowed for your role." }); return null; }
+    return { ownerId: STAFFING_OWNER_ID };
+  }
+  return null;
+}
 
 /* Fixed provider allowlist. Adding a new provider means a real integration commit -
    copy/pasting the id in the client isn't enough to create a row here. */
@@ -30,20 +66,15 @@ const PROVIDERS = {
   ],
 };
 
-function ownerFromReq(req, scope) {
-  if (scope === "employer") return req.user?.role === "employer" ? req.user.employer_id : null;
-  if (scope === "hr") return req.user?.hr_company_id || null;
-  if (scope === "staffing") return req.user?.staffing_agency_id || null;
-  return null;
-}
-
 /* GET all integrations for the caller's scope, merged with the allowlist so the client always
    has one row per available provider (installed OR not) — the UI renders one card per provider
    either way, so a "not installed" state must be present. */
-integrationsRouter.get("/:scope", requireAuth, (req, res) => {
+integrationsRouter.get("/:scope", (req, res) => {
   const scope = req.params.scope;
   if (!PROVIDERS[scope]) return res.status(400).json({ error: "Unknown scope." });
-  const ownerId = ownerFromReq(req, scope);
+  const auth = authForScope(req, res, { mutate: false });
+  if (!auth) return;
+  const { ownerId } = auth;
   if (!ownerId) return res.status(403).json({ error: "No integration owner for your session." });
   const installed = db.prepare(
     `SELECT provider, status, config_json, installed_at, updated_at
@@ -67,11 +98,13 @@ integrationsRouter.get("/:scope", requireAuth, (req, res) => {
 
 /* Install / re-enable a provider. OAuth flows land later per provider; today this just marks
    the row as connected and records any client-supplied config (webhook URL / API key ref). */
-integrationsRouter.post("/:scope/:provider", requireAuth, (req, res) => {
+integrationsRouter.post("/:scope/:provider", (req, res) => {
   const { scope, provider } = req.params;
   if (!PROVIDERS[scope]) return res.status(400).json({ error: "Unknown scope." });
   if (!PROVIDERS[scope].find(p => p.key === provider)) return res.status(400).json({ error: "Provider not available for this scope." });
-  const ownerId = ownerFromReq(req, scope);
+  const auth = authForScope(req, res, { mutate: true });
+  if (!auth) return;
+  const { ownerId } = auth;
   if (!ownerId) return res.status(403).json({ error: "No integration owner for your session." });
   const config = (req.body && typeof req.body.config === "object" && req.body.config) || {};
   const id = `int_${scope}_${ownerId}_${provider}`;
@@ -89,10 +122,12 @@ integrationsRouter.post("/:scope/:provider", requireAuth, (req, res) => {
 });
 
 /* Disconnect — keeps the row so re-connecting preserves history, just flips status. */
-integrationsRouter.delete("/:scope/:provider", requireAuth, (req, res) => {
+integrationsRouter.delete("/:scope/:provider", (req, res) => {
   const { scope, provider } = req.params;
   if (!PROVIDERS[scope]) return res.status(400).json({ error: "Unknown scope." });
-  const ownerId = ownerFromReq(req, scope);
+  const auth = authForScope(req, res, { mutate: true });
+  if (!auth) return;
+  const { ownerId } = auth;
   if (!ownerId) return res.status(403).json({ error: "No integration owner for your session." });
   const now = new Date().toISOString();
   db.prepare(

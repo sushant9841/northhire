@@ -22,6 +22,7 @@ import { TrainingCard } from "../shared/cards.jsx";
 import { useTranslation } from "../../i18n/i18n.jsx";
 import { formatDate, formatDateTime } from "../../i18n/format.js";
 import { HrTimeline } from "./HrTimeline.jsx";
+import { IntegrationsPanel } from "../shared/IntegrationsPanel.jsx";
 
 /* Small pill-style tab bar reused across most HR Suite modules (attendance view,
    leave/tasks/calendar/invoices scope switches). Not string-interpolated into a
@@ -3016,6 +3017,8 @@ export function HrSettings(){
     </Card>
 
     <_BenefitsPlansEditor A={A} mob={mob}/>
+
+    <IntegrationsPanel scope="hr"/>
 
     <div className="flex gap-2.5 justify-end sticky bottom-3.5 bg-bg py-3.5">
       {dirty&&<Btn kind="ghost" onClick={()=>setD({...settings})}>{t("hr.settings.discardBtn")}</Btn>}

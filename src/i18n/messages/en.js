@@ -86,6 +86,7 @@ export const en = {
     agencyMargins: "Margins",
     agencyCompliance: "Compliance",
     agencyBranches: "Branches",
+    agencySettings: "Settings",
     workerDashboard: "Worker dashboard",
     workerTimesheet: "Weekly timesheet",
     workerPayStubs: "Pay stubs",
@@ -428,7 +429,7 @@ export const en = {
     modDashboard: "Dashboard", modJobOrders: "Job orders", modBench: "Bench", modAssignments: "Assignments",
     modTimesheets: "Timesheets", modPayroll: "Payroll", modInvoicing: "Invoicing", modPlacements: "Placements",
     modClients: "Clients", modWorkers: "Workers", modMargins: "Margins", modCompliance: "Compliance",
-    modBranches: "Branches",
+    modBranches: "Branches", modSettings: "Settings",
     licenseLabel: "License", agencyConsoleFallback: "Agency console",
   },
   alerts: {
@@ -1567,7 +1568,19 @@ export const en = {
       inProgress: "in-progress", failed: "failed", passed: "passed", notStarted: "not-started",
     },
     margins: { title: "Margins", profit: "Profit margin", revenue: "Revenue", cost: "Cost" },
-    branches: { title: "Branches", location: "Location", manager: "Manager", workers: "Workers" },
+    branches: {
+      title: "Branches", location: "Location", manager: "Manager", workers: "Workers",
+      countBranches: "{n} branches", desc: "Assign clients and recruiters to a branch/office instead of one shared book.",
+      addBranch: "Add branch", clients: "Clients", staff: "Staff",
+      noBranches: "No branches yet", noBranchesBody: "Add one to start assigning clients and recruiters to a specific office.",
+      staffAssignment: "Staff assignment", name: "Name", role: "Role", branch: "Branch", unassigned: "Unassigned",
+      branchName: "Branch name", branchPlaceholder: "e.g. Calgary office", city: "City", province: "Province",
+      cancel: "Cancel",
+    },
+    settings: {
+      title: "Settings", desc: "Agency-wide preferences and third-party integrations.",
+      integrationsTitle: "Integrations",
+    },
     compliance: {
       title: "Compliance", requirement: "Requirement", status: "Status", dueDate: "Due date",
       dashboard: "Compliance dashboard", desc: "Licensing, documentation, and audit-readiness across the desk.",

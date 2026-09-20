@@ -87,6 +87,7 @@ export const fr = {
     agencyMargins: "Marges",
     agencyCompliance: "Conformité",
     agencyBranches: "Succursales",
+    agencySettings: "Paramètres",
     workerDashboard: "Tableau de bord du travailleur",
     workerTimesheet: "Feuille de temps hebdomadaire",
     workerPayStubs: "Talons de paie",
@@ -429,7 +430,7 @@ export const fr = {
     modDashboard: "Tableau de bord", modJobOrders: "Commandes d'emploi", modBench: "Bassin", modAssignments: "Affectations",
     modTimesheets: "Feuilles de temps", modPayroll: "Paie", modInvoicing: "Facturation", modPlacements: "Placements",
     modClients: "Client·e·s", modWorkers: "Travailleurs·euses", modMargins: "Marges", modCompliance: "Conformité",
-    modBranches: "Succursales",
+    modBranches: "Succursales", modSettings: "Paramètres",
     licenseLabel: "Licence", agencyConsoleFallback: "Console de placement",
   },
   alerts: {
@@ -1685,6 +1686,10 @@ export const fr = {
       staffAssignment: "Assignation du personnel", name: "Nom", role: "Rôle", branch: "Succursale", unassigned: "Non assigné·e",
       branchName: "Nom de la succursale", branchPlaceholder: "p. ex. Bureau de Calgary", city: "Ville", province: "Province",
       cancel: "Annuler"
+    },
+    settings: {
+      title: "Paramètres", desc: "Préférences à l'échelle de l'agence et intégrations tierces.",
+      integrationsTitle: "Intégrations",
     },
     compliance: {
       title: "Conformité", requirement: "Exigence", status: "Statut", dueDate: "Date d'échéance",
