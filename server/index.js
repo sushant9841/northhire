@@ -25,6 +25,7 @@ import { ssoRouter } from "./routes/sso.js";
 import { offersRouter } from "./routes/offers.js";
 import { eventsRouter } from "./routes/events.js";
 import { adminSnapshotsRouter } from "./routes/adminSnapshots.js";
+import { adminModerationRouter } from "./routes/adminModeration.js";
 import { integrationsRouter } from "./routes/integrations.js";
 import { infinityReplacer } from "../src/helpers/jsonInfinity.js";
 import { execSync } from "node:child_process";
@@ -148,6 +149,7 @@ app.use("/api/sso", ssoRouter);
 app.use("/api/offers", offersRouter);
 app.use("/api/events", eventsRouter);
 app.use("/api/admin", adminSnapshotsRouter);
+app.use("/api/admin", adminModerationRouter);
 app.use("/api/integrations", integrationsRouter);
 
 app.use((req, res) => res.status(404).json({ error: "Not found." }));

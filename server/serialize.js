@@ -152,6 +152,10 @@ export function serializeApplication(row) {
     withdrawnAt: row.withdrawn_at,
     // Priority-4 #2 - free-form tags the workflow rules engine (or a person) attached.
     tags: JSON.parse(row.tags_json || "[]"),
+    // Priority-5 admin CRUD sweep: a moderator can soft-hide an application from admin-facing
+    // views (spam/abuse) without deleting the underlying record - mirrors jobs.flagged.
+    adminHiddenAt: row.admin_hidden_at || null,
+    adminHiddenReason: row.admin_hidden_reason || null,
   };
 }
 

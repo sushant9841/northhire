@@ -1158,6 +1158,29 @@ export function useStore(){
     try{const r=await api.post("/admin/snapshots/recapture",{});return {ok:true,...r};}
     catch(err){return {ok:false,msg:err.message};}
   };
+  /* Priority-5 admin CRUD sweep: applications/interviews/offers are user-generated, so admin gets
+     a platform-wide Read plus one moderation verb each (hide/cancel/revoke) - never a Create. */
+  const loadAdminApplications=async()=>{
+    try{const {applications}=await api.get("/admin/applications");return applications;}catch(err){toast(err.message,"danger");return [];}
+  };
+  const moderateAdminApplication=async(id,hidden,reason)=>{
+    try{const {application}=await api.patch(`/admin/applications/${id}/moderate`,{hidden,reason});return {ok:true,application};}
+    catch(err){return {ok:false,msg:err.message};}
+  };
+  const loadAdminInterviews=async()=>{
+    try{const {interviews}=await api.get("/admin/interviews");return interviews;}catch(err){toast(err.message,"danger");return [];}
+  };
+  const cancelAdminInterview=async id=>{
+    try{await api.patch(`/admin/interviews/${id}/cancel`,{});return {ok:true};}
+    catch(err){return {ok:false,msg:err.message};}
+  };
+  const loadAdminOffers=async()=>{
+    try{const {offers}=await api.get("/admin/offers");return offers;}catch(err){toast(err.message,"danger");return [];}
+  };
+  const revokeAdminOffer=async id=>{
+    try{await api.patch(`/admin/offers/${id}/revoke`,{});return {ok:true};}
+    catch(err){return {ok:false,msg:err.message};}
+  };
   const setAdminScope=async(id,scope)=>{
     try{await api.patch(`/users/${id}/admin-scope`,{scope});return {ok:true};}
     catch(err){return {ok:false,msg:err.message};}
@@ -2342,6 +2365,7 @@ export function useStore(){
     addReview,deleteReview,loadEmployerReviews,loadCandidateContact,candidateNotes,saveCandidateNote,loadScorecards,submitScorecard,
     submitContact,loadContactInbox,resolveContactMessage,listAdmins,setAdminScope,updatePlatformConfig,geocode,
     loadAdminSilverMedalistMatches,deleteAdminSilverMedalistMatch,refreshSilverMedalistMatches,recaptureSnapshot,
+    loadAdminApplications,moderateAdminApplication,loadAdminInterviews,cancelAdminInterview,loadAdminOffers,revokeAdminOffer,
     saved,following,enrolled,trainingProgress,suspended,suspensionInfo,invitedCandidates,notifications,activity,securitySignals,opsHealth,settings,userSettings,search,setSearch,
     toasts,toast,dismissToast,chatDock,setChatDock,
     jobId,empId,blogId,trainingId,cvId,editId,candidateId,hrEmpId,setHrEmpId,pipelineJob,applyDraft,setApplyDraft,

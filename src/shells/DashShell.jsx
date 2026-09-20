@@ -55,6 +55,7 @@ export const ADM_MODULES=[
   {k:"admUsers",label:"profile.users",icon:"users",section:"manage",adminScope:["support","moderator"]},
   {k:"admEmployers",label:"profile.employers",icon:"building",section:"manage",adminScope:["moderator"]},
   {k:"admJobs",label:"tabs.jobs",icon:"briefcase",section:"manage",adminScope:["moderator"]},
+  {k:"admModeration",label:"dashShell.modAdmModeration",icon:"shield",section:"manage",adminScope:["moderator"]},
   {k:"admBlogs",label:"dashShell.modAdmBlogs",icon:"book",section:"content",adminScope:["moderator"]},
   {k:"admTrainings",label:"nav.trainings",icon:"cap",section:"content",adminScope:["moderator"]},
   {k:"admConfig",label:"dashShell.modAdmConfig",icon:"wallet",section:"finance",adminScope:["finance"]},

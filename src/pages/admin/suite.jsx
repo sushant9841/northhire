@@ -589,6 +589,82 @@ function _SilverMedalistAdmin({A,mob,t}){
   </Card>;
 }
 
+/* Priority-5 admin CRUD sweep: applications/interviews/offers are user-generated content, so this
+   is Read (platform-wide) + one moderation verb per domain - no admin Create. */
+export function AdmModeration(){
+  const A=use(); const {t,locale}=useTranslation();
+  const [tab,setTab]=useState("applications");
+  const [apps,setApps]=useState(null); const [interviews,setInterviews]=useState(null); const [offers,setOffers]=useState(null);
+  const [hiding,setHiding]=useState(null); const [reason,setReason]=useState("");
+  const loadAll=async()=>{
+    if(tab==="applications"&&apps===null)setApps(await A.loadAdminApplications());
+    if(tab==="interviews"&&interviews===null)setInterviews(await A.loadAdminInterviews());
+    if(tab==="offers"&&offers===null)setOffers(await A.loadAdminOffers());
+  };
+  useEffect(()=>{loadAll();},[tab]);
+  const unhide=async id=>{const r=await A.moderateAdminApplication(id,false);
+    if(r.ok){setApps(l=>l.map(a=>a.id===id?r.application:a));A.toast(t("admin.moderation.unhiddenToast"),"ok");}else A.toast(r.msg,"danger");};
+  const doHide=async()=>{const id=hiding.id; const r=await A.moderateAdminApplication(id,true,reason.trim());
+    if(r.ok){setApps(l=>l.map(a=>a.id===id?r.application:a));A.toast(t("admin.moderation.hiddenToast"),"danger");}else A.toast(r.msg,"danger");
+    setHiding(null);};
+  const cancelInterview=async id=>{const r=await A.cancelAdminInterview(id);
+    if(r.ok){setInterviews(l=>l.map(i=>i.id===id?{...i,status:"cancelled"}:i));A.toast(t("admin.moderation.interviewCancelledToast"),"ok");}else A.toast(r.msg,"danger");};
+  const revokeOffer=async id=>{const r=await A.revokeAdminOffer(id);
+    if(r.ok){setOffers(l=>l.map(o=>o.id===id?{...o,status:"withdrawn"}:o));A.toast(t("admin.moderation.offerRevokedToast"),"ok");}else A.toast(r.msg,"danger");};
+  return <Page wide>
+    <H1 sub={t("admin.moderation.subtitle")}>{t("admin.moderation.title")}</H1>
+    <Tabs items={[{k:"applications",label:t("admin.moderation.tabApplications")},{k:"interviews",label:t("admin.moderation.tabInterviews")},{k:"offers",label:t("admin.moderation.tabOffers")}]}
+      value={tab} onChange={setTab} style={{marginBottom:18}}/>
+    {tab==="applications"&&<Card pad={0} style={{overflow:"hidden"}}>
+      {apps===null?<div className="text-sm text-text-3 py-5 text-center">{t("admin.stats.loading")}</div>
+        :apps.length===0?<Empty icon="search" title={t("admin.moderation.noApplications")}/>
+        :apps.map((a,i)=>{const u=A.person(a.user); const j=A.job(a.job);
+          return <div key={a.id} className={`flex items-center gap-3 py-3 px-5 flex-wrap ${i<apps.length-1?"border-b border-line-soft":""} ${a.adminHiddenAt?"bg-red-bg":""}`}>
+            <div className="grow shrink basis-60 min-w-0">
+              <div className="text-sm font-semibold text-text">{u?.name||a.user} → {j?.t||a.job}</div>
+              <div className="text-xs text-text-3 mt-0.5">{applicationStageLabel(a.stage,t)} · {formatDateTime(a.createdAt,locale)}
+                {a.adminHiddenAt&&<span className="text-red"> · {t("admin.moderation.hiddenReason",{reason:a.adminHiddenReason})}</span>}</div></div>
+            {a.adminHiddenAt?<Btn kind="outline" size="xs" onClick={()=>unhide(a.id)}>{t("admin.moderation.unhide")}</Btn>
+              :<Btn kind="dangerSoft" size="xs" onClick={()=>{setHiding(a);setReason("");}}>{t("admin.moderation.hide")}</Btn>}
+          </div>;})}
+    </Card>}
+    {tab==="interviews"&&<Card pad={0} style={{overflow:"hidden"}}>
+      {interviews===null?<div className="text-sm text-text-3 py-5 text-center">{t("admin.stats.loading")}</div>
+        :interviews.length===0?<Empty icon="search" title={t("admin.moderation.noInterviews")}/>
+        :interviews.map((iv,i)=>{const u=A.person(iv.candidate); const j=A.job(iv.job);
+          return <div key={iv.id} className={`flex items-center gap-3 py-3 px-5 flex-wrap ${i<interviews.length-1?"border-b border-line-soft":""}`}>
+            <div className="grow shrink basis-60 min-w-0">
+              <div className="text-sm font-semibold text-text">{u?.name||iv.candidate} → {j?.t||iv.job}</div>
+              <div className="text-xs text-text-3 mt-0.5">{iv.when} · {iv.mode}</div></div>
+            <Tag tone={iv.status==="cancelled"?"neutral":"brand"} sm>{iv.status}</Tag>
+            {iv.status!=="cancelled"&&<Btn kind="dangerSoft" size="xs" onClick={()=>cancelInterview(iv.id)}>{t("admin.moderation.cancel")}</Btn>}
+          </div>;})}
+    </Card>}
+    {tab==="offers"&&<Card pad={0} style={{overflow:"hidden"}}>
+      {offers===null?<div className="text-sm text-text-3 py-5 text-center">{t("admin.stats.loading")}</div>
+        :offers.length===0?<Empty icon="search" title={t("admin.moderation.noOffers")}/>
+        :offers.map((o,i)=>
+          <div key={o.id} className={`flex items-center gap-3 py-3 px-5 flex-wrap ${i<offers.length-1?"border-b border-line-soft":""}`}>
+            <div className="grow shrink basis-60 min-w-0">
+              <div className="text-sm font-semibold text-text">{o.position||o.id}</div>
+              <div className="text-xs text-text-3 mt-0.5">{formatDateTime(o.createdAt,locale)}</div></div>
+            <Tag tone={o.status==="accepted"?"ok":o.status==="withdrawn"?"neutral":"brand"} sm>{o.status}</Tag>
+            {o.status==="sent"&&<Btn kind="dangerSoft" size="xs" onClick={()=>revokeOffer(o.id)}>{t("admin.moderation.revoke")}</Btn>}
+          </div>)}
+    </Card>}
+    {hiding&&<Modal onClose={()=>setHiding(null)} title={t("admin.moderation.hideTitle")}>
+      <div className="flex flex-col gap-3.5">
+        <Field label={t("admin.jobs.reason")} required>
+          <Area rows={3} value={reason} onChange={e=>setReason(e.target.value)}/></Field>
+        <div className="flex gap-2.5 justify-end">
+          <Btn kind="ghost" onClick={()=>setHiding(null)}>{t("admin.jobs.cancel")}</Btn>
+          <Btn kind="danger" disabled={!reason.trim()} onClick={doHide}>{t("admin.moderation.hide")}</Btn>
+        </div>
+      </div>
+    </Modal>}
+  </Page>;
+}
+
 const adminScopeInfo=t=>({
   full:{label:t("admin.admins.scopeFullLabel"),desc:t("admin.admins.scopeFullDesc")},
   support:{label:t("admin.admins.scopeSupportLabel"),desc:t("admin.admins.scopeSupportDesc")},

@@ -52,7 +52,7 @@ import {
   AgencyTimesheets, AgencyPayroll, AgencyInvoicing, AgencyPlacements, AgencyClients,
   AgencyWorkers, AgencyMargins, AgencyCompliance, AgencyBranches, AgencySettings,
 } from "./pages/staffing/suite.jsx";
-import { AdmHome, AdmUsers, AdmEmployers, AdmJobs, AdmSettings, AdmLog, AdmStats, AdmConfig, AdmAdmins } from "./pages/admin/suite.jsx";
+import { AdmHome, AdmUsers, AdmEmployers, AdmJobs, AdmSettings, AdmLog, AdmStats, AdmConfig, AdmAdmins, AdmModeration } from "./pages/admin/suite.jsx";
 import { AdmDesignSystem } from "./pages/admin/designSystem.jsx";
 import {
   HomePage, BlogsPage, BlogPage, TrainingsPage, TrainingPage, AboutPage, ContactPage, LegalPage,
@@ -116,7 +116,7 @@ export default function NorthHire(){
     empArticles:<EmpShell><EmpArticlesPage/></EmpShell>,empTrainings:<EmpShell><EmpTrainingsAdminPage/></EmpShell>,empBlogEdit:_roleWrap(<BlogEditor/>),empTrainEdit:_roleWrap(<TrainingEditor/>),
     empCompany:<EmpShell><EmpCompany/></EmpShell>,empTeam:<EmpShell><EmpTeam/></EmpShell>,empBilling:<EmpShell><EmpBilling/></EmpShell>,empAnalytics:<EmpShell><EmpAnalyticsPage/></EmpShell>,empApi:<EmpShell><EmpApiPage/></EmpShell>,empSso:<EmpShell><EmpSsoPage/></EmpShell>,
     empWelcome:<EmpShell><EmpPostCheckoutWelcome/></EmpShell>,
-    admHome:<AdmShell><AdmHome/></AdmShell>,admUsers:<AdmShell><AdmUsers/></AdmShell>,admEmployers:<AdmShell><AdmEmployers/></AdmShell>,admJobs:<AdmShell><AdmJobs/></AdmShell>,
+    admHome:<AdmShell><AdmHome/></AdmShell>,admUsers:<AdmShell><AdmUsers/></AdmShell>,admEmployers:<AdmShell><AdmEmployers/></AdmShell>,admJobs:<AdmShell><AdmJobs/></AdmShell>,admModeration:<AdmShell><AdmModeration/></AdmShell>,
     account:<AccountMenuPage/>,
     accessibility:<AccessibilityPage/>,pipeda:<PipedaPage/>,credits:<CreditsPage/>,security:<SecurityPage/>,unsubscribe:<UnsubscribePage/>,matchScore:<MatchScorePage/>,offer:<OfferPage/>,verifyEmail:<VerifyEmailPage/>,
     admBlogs:<AdmShell><ContentManager scope="admin"/></AdmShell>,admTrainings:<AdmShell><ContentManager scope="admin"/></AdmShell>,

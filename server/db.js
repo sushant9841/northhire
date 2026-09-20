@@ -1161,6 +1161,11 @@ for (const stmt of [
   // fr-CA-for-Quebec-signup convention as users.locale. Editable via PATCH /employers/:id/locale
   // on the employer's own settings page.
   "ALTER TABLE employers ADD COLUMN locale TEXT DEFAULT 'en-CA'",
+  // Priority-5 admin CRUD sweep: applications are user-generated (a seeker applying to a job), so
+  // the admin action is moderation (Read + soft-hide), not Create/Update. Mirrors the existing
+  // jobs.flagged pattern - a flag admins can set/clear, not a delete.
+  "ALTER TABLE applications ADD COLUMN admin_hidden_at TEXT",
+  "ALTER TABLE applications ADD COLUMN admin_hidden_reason TEXT",
 ]) {
   try { db.exec(stmt); } catch (e) { if (!/duplicate column/i.test(e.message)) console.error("migration:", stmt, e.message); }
 }
