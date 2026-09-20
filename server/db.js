@@ -1079,6 +1079,53 @@ for (const stmt of [
      UNIQUE(owner_scope, owner_id, provider)
    )`,
   "CREATE INDEX IF NOT EXISTS idx_integrations_owner ON integrations(owner_scope, owner_id)",
+  // Priority-4 #5 - Full per-tier benefits premium logic. A benefits_plans row is one employer-
+  // defined plan (health/dental/etc): config_json.tiers is an ordered list of
+  // {key,label,monthlyCost,employerPct} - flat monthly cost and the employer-paid split % for
+  // that tier (Employee / Employee+Spouse / Family, or whatever the employer calls them);
+  // config_json.rrspMatch is an ordered list of {upToPct,matchPct} bands (e.g. "first 3% matched
+  // 100%, next 2% matched 50%"); config_json.openEnrollment is a recurring {startMonth,startDay,
+  // endMonth,endDay} window checked against today's date every year - see benefitsWindow.js.
+  // company_id matches the hr_departments/hr_one_on_ones convention (this is an HR Suite module,
+  // scoped to hr_employees, not the employer-console `employers` features like workflow_rules).
+  `CREATE TABLE IF NOT EXISTS benefits_plans (
+     id TEXT PRIMARY KEY,
+     company_id TEXT NOT NULL REFERENCES employers(id),
+     name TEXT NOT NULL,
+     config_json TEXT NOT NULL DEFAULT '{}',
+     active INTEGER NOT NULL DEFAULT 1,
+     created_at TEXT NOT NULL DEFAULT (datetime('now'))
+   )`,
+  "CREATE INDEX IF NOT EXISTS idx_benefits_plans_company ON benefits_plans(company_id)",
+  // One row per continuous enrollment stretch - changing plan/tier ends the current row
+  // (ended_at set) and inserts a new one, so "what was Priya enrolled in last March" is a plain
+  // query instead of a mutated cell with no history. next_enrollment_at is the plan's next
+  // recurring open-enrollment start date at the moment this row was created, purely informational
+  // (a UI hint, not re-validated later - the live window check always re-derives from today).
+  `CREATE TABLE IF NOT EXISTS benefits_enrollments (
+     id TEXT PRIMARY KEY,
+     employee_id TEXT NOT NULL REFERENCES hr_employees(id),
+     plan_id TEXT NOT NULL REFERENCES benefits_plans(id),
+     tier TEXT NOT NULL,
+     started_at TEXT NOT NULL DEFAULT (datetime('now')),
+     ended_at TEXT,
+     next_enrollment_at TEXT
+   )`,
+  "CREATE INDEX IF NOT EXISTS idx_benefits_enrollments_employee ON benefits_enrollments(employee_id)",
+  // A qualifying life event (marriage, birth/adoption, loss of other coverage, etc) reopens the
+  // enrollment window for LIFE_EVENT_WINDOW_DAYS regardless of the plan's calendar window - see
+  // hasQualifyingLifeEvent in benefitsWindow.js. Owner/Finance/HR record these, not the employee
+  // themselves, per the same charter as who can edit an enrollment.
+  `CREATE TABLE IF NOT EXISTS benefits_life_events (
+     id TEXT PRIMARY KEY,
+     employee_id TEXT NOT NULL REFERENCES hr_employees(id),
+     event_type TEXT NOT NULL,
+     event_date TEXT NOT NULL,
+     note TEXT,
+     recorded_by TEXT REFERENCES hr_employees(id),
+     created_at TEXT NOT NULL DEFAULT (datetime('now'))
+   )`,
+  "CREATE INDEX IF NOT EXISTS idx_benefits_life_events_employee ON benefits_life_events(employee_id)",
 ]) {
   try { db.exec(stmt); } catch (e) { if (!/duplicate column/i.test(e.message)) console.error("migration:", stmt, e.message); }
 }

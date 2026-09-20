@@ -1,4 +1,5 @@
 import { sqlTime } from "./db.js";
+import { parsePlanConfig, computePremium, isOpenEnrollmentActive, nextOpenEnrollmentDate } from "./lib/benefits.js";
 
 // Real created_at/deadline_date timestamps replace the frontend seed data's frozen
 // "2 days ago" / dl-day-count strings, which never advanced once written - the same
@@ -339,6 +340,40 @@ export function serializeHrSignDocument(row) {
   if (!row) return null;
   return { id: row.id, companyId: row.company_id, title: row.title, body: row.body,
     requiredFor: JSON.parse(row.required_for_json || "[]"), createdBy: row.created_by, createdAt: sqlTime(row.created_at).getTime() };
+}
+// Priority-4 #5 - Full per-tier benefits premium logic. Plan config is parsed once here so
+// callers (CRUD list/detail routes, the enrollment premium calc) all see the same normalised
+// shape - a plan created before a config field existed still comes back with the field's default.
+export function serializeBenefitsPlan(row) {
+  if (!row) return null;
+  const config = parsePlanConfig(row.config_json);
+  return {
+    id: row.id, companyId: row.company_id, name: row.name, config, active: !!row.active,
+    isOpenNow: isOpenEnrollmentActive(config.openEnrollment),
+    nextWindowStart: nextOpenEnrollmentDate(config.openEnrollment),
+    createdAt: sqlTime(row.created_at).getTime(),
+  };
+}
+// planRow is the plan this enrollment points at (joined by the caller) - used to attach the
+// derived premium split so the client never has to re-implement computePremium itself.
+export function serializeBenefitsEnrollment(row, planRow) {
+  if (!row) return null;
+  const config = planRow ? parsePlanConfig(planRow.config_json) : null;
+  const premium = config ? computePremium(config, row.tier) : null;
+  return {
+    id: row.id, employeeId: row.employee_id, planId: row.plan_id, planName: planRow?.name || null,
+    tier: row.tier, premium,
+    startedAt: sqlTime(row.started_at).getTime(),
+    endedAt: row.ended_at ? sqlTime(row.ended_at).getTime() : null,
+    nextEnrollmentAt: row.next_enrollment_at || null,
+  };
+}
+export function serializeBenefitsLifeEvent(row) {
+  if (!row) return null;
+  return {
+    id: row.id, employeeId: row.employee_id, eventType: row.event_type, eventDate: row.event_date,
+    note: row.note, recordedBy: row.recorded_by, createdAt: sqlTime(row.created_at).getTime(),
+  };
 }
 export function serializeHrSignature(row) {
   if (!row) return null;

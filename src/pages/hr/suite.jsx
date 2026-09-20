@@ -591,7 +591,7 @@ export function HrProfilePage(){
     {tab==="tasks"&&<_HrProfileTasksTab A={A} empId={emp.id}/>}
     {tab==="training"&&<_HrProfileTrainingTab A={A} empId={emp.id}/>}
     {tab==="documents"&&<Card pad={22} style={{borderRadius:16}}><_MyDocuments empId={emp.id}/></Card>}
-    {tab==="salary"&&data.canViewSalary&&<_HrProfileSalaryTab emp={emp}/>}
+    {tab==="salary"&&data.canViewSalary&&<_HrProfileSalaryTab A={A} emp={emp} viewer={viewer}/>}
     {tab==="communication"&&<_HrProfileCommunicationTab A={A} emp={emp} isSelf={isSelf}/>}
   </div>;
 }
@@ -724,14 +724,172 @@ function _HrProfileTrainingTab({A,empId}){
 /* Server already strips salary/hourlyRate/benefits from the payload when the viewer isn't
    allowed to see them (canViewSalary=false) - this tab only ever renders when the caller already
    checked data.canViewSalary, so there's nothing left to gate here client-side. */
-function _HrProfileSalaryTab({emp}){
-  const {t}=useTranslation();
+function _HrProfileSalaryTab({A,emp,viewer}){
+  const {t,locale}=useTranslation();
+  // Mirrors the server's isMoneyRole (owner/admin/hr/finance) - the actual guard lives server-side
+  // on every write route below, this just decides whether to render the edit controls at all.
+  const canManageBenefits=["owner","admin","hr","finance"].includes(viewer.role);
+  return <div className="flex flex-col gap-4">
+    <Card pad={22} style={{borderRadius:16}}>
+      <div className="grid grid-cols-2 gap-4">
+        <div><div className="text-xs text-text-3">{emp.payType==="hourly"?t("hrPeople.manage.hourlyRateCad"):t("hrPeople.manage.annualSalaryCad")}</div>
+          <div className="text-2xl font-bold text-text mt-1">${(emp.payType==="hourly"?emp.hourlyRate:emp.salary)?.toLocaleString()||"—"}</div></div>
+        {emp.benefitsPlan&&<div><div className="text-xs text-text-3">{t("hrPeople.manage.benefitsPlan")}</div>
+          <div className="text-sm font-semibold text-text mt-1">{emp.benefitsPlan} · {emp.benefitsTier||"Employee"}</div></div>}
+      </div>
+    </Card>
+    <_BenefitsEnrollmentCard A={A} emp={emp} canManage={canManageBenefits} locale={locale} t={t}/>
+  </div>;
+}
+
+/* Priority-4 #5 - full per-tier benefits premium logic, employee-facing half. Reads/writes
+   /hr/benefits/* directly via the passthrough hrApi* helpers (same pattern as the 1:1 log widget)
+   rather than growing useHrStore.js for a module scoped to one profile tab. */
+function _BenefitsEnrollmentCard({A,emp,canManage,locale,t}){
+  const [current,setCurrent]=useState(undefined); // undefined = loading, null = none
+  const [history,setHistory]=useState([]);
+  const [plans,setPlans]=useState([]);
+  const [events,setEvents]=useState([]);
+  const [changing,setChanging]=useState(false);
+  const [selPlan,setSelPlan]=useState(""); const [selTier,setSelTier]=useState("");
+  const [overrideWindow,setOverrideWindow]=useState(false);
+  const [err,setErr]=useState("");
+  const [enrolling,setEnrolling]=useState(false);
+  const [addingEvent,setAddingEvent]=useState(false);
+  const [evType,setEvType]=useState("marriage"); const [evDate,setEvDate]=useState(""); const [evNote,setEvNote]=useState("");
+  const [savingEvent,setSavingEvent]=useState(false);
+
+  const load=async()=>{
+    const [enr,pl,ev]=await Promise.all([
+      A.hrApiGet(`/hr/benefits/enrollments/${emp.id}`).catch(()=>({current:null,history:[]})),
+      A.hrApiGet("/hr/benefits/plans").catch(()=>({plans:[]})),
+      A.hrApiGet(`/hr/benefits/life-events/${emp.id}`).catch(()=>({events:[]})),
+    ]);
+    setCurrent(enr.current); setHistory(enr.history||[]);
+    setPlans((pl.plans||[]).filter(p=>p.active));
+    setEvents(ev.events||[]);
+  };
+  useEffect(()=>{load();},[emp.id]);
+
+  const fmt=d=>d?new Date(d).toLocaleDateString(locale==="fr"?"fr-CA":"en-CA",{month:"short",day:"numeric",year:"numeric"}):"—";
+  // eventDate is a plain "YYYY-MM-DD" calendar date (no time component), unlike startedAt/endedAt
+  // which are real epoch-ms instants from sqlTime(). Parsing "2026-08-01" with `new Date()` and
+  // then formatting in the browser's local timezone shifts it a day earlier for anyone west of
+  // UTC (midnight UTC Aug 1 is still July 31 evening in America/*) - parse the components
+  // directly instead of going through a timezone-aware Date at all.
+  const fmtCalendarDate=d=>{
+    if(!d)return "—";
+    const [y,m,day]=d.split("-").map(Number);
+    return new Date(y,m-1,day).toLocaleDateString(locale==="fr"?"fr-CA":"en-CA",{month:"short",day:"numeric",year:"numeric"});
+  };
+  const selectedPlan=plans.find(p=>p.id===selPlan);
+
+  const submitEnroll=async()=>{
+    if(enrolling)return;
+    setErr(""); setEnrolling(true);
+    try{
+      await A.hrApiPost("/hr/benefits/enrollments",{employeeId:emp.id,planId:selPlan,tier:selTier,overrideWindow});
+      setChanging(false); setSelPlan(""); setSelTier(""); setOverrideWindow(false);
+      await load();
+    }catch(e){setErr(e.message);}
+    finally{setEnrolling(false);}
+  };
+  const submitEvent=async()=>{
+    if(!evDate||savingEvent)return;
+    setSavingEvent(true);
+    try{
+      await A.hrApiPost("/hr/benefits/life-events",{employeeId:emp.id,eventType:evType,eventDate:evDate,note:evNote||undefined});
+      setAddingEvent(false); setEvType("marriage"); setEvDate(""); setEvNote("");
+      await load();
+    } finally{setSavingEvent(false);}
+  };
+
+  if(current===undefined)return null;
+  const LIFE_EVENT_TYPES=[["marriage",t("hr.employeeProfile.lifeEventMarriage")],["birth",t("hr.employeeProfile.lifeEventBirth")],
+    ["lost-coverage",t("hr.employeeProfile.lifeEventLostCoverage")],["divorce",t("hr.employeeProfile.lifeEventDivorce")],["other",t("hr.employeeProfile.lifeEventOther")]];
+
   return <Card pad={22} style={{borderRadius:16}}>
-    <div className="grid grid-cols-2 gap-4">
-      <div><div className="text-xs text-text-3">{emp.payType==="hourly"?t("hrPeople.manage.hourlyRateCad"):t("hrPeople.manage.annualSalaryCad")}</div>
-        <div className="text-2xl font-bold text-text mt-1">${(emp.payType==="hourly"?emp.hourlyRate:emp.salary)?.toLocaleString()||"—"}</div></div>
-      {emp.benefitsPlan&&<div><div className="text-xs text-text-3">{t("hrPeople.manage.benefitsPlan")}</div>
-        <div className="text-sm font-semibold text-text mt-1">{emp.benefitsPlan} · {emp.benefitsTier||"Employee"}</div></div>}
+    <Lbl>{t("hr.employeeProfile.benefitsTitle")}</Lbl>
+    {!current
+      ? <div className="text-sm text-text-3 mb-3">{t("hr.employeeProfile.notEnrolledInPlan")}</div>
+      : <div className="mb-3">
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <span className="text-sm text-text-3">{t("hr.employeeProfile.currentPlanLabel")}:</span>
+            <span className="text-sm font-bold text-text">{current.planName||t("hr.employeeProfile.noLongerAvailable")}</span>
+            <Tag sm>{current.premium?.tierLabel||current.tier}</Tag>
+          </div>
+          {current.premium&&<div className="grid grid-cols-3 gap-3 mt-3">
+            <div><div className="text-xs text-text-3">{t("hr.employeeProfile.monthlyPremiumLabel")}</div><div className="text-lg font-bold text-text">${current.premium.monthlyCost.toLocaleString()}</div></div>
+            <div><div className="text-xs text-text-3">{t("hr.employeeProfile.employerPaysLabel")}</div><div className="text-lg font-bold text-ok">${current.premium.employerShare.toLocaleString()}</div></div>
+            <div><div className="text-xs text-text-3">{t("hr.employeeProfile.youPayLabel")}</div><div className="text-lg font-bold text-text">${current.premium.employeeShare.toLocaleString()}</div></div>
+          </div>}
+        </div>}
+
+    {canManage&&<>
+      {!changing
+        ? <Btn kind="outline" size="sm" icon="edit" onClick={()=>setChanging(true)}>{t("hr.employeeProfile.changeEnrollmentBtn")}</Btn>
+        : <div className="border-t border-line-soft pt-3 mt-1">
+            {err&&<Banner tone="danger" icon="alert" style={{marginBottom:10}}>{err}</Banner>}
+            <div className="grid gap-2.5 grid-cols-2 mb-2.5">
+              <Field label={t("hr.employeeProfile.choosePlanLabel")}>
+                <Sel value={selPlan} onChange={e=>{setSelPlan(e.target.value);setSelTier("");}}>
+                  <option value="">—</option>
+                  {plans.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
+                </Sel>
+              </Field>
+              <Field label={t("hr.employeeProfile.chooseTierLabel")}>
+                <Sel value={selTier} onChange={e=>setSelTier(e.target.value)} disabled={!selectedPlan}>
+                  <option value="">—</option>
+                  {selectedPlan?.config.tiers.map(tr=><option key={tr.key} value={tr.key}>{tr.label}</option>)}
+                </Sel>
+              </Field>
+            </div>
+            {selectedPlan&&<div className="text-xs mb-2" style={{color:selectedPlan.isOpenNow?C.ok:C.warn}}>
+              {selectedPlan.isOpenNow?t("hr.employeeProfile.windowOpenNow"):t("hr.employeeProfile.windowClosedNextOpens",{date:fmtCalendarDate(selectedPlan.nextWindowStart)})}
+            </div>}
+            {selectedPlan&&!selectedPlan.isOpenNow&&<div style={{marginBottom:10}}><CheckRow on={overrideWindow} onChange={setOverrideWindow} label={t("hr.employeeProfile.overrideWindowLabel")}/></div>}
+            <div className="flex gap-2">
+              <Btn kind="primary" size="sm" disabled={!selPlan||!selTier||enrolling} onClick={submitEnroll}>{t("hr.employeeProfile.enrollBtn")}</Btn>
+              <Btn kind="ghost" size="sm" onClick={()=>{setChanging(false);setErr("");}}>{t("hr.employeeProfile.cancelBtn")}</Btn>
+            </div>
+          </div>}
+    </>}
+
+    {history.length>0&&<div className="mt-4 pt-3 border-t border-line-soft">
+      <div className="text-xs font-bold text-text-3 uppercase tracking-wide mb-1.5">{t("hr.employeeProfile.enrollmentHistoryLabel")}</div>
+      <div className="flex flex-col gap-1">
+        {history.map(h=><div key={h.id} className="text-xs text-text-2">
+          {t("hr.employeeProfile.enrolledFrom",{plan:h.planName||"—",tier:h.premium?.tierLabel||h.tier,from:fmt(h.startedAt),to:fmt(h.endedAt)})}
+        </div>)}
+      </div>
+    </div>}
+
+    <div className="mt-4 pt-3 border-t border-line-soft">
+      <div className="flex justify-between items-center mb-2">
+        <div className="text-xs font-bold text-text-3 uppercase tracking-wide">{t("hr.employeeProfile.lifeEventsTitle")}</div>
+        {canManage&&!addingEvent&&<Btn kind="ghost" size="xs" icon="plus" onClick={()=>setAddingEvent(true)}>{t("hr.employeeProfile.recordLifeEventBtn")}</Btn>}
+      </div>
+      {addingEvent&&<div className="flex flex-col gap-2 mb-3 p-3 bg-bg rounded-lg">
+        <div className="grid grid-cols-2 gap-2">
+          <Field label={t("hr.employeeProfile.lifeEventTypeLabel")}>
+            <Sel value={evType} onChange={e=>setEvType(e.target.value)}>{LIFE_EVENT_TYPES.map(([k,l])=><option key={k} value={k}>{l}</option>)}</Sel>
+          </Field>
+          <Field label={t("hr.employeeProfile.lifeEventDatePlaceholder")}><Input type="date" value={evDate} onChange={e=>setEvDate(e.target.value)}/></Field>
+        </div>
+        <Field label={t("hr.employeeProfile.lifeEventNoteLabel")}><Input value={evNote} onChange={e=>setEvNote(e.target.value)}/></Field>
+        <div className="flex gap-2">
+          <Btn kind="primary" size="xs" disabled={!evDate||savingEvent} onClick={submitEvent}>{t("hr.employeeProfile.saveLifeEventBtn")}</Btn>
+          <Btn kind="ghost" size="xs" onClick={()=>setAddingEvent(false)}>{t("hr.employeeProfile.cancelBtn")}</Btn>
+        </div>
+      </div>}
+      {events.length===0
+        ? <div className="text-sm text-text-3">{t("hr.employeeProfile.noLifeEvents")}</div>
+        : <div className="flex flex-col gap-1.5">
+            {events.map(ev=><div key={ev.id} className="flex justify-between text-sm py-1.5 px-2.5 bg-bg rounded-lg">
+              <span className="text-text font-medium">{LIFE_EVENT_TYPES.find(([k])=>k===ev.eventType)?.[1]||ev.eventType}</span>
+              <span className="text-text-3 text-xs">{fmtCalendarDate(ev.eventDate)}</span>
+            </div>)}
+          </div>}
     </div>
   </Card>;
 }
@@ -2503,6 +2661,146 @@ function _TimeClocks({A,mob}){
   </Card>;
 }
 
+/* ─── Priority-4 #5: Benefits plans (employer-wide) editor ───
+   Self-contained, like _TimeClocks above - its own fetch/CRUD against /hr/benefits/plans rather
+   than folded into HrSettings' `d`/save flow, since a plan add/edit/deactivate takes effect the
+   moment it's confirmed (no "discard" concept - matches how the server treats it). */
+function _slugifyTierKey(label,existing){
+  const base=(label||"tier").toLowerCase().trim().replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"")||"tier";
+  let key=base,i=2; while(existing.includes(key)){key=`${base}_${i++}`;}
+  return key;
+}
+function _BenefitsPlanEditor({plan,onSave,onCancel}){
+  const {t}=useTranslation();
+  const [draft,setDraft]=useState({name:plan.name,tiers:plan.config.tiers.map(x=>({...x})),rrspMatch:plan.config.rrspMatch.map(x=>({...x})),openEnrollment:{...plan.config.openEnrollment}});
+  const setTier=(i,patch)=>setDraft(p=>({...p,tiers:p.tiers.map((tr,j)=>j===i?{...tr,...patch}:tr)}));
+  const addTier=()=>setDraft(p=>{const label=t("hr.settings.tierLabelPlaceholder");return {...p,tiers:[...p.tiers,{key:_slugifyTierKey(label,p.tiers.map(x=>x.key)),label,monthlyCost:0,employerPct:100}]};});
+  const removeTier=i=>setDraft(p=>({...p,tiers:p.tiers.filter((_,j)=>j!==i)}));
+  const setBand=(i,patch)=>setDraft(p=>({...p,rrspMatch:p.rrspMatch.map((b,j)=>j===i?{...b,...patch}:b)}));
+  const addBand=()=>setDraft(p=>({...p,rrspMatch:[...p.rrspMatch,{upToPct:0,matchPct:0}]}));
+  const removeBand=i=>setDraft(p=>({...p,rrspMatch:p.rrspMatch.filter((_,j)=>j!==i)}));
+  return <div className="mt-3 pt-3 border-t border-line-soft flex flex-col gap-3.5">
+    <Field label={t("hrPeople.manage.fullName")}><Input value={draft.name} onChange={e=>setDraft(p=>({...p,name:e.target.value}))}/></Field>
+    <div>
+      <div className="text-xs font-bold text-text-3 uppercase tracking-wide mb-1.5">{t("hr.settings.tiersLabel")}</div>
+      {draft.tiers.map((tr,i)=><div key={tr.key} className="grid gap-2 mb-1.5 items-end" style={{gridTemplateColumns:"1.4fr 1fr 1fr auto"}}>
+        <Field label={i===0?t("hr.settings.tierLabelPlaceholder"):undefined}><Input value={tr.label} onChange={e=>setTier(i,{label:e.target.value})}/></Field>
+        <Field label={i===0?t("hr.settings.tierMonthlyCost"):undefined}><Input type="number" min="0" value={tr.monthlyCost} onChange={e=>setTier(i,{monthlyCost:Number(e.target.value)||0})}/></Field>
+        <Field label={i===0?t("hr.settings.tierEmployerPct"):undefined}><Input type="number" min="0" max="100" value={tr.employerPct} onChange={e=>setTier(i,{employerPct:Math.max(0,Math.min(100,Number(e.target.value)||0))})}/></Field>
+        <Btn kind="ghost" size="xs" onClick={()=>removeTier(i)} disabled={draft.tiers.length<=1}>{t("hr.settings.removeTierBtn")}</Btn>
+      </div>)}
+      <Btn kind="outline" size="xs" icon="plus" onClick={addTier}>{t("hr.settings.addTierBtn")}</Btn>
+    </div>
+    <div>
+      <div className="text-xs font-bold text-text-3 uppercase tracking-wide mb-1.5">{t("hr.settings.rrspMatchLabel")}</div>
+      {draft.rrspMatch.map((b,i)=><div key={i} className="grid gap-2 mb-1.5 items-end" style={{gridTemplateColumns:"1fr 1fr auto"}}>
+        <Field label={i===0?t("hr.settings.rrspUpToPct"):undefined}><Input type="number" min="0" max="100" value={b.upToPct} onChange={e=>setBand(i,{upToPct:Number(e.target.value)||0})}/></Field>
+        <Field label={i===0?t("hr.settings.rrspMatchPct"):undefined}><Input type="number" min="0" max="100" value={b.matchPct} onChange={e=>setBand(i,{matchPct:Number(e.target.value)||0})}/></Field>
+        <Btn kind="ghost" size="xs" onClick={()=>removeBand(i)}>{t("hr.settings.removeRrspBandBtn")}</Btn>
+      </div>)}
+      <Btn kind="outline" size="xs" icon="plus" onClick={addBand}>{t("hr.settings.addRrspBandBtn")}</Btn>
+    </div>
+    <div>
+      <div className="text-xs font-bold text-text-3 uppercase tracking-wide mb-1.5">{t("hr.settings.openEnrollmentLabel")}</div>
+      <div className="grid gap-3 grid-cols-2">
+        <Field label={t("hr.settings.windowStart")}>
+          <div className="flex gap-1.5">
+            <Sel value={draft.openEnrollment.startMonth} onChange={e=>setDraft(p=>({...p,openEnrollment:{...p.openEnrollment,startMonth:Number(e.target.value)}}))}>
+              {Array.from({length:12},(_,m)=><option key={m} value={m+1}>{m+1}</option>)}
+            </Sel>
+            <Input type="number" min="1" max="31" value={draft.openEnrollment.startDay} onChange={e=>setDraft(p=>({...p,openEnrollment:{...p.openEnrollment,startDay:Math.max(1,Math.min(31,Number(e.target.value)||1))}}))}/>
+          </div>
+        </Field>
+        <Field label={t("hr.settings.windowEnd")}>
+          <div className="flex gap-1.5">
+            <Sel value={draft.openEnrollment.endMonth} onChange={e=>setDraft(p=>({...p,openEnrollment:{...p.openEnrollment,endMonth:Number(e.target.value)}}))}>
+              {Array.from({length:12},(_,m)=><option key={m} value={m+1}>{m+1}</option>)}
+            </Sel>
+            <Input type="number" min="1" max="31" value={draft.openEnrollment.endDay} onChange={e=>setDraft(p=>({...p,openEnrollment:{...p.openEnrollment,endDay:Math.max(1,Math.min(31,Number(e.target.value)||1))}}))}/>
+          </div>
+        </Field>
+      </div>
+    </div>
+    <div className="flex gap-2 justify-end">
+      <Btn kind="ghost" size="sm" onClick={onCancel}>{t("hr.settings.discardBtn")}</Btn>
+      <Btn kind="primary" size="sm" icon="check" onClick={()=>onSave({name:draft.name,config:{tiers:draft.tiers,rrspMatch:draft.rrspMatch,openEnrollment:draft.openEnrollment}})}>{t("hr.settings.saveChangesBtn")}</Btn>
+    </div>
+  </div>;
+}
+function _BenefitsPlansEditor({A,mob}){
+  const {t,locale}=useTranslation();
+  const [plans,setPlans]=useState([]);
+  const [editing,setEditing]=useState(null); // plan id being edited
+  const [adding,setAdding]=useState(false);
+  const [newName,setNewName]=useState("");
+  const [creating,setCreating]=useState(false);
+  const [deactivating,setDeactivating]=useState(null);
+  const load=()=>A.hrApiGet("/hr/benefits/plans").then(r=>setPlans(r.plans)).catch(()=>{});
+  useEffect(()=>{load();},[]);
+
+  // Guarded against double-submit - a slow network + a second click (or an impatient double-tap)
+  // before the first request resolves would otherwise create two identically-named plans.
+  const create=async()=>{
+    if(!newName.trim()||creating)return;
+    setCreating(true);
+    try{ await A.hrApiPost("/hr/benefits/plans",{name:newName.trim()}); setNewName(""); setAdding(false); await load(); }
+    finally{ setCreating(false); }
+  };
+  const save=async(planId,patch)=>{
+    await A.hrApiPatch(`/hr/benefits/plans/${planId}`,patch);
+    setEditing(null); load();
+  };
+  const toggleActive=async(plan)=>{
+    if(plan.active){setDeactivating(plan);return;}
+    await A.hrApiPatch(`/hr/benefits/plans/${plan.id}`,{active:true});
+    load();
+  };
+
+  return <Card pad={mob?20:26} style={{borderRadius:16,marginBottom:16}}>
+    <Lbl>{t("hr.settings.benefitsPlansTitle")}</Lbl>
+    <div className="text-sm text-text-3 mb-3.5 leading-relaxed">{t("hr.settings.benefitsPlansDesc")}</div>
+
+    {plans.length===0
+      ? <div className="text-sm text-text-3 py-2 mb-2">{t("hr.settings.noPlansYet")}</div>
+      : <div className="flex flex-col gap-2 mb-3">
+          {plans.map(plan=><div key={plan.id} className="border border-line rounded-xl py-3 px-3.5">
+            <div className="flex justify-between items-center gap-2 flex-wrap">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-text">{plan.name}</span>
+                  <Tag tone={plan.active?"ok":"neutral"} sm>{plan.active?t("hr.settings.activeTag"):t("hr.settings.deactivatedTag")}</Tag>
+                </div>
+                <div className="text-xs text-text-3 mt-0.5">
+                  {plan.config.tiers.map(tr=>tr.label).join(" · ")}
+                </div>
+              </div>
+              <div className="flex gap-1.5">
+                <Btn kind="ghost" size="xs" onClick={()=>setEditing(editing===plan.id?null:plan.id)}>{editing===plan.id?t("hr.settings.donePlanBtn"):t("hr.settings.editPlanBtn")}</Btn>
+                <Btn kind="ghost" size="xs" onClick={()=>toggleActive(plan)}>{plan.active?t("hr.settings.deactivatePlanBtn"):t("hr.settings.reactivatePlanBtn")}</Btn>
+              </div>
+            </div>
+            {editing===plan.id&&<_BenefitsPlanEditor plan={plan} onCancel={()=>setEditing(null)} onSave={patch=>save(plan.id,patch)}/>}
+          </div>)}
+        </div>}
+
+    {adding
+      ? <div className="flex gap-2 items-end flex-wrap">
+          <Field label={t("hr.settings.addPlanBtn")} style={{minWidth:220,flex:1}}>
+            <Input value={newName} onChange={e=>setNewName(e.target.value)} placeholder={t("hr.settings.planNamePlaceholder")}/>
+          </Field>
+          <Btn kind="primary" size="sm" onClick={create} disabled={!newName.trim()||creating}>{t("hr.settings.addPlanBtn")}</Btn>
+          <Btn kind="ghost" size="sm" onClick={()=>{setAdding(false);setNewName("");}}>{t("hr.employeeProfile.cancelBtn")}</Btn>
+        </div>
+      : <Btn kind="outline" size="sm" icon="plus" onClick={()=>setAdding(true)}>{t("hr.settings.addPlanBtn")}</Btn>}
+
+    <ConfirmDialog open={!!deactivating} onClose={()=>setDeactivating(null)} confirmLabel={t("hr.settings.deactivatePlanBtn")} danger
+      title={t("hr.settings.deactivateConfirmTitle",{name:deactivating?.name})}
+      onConfirm={async()=>{await A.hrApiPatch(`/hr/benefits/plans/${deactivating.id}`,{active:false});setDeactivating(null);load();}}>
+      {t("hr.settings.deactivateConfirmBody")}
+    </ConfirmDialog>
+  </Card>;
+}
+
 export function HrSettings(){
   const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
@@ -2716,6 +3014,8 @@ export function HrSettings(){
         </div>
       </>}
     </Card>
+
+    <_BenefitsPlansEditor A={A} mob={mob}/>
 
     <div className="flex gap-2.5 justify-end sticky bottom-3.5 bg-bg py-3.5">
       {dirty&&<Btn kind="ghost" onClick={()=>setD({...settings})}>{t("hr.settings.discardBtn")}</Btn>}

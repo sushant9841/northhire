@@ -10,7 +10,9 @@ import {
   serializeHrEmployee, serializeHrAttendance, serializeHrLeave, serializeHrTask, serializeHrEvent,
   serializeHrInvoice, serializeHrDepartment, serializeHrExpense, serializeHrPayrun, serializeHrChat, serializeHrChatMessage,
   serializeHrAuditEntry, serializeHrSignDocument, serializeHrSignature, serializeHrShift,
+  serializeBenefitsPlan, serializeBenefitsEnrollment, serializeBenefitsLifeEvent,
 } from "../serialize.js";
+import { DEFAULT_PLAN_CONFIG, parsePlanConfig, isOpenEnrollmentActive, hasQualifyingLifeEvent, nextOpenEnrollmentDate } from "../lib/benefits.js";
 import { pushNotification } from "../lib/notify.js";
 import { notifStringsForUser } from "../emailLocale.js";
 
@@ -1634,4 +1636,120 @@ hrRouter.delete("/perf-reviews/:id", requireHrAuth, requireHrPriv, (req, res) =>
   if (row.submitted_at) return res.status(400).json({ error: "Can't remove an already-submitted review." });
   db.prepare("DELETE FROM perf_reviews WHERE id = ?").run(row.id);
   res.json({ ok: true });
+});
+
+/* ─── Priority-4 #5: Full per-tier benefits premium logic ───
+   Plans are employer-wide; CRUD is gated to isMoneyRole (owner/admin/hr/finance), matching the
+   "Owner/HR/Finance" charter for plans and "Owner/Finance can edit any, HR can edit any" for
+   enrollments - isMoneyRole already covers both since isPriv includes hr. An employee can always
+   view (not edit) their own enrollment/life-events, checked explicitly rather than folded into
+   isMoneyRole. */
+function requireBenefitsSelfOrMoney(req, res, next) {
+  const employeeId = req.params.employeeId || req.body?.employeeId;
+  if (employeeId === req.hrEmployee.id || isMoneyRole(req.hrEmployee)) return next();
+  return res.status(403).json({ error: "Not allowed for your role." });
+}
+
+hrRouter.get("/benefits/plans", requireHrAuth, (req, res) => {
+  const rows = db.prepare("SELECT * FROM benefits_plans WHERE company_id = ? ORDER BY created_at ASC").all(req.hrEmployee.company_id);
+  res.json({ plans: rows.map(serializeBenefitsPlan) });
+});
+hrRouter.post("/benefits/plans", requireHrAuth, requireHrMoney, (req, res) => {
+  const { name, config } = req.body || {};
+  if (!name || !String(name).trim()) return res.status(400).json({ error: "Plan name is required." });
+  const id = nextId("bp", "benefits_plans");
+  const cfg = config ? parsePlanConfig(JSON.stringify(config)) : DEFAULT_PLAN_CONFIG();
+  db.prepare("INSERT INTO benefits_plans (id, company_id, name, config_json) VALUES (?, ?, ?, ?)")
+    .run(id, req.hrEmployee.company_id, String(name).trim().slice(0, 200), JSON.stringify(cfg));
+  logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "benefits_plan_created", `Created benefits plan "${name}"`);
+  res.status(201).json({ plan: serializeBenefitsPlan(db.prepare("SELECT * FROM benefits_plans WHERE id = ?").get(id)) });
+});
+hrRouter.patch("/benefits/plans/:id", requireHrAuth, requireHrMoney, (req, res) => {
+  const row = db.prepare("SELECT * FROM benefits_plans WHERE id = ? AND company_id = ?").get(req.params.id, req.hrEmployee.company_id);
+  if (!row) return res.status(404).json({ error: "Plan not found." });
+  const { name, config, active } = req.body || {};
+  const nextName = name !== undefined ? (String(name).trim().slice(0, 200) || row.name) : row.name;
+  const nextConfig = config !== undefined ? parsePlanConfig(JSON.stringify(config)) : parsePlanConfig(row.config_json);
+  const nextActive = active !== undefined ? (active ? 1 : 0) : row.active;
+  db.prepare("UPDATE benefits_plans SET name = ?, config_json = ?, active = ? WHERE id = ?")
+    .run(nextName, JSON.stringify(nextConfig), nextActive, row.id);
+  logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "benefits_plan_updated", `Updated benefits plan "${nextName}"`);
+  res.json({ plan: serializeBenefitsPlan(db.prepare("SELECT * FROM benefits_plans WHERE id = ?").get(row.id)) });
+});
+// Soft-delete only (active=0) - a plan already referenced by enrollment history must stay
+// resolvable (serializeBenefitsEnrollment still needs its name/config to show what someone *was*
+// enrolled in), so a hard DELETE would orphan that history instead of just retiring the plan.
+hrRouter.delete("/benefits/plans/:id", requireHrAuth, requireHrMoney, (req, res) => {
+  const row = db.prepare("SELECT * FROM benefits_plans WHERE id = ? AND company_id = ?").get(req.params.id, req.hrEmployee.company_id);
+  if (!row) return res.status(404).json({ error: "Plan not found." });
+  db.prepare("UPDATE benefits_plans SET active = 0 WHERE id = ?").run(row.id);
+  logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "benefits_plan_deactivated", `Deactivated benefits plan "${row.name}"`);
+  res.json({ ok: true });
+});
+
+function currentEnrollmentRow(employeeId) {
+  return db.prepare("SELECT * FROM benefits_enrollments WHERE employee_id = ? AND ended_at IS NULL ORDER BY started_at DESC LIMIT 1").get(employeeId);
+}
+hrRouter.get("/benefits/enrollments/:employeeId", requireHrAuth, requireBenefitsSelfOrMoney, (req, res) => {
+  const emp = db.prepare("SELECT id FROM hr_employees WHERE id = ? AND company_id = ?").get(req.params.employeeId, req.hrEmployee.company_id);
+  if (!emp) return res.status(404).json({ error: "Employee not found." });
+  const rows = db.prepare("SELECT * FROM benefits_enrollments WHERE employee_id = ? ORDER BY started_at DESC").all(req.params.employeeId);
+  const withPlan = rows.map(r => ({ row: r, plan: db.prepare("SELECT * FROM benefits_plans WHERE id = ?").get(r.plan_id) }));
+  const current = withPlan.find(x => !x.row.ended_at) || null;
+  res.json({
+    current: current ? serializeBenefitsEnrollment(current.row, current.plan) : null,
+    history: withPlan.filter(x => x.row.ended_at).map(x => serializeBenefitsEnrollment(x.row, x.plan)),
+  });
+});
+// Enrolling requires either the plan's calendar open-enrollment window to be active, or a
+// qualifying life event on file within LIFE_EVENT_WINDOW_DAYS - otherwise anyone with edit rights
+// could change tier/plan mid-year, which is exactly what an open-enrollment window prevents.
+// Owner/Finance/HR (isMoneyRole, already required above) may explicitly override a closed window
+// (e.g. correcting a data-entry mistake) but the override is itself audit-logged, never silent.
+hrRouter.post("/benefits/enrollments", requireHrAuth, requireHrMoney, (req, res) => {
+  const { employeeId, planId, tier, overrideWindow } = req.body || {};
+  const emp = db.prepare("SELECT id FROM hr_employees WHERE id = ? AND company_id = ?").get(employeeId, req.hrEmployee.company_id);
+  if (!emp) return res.status(404).json({ error: "Employee not found." });
+  const plan = db.prepare("SELECT * FROM benefits_plans WHERE id = ? AND company_id = ? AND active = 1").get(planId, req.hrEmployee.company_id);
+  if (!plan) return res.status(404).json({ error: "Plan not found or inactive." });
+  const config = parsePlanConfig(plan.config_json);
+  if (!config.tiers.some(t => t.key === tier)) return res.status(400).json({ error: "Unknown tier for this plan." });
+  const windowOpen = isOpenEnrollmentActive(config.openEnrollment);
+  const lifeEvents = db.prepare("SELECT * FROM benefits_life_events WHERE employee_id = ? ORDER BY event_date DESC").all(employeeId);
+  const qualifies = hasQualifyingLifeEvent(lifeEvents);
+  if (!windowOpen && !qualifies && !overrideWindow) {
+    return res.status(400).json({
+      error: `Outside the open-enrollment window and no qualifying life event on file. Next window opens ${nextOpenEnrollmentDate(config.openEnrollment)}.`,
+      windowOpen, hasLifeEvent: qualifies,
+    });
+  }
+  const prior = currentEnrollmentRow(employeeId);
+  const now = new Date().toISOString();
+  if (prior) db.prepare("UPDATE benefits_enrollments SET ended_at = ? WHERE id = ?").run(now, prior.id);
+  const id = nextId("be", "benefits_enrollments");
+  const nextWindow = nextOpenEnrollmentDate(config.openEnrollment);
+  db.prepare("INSERT INTO benefits_enrollments (id, employee_id, plan_id, tier, next_enrollment_at) VALUES (?, ?, ?, ?, ?)")
+    .run(id, employeeId, planId, tier, nextWindow);
+  logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "benefits_enrollment_changed",
+    `Enrolled in "${plan.name}" (${config.tiers.find(t => t.key === tier)?.label || tier})${(!windowOpen && overrideWindow) ? " [window override]" : ""}`, employeeId);
+  res.status(201).json({ enrollment: serializeBenefitsEnrollment(db.prepare("SELECT * FROM benefits_enrollments WHERE id = ?").get(id), plan) });
+});
+
+hrRouter.get("/benefits/life-events/:employeeId", requireHrAuth, requireBenefitsSelfOrMoney, (req, res) => {
+  const emp = db.prepare("SELECT id FROM hr_employees WHERE id = ? AND company_id = ?").get(req.params.employeeId, req.hrEmployee.company_id);
+  if (!emp) return res.status(404).json({ error: "Employee not found." });
+  const rows = db.prepare("SELECT * FROM benefits_life_events WHERE employee_id = ? ORDER BY event_date DESC").all(req.params.employeeId);
+  res.json({ events: rows.map(serializeBenefitsLifeEvent) });
+});
+hrRouter.post("/benefits/life-events", requireHrAuth, requireHrMoney, (req, res) => {
+  const { employeeId, eventType, eventDate, note } = req.body || {};
+  const emp = db.prepare("SELECT id FROM hr_employees WHERE id = ? AND company_id = ?").get(employeeId, req.hrEmployee.company_id);
+  if (!emp) return res.status(404).json({ error: "Employee not found." });
+  if (!eventType || !String(eventType).trim()) return res.status(400).json({ error: "Event type is required." });
+  if (!eventDate || !/^\d{4}-\d{2}-\d{2}$/.test(eventDate)) return res.status(400).json({ error: "A valid event date (YYYY-MM-DD) is required." });
+  const id = nextId("ble", "benefits_life_events");
+  db.prepare("INSERT INTO benefits_life_events (id, employee_id, event_type, event_date, note, recorded_by) VALUES (?, ?, ?, ?, ?, ?)")
+    .run(id, employeeId, String(eventType).trim().slice(0, 80), eventDate, note ? String(note).slice(0, 2000) : null, req.hrEmployee.id);
+  logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "benefits_life_event_recorded", `Recorded life event "${eventType}"`, employeeId);
+  res.status(201).json({ event: serializeBenefitsLifeEvent(db.prepare("SELECT * FROM benefits_life_events WHERE id = ?").get(id)) });
 });
