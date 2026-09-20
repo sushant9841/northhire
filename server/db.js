@@ -1049,6 +1049,20 @@ for (const stmt of [
      recorded_at TEXT NOT NULL DEFAULT (datetime('now')),
      PRIMARY KEY (user_id, field)
    )`,
+  // Priority-4 #4 - Daily-snapshot analytics. One row per (date, metric, dimension): dimension
+  // is an employer_id for the three per-employer metrics (applications/live_jobs/hires) or the
+  // literal string 'platform' for the two platform-wide signup counters. Upserted nightly (and
+  // backfilled 30 days at server start) rather than computed live on every analytics page view,
+  // so a sparkline/WoW/MoM comparison reads a real historical count instead of re-deriving it
+  // from scratch (and possibly differently) on every request.
+  `CREATE TABLE IF NOT EXISTS daily_snapshots (
+     date TEXT NOT NULL,
+     metric TEXT NOT NULL,
+     dimension TEXT NOT NULL,
+     value NUMERIC NOT NULL DEFAULT 0,
+     PRIMARY KEY (date, metric, dimension)
+   )`,
+  "CREATE INDEX IF NOT EXISTS idx_daily_snapshots_lookup ON daily_snapshots(metric, dimension, date)",
 ]) {
   try { db.exec(stmt); } catch (e) { if (!/duplicate column/i.test(e.message)) console.error("migration:", stmt, e.message); }
 }

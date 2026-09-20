@@ -1379,6 +1379,32 @@ export function useStore(){
     return {totalJobs:myJobs.length,liveJobs:myJobs.filter(j=>j.status==="live").length,totalViews,totalApps,conversion,byStage,topJob,avgScore,applicationTrend,eligibilityMix,byJob,costPerHire,totalCost,hiresCount:hiresInRange.length,salaryBenchmarks};
   };
 
+  /* Priority-4 #4 - daily-snapshot analytics. Fetched once (60 days: enough for a trailing-7
+     sparkline plus a real week-over-week AND month-over-month comparison) whenever the signed-in
+     employer changes, and cached here rather than re-fetched by every Stat card. */
+  const [dailySnapshots,setDailySnapshots]=useState(null);
+  useEffect(()=>{
+    if(!company){setDailySnapshots(null);return;}
+    let cancelled=false;
+    api.get("/employers/me/snapshots?days=60").then(({series})=>{if(!cancelled)setDailySnapshots(series);}).catch(()=>{});
+    return ()=>{cancelled=true;};
+  },[company?.id]);
+  /* Turns one metric's 60-day series into what a Stat card needs: a 14-point sparkline (last two
+     weeks - anything longer flattens into an unreadable smear at this card size), plus real
+     week-over-week and month-over-month percent deltas. Returns null while the fetch hasn't
+     resolved yet, or if the series doesn't have enough history for a given comparison. */
+  const snapshotDeltas=metric=>{
+    const series=dailySnapshots?.[metric];
+    if(!series||series.length<2)return null;
+    const values=series.map(p=>p.value);
+    const sum=arr=>arr.reduce((s,v)=>s+v,0);
+    const last=n=>values.slice(Math.max(0,values.length-n));
+    const pct=(cur,prev)=>prev===0?(cur===0?0:null):Math.round(((cur-prev)/prev)*1000)/10;
+    const wowCur=sum(last(7)), wowPrev=sum(values.slice(Math.max(0,values.length-14),Math.max(0,values.length-7)));
+    const momCur=sum(last(30)), momPrev=sum(values.slice(Math.max(0,values.length-60),Math.max(0,values.length-30)));
+    return {spark:last(14),wowPct:values.length>=14?pct(wowCur,wowPrev):null,momPct:values.length>=60?pct(momCur,momPrev):null};
+  };
+
   /* Fuzzy/synonym expansion now lives in helpers/synonyms.js so server/jobAlerts.js matches
      saved searches against new jobs using the identical logic this page's search uses. */
 

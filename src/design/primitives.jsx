@@ -477,13 +477,26 @@ export const HERO_WIDE="font-extrabold tracking-tight leading-none text-text"; /
 export const HERO_WRAP="font-extrabold tracking-tight text-text leading-tight"; /* hero titles holding dynamic content that may wrap to 2+ lines (article/training titles) - leading-tight not leading-none */
 export const HERO_QUIET="font-bold tracking-tight text-text"; /* de-emphasized utility-page h1s (legal docs, confirmation screens) - no forced leading, callers keep their own */
 export const SECTION_CLS="font-bold text-text tracking-tight"; /* in-page section headers on public pages - callers add their own leading-tight/-snug/-none */
-export function Stat({label,value,tone=C.text,icon,delta,onClick}){
+/* `spark` (optional): array of numbers, oldest first - rendered as a tiny inline sparkline under
+   the value (Priority-4 #4, daily-snapshot analytics). `deltaTone` colors the delta line - a
+   plain string label defaults to "ok" (existing callers, unchanged); pass "warn"/"text-3" for a
+   week-over-week/month-over-month figure that isn't necessarily good news. */
+export function Stat({label,value,tone=C.text,icon,delta,deltaTone="ok",spark,onClick}){
+ const deltaColorCls=deltaTone==="warn"?"text-warn":deltaTone==="down"?"text-red":"text-ok";
  return <div onClick={onClick} {...clickableA11y(onClick)}
   className={`bg-white border rounded-2xl py-6 px-6 transition-[border-color,transform] duration-150 ${onClick?"cursor-pointer border-line hover:border-line-2 hover:-translate-y-0.5":"cursor-default border-line"}`}>
   <div className="flex items-center gap-2.5 mb-3.5 text-text-3">
    {icon&&<I n={icon} s={16}/>}<span className="text-sm text-text-2 font-semibold">{label}</span></div>
   <div className="text-4xl font-extrabold leading-none tracking-tighter" style={{color:tone}}>{value}</div>
-  {delta&&<div className="text-xs text-ok mt-2.5 font-semibold">{delta}</div>}</div>;}
+  {Array.isArray(spark)&&spark.length>1&&(()=>{
+    const max=Math.max(...spark,1),min=Math.min(...spark,0),range=Math.max(max-min,1);
+    const w=100,h=24,step=w/(spark.length-1);
+    const pts=spark.map((v,i)=>`${(i*step).toFixed(1)},${(h-((v-min)/range)*h).toFixed(1)}`).join(" ");
+    return <svg viewBox={`0 0 ${w} ${h}`} width="100%" height={h} className="mt-2.5 block" preserveAspectRatio="none">
+      <polyline points={pts} fill="none" stroke={tone} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" opacity="0.55"/>
+    </svg>;
+  })()}
+  {delta&&<div className={`text-xs ${deltaColorCls} mt-2.5 font-semibold`}>{delta}</div>}</div>;}
 
 /* ═══════════════ SUCCESS CARD ═══════════════
    Rich confirmation screen for "something important just happened" moments (job published,

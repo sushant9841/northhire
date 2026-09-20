@@ -24,8 +24,10 @@ import { publicApiRouter, apiAdminRouter } from "./routes/publicApi.js";
 import { ssoRouter } from "./routes/sso.js";
 import { offersRouter } from "./routes/offers.js";
 import { eventsRouter } from "./routes/events.js";
+import { adminSnapshotsRouter } from "./routes/adminSnapshots.js";
 import { infinityReplacer } from "../src/helpers/jsonInfinity.js";
 import { execSync } from "node:child_process";
+import { backfillDailySnapshots, captureDailySnapshot } from "./snapshots.js";
 
 /* Build identity for this server process. Client checks this against its own __BUILD_ID__
    (defined at frontend build time - see vite.config.js) and shows a discreet refresh banner
@@ -143,6 +145,7 @@ app.use("/api/api-keys", apiAdminRouter);
 app.use("/api/sso", ssoRouter);
 app.use("/api/offers", offersRouter);
 app.use("/api/events", eventsRouter);
+app.use("/api/admin", adminSnapshotsRouter);
 
 app.use((req, res) => res.status(404).json({ error: "Not found." }));
 // eslint-disable-next-line no-unused-vars
@@ -163,3 +166,9 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`NorthHire API listening on http://localhost:${PORT}`);
 });
+
+// Priority-4 #4 - daily-snapshot analytics: backfill the trailing 30 days from existing rows'
+// created_at timestamps on boot, then re-capture "today" every 24h so a long-running server keeps
+// its most recent day's counters fresh without needing a cron/scheduler dependency.
+backfillDailySnapshots(30);
+setInterval(() => captureDailySnapshot(), 24 * 3600 * 1000);

@@ -406,6 +406,31 @@ employersRouter.get("/me/demographics-aggregate", requireAuth, requireRole("empl
   res.json({ totalApplicants: applicantIds.length, totalHires: hireIds.length, respondentCount, fields });
 });
 
+/* Priority-4 #4 - daily-snapshot analytics, employer-scoped. `metric` optional: one of
+   applications/live_jobs/hires returns that series alone; omitted returns all three keyed by
+   name. Gaps (days with nothing captured) are filled with 0 so a sparkline never has holes. */
+employersRouter.get("/me/snapshots", requireAuth, requireRole("employer"), (req, res) => {
+  const days = Math.min(365, Math.max(1, Number(req.query.days) || 60));
+  const metric = req.query.metric;
+  const validMetrics = ["applications", "live_jobs", "hires"];
+  if (metric && !validMetrics.includes(metric)) return res.status(400).json({ error: "Unknown metric." });
+  const metrics = metric ? [metric] : validMetrics;
+  const dateList = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(); d.setUTCHours(0, 0, 0, 0); d.setUTCDate(d.getUTCDate() - i);
+    dateList.push(d.toISOString().slice(0, 10));
+  }
+  const series = {};
+  for (const m of metrics) {
+    const rows = db.prepare(
+      `SELECT date, value FROM daily_snapshots WHERE metric = ? AND dimension = ? AND date >= ? ORDER BY date ASC`
+    ).all(m, req.user.employer_id, dateList[0]);
+    const byDate = Object.fromEntries(rows.map(r => [r.date, r.value]));
+    series[m] = dateList.map(date => ({ date, value: byDate[date] || 0 }));
+  }
+  res.json(metric ? { days, metric, series: series[metric] } : { days, series });
+});
+
 employersRouter.get("/:id", (req, res) => {
   const row = db.prepare(`${WITH_OWNER} WHERE employers.id = ?`).get(req.params.id);
   if (!row) return res.status(404).json({ error: "Employer not found." });
