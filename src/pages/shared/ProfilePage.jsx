@@ -147,7 +147,23 @@ export function ProfilePage(){
               return <button key={mod} onClick={()=>set("modes",on?d.modes.filter(x=>x!==mod):[...d.modes,mod])}
                 className={`py-3 px-3 rounded-xl cursor-pointer text-sm border-2 transition duration-150 ${on?"font-semibold border-brand bg-tint text-brand":"font-medium border-line bg-white text-text"}`}>{mod}</button>;})}</div></div>
         <Field label={t("profile.whenStart")}><Sel value={d.startWhen||t("profile.startWeek")} onChange={e=>set("startWhen",e.target.value)}>
-          {[t("profile.startImmediately"),t("profile.startWeek"),t("profile.startMonth"),t("profile.startPlus")].map(o=><option key={o}>{o}</option>)}</Sel></Field></div>}
+          {[t("profile.startImmediately"),t("profile.startWeek"),t("profile.startMonth"),t("profile.startPlus")].map(o=><option key={o}>{o}</option>)}</Sel></Field>
+        {/* Priority-4 #6: CASL consent for silver-medalist re-engagement matching - a seeker who
+            reached Interview/Offer/Withdrawn with an employer gets matched against that same
+            employer's future live roles ONLY if this box is checked. Off by default, revocable
+            at any time; the next weekly batch simply stops creating new matches for them once
+            unchecked (see server/lib/silverMedalist.js). */}
+        <div className="border border-line rounded-xl p-4">
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input type="checkbox" checked={!!d.optInFutureOpportunities} onChange={e=>set("optInFutureOpportunities",e.target.checked)}
+              className="mt-0.5 w-4.5 h-4.5 accent-brand shrink-0"/>
+            <span className="text-sm font-semibold text-text">{t("profile.futureOppsOptInLabel")}</span>
+          </label>
+          <div className="text-xs text-text-3 leading-relaxed mt-2 flex flex-col gap-1.5">
+            <p className="m-0">{t("profile.futureOppsDisclaimerEn")}</p>
+            <p className="m-0">{t("profile.futureOppsDisclaimerFr")}</p>
+          </div>
+        </div></div>}
 
       {tab==="learning"&&<div>
         <H2 sub={t("profile.learnSub")} action={<Btn kind="outline" size="sm" onClick={()=>A.go("trainings")}>{t("profile.browseTrainings")}</Btn>}>{t("profile.learning")}</H2>

@@ -133,7 +133,7 @@ export function requireAgencyAuth(req, res, next) {
 
 export function publicUser(row) {
   if (!row) return null;
-  const { password_hash, password_salt, skills_json, types_json, modes_json, visibility_json, badges_json, ...rest } = row;
+  const { password_hash, password_salt, skills_json, types_json, modes_json, visibility_json, badges_json, opt_in_future_opportunities, ...rest } = row;
   return {
     ...rest,
     skills: JSON.parse(skills_json || "[]"),
@@ -143,5 +143,7 @@ export function publicUser(row) {
     // HR Suite H1: badges published from an employer's HR Suite once the seeker has consented
     // to the HR<->seeker profile sync (see hr_employees.sync_json).
     badges: JSON.parse(badges_json || "[]"),
+    // Priority-4 #6: CASL consent for silver-medalist re-engagement matching.
+    optInFutureOpportunities: !!opt_in_future_opportunities,
   };
 }

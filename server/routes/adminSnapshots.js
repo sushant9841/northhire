@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db } from "../db.js";
 import { requireAuth, requireAdminScope } from "../auth.js";
 import { SNAPSHOT_METRICS } from "../snapshots.js";
+import { refreshSilverMedalistMatches } from "../lib/silverMedalist.js";
 
 export const adminSnapshotsRouter = Router();
 
@@ -18,4 +19,12 @@ adminSnapshotsRouter.get("/snapshots", requireAuth, requireAdminScope("finance",
      ORDER BY date ASC`
   ).all(...(metric ? [`-${days} days`, metric] : [`-${days} days`]));
   res.json({ days, snapshots: rows });
+});
+
+/* Priority-4 #6 - callable for admin/tests: the weekly batch also runs on boot and every 7 days
+   (server/index.js), but a test run (or an impatient admin) shouldn't have to wait a week or
+   restart the server to see it recompute. */
+adminSnapshotsRouter.post("/silver-medalist-matches/refresh", requireAuth, requireAdminScope(), (req, res) => {
+  const result = refreshSilverMedalistMatches();
+  res.json(result);
 });

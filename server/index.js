@@ -29,6 +29,7 @@ import { integrationsRouter } from "./routes/integrations.js";
 import { infinityReplacer } from "../src/helpers/jsonInfinity.js";
 import { execSync } from "node:child_process";
 import { backfillDailySnapshots, captureDailySnapshot } from "./snapshots.js";
+import { refreshSilverMedalistMatches } from "./lib/silverMedalist.js";
 
 /* Build identity for this server process. Client checks this against its own __BUILD_ID__
    (defined at frontend build time - see vite.config.js) and shows a discreet refresh banner
@@ -174,3 +175,11 @@ app.listen(PORT, () => {
 // its most recent day's counters fresh without needing a cron/scheduler dependency.
 backfillDailySnapshots(30);
 setInterval(() => captureDailySnapshot(), 24 * 3600 * 1000);
+
+// Priority-4 #6 - silver-medalist candidate re-engagement: recompute matches once on boot (so a
+// freshly-restarted server doesn't wait a full week to catch up on new live jobs / new opt-ins)
+// and weekly thereafter. refreshSilverMedalistMatches() is also exposed as a callable for
+// admin/test use (see /api/admin/silver-medalist-matches/refresh) so this doesn't have to wait a
+// week to be verified either.
+refreshSilverMedalistMatches();
+setInterval(() => refreshSilverMedalistMatches(), 7 * 24 * 3600 * 1000);

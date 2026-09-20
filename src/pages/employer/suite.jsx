@@ -947,6 +947,43 @@ function _JobScoring({A,job,mob,t}){
   </Card>;
 }
 
+/* Priority-4 #6: "Silver medalist matches" - candidates who reached Interview/Offer/Withdrawn
+   with THIS employer in the past 12 months and skill-overlap with one of its currently-live
+   listings, computed server-side by the weekly batch (server/lib/silverMedalist.js). Only ever
+   shows this employer's own matches (server-enforced via req.user.employer_id, see
+   employers.js's GET /silver-medalist-matches). Reuses the existing inviteToApply flow so an
+   invite here behaves identically to inviting from the Talent Pool tab. */
+function SilverMedalistMatchesCard({A,t}){
+  useEffect(()=>{ A.loadSilverMatches(); /* eslint-disable-next-line react-hooks/exhaustive-deps */},[A.company?.id]);
+  if(!A.silverMatches?.length)return null;
+  return <Card style={{padding:20,borderRadius:16,marginBottom:16}}>
+    <div className="flex gap-3 items-center mb-3.5 flex-wrap">
+      <div className="w-11 h-11 rounded-xl bg-wash text-brand flex items-center justify-center shrink-0"><I n="target" s={22}/></div>
+      <div className="flex-1 min-w-45"><div className="text-base font-semibold text-text">{t("employer.pipeline.silverMedalistTitle")}</div>
+        <div className="text-sm text-text-2 mt-0.5">{t("employer.pipeline.silverMedalistDesc")}</div></div>
+      <Tag tone="brand" sm>{t("employer.pipeline.silverMedalistCount",{n:A.silverMatches.length})}</Tag>
+    </div>
+    <div className="flex flex-col gap-2">
+      {A.silverMatches.map(m=>{
+        const p=A.person(m.seekerId); const j=A.job(m.jobId); if(!p||!j)return null;
+        const invited=A.invitedCandidates.has(`${j.id}:${p.id}`);
+        return <div key={m.id} className="flex items-center gap-3 border border-line rounded-xl py-2.5 px-3.5 flex-wrap">
+          <SmartPortrait seed={p.seed} size={40}/>
+          <div className="flex-1 min-w-45">
+            <div className="text-sm font-semibold text-text">{p.name}</div>
+            <div className="text-xs text-text-2 mt-0.5">{t("employer.pipeline.silverMedalistMatchedTo",{job:j.t})} • {t("employer.pipeline.silverMedalistOverlap",{n:m.overlapScore})}</div>
+          </div>
+          <div className="flex gap-1.5 shrink-0">
+            {invited
+              ?<Btn kind="soft" size="xs" icon="check" disabled>{t("employer.pipeline.invitedToRole",{role:j.t})}</Btn>
+              :<Btn kind="primary" size="xs" icon="send" onClick={()=>A.inviteToApply(p.id,j.id)}>{t("employer.pipeline.inviteToApplyRole",{role:j.t})}</Btn>}
+            <Btn kind="ghost" size="xs" icon="x" onClick={()=>A.dismissSilverMatch(m.id)}>{t("employer.pipeline.silverMedalistDismissBtn")}</Btn>
+          </div>
+        </div>;})}
+    </div>
+  </Card>;
+}
+
 export function EmpPipeline(){
   const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const myJobs=A.jobs.filter(j=>j.e===A.company.id);
@@ -1030,6 +1067,10 @@ export function EmpPipeline(){
         <Tabs items={[{k:"pipeline",label:t("employer.pipeline.pipelineTab",{n:apps.length})},{k:"filters",label:t("employer.pipeline.filtersTab")},
           {k:"talent",label:t("employer.pipeline.talentPoolTab",{n:reverseCandidates.length})}]} value={tab} onChange={setTab}/></div>
     </div>
+
+    {tab==="pipeline"&&<div className={`max-w-site mx-auto w-full pt-4 ${mob?"px-4":"px-7"}`}>
+      <SilverMedalistMatchesCard A={A} t={t}/>
+    </div>}
 
     {tab==="filters"&&<div className={`${mob?"p-4":"p-6"} max-w-site mx-auto w-full`}>
       <_JobScoring A={A} job={job} mob={mob} t={t}/>

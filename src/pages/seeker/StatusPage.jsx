@@ -133,6 +133,7 @@ export function StatusPage(){
     <ProfileCompletionNudge/>
     <HrAccessBanner/>
     <UpcomingInterviewsCard/>
+    <SilverMedalistCard/>
     <div className="grid gap-3 mb-5" style={{gridTemplateColumns:`repeat(auto-fit,minmax(${mob?140:160}px,1fr))`}}>
       <Stat icon="send" label={t("seeker.status.statApplications")} value={mine.length} tone={C.brand}/>
       <Stat icon="eye" label={t("seeker.status.statReviewed")} value={(counts.Reviewed||0)+(counts.Shortlisted||0)+(counts.Interview||0)+(counts.Offer||0)}/>
@@ -304,6 +305,40 @@ function UpcomingInterviewsCard(){
           </div>
         </div>;})}
       {upcoming.length>3&&<button onClick={()=>A.go("interviews")} className="self-start bg-transparent border-0 p-0 cursor-pointer text-sm font-semibold text-brand underline">{t("seeker.status.viewAllInterviewsBtn",{n:upcoming.length})}</button>}
+    </div>
+  </div>;
+}
+
+/* Priority-4 #6: "You may also like" - live roles at an employer this seeker already reached a
+   final pipeline stage with, surfaced from the server-computed silver_medalist_matches table
+   (see server/lib/silverMedalist.js). Server-enforced: the GET only ever returns THIS seeker's
+   own rows (seeker_id = req.user.id), never another seeker's. Loaded lazily on mount rather than
+   joining the eager seed-load path, same reasoning as loadCandidateOutreach on the employer side -
+   this is secondary content, not core page data. */
+function SilverMedalistCard(){
+  const A=use(); const {t}=useTranslation();
+  useEffect(()=>{ if(A.user?.role==="seeker")A.loadSilverMatches(); /* eslint-disable-next-line react-hooks/exhaustive-deps */},[A.user?.id]);
+  if(!A.user||A.user.role!=="seeker"||!A.silverMatches?.length)return null;
+  return <div className="mb-5 border border-line rounded-2xl p-4 bg-white">
+    <div className="flex items-center gap-2 mb-3">
+      <span className="w-8 h-8 rounded-full bg-wash text-brand flex items-center justify-center"><I n="sparkle" s={16}/></span>
+      <div className="font-bold text-text tracking-tight">{t("seeker.status.mayAlsoLikeTitle")}</div>
+      <div className="ml-auto text-xs text-text-3">{t("seeker.status.mayAlsoLikeCount",{n:A.silverMatches.length})}</div>
+    </div>
+    <div className="flex flex-col gap-2">
+      {A.silverMatches.map(m=>{
+        const j=A.job(m.jobId); if(!j)return null; const e=A.emp(j.e);
+        return <div key={m.id} className="bg-bg border border-line rounded-xl px-3 py-2.5 flex items-center gap-3 flex-wrap">
+          <EmpMark e={e} size={38}/>
+          <div className="flex-1 min-w-0">
+            <button onClick={()=>A.openJob(j.id)} className="bg-transparent border-0 p-0 cursor-pointer text-left text-sm font-semibold text-text truncate">{j.t}</button>
+            <div className="text-xs text-text-2 mt-0.5">{e?.name} • {j.city}, {j.prov} • {pay(j)}{payShort(j)}</div>
+          </div>
+          <div className="flex gap-1.5 shrink-0">
+            <Btn kind="primary" size="xs" onClick={()=>A.openJob(j.id)}>{t("seeker.status.mayAlsoLikeViewBtn")}</Btn>
+            <Btn kind="ghost" size="xs" icon="x" onClick={()=>A.dismissSilverMatch(m.id)}>{t("seeker.status.dismissNudgeBtn")}</Btn>
+          </div>
+        </div>;})}
     </div>
   </div>;
 }

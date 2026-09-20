@@ -1126,6 +1126,31 @@ for (const stmt of [
      created_at TEXT NOT NULL DEFAULT (datetime('now'))
    )`,
   "CREATE INDEX IF NOT EXISTS idx_benefits_life_events_employee ON benefits_life_events(employee_id)",
+  // Priority-4 #6 - Silver-medalist candidate re-engagement. Separate CASL consent flag from
+  // marketing_consent above: this is "may we match you against future roles at employers you've
+  // already interviewed with", not "may we send you commercial email" - a seeker can hold either
+  // independently. Default 0 (opt-in, never opt-out-by-default) per CASL's express-consent bar.
+  "ALTER TABLE users ADD COLUMN opt_in_future_opportunities INTEGER DEFAULT 0",
+  // One row per (seeker, job) match the weekly batch has found. dismissed_at is set independently
+  // by either side (seeker dismissing "You may also like", employer dismissing their card) - both
+  // use the same row/column since a match either party has waved off shouldn't keep resurfacing
+  // for the other, and a fresh batch run naturally re-creates it if the underlying facts still
+  // hold and it's been re-dismissed... actually a re-run skips any (seeker,job) pair that already
+  // has a live (non-dismissed) row, so a dismiss is a genuine "stop showing me this" until the
+  // pair falls out of the matching window entirely (interview >12mo old, or job no longer live).
+  `CREATE TABLE IF NOT EXISTS silver_medalist_matches (
+     id TEXT PRIMARY KEY,
+     seeker_id TEXT NOT NULL REFERENCES users(id),
+     job_id TEXT NOT NULL REFERENCES jobs(id),
+     employer_id TEXT NOT NULL REFERENCES employers(id),
+     overlap_score INTEGER NOT NULL DEFAULT 0,
+     matched_at TEXT NOT NULL DEFAULT (datetime('now')),
+     notified_at TEXT,
+     dismissed_at TEXT,
+     UNIQUE(seeker_id, job_id)
+   )`,
+  "CREATE INDEX IF NOT EXISTS idx_silver_medalist_seeker ON silver_medalist_matches(seeker_id)",
+  "CREATE INDEX IF NOT EXISTS idx_silver_medalist_employer ON silver_medalist_matches(employer_id)",
 ]) {
   try { db.exec(stmt); } catch (e) { if (!/duplicate column/i.test(e.message)) console.error("migration:", stmt, e.message); }
 }

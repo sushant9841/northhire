@@ -12,6 +12,9 @@ const OWN_PROFILE_FIELDS = {
   // Bill 96: UI/email language preference. Validated against the two supported locales rather
   // than accepted verbatim, same reasoning as any other user-writable enum column.
   locale: "locale",
+  // Priority-4 #6: CASL consent for silver-medalist matching, separate from marketing_consent -
+  // coerced to a strict 0/1 below since this drives a SQL boolean comparison in the batch job.
+  optInFutureOpportunities: "opt_in_future_opportunities",
 };
 const VALID_LOCALES = ["en-CA", "fr-CA"];
 usersRouter.patch("/me", requireAuth, (req, res) => {
@@ -20,7 +23,8 @@ usersRouter.patch("/me", requireAuth, (req, res) => {
   for (const [key, col] of Object.entries(OWN_PROFILE_FIELDS)) {
     if (body[key] === undefined) continue;
     if (key === "locale" && !VALID_LOCALES.includes(body[key])) continue;
-    setCols.push(`${col} = ?`); params.push(body[key]);
+    const value = key === "optInFutureOpportunities" ? (body[key] ? 1 : 0) : body[key];
+    setCols.push(`${col} = ?`); params.push(value);
   }
   if (body.skills !== undefined) { setCols.push("skills_json = ?"); params.push(JSON.stringify(body.skills)); }
   if (body.types !== undefined) { setCols.push("types_json = ?"); params.push(JSON.stringify(body.types)); }

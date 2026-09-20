@@ -257,6 +257,12 @@ export function ApplyDone(){
   const showExpPrompt=A.user?.role==="seeker"&&A.user.years==null&&!expPromptDismissed;
   const YEARS_OPTIONS=[[t("auth.noExperience"),0],[t("auth.lessThanYear"),1],["1-2 years",2],["3-5 years",4],["6-10 years",8],["More than 10 years",12]];
   const setYears=years=>{A.saveProfile({...A.user,years}); setExpPromptDismissed(true);};
+  /* Priority-4 #6: CASL opt-in surfaced again right after an apply that didn't work out is
+     genuinely the best moment for it - "this employer" is fresh in mind, and the whole point of
+     silver-medalist matching is re-engagement with an employer the seeker already applied to.
+     Only shown to a not-yet-opted-in seeker, dismissable like the experience prompt above. */
+  const [optInPromptDismissed,setOptInPromptDismissed]=useState(false);
+  const showOptInPrompt=A.user?.role==="seeker"&&!A.user.optInFutureOpportunities&&!optInPromptDismissed;
   return <Page narrow>
     <div className="text-center pt-5 pb-2" style={{animation:"rise .4s ease both"}}>
       <div className="w-19 h-19 rounded-full bg-ok-bg border-2 border-ok-ln flex items-center justify-center mx-auto mb-5" style={{animation:"pop .45s cubic-bezier(.22,.68,.35,1) both"}}>
@@ -287,6 +293,17 @@ export function ApplyDone(){
         {YEARS_OPTIONS.map(([label,years])=><button key={label} onClick={()=>setYears(years)}
           className="py-2 px-3.5 rounded-xl cursor-pointer text-sm font-medium border-2 border-line bg-white text-text hover:border-brand">
           {label}</button>)}</div>
+    </Card>}
+    {showOptInPrompt&&<Card pad={20} style={{marginBottom:24}}>
+      <div className="flex justify-between items-start gap-3 mb-2">
+        <div className="text-sm font-bold text-text">{t("seeker.apply.optInPromptTitle")}</div>
+        <button onClick={()=>setOptInPromptDismissed(true)} className="bg-transparent border-0 p-0 cursor-pointer text-text-3"><I n="x" s={16}/></button></div>
+      <p className="text-sm text-text-2 leading-relaxed mb-1">{t("seeker.apply.optInPromptBody")}</p>
+      <div className="text-xs text-text-3 leading-relaxed mb-3.5 flex flex-col gap-1">
+        <p className="m-0">{t("seeker.apply.optInPromptDisclaimerEn")}</p>
+        <p className="m-0">{t("seeker.apply.optInPromptDisclaimerFr")}</p>
+      </div>
+      <Btn kind="primary" size="sm" icon="check" onClick={()=>{A.setOptInFutureOpportunities(true); setOptInPromptDismissed(true);}}>{t("seeker.apply.optInPromptBtn")}</Btn>
     </Card>}
     {more.length>0&&<><H2 sub={t("seeker.apply.similarJobsSub")}>{t("seeker.apply.similarJobsTitle")}</H2>
       <div className="flex flex-col gap-3">{more.map((j,i)=><JobCard key={j.id} job={j} delay={i*0.05}/>)}</div></>}

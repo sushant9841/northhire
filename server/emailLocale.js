@@ -99,6 +99,8 @@ const NOTIF_STRINGS = {
     interviewScheduledBody: (mode, when) => `${mode === "video" ? "Video call" : "On-site interview"} on ${when}.`,
     interviewCancelledTitle: "Interview cancelled",
     interviewCancelledBody: "An upcoming interview was cancelled.",
+    silverMedalistTitle: "A role you may like just opened up",
+    silverMedalistBody: (jobTitle, employerName) => `${employerName || "An employer"} has a live opening, ${jobTitle}, that matches your skills.`,
   },
   "fr-CA": {
     newApplicationTitle: "Nouvelle candidature",
@@ -111,6 +113,8 @@ const NOTIF_STRINGS = {
     interviewScheduledBody: (mode, when) => `${mode === "video" ? "Appel vidéo" : "Entrevue en personne"} le ${when}.`,
     interviewCancelledTitle: "Entrevue annulée",
     interviewCancelledBody: "Une entrevue à venir a été annulée.",
+    silverMedalistTitle: "Un poste qui pourrait vous intéresser vient de s'ouvrir",
+    silverMedalistBody: (jobTitle, employerName) => `${employerName || "Un employeur"} a un poste ouvert, ${jobTitle}, qui correspond à vos compétences.`,
   },
 };
 

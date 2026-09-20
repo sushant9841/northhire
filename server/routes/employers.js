@@ -59,6 +59,28 @@ employersRouter.put("/candidate-notes/:candidateId", requireAuth, requireRole("e
   res.json({ note: serializeCandidateNote(row) });
 });
 
+/* Priority-4 #6 - the employer-side "Silver medalist matches" card on EmpPipeline. Server-enforced
+   to req.user.employer_id exactly like candidate-notes/candidate-outreach above, so one employer
+   can never see another's matched candidates. Bare ids only (seekerId/jobId) - the client already
+   holds `people`/`jobs` and resolves via A.person()/A.job(), same as reverseMatch's candidates. */
+employersRouter.get("/silver-medalist-matches", requireAuth, requireRole("employer"), (req, res) => {
+  const rows = db.prepare(
+    "SELECT * FROM silver_medalist_matches WHERE employer_id = ? AND dismissed_at IS NULL ORDER BY matched_at DESC"
+  ).all(req.user.employer_id);
+  res.json({
+    matches: rows.map(r => ({
+      id: r.id, jobId: r.job_id, seekerId: r.seeker_id,
+      overlapScore: r.overlap_score, matchedAt: sqlTime(r.matched_at).getTime(),
+    })),
+  });
+});
+employersRouter.patch("/silver-medalist-matches/:id/dismiss", requireAuth, requireRole("employer"), (req, res) => {
+  const row = db.prepare("SELECT * FROM silver_medalist_matches WHERE id = ? AND employer_id = ?").get(req.params.id, req.user.employer_id);
+  if (!row) return res.status(404).json({ error: "Match not found." });
+  db.prepare("UPDATE silver_medalist_matches SET dismissed_at = datetime('now') WHERE id = ?").run(row.id);
+  res.json({ ok: true });
+});
+
 /* Real outreach-history timeline for the talent pool - unifies every actual touch this company's
    team has had with a candidate (invites, messages either direction, the private note) into one
    chronological feed, instead of the talent pool being a one-shot list with no memory of past

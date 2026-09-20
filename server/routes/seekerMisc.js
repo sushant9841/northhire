@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { PDFParse } from "pdf-parse";
 import mammoth from "mammoth";
-import { db, nextId } from "../db.js";
+import { db, nextId, sqlTime } from "../db.js";
 import { requireAuth, requireRole } from "../auth.js";
 import { storeUpload, listUploads, getUpload, deleteUpload } from "../uploads.js";
 import {
@@ -360,6 +360,30 @@ seekerMiscRouter.post("/invited-candidates", requireAuth, requireRole("employer"
   db.prepare("INSERT OR IGNORE INTO invited_candidates (job_id, candidate_id) VALUES (?, ?)").run(jobId, candidateId);
   res.status(201).json({ ok: true });
 });
+/* Priority-4 #6 - the seeker-side "You may also like" feed on the Status page. The batch job
+   (server/lib/silverMedalist.js) already checked opt_in_future_opportunities before creating a
+   row, so this read doesn't re-check it - a seeker who has since opted out simply stops getting
+   NEW rows, but any already-created ones are their own past matches, not a live re-derivation.
+   Returns bare ids only (jobId) - the client already holds the full job list and resolves it via
+   A.job(), same shape as saved-jobs/appliedJobIds elsewhere in this store. */
+seekerMiscRouter.get("/silver-medalist-matches", requireAuth, requireRole("seeker"), (req, res) => {
+  const rows = db.prepare(
+    "SELECT * FROM silver_medalist_matches WHERE seeker_id = ? AND dismissed_at IS NULL ORDER BY matched_at DESC"
+  ).all(req.user.id);
+  res.json({
+    matches: rows.map(r => ({
+      id: r.id, jobId: r.job_id, employerId: r.employer_id,
+      overlapScore: r.overlap_score, matchedAt: sqlTime(r.matched_at).getTime(),
+    })),
+  });
+});
+seekerMiscRouter.patch("/silver-medalist-matches/:id/dismiss", requireAuth, requireRole("seeker"), (req, res) => {
+  const row = db.prepare("SELECT * FROM silver_medalist_matches WHERE id = ? AND seeker_id = ?").get(req.params.id, req.user.id);
+  if (!row) return res.status(404).json({ error: "Match not found." });
+  db.prepare("UPDATE silver_medalist_matches SET dismissed_at = datetime('now') WHERE id = ?").run(row.id);
+  res.json({ ok: true });
+});
+
 seekerMiscRouter.get("/invited-candidates", requireAuth, requireRole("employer"), (req, res) => {
   const rows = db.prepare(
     `SELECT invited_candidates.* FROM invited_candidates

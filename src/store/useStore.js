@@ -871,8 +871,19 @@ export function useStore(){
     try{
       await api.patch("/users/me",{title:d.title,cat:d.cat,city:d.city,prov:d.prov,years:d.years,phone:d.phone,
         skills:d.skills,edu:d.edu,eligible:d.eligible,payMin:d.payMin,payUnit:d.payUnit,types:d.types,modes:d.modes,summary:d.summary,
-        visibility:d.visibility});
+        visibility:d.visibility,optInFutureOpportunities:d.optInFutureOpportunities});
     }catch(err){toast(`Profile saved locally, but couldn't sync to the server: ${err.message}`,"warn");}
+  };
+  /* Priority-4 #6: a standalone opt-in toggle for the two lightweight surfaces (ApplyDone,
+     Profile's Preferences tab) that shouldn't have to push the whole profile-edit form to flip
+     one CASL consent checkbox. Server-enforced like every other consent flag - this PATCH is the
+     only place opt_in_future_opportunities ever changes. */
+  const setOptInFutureOpportunities=async optIn=>{
+    setUser(u=>u?{...u,optInFutureOpportunities:optIn}:u);
+    try{await api.patch("/users/me",{optInFutureOpportunities:optIn});
+      toast(optIn?"You're opted in to future-role matching.":"Turned off future-role matching.","ok");
+      return {ok:true};}
+    catch(err){toast(err.message,"danger"); return {ok:false,msg:err.message};}
     /* Record autofill history for the fields worth remembering across future forms. */
     const items=[];
     if(d.city)items.push({field:"city",value:d.city});
@@ -899,6 +910,28 @@ export function useStore(){
   const loadDiversityAggregate=async()=>{
     try{return await api.get("/employers/me/demographics-aggregate");}
     catch(err){return {error:err.message};}};
+
+  /* Priority-4 #6: silver-medalist matches, read fresh on demand rather than kept in the big
+     always-loaded state blob - both surfaces (Status page's "You may also like", EmpPipeline's
+     "Silver medalist matches" card) are secondary content a user may never scroll to, so this
+     mirrors loadCandidateOutreach/loadJobReports's lazy-load-into-local-state shape rather than
+     joining the eager seed-load path. */
+  const [silverMatches,setSilverMatches]=useState([]);
+  const loadSilverMatches=async()=>{
+    try{
+      const path=user?.role==="employer"?"/employers/silver-medalist-matches":"/seeker/silver-medalist-matches";
+      const {matches}=await api.get(path);
+      setSilverMatches(matches||[]);
+      return matches||[];
+    }catch(err){toast(err.message,"danger"); return [];}
+  };
+  const dismissSilverMatch=async id=>{
+    setSilverMatches(list=>list.filter(m=>m.id!==id));
+    try{
+      const path=user?.role==="employer"?`/employers/silver-medalist-matches/${id}/dismiss`:`/seeker/silver-medalist-matches/${id}/dismiss`;
+      await api.patch(path,{});
+    }catch(err){toast(err.message,"danger");}
+  };
 
   const deleteAccount=()=>{log("account.delete",`Deleted account ${user.name}`,"trash");setUser(null);setCvs([]);_hardNav("home");};
   const exportData=()=>downloadText(`northhire-data-${user.id}.json`,JSON.stringify({profile:user,cvs,applications:myApps,saved:[...saved]},null,2));
@@ -2311,6 +2344,7 @@ export function useStore(){
     stageAutomations,loadStageAutomations,setStageAutomation,
     workflowRules,loadWorkflowRules,saveWorkflowRule,toggleWorkflowRule,deleteWorkflowRule,
     demographics,saveDemographics,loadDiversityAggregate,
+    setOptInFutureOpportunities,silverMatches,loadSilverMatches,dismissSilverMatch,
     editBlog,editTraining,saveBlog,saveTraining,deleteBlog,deleteTraining,toggleBlogStatus,toggleTrainingStatus,
     loadContentRevisions,restoreContentRevision,loadArticleAnalytics,
     enrol,confirmPaidEnrol,advanceTraining,paidTrainings,trainingBadgePrompts,dismissTrainingBadgePrompt,publishTrainingBadge,newCv,importResumeToNewCv,editCv,saveCv,duplicateCv,deleteCv,setDefaultCv,
