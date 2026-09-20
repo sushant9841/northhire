@@ -1181,6 +1181,11 @@ export function useStore(){
     try{await api.patch(`/admin/offers/${id}/revoke`,{});return {ok:true};}
     catch(err){return {ok:false,msg:err.message};}
   };
+  // Platform-wide D&I aggregate (Read-only by design — an aggregation, never an admin-edited
+  // record). Suppression floor is enforced server-side; nothing under 10 respondents ever reaches here.
+  const loadAdminDemographicsAggregate=async()=>{
+    try{return await api.get("/admin/demographics-aggregate");}catch(err){toast(err.message,"danger");return null;}
+  };
   const setAdminScope=async(id,scope)=>{
     try{await api.patch(`/users/${id}/admin-scope`,{scope});return {ok:true};}
     catch(err){return {ok:false,msg:err.message};}
@@ -2365,7 +2370,7 @@ export function useStore(){
     addReview,deleteReview,loadEmployerReviews,loadCandidateContact,candidateNotes,saveCandidateNote,loadScorecards,submitScorecard,
     submitContact,loadContactInbox,resolveContactMessage,listAdmins,setAdminScope,updatePlatformConfig,geocode,
     loadAdminSilverMedalistMatches,deleteAdminSilverMedalistMatch,refreshSilverMedalistMatches,recaptureSnapshot,
-    loadAdminApplications,moderateAdminApplication,loadAdminInterviews,cancelAdminInterview,loadAdminOffers,revokeAdminOffer,
+    loadAdminApplications,moderateAdminApplication,loadAdminInterviews,cancelAdminInterview,loadAdminOffers,revokeAdminOffer,loadAdminDemographicsAggregate,
     saved,following,enrolled,trainingProgress,suspended,suspensionInfo,invitedCandidates,notifications,activity,securitySignals,opsHealth,settings,userSettings,search,setSearch,
     toasts,toast,dismissToast,chatDock,setChatDock,
     jobId,empId,blogId,trainingId,cvId,editId,candidateId,hrEmpId,setHrEmpId,pipelineJob,applyDraft,setApplyDraft,

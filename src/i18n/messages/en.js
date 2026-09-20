@@ -876,6 +876,8 @@ export const en = {
       noSilverMedalistMatches: "No matches yet.", overlapScore: "Overlap {n}", dismissed: "Dismissed",
       silverMedalistRefreshedToast: "Refresh complete — {n} new match(es).", silverMedalistDeletedToast: "Match removed.",
       snapshotRecapturedToast: "Snapshot for {date} re-captured.",
+      demographicsTitle: "Applicant demographics (platform-wide)", demographicsSub: "{n} respondents — every bucket under 10 people is suppressed",
+      totalApplicants: "Total applicants", totalHires: "Total hires", suppressed: "Suppressed (< 10)", noRespondents: "No respondents",
     },
     admins: {
       subtitle: "Every admin account and what section of the console it can reach. Scope changes take effect immediately.",

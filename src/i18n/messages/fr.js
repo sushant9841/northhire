@@ -878,6 +878,8 @@ export const fr = {
       noSilverMedalistMatches: "Aucune correspondance pour l'instant.", overlapScore: "Chevauchement {n}", dismissed: "Ignorée",
       silverMedalistRefreshedToast: "Actualisation terminée — {n} nouvelle(s) correspondance(s).", silverMedalistDeletedToast: "Correspondance retirée.",
       snapshotRecapturedToast: "Instantané du {date} recapturé.",
+      demographicsTitle: "Données démographiques des candidat·e·s (plateforme entière)", demographicsSub: "{n} répondant·e·s — tout groupe de moins de 10 personnes est supprimé",
+      totalApplicants: "Total des candidatures", totalHires: "Total des embauches", suppressed: "Supprimé (< 10)", noRespondents: "Aucun·e répondant·e",
     },
     admins: {
       subtitle: "Chaque compte administrateur et la section de la console qu'il peut atteindre. Les changements de portée prennent effet immédiatement.",

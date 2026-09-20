@@ -541,7 +541,35 @@ export function AdmStats(){
       {byPlan.map(p=><BarRow key={p.name} label={`${p.name} (${p.n})`} value={p.revenue} max={Math.max(1,totalRevenue)} tone={p.name==="Enterprise"?C.violet:p.name==="Growth"?C.brand:C.text3} total={totalRevenue}/>)}
     </Card>
     <_SilverMedalistAdmin A={A} mob={mob} t={t}/>
+    <_DemographicsAdmin A={A} t={t}/>
   </Page>;
+}
+
+/* Read-only by design: an aggregation, never an admin-edited record. Every bucket under the
+   10-respondent suppression floor is already replaced server-side with {suppressed:true}. */
+function _DemographicsAdmin({A,t}){
+  const [agg,setAgg]=useState(undefined);
+  useEffect(()=>{A.loadAdminDemographicsAggregate().then(setAgg);},[]);
+  if(agg===undefined)return null;
+  if(!agg)return null;
+  const fmtBucket=b=>b.suppressed?t("admin.stats.suppressed"):`${b.value}: ${b.count}`;
+  return <Card style={{marginTop:16}}>
+    <H2 sub={t("admin.stats.demographicsSub",{n:agg.respondentCount})}>{t("admin.stats.demographicsTitle")}</H2>
+    <div className="grid grid-cols-2 gap-2.5 mb-3.5">
+      <div className="bg-bg rounded-xl py-2.5 px-3"><div className="text-xs text-text-3">{t("admin.stats.totalApplicants")}</div><div className="text-lg font-bold text-text mt-0.5">{agg.totalApplicants}</div></div>
+      <div className="bg-bg rounded-xl py-2.5 px-3"><div className="text-xs text-text-3">{t("admin.stats.totalHires")}</div><div className="text-lg font-bold text-text mt-0.5">{agg.totalHires}</div></div>
+    </div>
+    <div className="grid grid-cols-2 gap-3">
+      {Object.entries(agg.fields).map(([field,d])=>
+        <div key={field} className="bg-bg rounded-xl py-2.5 px-3">
+          <div className="text-xs font-semibold text-text-2 mb-1.5">{field}</div>
+          <div className="flex flex-col gap-0.5">
+            {d.applicants.length===0?<div className="text-xs text-text-3">{t("admin.stats.noRespondents")}</div>
+              :d.applicants.map(b=><div key={b.value} className="text-xs text-text-2">{fmtBucket(b)}</div>)}
+          </div>
+        </div>)}
+    </div>
+  </Card>;
 }
 
 /* Priority-5 admin CRUD sweep: silver-medalist matches are entirely system-generated (weekly
