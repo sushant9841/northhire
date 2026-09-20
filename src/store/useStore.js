@@ -1186,6 +1186,30 @@ export function useStore(){
   const loadAdminDemographicsAggregate=async()=>{
     try{return await api.get("/admin/demographics-aggregate");}catch(err){toast(err.message,"danger");return null;}
   };
+  /* Cross-org admin CRUD for per-employer / per-company records (`af98eba`). Read is a list;
+     destructive verb is either hard-delete (workflow rules, perf cycles) or soft-archive
+     (benefits plans — server rejects with 409 if active enrollments exist). */
+  const loadAdminWorkflowRules=async()=>{
+    try{const {rules}=await api.get("/admin/workflow-rules");return rules;}catch(err){toast(err.message,"danger");return [];}
+  };
+  const deleteAdminWorkflowRule=async id=>{
+    try{await api.del(`/admin/workflow-rules/${id}`);return {ok:true};}
+    catch(err){return {ok:false,msg:err.message};}
+  };
+  const loadAdminBenefitsPlans=async()=>{
+    try{const {plans}=await api.get("/admin/benefits-plans");return plans;}catch(err){toast(err.message,"danger");return [];}
+  };
+  const archiveAdminBenefitsPlan=async id=>{
+    try{await api.patch(`/admin/benefits-plans/${id}/archive`,{});return {ok:true};}
+    catch(err){return {ok:false,msg:err.message};}
+  };
+  const loadAdminPerfCycles=async()=>{
+    try{const {cycles}=await api.get("/admin/perf-cycles");return cycles;}catch(err){toast(err.message,"danger");return [];}
+  };
+  const deleteAdminPerfCycle=async id=>{
+    try{await api.del(`/admin/perf-cycles/${id}`);return {ok:true};}
+    catch(err){return {ok:false,msg:err.message};}
+  };
   const setAdminScope=async(id,scope)=>{
     try{await api.patch(`/users/${id}/admin-scope`,{scope});return {ok:true};}
     catch(err){return {ok:false,msg:err.message};}
@@ -2371,6 +2395,7 @@ export function useStore(){
     submitContact,loadContactInbox,resolveContactMessage,listAdmins,setAdminScope,updatePlatformConfig,geocode,
     loadAdminSilverMedalistMatches,deleteAdminSilverMedalistMatch,refreshSilverMedalistMatches,recaptureSnapshot,
     loadAdminApplications,moderateAdminApplication,loadAdminInterviews,cancelAdminInterview,loadAdminOffers,revokeAdminOffer,loadAdminDemographicsAggregate,
+    loadAdminWorkflowRules,deleteAdminWorkflowRule,loadAdminBenefitsPlans,archiveAdminBenefitsPlan,loadAdminPerfCycles,deleteAdminPerfCycle,
     saved,following,enrolled,trainingProgress,suspended,suspensionInfo,invitedCandidates,notifications,activity,securitySignals,opsHealth,settings,userSettings,search,setSearch,
     toasts,toast,dismissToast,chatDock,setChatDock,
     jobId,empId,blogId,trainingId,cvId,editId,candidateId,hrEmpId,setHrEmpId,pipelineJob,applyDraft,setApplyDraft,

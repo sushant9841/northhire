@@ -623,13 +623,36 @@ export function AdmModeration(){
   const A=use(); const {t,locale}=useTranslation();
   const [tab,setTab]=useState("applications");
   const [apps,setApps]=useState(null); const [interviews,setInterviews]=useState(null); const [offers,setOffers]=useState(null);
+  const [rules,setRules]=useState(null); const [plans,setPlans]=useState(null); const [cycles,setCycles]=useState(null);
   const [hiding,setHiding]=useState(null); const [reason,setReason]=useState("");
   const loadAll=async()=>{
     if(tab==="applications"&&apps===null)setApps(await A.loadAdminApplications());
     if(tab==="interviews"&&interviews===null)setInterviews(await A.loadAdminInterviews());
     if(tab==="offers"&&offers===null)setOffers(await A.loadAdminOffers());
+    if(tab==="workflowRules"&&rules===null)setRules(await A.loadAdminWorkflowRules());
+    if(tab==="benefitsPlans"&&plans===null)setPlans(await A.loadAdminBenefitsPlans());
+    if(tab==="perfCycles"&&cycles===null)setCycles(await A.loadAdminPerfCycles());
   };
   useEffect(()=>{loadAll();},[tab]);
+  /* Cross-org destructive actions land through the same admin-log path as applications/
+     interviews/offers moderation, so anything an admin nukes shows up in AdmLog with the
+     admin's name. Rows disappear from the local list immediately; a follow-up refetch would
+     also work but this stays snappy. */
+  const deleteWorkflowRule=async(id,name)=>{
+    if(!window.confirm(t("admin.moderation.confirmDeleteRule",{name})))return;
+    const r=await A.deleteAdminWorkflowRule(id);
+    if(r.ok){setRules(l=>l.filter(x=>x.id!==id));A.toast(t("admin.moderation.ruleDeletedToast"),"ok");}else A.toast(r.msg,"danger");
+  };
+  const archiveBenefitsPlan=async(id,name)=>{
+    if(!window.confirm(t("admin.moderation.confirmArchivePlan",{name})))return;
+    const r=await A.archiveAdminBenefitsPlan(id);
+    if(r.ok){setPlans(l=>l.map(x=>x.id===id?{...x,active:false}:x));A.toast(t("admin.moderation.planArchivedToast"),"ok");}else A.toast(r.msg,"danger");
+  };
+  const deletePerfCycle=async(id,name)=>{
+    if(!window.confirm(t("admin.moderation.confirmDeleteCycle",{name})))return;
+    const r=await A.deleteAdminPerfCycle(id);
+    if(r.ok){setCycles(l=>l.filter(x=>x.id!==id));A.toast(t("admin.moderation.cycleDeletedToast"),"ok");}else A.toast(r.msg,"danger");
+  };
   const unhide=async id=>{const r=await A.moderateAdminApplication(id,false);
     if(r.ok){setApps(l=>l.map(a=>a.id===id?r.application:a));A.toast(t("admin.moderation.unhiddenToast"),"ok");}else A.toast(r.msg,"danger");};
   const doHide=async()=>{const id=hiding.id; const r=await A.moderateAdminApplication(id,true,reason.trim());
@@ -641,7 +664,14 @@ export function AdmModeration(){
     if(r.ok){setOffers(l=>l.map(o=>o.id===id?{...o,status:"withdrawn"}:o));A.toast(t("admin.moderation.offerRevokedToast"),"ok");}else A.toast(r.msg,"danger");};
   return <Page wide>
     <H1 sub={t("admin.moderation.subtitle")}>{t("admin.moderation.title")}</H1>
-    <Tabs items={[{k:"applications",label:t("admin.moderation.tabApplications")},{k:"interviews",label:t("admin.moderation.tabInterviews")},{k:"offers",label:t("admin.moderation.tabOffers")}]}
+    <Tabs items={[
+        {k:"applications",label:t("admin.moderation.tabApplications")},
+        {k:"interviews",label:t("admin.moderation.tabInterviews")},
+        {k:"offers",label:t("admin.moderation.tabOffers")},
+        {k:"workflowRules",label:t("admin.moderation.tabWorkflowRules")},
+        {k:"benefitsPlans",label:t("admin.moderation.tabBenefitsPlans")},
+        {k:"perfCycles",label:t("admin.moderation.tabPerfCycles")},
+      ]}
       value={tab} onChange={setTab} style={{marginBottom:18}}/>
     {tab==="applications"&&<Card pad={0} style={{overflow:"hidden"}}>
       {apps===null?<div className="text-sm text-text-3 py-5 text-center">{t("admin.stats.loading")}</div>
@@ -678,6 +708,42 @@ export function AdmModeration(){
               <div className="text-xs text-text-3 mt-0.5">{formatDateTime(o.createdAt,locale)}</div></div>
             <Tag tone={o.status==="accepted"?"ok":o.status==="withdrawn"?"neutral":"brand"} sm>{o.status}</Tag>
             {o.status==="sent"&&<Btn kind="dangerSoft" size="xs" onClick={()=>revokeOffer(o.id)}>{t("admin.moderation.revoke")}</Btn>}
+          </div>)}
+    </Card>}
+    {tab==="workflowRules"&&<Card pad={0} style={{overflow:"hidden"}}>
+      {rules===null?<div className="text-sm text-text-3 py-5 text-center">{t("admin.stats.loading")}</div>
+        :rules.length===0?<Empty icon="search" title={t("admin.moderation.noWorkflowRules")}/>
+        :rules.map((r,i)=>
+          <div key={r.id} className={`flex items-center gap-3 py-3 px-5 flex-wrap ${i<rules.length-1?"border-b border-line-soft":""}`}>
+            <div className="grow shrink basis-60 min-w-0">
+              <div className="text-sm font-semibold text-text">{r.name}</div>
+              <div className="text-xs text-text-3 mt-0.5">{r.employerName||r.employerId} · {formatDateTime(r.updatedAt,locale)}</div></div>
+            <Tag tone={r.enabled?"ok":"neutral"} sm>{r.enabled?t("admin.moderation.enabled"):t("admin.moderation.disabled")}</Tag>
+            <Btn kind="dangerSoft" size="xs" onClick={()=>deleteWorkflowRule(r.id,r.name)}>{t("common.delete")}</Btn>
+          </div>)}
+    </Card>}
+    {tab==="benefitsPlans"&&<Card pad={0} style={{overflow:"hidden"}}>
+      {plans===null?<div className="text-sm text-text-3 py-5 text-center">{t("admin.stats.loading")}</div>
+        :plans.length===0?<Empty icon="search" title={t("admin.moderation.noBenefitsPlans")}/>
+        :plans.map((p,i)=>
+          <div key={p.id} className={`flex items-center gap-3 py-3 px-5 flex-wrap ${i<plans.length-1?"border-b border-line-soft":""} ${!p.active?"bg-red-bg":""}`}>
+            <div className="grow shrink basis-60 min-w-0">
+              <div className="text-sm font-semibold text-text">{p.name}</div>
+              <div className="text-xs text-text-3 mt-0.5">{p.employerName||p.employerId} · {t("admin.moderation.enrollmentsCount",{n:p.enrolledCount})} · {formatDateTime(p.createdAt,locale)}</div></div>
+            <Tag tone={p.active?"ok":"neutral"} sm>{p.active?t("admin.moderation.active"):t("admin.moderation.archived")}</Tag>
+            {p.active&&<Btn kind="dangerSoft" size="xs" onClick={()=>archiveBenefitsPlan(p.id,p.name)}>{t("admin.moderation.archive")}</Btn>}
+          </div>)}
+    </Card>}
+    {tab==="perfCycles"&&<Card pad={0} style={{overflow:"hidden"}}>
+      {cycles===null?<div className="text-sm text-text-3 py-5 text-center">{t("admin.stats.loading")}</div>
+        :cycles.length===0?<Empty icon="search" title={t("admin.moderation.noPerfCycles")}/>
+        :cycles.map((c,i)=>
+          <div key={c.id} className={`flex items-center gap-3 py-3 px-5 flex-wrap ${i<cycles.length-1?"border-b border-line-soft":""}`}>
+            <div className="grow shrink basis-60 min-w-0">
+              <div className="text-sm font-semibold text-text">{c.name}</div>
+              <div className="text-xs text-text-3 mt-0.5">{c.companyName||c.companyId} · {c.periodStart} → {c.periodEnd} · {t("admin.moderation.reviewsCount",{n:c.reviewCount})}</div></div>
+            <Tag tone={c.status==="active"?"brand":"neutral"} sm>{c.status||"—"}</Tag>
+            <Btn kind="dangerSoft" size="xs" onClick={()=>deletePerfCycle(c.id,c.name)}>{t("common.delete")}</Btn>
           </div>)}
     </Card>}
     {hiding&&<Modal onClose={()=>setHiding(null)} title={t("admin.moderation.hideTitle")}>
