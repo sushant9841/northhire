@@ -1237,6 +1237,7 @@ export const fr = {
       companyName: "Nom de l'entreprise", cityLabel: "Ville", provinceLabel: "Province", foundedLabel: "Fondée",
       websiteLabel: "Site Web", craBusinessNumber: "Numéro d'entreprise ARC", craHint: "9 chiffres — vérifiés lors de la vérification administrateur.",
       aboutCompanyLabel: "À propos de l'entreprise", aboutCompanyHint: "Deux ou trois phrases affichées sur votre page publique et sur chaque annonce.",
+      correspondenceLanguage: "Langue de correspondance", correspondenceLanguageHint: "Langue utilisée pour les courriels envoyés à des contacts sans compte NorthHire, comme le contact de facturation d'un client de dotation sur un courriel de facture.",
       discard: "Ignorer", saveChanges: "Enregistrer les modifications", saved: "Enregistré",
       discardTitle: "Ignorer les modifications non enregistrées ?", discardBody: "Ceci rétablira chaque champ de cette page à ce qui est actuellement enregistré.",
     },

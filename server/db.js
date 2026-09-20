@@ -1155,6 +1155,12 @@ for (const stmt of [
    )`,
   "CREATE INDEX IF NOT EXISTS idx_silver_medalist_seeker ON silver_medalist_matches(seeker_id)",
   "CREATE INDEX IF NOT EXISTS idx_silver_medalist_employer ON silver_medalist_matches(employer_id)",
+  // Priority-5 Bill 96 tail: the staffing invoice-ready email goes to the client employer's
+  // billing contact, who has no NorthHire user account of their own to carry a locale - the
+  // client *employer* record is the right place to hang that preference. Same 'en-CA' default and
+  // fr-CA-for-Quebec-signup convention as users.locale. Editable via PATCH /employers/:id/locale
+  // on the employer's own settings page.
+  "ALTER TABLE employers ADD COLUMN locale TEXT DEFAULT 'en-CA'",
 ]) {
   try { db.exec(stmt); } catch (e) { if (!/duplicate column/i.test(e.message)) console.error("migration:", stmt, e.message); }
 }

@@ -9,7 +9,7 @@ import { calcStaffingEconomics } from "../../src/helpers/staffingEconomics.js";
 import { getConfig } from "../platformConfig.js";
 import { buildAllT4s, buildRoe, payrollYears } from "../../src/helpers/taxSlips.js";
 import { sendAndLogMail } from "../mail.js";
-import { localeForAgencyStaffEmail, emailStrings } from "../emailLocale.js";
+import { localeForAgencyStaffEmail, emailStrings, staffingEmailStringsForEmployer } from "../emailLocale.js";
 import {
   serializeWorker, serializeWorkerForClient, serializeStaffingClient, serializeStaffingBranch, serializeJobOrder, serializeAssignment, serializeSubmittal,
   serializeStaffingTimesheet, serializeStaffingPayrun, serializeStaffingInvoice, serializePlacement,
@@ -649,10 +649,13 @@ staffingRouter.post("/invoices/generate", requireAgencyAuth, async (req, res) =>
     ).run(id, nextNumber(), cid, weekStart, due.toISOString().slice(0, 10), JSON.stringify(d.lines), subtotal, hst, total, client?.po_number || "—");
     const invoice = serializeStaffingInvoice(db.prepare("SELECT * FROM staffing_invoices WHERE id = ?").get(id));
     // Only sent when the client actually has a billing contact on file, since sending to no one
-    // isn't "emailed" either.
+    // isn't "emailed" either. That contact has no NorthHire account of their own, so the language
+    // comes from the client *employer's* own locale (employers.locale, Bill 96 tail) rather than
+    // a user/agency-staff lookup.
     if (client?.default_supervisor_email) {
-      await sendAndLogMail(client.default_supervisor_email, `Invoice ${invoice.number} from your staffing agency`,
-        `Invoice ${invoice.number} for the week of ${weekStart} is ready: $${total.toFixed(2)} total, due ${invoice.due}.`);
+      const ses = staffingEmailStringsForEmployer(client.employer_id);
+      await sendAndLogMail(client.default_supervisor_email, ses.invoiceReadySubject(invoice.number),
+        ses.invoiceReadyBody(invoice.number, weekStart, total.toFixed(2), invoice.due));
     }
     created.push(invoice);
   }

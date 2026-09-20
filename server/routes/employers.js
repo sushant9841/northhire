@@ -470,6 +470,9 @@ employersRouter.patch("/:id", requireAuth, (req, res) => {
   const isAdmin = req.user.role === "admin";
   const isOwner = req.user.role === "employer" && req.user.employer_id === req.params.id;
   if (!isAdmin && !isOwner) return res.status(403).json({ error: "Not your company." });
+  if (profileFields.locale !== undefined && profileFields.locale !== "en-CA" && profileFields.locale !== "fr-CA") {
+    return res.status(400).json({ error: "locale must be 'en-CA' or 'fr-CA'." });
+  }
 
   if (verified !== undefined) {
     if (!isAdmin) return res.status(403).json({ error: "Only an administrator can verify a company." });
@@ -492,7 +495,9 @@ employersRouter.patch("/:id", requireAuth, (req, res) => {
     if (isOwner && !isAdmin && targetPrice > 0) return res.status(402).json({ error: "Upgrading to a paid plan requires checkout." });
     db.prepare("UPDATE employers SET plan = ? WHERE id = ?").run(plan, req.params.id);
   }
-  const fieldMap = { name: "name", industry: "industry", city: "city", prov: "prov", size: "size", about: "about", site: "site", businessNumber: "business_number", founded: "founded", mark: "mark", a: "a", b: "b" };
+  // locale: Bill 96 tail - lets an employer set the language used for mail sent to contacts who
+  // have no NorthHire account of their own (e.g. their staffing client's billing contact).
+  const fieldMap = { name: "name", industry: "industry", city: "city", prov: "prov", size: "size", about: "about", site: "site", businessNumber: "business_number", founded: "founded", mark: "mark", a: "a", b: "b", locale: "locale" };
   const BRAND_FIELDS = ["mark", "a", "b"];
   let setCols = Object.keys(profileFields).filter(k => fieldMap[k]);
   if (setCols.length) {

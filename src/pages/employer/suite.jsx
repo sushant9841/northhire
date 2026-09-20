@@ -2015,6 +2015,11 @@ export function EmpCompany(){
         <Field label={t("employer.company.foundedLabel")}><Input type="number" value={d.founded} onChange={e=>set("founded",Number(e.target.value)||2000)}/></Field>
         <Field label={t("employer.company.websiteLabel")} style={{gridColumn:mob?"auto":"span 2"}}><Input icon="globe" value={d.site} onChange={e=>set("site",e.target.value)}/></Field>
         <Field label={t("employer.company.craBusinessNumber")} hint={t("employer.company.craHint")}><Input icon="file" value={d.businessNumber||""} onChange={e=>set("businessNumber",e.target.value.replace(/\s/g,""))}/></Field>
+        <Field label={t("employer.company.correspondenceLanguage")} hint={t("employer.company.correspondenceLanguageHint")}>
+          <Sel value={d.locale||"en-CA"} onChange={e=>set("locale",e.target.value)}>
+            <option value="en-CA">{t("account.languageEnglish")}</option>
+            <option value="fr-CA">{t("account.languageFrench")}</option>
+          </Sel></Field>
         <Field label={t("employer.company.aboutCompanyLabel")} style={{gridColumn:mob?"auto":"span 2"}} hint={t("employer.company.aboutCompanyHint")}>
           <Area rows={5} value={d.about} onChange={e=>set("about",e.target.value)}/></Field></div>
       <div className="flex gap-2.5 justify-end mt-6 pt-5 border-t border-line-soft">

@@ -26,6 +26,15 @@ export function localeForAgencyStaffEmail(email) {
   return row?.locale === "fr-CA" ? "fr-CA" : "en-CA";
 }
 
+// Priority-5 Bill 96 tail: the staffing invoice-ready email goes to the client employer's billing
+// contact, who has no NorthHire user account to carry a locale of their own - the client
+// *employer* record (employers.locale) is the right place to hang that preference.
+export function localeForEmployerId(employerId) {
+  if (!employerId) return "en-CA";
+  const row = db.prepare("SELECT locale FROM employers WHERE id = ?").get(employerId);
+  return row?.locale === "fr-CA" ? "fr-CA" : "en-CA";
+}
+
 // HR Suite employees are yet another account table separate from `users` and agency_staff -
 // their own locale preference (set via PATCH /hr/employees/:id/locale) is what every HR Suite
 // mailer call site (badge award, leave decision, task assignment, training assignment, payroll
@@ -247,4 +256,27 @@ export function hrEmailStrings(locale) {
 }
 export function hrEmailStringsForEmployee(employeeId) {
   return hrEmailStrings(localeForHrEmployeeId(employeeId));
+}
+
+/* Priority-5 Bill 96 tail: the staffing-agency invoice-ready email to a client's billing contact
+   was hardcoded English (flagged after Priority-5 item 3). That recipient has no NorthHire
+   account, so it's localized from the client *employer's* own locale (employers.locale) rather
+   than a user/agency_staff/hr_employees lookup. */
+const STAFFING_EMAIL_STRINGS = {
+  "en-CA": {
+    invoiceReadySubject: number => `Invoice ${number} from your staffing agency`,
+    invoiceReadyBody: (number, weekStart, total, due) =>
+      `Invoice ${number} for the week of ${weekStart} is ready: $${total} total, due ${due}.`,
+  },
+  "fr-CA": {
+    invoiceReadySubject: number => `Facture ${number} de votre agence de dotation`,
+    invoiceReadyBody: (number, weekStart, total, due) =>
+      `La facture ${number} pour la semaine du ${weekStart} est prête : ${total} $ au total, échéance le ${due}.`,
+  },
+};
+export function staffingEmailStrings(locale) {
+  return STAFFING_EMAIL_STRINGS[locale] || STAFFING_EMAIL_STRINGS["en-CA"];
+}
+export function staffingEmailStringsForEmployer(employerId) {
+  return staffingEmailStrings(localeForEmployerId(employerId));
 }

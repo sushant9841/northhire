@@ -1235,6 +1235,7 @@ export const en = {
       companyName: "Company name", cityLabel: "City", provinceLabel: "Province", foundedLabel: "Founded",
       websiteLabel: "Website", craBusinessNumber: "CRA business number", craHint: "9 digits — checked during admin verification.",
       aboutCompanyLabel: "About the company", aboutCompanyHint: "Two or three sentences shown on your public page and on every listing.",
+      correspondenceLanguage: "Correspondence language", correspondenceLanguageHint: "Language used for mail sent to contacts without a NorthHire account of their own, such as a staffing client's billing contact on an invoice email.",
       discard: "Discard", saveChanges: "Save changes", saved: "Saved",
       discardTitle: "Discard unsaved changes?", discardBody: "This will revert every field on this page back to what's currently saved.",
     },

@@ -120,6 +120,10 @@ export function serializeEmployer(row) {
     // "here's what you unlocked" tour for. Compared against the CURRENT plan client-side, not
     // trusted as a boolean - a later upgrade (or a downgrade-then-upgrade) still shows it once.
     welcomeSeenPlan: row.welcome_seen_plan || null,
+    // Bill 96 tail: this employer's preferred language for mail sent to contacts who have no
+    // NorthHire account of their own (e.g. a staffing client's billing contact on an invoice-ready
+    // email). Editable by the employer on their own settings page; defaults to en-CA.
+    locale: row.locale === "fr-CA" ? "fr-CA" : "en-CA",
   };
 }
 
