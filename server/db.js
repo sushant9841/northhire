@@ -1063,6 +1063,22 @@ for (const stmt of [
      PRIMARY KEY (date, metric, dimension)
    )`,
   "CREATE INDEX IF NOT EXISTS idx_daily_snapshots_lookup ON daily_snapshots(metric, dimension, date)",
+  /* Priority-4 #7: integrations marketplace shell. Owner-employer install/disconnect state per
+     external service. OAuth flows come later per service; this table just persists the fact of
+     the install + any per-integration config (webhook URL, api key ref, etc.). owner_scope +
+     owner_id together = polymorphic owner (employer / hr_company / staffing_agency). */
+  `CREATE TABLE IF NOT EXISTS integrations (
+     id TEXT PRIMARY KEY,
+     owner_scope TEXT NOT NULL,
+     owner_id TEXT NOT NULL,
+     provider TEXT NOT NULL,
+     status TEXT NOT NULL DEFAULT 'not-connected',
+     config_json TEXT NOT NULL DEFAULT '{}',
+     installed_at TEXT,
+     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+     UNIQUE(owner_scope, owner_id, provider)
+   )`,
+  "CREATE INDEX IF NOT EXISTS idx_integrations_owner ON integrations(owner_scope, owner_id)",
 ]) {
   try { db.exec(stmt); } catch (e) { if (!/duplicate column/i.test(e.message)) console.error("migration:", stmt, e.message); }
 }

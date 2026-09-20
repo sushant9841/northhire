@@ -1279,6 +1279,16 @@ export const en = {
       copyShareLink: "Copy link", teamActivity: "Team activity", noActivity: "Nothing yet. Invites, member removals and acceptances show up here.",
       removeTitle: "Remove {name}?", removeBody: "They'll immediately lose access to this employer account. This can't be undone from here.",
     },
+    integrations: {
+      title: "Integrations",
+      sub: "Connect NorthHire to the tools your team already uses. Deeper OAuth flows for each service are rolling out per provider.",
+      loadError: "Couldn't load your integrations",
+      connectBtn: "Connect",
+      disconnectBtn: "Disconnect",
+      statusConnected: "Connected",
+      statusNotConnected: "Not connected",
+      cat: { sso: "Single sign-on", messaging: "Team messaging", webhooks: "Webhooks and automation", finance: "Finance and accounting", payroll: "Payroll export" },
+    },
     billing: {
       billingTitle: "Billing and plan", currentPlan: "Current plan", planFeatures: "Features", upgrade: "Upgrade",
       invoiceHistory: "Invoice history", paymentMethod: "Payment method", updatePayment: "Update payment method",

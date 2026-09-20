@@ -1281,6 +1281,16 @@ export const fr = {
       copyShareLink: "Copier le lien", teamActivity: "Activité de l'équipe", noActivity: "Rien pour l'instant. Les invitations, les retraits de membres et les acceptations s'affichent ici.",
       removeTitle: "Retirer {name} ?", removeBody: "Iel perdra immédiatement l'accès à ce compte d'employeur. Ceci ne peut pas être annulé d'ici.",
     },
+    integrations: {
+      title: "Intégrations",
+      sub: "Connectez NorthHire aux outils que votre équipe utilise déjà. Les flux OAuth complets pour chaque service sont déployés par fournisseur.",
+      loadError: "Impossible de charger vos intégrations",
+      connectBtn: "Connecter",
+      disconnectBtn: "Déconnecter",
+      statusConnected: "Connecté",
+      statusNotConnected: "Non connecté",
+      cat: { sso: "Authentification unique", messaging: "Messagerie d'équipe", webhooks: "Webhooks et automatisation", finance: "Finances et comptabilité", payroll: "Exportation de paie" },
+    },
     billing: {
       billingTitle: "Facturation et forfait", currentPlan: "Forfait actuel", planFeatures: "Fonctionnalités", upgrade: "Passer à la version supérieure",
       invoiceHistory: "Historique des factures", paymentMethod: "Mode de paiement", updatePayment: "Mettre à jour le mode de paiement",
