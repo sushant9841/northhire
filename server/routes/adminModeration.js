@@ -106,3 +106,62 @@ adminModerationRouter.get("/demographics-aggregate", requireAuth, requireAdminSc
     : 0;
   res.json({ totalApplicants: applicantIds.length, totalHires: hireIds.length, respondentCount, fields });
 });
+
+/* ─── Workflow rules (per-employer, admin cross-org read + delete stale) ─── */
+adminModerationRouter.get("/workflow-rules", requireAuth, requireAdminScope("support", "moderator"), (req, res) => {
+  const rows = db.prepare(
+    `SELECT wr.*, e.name AS employer_name FROM workflow_rules wr
+     LEFT JOIN employers e ON e.id = wr.employer_id
+     ORDER BY wr.updated_at DESC LIMIT 500`
+  ).all();
+  res.json({ rules: rows.map(r => ({ id: r.id, name: r.name, employerId: r.employer_id, employerName: r.employer_name, enabled: !!r.enabled, updatedAt: r.updated_at })) });
+});
+adminModerationRouter.delete("/workflow-rules/:id", requireAuth, requireAdminScope("moderator"), (req, res) => {
+  const row = db.prepare("SELECT * FROM workflow_rules WHERE id = ?").get(req.params.id);
+  if (!row) return res.status(404).json({ error: "Rule not found." });
+  db.prepare("DELETE FROM workflow_rules WHERE id = ?").run(req.params.id);
+  logAdminAction(req, "admin.workflowRuleDelete", `Deleted workflow rule ${row.name} (employer ${row.employer_id})`);
+  res.json({ ok: true });
+});
+
+/* ─── Benefits plans (per-employer, admin cross-org read + soft-archive via `active` flag) ─── */
+adminModerationRouter.get("/benefits-plans", requireAuth, requireAdminScope("support", "moderator"), (req, res) => {
+  const rows = db.prepare(
+    `SELECT bp.*, e.name AS employer_name,
+       (SELECT COUNT(*) FROM benefits_enrollments be WHERE be.plan_id = bp.id AND be.ended_at IS NULL) AS enrolled_count
+     FROM benefits_plans bp
+     LEFT JOIN employers e ON e.id = bp.employer_id
+     ORDER BY bp.created_at DESC LIMIT 500`
+  ).all();
+  res.json({ plans: rows.map(r => ({ id: r.id, name: r.name, employerId: r.employer_id, employerName: r.employer_name, active: !!r.active, enrolledCount: r.enrolled_count, createdAt: r.created_at })) });
+});
+adminModerationRouter.patch("/benefits-plans/:id/archive", requireAuth, requireAdminScope("moderator"), (req, res) => {
+  const row = db.prepare("SELECT * FROM benefits_plans WHERE id = ?").get(req.params.id);
+  if (!row) return res.status(404).json({ error: "Plan not found." });
+  const enrolled = db.prepare("SELECT COUNT(*) AS n FROM benefits_enrollments WHERE plan_id = ? AND ended_at IS NULL").get(req.params.id).n;
+  if (enrolled > 0) return res.status(409).json({ error: `Plan still has ${enrolled} active enrollment(s). End enrollments first.` });
+  db.prepare("UPDATE benefits_plans SET active = 0 WHERE id = ?").run(req.params.id);
+  logAdminAction(req, "admin.benefitsPlanArchive", `Archived benefits plan ${row.name} (employer ${row.employer_id})`);
+  res.json({ ok: true });
+});
+
+/* ─── Perf review cycles (per-company, admin cross-org read + delete stale) ─── */
+adminModerationRouter.get("/perf-cycles", requireAuth, requireAdminScope("support", "moderator"), (req, res) => {
+  const rows = db.prepare(
+    `SELECT pc.*, e.name AS company_name,
+       (SELECT COUNT(*) FROM perf_reviews pr WHERE pr.cycle_id = pc.id) AS review_count
+     FROM perf_cycles pc
+     LEFT JOIN employers e ON e.id = pc.company_id
+     ORDER BY pc.period_end DESC LIMIT 500`
+  ).all();
+  res.json({ cycles: rows.map(r => ({ id: r.id, name: r.name, companyId: r.company_id, companyName: r.company_name, status: r.status, periodStart: r.period_start, periodEnd: r.period_end, reviewCount: r.review_count })) });
+});
+adminModerationRouter.delete("/perf-cycles/:id", requireAuth, requireAdminScope("moderator"), (req, res) => {
+  const row = db.prepare("SELECT * FROM perf_cycles WHERE id = ?").get(req.params.id);
+  if (!row) return res.status(404).json({ error: "Cycle not found." });
+  /* Cascade the reviews explicitly (SQLite ON DELETE CASCADE wasn't declared on this pair). */
+  db.prepare("DELETE FROM perf_reviews WHERE cycle_id = ?").run(req.params.id);
+  db.prepare("DELETE FROM perf_cycles WHERE id = ?").run(req.params.id);
+  logAdminAction(req, "admin.perfCycleDelete", `Deleted perf cycle ${row.name} (company ${row.company_id})`);
+  res.json({ ok: true });
+});
