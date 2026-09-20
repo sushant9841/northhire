@@ -623,11 +623,28 @@ function ConfigCard({title,desc,dirty,saving,error,onSave,children}){
     {error&&<Banner tone="danger" icon="alert" style={{marginTop:10}}>{error}</Banner>}
   </Card>;
 }
+/* Zero-value default for a freshly-created tier - an admin fills in real numbers before saving,
+   but the object needs every key PlansEditor's FIELDS loop reads or it throws on first render. */
+const NEW_PLAN_DEFAULTS={price:0,jobs:0,seats:1,featured:0,messagesPerMonth:0,messages:"limited",analytics:"basic",
+  interviews:false,talentPool:false,csvImport:false,branded:false,articles:false,trainings:false,
+  hrSuite:false,api:false,sso:false,manager:false,customStages:false,bulkActions:false};
 function PlansEditor({value,onSave}){
   const A=use(); const {t}=useTranslation();
   const [plans,setPlans]=useState(value);
   const [saving,setSaving]=useState(false); const [error,setError]=useState("");
+  const [adding,setAdding]=useState(false); const [newName,setNewName]=useState("");
+  const [removing,setRemoving]=useState(null);
   const dirty=JSON.stringify(plans)!==JSON.stringify(value);
+  const addPlan=()=>{
+    const name=newName.trim();
+    if(!name||plans[name])return;
+    setPlans(p=>({...p,[name]:{...NEW_PLAN_DEFAULTS}}));
+    setNewName(""); setAdding(false);
+  };
+  const removePlan=name=>{
+    setPlans(p=>{const next={...p}; delete next[name]; return next;});
+    setRemoving(null);
+  };
   const FIELDS=[
     ["price",t("admin.config.fieldPrice"),"number"],["jobs",t("admin.config.fieldJobs"),"limit"],["seats",t("admin.config.fieldSeats"),"limit"],
     ["featured",t("admin.config.fieldFeatured"),"limit"],["messagesPerMonth",t("admin.config.fieldMessagesPerMonth"),"limit"],
@@ -644,7 +661,10 @@ function PlansEditor({value,onSave}){
   return <ConfigCard title={t("admin.config.plansTitle")} desc={t("admin.config.plansDesc")} dirty={dirty} saving={saving} error={error} onSave={save}>
     <div className="grid gap-4" style={{gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))"}}>
       {Object.keys(plans).map(planName=><div key={planName} className="border border-line rounded-xl p-3.5">
-        <div className="text-sm font-bold text-text mb-2.5">{planName}</div>
+        <div className="flex justify-between items-center gap-2 mb-2.5">
+          <div className="text-sm font-bold text-text">{planName}</div>
+          <Btn kind="ghost" size="xs" icon="trash" aria-label={t("admin.config.deletePlanBtn")} onClick={()=>setRemoving(planName)}/>
+        </div>
         <div className="flex flex-col gap-2.5">
           {FIELDS.map(([key,label,kind])=>{const v=plans[planName][key];
             if(kind==="bool")return <div key={key} className="flex justify-between items-center gap-2">
@@ -663,7 +683,23 @@ function PlansEditor({value,onSave}){
           })}
         </div>
       </div>)}
+      <div className="border border-dashed border-line rounded-xl p-3.5 flex flex-col justify-center items-center gap-2">
+        {adding
+          ? <div className="flex flex-col gap-2 w-full">
+              <Input autoFocus placeholder={t("admin.config.addPlanNamePlaceholder")} value={newName} onChange={e=>setNewName(e.target.value)}
+                onKeyDown={e=>{if(e.key==="Enter")addPlan();}} style={{padding:"6px 10px",fontSize:13}}/>
+              <div className="flex gap-2">
+                <Btn kind="primary" size="xs" disabled={!newName.trim()||!!plans[newName.trim()]} onClick={addPlan}>{t("admin.config.addPlanBtn")}</Btn>
+                <Btn kind="ghost" size="xs" onClick={()=>{setAdding(false);setNewName("");}}>{t("admin.config.cancel")}</Btn>
+              </div>
+            </div>
+          : <Btn kind="outline" size="sm" icon="plus" onClick={()=>setAdding(true)}>{t("admin.config.addPlanBtn")}</Btn>}
+      </div>
     </div>
+    <ConfirmDialog open={!!removing} onClose={()=>setRemoving(null)} confirmLabel={t("admin.config.deletePlanBtn")} danger
+      title={t("admin.config.deletePlanConfirmTitle",{name:removing})} onConfirm={()=>removePlan(removing)}>
+      {t("admin.config.deletePlanConfirmBody",{name:removing})}
+    </ConfirmDialog>
   </ConfigCard>;
 }
 function StaffingAgencyEditor({value,onSave}){

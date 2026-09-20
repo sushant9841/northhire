@@ -26,6 +26,15 @@ function serializeSettings(row) {
 platformRouter.get("/config", (req, res) => { res.json(getAllConfig()); });
 platformRouter.patch("/config/:key", requireAuth, requireAdminScope("finance"), (req, res) => {
   if (!CONFIG_KEYS.includes(req.params.key)) return res.status(400).json({ error: "Unknown config key." });
+  // Priority-5 item 1: PlansEditor now lets an admin delete a plan tier outright - block deleting
+  // one that's still assigned to a live employer, so their account doesn't end up pointing at a
+  // plan key that no longer exists (A.PLANS[plan] going undefined breaks billing/limit math
+  // across the employer console rather than failing loudly here).
+  if (req.params.key === "plans" && req.body?.value && typeof req.body.value === "object") {
+    const inUse = db.prepare("SELECT DISTINCT plan FROM employers WHERE plan IS NOT NULL").all().map(r => r.plan);
+    const missing = inUse.filter(p => !(p in req.body.value));
+    if (missing.length) return res.status(409).json({ error: `Can't remove ${missing.join(", ")} - still assigned to at least one employer.` });
+  }
   const updated = setConfig(req.params.key, req.body?.value, `${req.user.name} (${req.user.role})`);
   db.prepare("INSERT INTO activity_log (id, action, text, icon, actor) VALUES (?, 'config.change', ?, 'gear', ?)")
     .run(nextId("l", "activity_log"), `Updated ${req.params.key} config`, `${req.user.name} (${req.user.role})`);
