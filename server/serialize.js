@@ -257,6 +257,7 @@ export function serializeHrEmployee(row) {
     visibility: JSON.parse(rest.visibility_json || "{}"),
     joinedDate: rest.hired,
     notes: rest.notes || "",
+    locale: rest.locale === "fr-CA" ? "fr-CA" : "en-CA",
     sync: (() => { try { return JSON.parse(rest.sync_json || "{}"); } catch { return {}; } })(),
   };
 }

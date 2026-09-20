@@ -14,7 +14,7 @@ import {
 } from "../serialize.js";
 import { DEFAULT_PLAN_CONFIG, parsePlanConfig, isOpenEnrollmentActive, hasQualifyingLifeEvent, nextOpenEnrollmentDate } from "../lib/benefits.js";
 import { pushNotification } from "../lib/notify.js";
-import { notifStringsForUser } from "../emailLocale.js";
+import { notifStringsForUser, hrEmailStringsForEmployee } from "../emailLocale.js";
 
 export const hrRouter = Router();
 
@@ -309,6 +309,18 @@ hrRouter.patch("/employees/:id/visibility", requireHrAuth, (req, res) => {
   db.prepare("UPDATE hr_employees SET visibility_json = ? WHERE id = ?").run(JSON.stringify(visibility), req.params.id);
   res.json({ employee: maskHrEmployeeForViewer(serializeHrEmployee(db.prepare("SELECT * FROM hr_employees WHERE id = ?").get(req.params.id)), req.hrEmployee) });
 });
+// Priority-5 item 3 (Bill 96 tail): lets an employee pick their own email/notification language,
+// same self-or-privileged ownership rule as the visibility endpoint above. Every HR Suite mailer
+// call site (badge award, leave decision, task assignment, training assignment, payroll run)
+// reads this via localeForHrEmployee in emailLocale.js.
+hrRouter.patch("/employees/:id/locale", requireHrAuth, (req, res) => {
+  if (req.params.id !== req.hrEmployee.id && !isPriv(req.hrEmployee)) return res.status(403).json({ error: "You can only change your own language preference." });
+  const locale = req.body?.locale === "fr-CA" ? "fr-CA" : "en-CA";
+  const row = db.prepare("SELECT id FROM hr_employees WHERE id = ? AND company_id = ?").get(req.params.id, req.hrEmployee.company_id);
+  if (!row) return res.status(404).json({ error: "Employee not found." });
+  db.prepare("UPDATE hr_employees SET locale = ? WHERE id = ?").run(locale, req.params.id);
+  res.json({ employee: serializeHrEmployee(db.prepare("SELECT * FROM hr_employees WHERE id = ?").get(req.params.id)) });
+});
 hrRouter.delete("/employees/:id", requireHrAuth, requireHrPriv, (req, res) => {
   const row = db.prepare("SELECT * FROM hr_employees WHERE id = ? AND company_id = ?").get(req.params.id, req.hrEmployee.company_id);
   if (!row) return res.status(404).json({ error: "Employee not found." });
@@ -350,7 +362,10 @@ hrRouter.patch("/employees/:id/badges", requireHrAuth, requireHrPriv, async (req
   if (!remove) badges.push({ name: badge, awardedAt: new Date().toISOString() });
   db.prepare("UPDATE hr_employees SET badges_json = ? WHERE id = ?").run(JSON.stringify(badges), req.params.id);
   logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, remove ? "badge_removed" : "badge_awarded", `${remove ? "Removed" : "Awarded"} "${badge}" ${remove ? "from" : "to"} ${row.name}`, row.id);
-  if (!remove && !row.erased) await sendAndLogMail(row.email, `You earned a badge: ${badge}`, `${req.hrEmployee.name} awarded you the "${badge}" badge. Check the badge wall in HR Suite to see it.`);
+  if (!remove && !row.erased) {
+    const hs = hrEmailStringsForEmployee(row.id);
+    await sendAndLogMail(row.email, hs.badgeAwardedSubject(badge), hs.badgeAwardedBody(req.hrEmployee.name, badge));
+  }
   // H1: a badge earned in HR Suite (recognition, or completing a training - HR-03) publishes
   // onto the employee's public NorthHire seeker profile automatically once they've opted in to
   // the profile sync (never before consent, and never for a plain removal).
@@ -729,8 +744,9 @@ hrRouter.patch("/leave/:id/decide", requireHrAuth, async (req, res) => {
   if (emp && !emp.erased) {
     // Exactly one notification for this action - the email below is it. The calendar write above
     // and the task-assignment block in POST /hr/tasks are silent side effects, not separate pings.
-    await sendAndLogMail(emp.email, `Your ${row.type} leave request was ${req.body?.decision}`,
-      `Your leave request for ${row.from_date} to ${row.to_date} was ${req.body?.decision} by ${req.hrEmployee.name}.`);
+    const hs = hrEmailStringsForEmployee(row.employee_id);
+    await sendAndLogMail(emp.email, hs.leaveDecisionSubject(row.type, req.body?.decision),
+      hs.leaveDecisionBody(row.type, row.from_date, row.to_date, req.body?.decision, req.hrEmployee.name));
   }
   res.json({ leave: serializeHrLeave(db.prepare("SELECT * FROM hr_leave WHERE id = ?").get(req.params.id)) });
 });
@@ -764,7 +780,8 @@ hrRouter.post("/tasks", requireHrAuth, async (req, res) => {
   const assignee = d.assignee ? db.prepare("SELECT name, email, erased FROM hr_employees WHERE id = ?").get(d.assignee) : null;
   if (assignee && !assignee.erased && d.assignee !== req.hrEmployee.id) {
     // Exactly one notification for this action - the calendar write above is a silent side effect.
-    await sendAndLogMail(assignee.email, `New task: ${d.title}`, `${req.hrEmployee.name} assigned you a task${d.due ? `, due ${d.due}` : ""}: ${d.title}`);
+    const hs = hrEmailStringsForEmployee(d.assignee);
+    await sendAndLogMail(assignee.email, hs.taskAssignedSubject(d.title), hs.taskAssignedBody(req.hrEmployee.name, d.title, d.due));
   }
   res.status(201).json({ task: serializeHrTask(db.prepare("SELECT * FROM hr_tasks WHERE id = ?").get(id)) });
 });
@@ -778,7 +795,8 @@ hrRouter.patch("/tasks/:id/status", requireHrAuth, async (req, res) => {
   if (status === "done" && task.status !== "done" && task.assigned_by && task.assigned_by !== req.hrEmployee.id) {
     const assigner = db.prepare("SELECT name, email, erased FROM hr_employees WHERE id = ?").get(task.assigned_by);
     if (assigner && !assigner.erased) {
-      await sendAndLogMail(assigner.email, `Task completed: ${task.title}`, `${req.hrEmployee.name} marked "${task.title}" as done.`);
+      const hs = hrEmailStringsForEmployee(task.assigned_by);
+      await sendAndLogMail(assigner.email, hs.taskCompletedSubject(task.title), hs.taskCompletedBody(req.hrEmployee.name, task.title));
     }
   }
   res.json({ task: serializeHrTask(db.prepare("SELECT * FROM hr_tasks WHERE id = ?").get(req.params.id)) });
@@ -821,8 +839,9 @@ hrRouter.post("/trainings/:id/assign", requireHrAuth, requireHrPriv, async (req,
   ).run(nextId("ev", "hr_events"), req.hrEmployee.company_id, training.title, due, employees.map(e => e.id).join(","), req.hrEmployee.id, "Assigned via HR Suite.");
   for (const emp of employees) {
     if (emp.erased) continue;
-    await sendAndLogMail(emp.email, `New training assigned: ${training.title}`,
-      `${req.hrEmployee.name} assigned you "${training.title}", due ${due}. It's on your task list and calendar in HR Suite.`);
+    const hs = hrEmailStringsForEmployee(emp.id);
+    await sendAndLogMail(emp.email, hs.trainingAssignedSubject(training.title),
+      hs.trainingAssignedBody(req.hrEmployee.name, training.title, due));
   }
   logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "training_assigned", `Assigned "${training.title}" to ${employees.length} employee${employees.length === 1 ? "" : "s"}, due ${due}`);
   res.status(201).json({ tasks: createdTasks });
@@ -1203,7 +1222,8 @@ hrRouter.patch("/payruns/:id/execute", requireHrAuth, requireHrMoney, (req, res)
   for (const line of lines) {
     const emp = db.prepare("SELECT email, erased FROM hr_employees WHERE id = ?").get(line.employee);
     if (emp && !emp.erased) {
-      sendAndLogMail(emp.email, "Your pay has been deposited", `Your pay for ${run.period_start} to ${run.period_end} ($${line.net.toFixed(2)} net) has been deposited. View your full pay stub in HR Suite.`)
+      const hs = hrEmailStringsForEmployee(line.employee);
+      sendAndLogMail(emp.email, hs.payDepositedSubject, hs.payDepositedBody(run.period_start, run.period_end, line.net.toFixed(2)))
         .catch(() => {});
     }
   }

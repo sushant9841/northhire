@@ -26,6 +26,16 @@ export function localeForAgencyStaffEmail(email) {
   return row?.locale === "fr-CA" ? "fr-CA" : "en-CA";
 }
 
+// HR Suite employees are yet another account table separate from `users` and agency_staff -
+// their own locale preference (set via PATCH /hr/employees/:id/locale) is what every HR Suite
+// mailer call site (badge award, leave decision, task assignment, training assignment, payroll
+// run) should route through.
+export function localeForHrEmployeeId(employeeId) {
+  if (!employeeId) return "en-CA";
+  const row = db.prepare("SELECT locale FROM hr_employees WHERE id = ?").get(employeeId);
+  return row?.locale === "fr-CA" ? "fr-CA" : "en-CA";
+}
+
 const EMAIL_STRINGS = {
   "en-CA": {
     resetSubject: "Reset your NorthHire password",
@@ -51,6 +61,8 @@ const EMAIL_STRINGS = {
     yourSavedSearch: "your saved search",
     digestIntro: (frequency, name) => `Your ${frequency === "daily" ? "daily" : "weekly"} job alert for "${name}":`,
     andMore: n => `…and ${n} more.`,
+    employerInviteSubject: "You have been invited to a NorthHire employer account",
+    employerInviteBody: (inviterName, token) => `${inviterName} invited you to join their team on NorthHire. Your invite code: ${token}`,
   },
   "fr-CA": {
     resetSubject: "Réinitialisez votre mot de passe NorthHire",
@@ -76,6 +88,8 @@ const EMAIL_STRINGS = {
     yourSavedSearch: "votre recherche sauvegardée",
     digestIntro: (frequency, name) => `Votre alerte d'emploi ${frequency === "daily" ? "quotidienne" : "hebdomadaire"} pour « ${name} » :`,
     andMore: n => `… et ${n} de plus.`,
+    employerInviteSubject: "Vous avez été invité·e à un compte employeur NorthHire",
+    employerInviteBody: (inviterName, token) => `${inviterName} vous a invité·e à rejoindre son équipe sur NorthHire. Votre code d'invitation : ${token}`,
   },
 };
 
@@ -186,4 +200,51 @@ export function candidateStrings(locale) {
 }
 export function candidateStringsForUser(userId) {
   return candidateStrings(localeForUserId(userId));
+}
+
+/* HR Suite mailer strings - badge award, leave decision, task assignment/completion, training
+   assignment, and payroll-deposited notices. These were the hardcoded-English call sites flagged
+   after commit ff00e16 (Priority-5 item 3 / Bill 96 tail). */
+const HR_EMAIL_STRINGS = {
+  "en-CA": {
+    badgeAwardedSubject: badge => `You earned a badge: ${badge}`,
+    badgeAwardedBody: (actorName, badge) => `${actorName} awarded you the "${badge}" badge. Check the badge wall in HR Suite to see it.`,
+    leaveDecisionWord: { approved: "approved", denied: "denied" },
+    leaveDecisionSubject(type, decision) { return `Your ${type} leave request was ${this.leaveDecisionWord[decision] || decision}`; },
+    leaveDecisionBody(type, from, to, decision, actorName) {
+      return `Your leave request for ${from} to ${to} was ${this.leaveDecisionWord[decision] || decision} by ${actorName}.`;
+    },
+    taskAssignedSubject: title => `New task: ${title}`,
+    taskAssignedBody: (actorName, title, due) => `${actorName} assigned you a task${due ? `, due ${due}` : ""}: ${title}`,
+    taskCompletedSubject: title => `Task completed: ${title}`,
+    taskCompletedBody: (actorName, title) => `${actorName} marked "${title}" as done.`,
+    trainingAssignedSubject: title => `New training assigned: ${title}`,
+    trainingAssignedBody: (actorName, title, due) => `${actorName} assigned you "${title}", due ${due}. It's on your task list and calendar in HR Suite.`,
+    payDepositedSubject: "Your pay has been deposited",
+    payDepositedBody: (from, to, net) => `Your pay for ${from} to ${to} ($${net} net) has been deposited. View your full pay stub in HR Suite.`,
+  },
+  "fr-CA": {
+    badgeAwardedSubject: badge => `Vous avez mérité un badge : ${badge}`,
+    badgeAwardedBody: (actorName, badge) => `${actorName} vous a décerné le badge « ${badge} ». Consultez le mur des badges dans HR Suite pour le voir.`,
+    leaveDecisionWord: { approved: "approuvée", denied: "refusée" },
+    leaveDecisionSubject(type, decision) { return `Votre demande de congé (${type}) a été ${this.leaveDecisionWord[decision] || decision}`; },
+    leaveDecisionBody(type, from, to, decision, actorName) {
+      return `Votre demande de congé du ${from} au ${to} a été ${this.leaveDecisionWord[decision] || decision} par ${actorName}.`;
+    },
+    taskAssignedSubject: title => `Nouvelle tâche : ${title}`,
+    taskAssignedBody: (actorName, title, due) => `${actorName} vous a assigné une tâche${due ? `, à faire pour le ${due}` : ""} : ${title}`,
+    taskCompletedSubject: title => `Tâche terminée : ${title}`,
+    taskCompletedBody: (actorName, title) => `${actorName} a marqué « ${title} » comme terminée.`,
+    trainingAssignedSubject: title => `Nouvelle formation assignée : ${title}`,
+    trainingAssignedBody: (actorName, title, due) => `${actorName} vous a assigné « ${title} », à faire pour le ${due}. C'est sur votre liste de tâches et votre calendrier dans HR Suite.`,
+    payDepositedSubject: "Votre paie a été déposée",
+    payDepositedBody: (from, to, net) => `Votre paie du ${from} au ${to} (${net} $ net) a été déposée. Consultez votre relevé de paie complet dans HR Suite.`,
+  },
+};
+
+export function hrEmailStrings(locale) {
+  return HR_EMAIL_STRINGS[locale] || HR_EMAIL_STRINGS["en-CA"];
+}
+export function hrEmailStringsForEmployee(employeeId) {
+  return hrEmailStrings(localeForHrEmployeeId(employeeId));
 }

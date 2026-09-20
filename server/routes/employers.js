@@ -6,6 +6,7 @@ import { serializeEmployer } from "../serialize.js";
 import { getConfig } from "../platformConfig.js";
 import { storeUpload, listUploads, getUpload, deleteUpload } from "../uploads.js";
 import { sendAndLogMail } from "../mail.js";
+import { localeForUserId, emailStrings } from "../emailLocale.js";
 import { validateConditions, validateActions, RuleValidationError } from "../lib/workflowRules.js";
 import { DEMOGRAPHIC_FIELDS, suppressedBucket } from "../lib/demographics.js";
 
@@ -336,7 +337,10 @@ employersRouter.post("/team/invite", requireAuth, requireRole("employer"), async
   const id = nextId("inv", "employer_invites");
   const token = crypto.randomBytes(20).toString("hex");
   db.prepare("INSERT INTO employer_invites (id, employer_id, email, invited_by, token) VALUES (?, ?, ?, ?, ?)").run(id, req.user.employer_id, email, req.user.id, token);
-  await sendAndLogMail(email, "You have been invited to a NorthHire employer account", `${req.user.name} invited you to join their team on NorthHire. Your invite code: ${token}`);
+  // The invited address has no NorthHire account yet (guarded above), so there's no recipient
+  // locale to look up - the inviting employer's own account locale is the best available signal.
+  const es = emailStrings(localeForUserId(req.user.id));
+  await sendAndLogMail(email, es.employerInviteSubject, es.employerInviteBody(req.user.name, token));
   logEmployerAudit(req.user.employer_id, req.user, "team.invite.sent", `Invited ${email}`);
   // The invited person has no account yet, so they can't check their own /auth/outbox even though
   // the email really was sent (to their Ethereal-sandboxed inbox) - also return the link straight
