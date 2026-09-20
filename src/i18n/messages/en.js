@@ -1324,6 +1324,7 @@ export const en = {
       insightTimeToHireUp: "Your median time-to-hire is {current} days, up from {prior}. Common causes: slow shortlisting.", seePipeline: "See pipeline",
       insightFeaturedUsage: "You've used {used} of {limit} featured credits this month. Featuring boosts applications 3-5x.", chooseJobToFeature: "Choose a job to feature",
       liveJobs: "Live jobs", totalViews: "Total views", applications: "Applications", viewToApply: "View → apply",
+      wowDelta: "{pct}% week over week",
       recruitingSpend: "Recruiting spend", hiresInRange: "Hires (in range)", costPerHire: "Cost per hire",
       applicationsLast30: "Applications, last 30 days", noApplications: "No applications in the last 30 days yet.", totalApplications: "Total {total} · peak {max}",
       peakDate: " on {date}", pipelineBreakdown: "Pipeline breakdown", applicationRate: "Application rate",

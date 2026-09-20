@@ -2616,12 +2616,22 @@ export function EmpAnalyticsPage(){
         </div>
         {histDays!==Infinity&&<div className="text-xs text-text-3 mb-4">
           {t("employer.analytics.historyLockedTitle")} — {t("employer.analytics.historyLockedBody",{days:histDays})}</div>}
-        <div className={`grid gap-3.5 mb-6 ${mob?"grid-cols-2":"grid-cols-4"}`}>
-          <Stat label={t("employer.analytics.liveJobs")} value={stats.liveJobs} icon="briefcase"/>
-          <Stat label={t("employer.analytics.totalViews")} value={stats.totalViews.toLocaleString()} icon="eye"/>
-          <Stat label={t("employer.analytics.applications")} value={stats.totalApps} icon="send"/>
-          <Stat label={t("employer.analytics.viewToApply")} value={`${stats.conversion}%`} icon="target" tone={C.brand}/>
-        </div>
+        {/* Priority-4 #4: WoW trendline + sparkline where a real per-day series exists
+            (applications / live_jobs / hires). totalViews + viewToApply don't have per-day
+            event capture in this codebase (see snapshots.js), so those two stay plain figures
+            rather than faking a sparkline off a rollup. */}
+        {(()=>{
+          const dApps=A.snapshotDeltas?.("applications");
+          const dJobs=A.snapshotDeltas?.("live_jobs");
+          const fmtDelta=d=>d?.wowPct==null?null:t("employer.analytics.wowDelta",{pct:(d.wowPct>0?"+":"")+d.wowPct});
+          const dTone=d=>d?.wowPct==null?"ok":d.wowPct>=0?"ok":"down";
+          return <div className={`grid gap-3.5 mb-6 ${mob?"grid-cols-2":"grid-cols-4"}`}>
+            <Stat label={t("employer.analytics.liveJobs")} value={stats.liveJobs} icon="briefcase" spark={dJobs?.spark} delta={fmtDelta(dJobs)} deltaTone={dTone(dJobs)}/>
+            <Stat label={t("employer.analytics.totalViews")} value={stats.totalViews.toLocaleString()} icon="eye"/>
+            <Stat label={t("employer.analytics.applications")} value={stats.totalApps} icon="send" spark={dApps?.spark} delta={fmtDelta(dApps)} deltaTone={dTone(dApps)}/>
+            <Stat label={t("employer.analytics.viewToApply")} value={`${stats.conversion}%`} icon="target" tone={C.brand}/>
+          </div>;
+        })()}
         {/* Cost-per-hire lands beside the top-line stats when the employer has recorded any
             recruiting spend and at least one hire in the range - otherwise the tile would show
             a hollow $0 that reads as broken. */}

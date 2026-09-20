@@ -1326,6 +1326,7 @@ export const fr = {
       insightTimeToHireUp: "Votre délai médian d'embauche est de {current} jours, contre {prior} auparavant. Causes fréquentes : présélection trop lente.", seePipeline: "Voir le pipeline",
       insightFeaturedUsage: "Vous avez utilisé {used} de {limit} crédits de mise en vedette ce mois-ci. La mise en vedette augmente les candidatures de 3 à 5 fois.", chooseJobToFeature: "Choisir une offre à mettre en vedette",
       liveJobs: "Emplois en direct", totalViews: "Vues totales", applications: "Candidatures", viewToApply: "Vue → candidature",
+      wowDelta: "{pct} % d'une semaine à l'autre",
       recruitingSpend: "Dépenses de recrutement", hiresInRange: "Embauches (dans la plage)", costPerHire: "Coût par embauche",
       applicationsLast30: "Candidatures, 30 derniers jours", noApplications: "Aucune candidature au cours des 30 derniers jours pour l'instant.", totalApplications: "Total {total} · pic {max}",
       peakDate: " le {date}", pipelineBreakdown: "Ventilation du pipeline", applicationRate: "Taux de candidature",
