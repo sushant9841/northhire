@@ -753,9 +753,12 @@ export function useHrStore(){
        (assigned trainings show up as a task + calendar entry - see POST /hr/trainings/:id/assign
        - but with "trainings" missing here an employee could never actually open the Trainings
        page to view or progress the training itself, only the task shell around it). */
-    const employee=[...base,"attendance","leave","payslips","trainings"];
-    const hr=[...employee,"people","hiring","trainings","badges","reports"];
-    const finance=[...base,"invoices","payroll","reports","attendance"];
+    /* H2 nav manifest: Finance and Employee reach the redesigned Directory (People, /hr/people)
+       rather than being stuck on the legacy /hr/directory route "directory" alone still points
+       at - see docs/PERMISSIONS.md and the H2 nav priority list in shells/HrShell.jsx. */
+    const employee=[...base,"people","attendance","leave","payslips","trainings"];
+    const hr=[...employee,"hiring","trainings","badges","reports"];
+    const finance=[...base,"people","invoices","payroll","reports","attendance"];
     const admin=[...hr,"invoices","payroll","settings","integrations","reports"];
     const owner=[...admin];
     return {owner,admin,hr,finance,employee}[role]||employee;

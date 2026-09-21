@@ -32,8 +32,8 @@ const HR_NAV_PRIORITY={
   owner:["hrDashboard","hrPeople","hrAttendance","hrLeave","hrTrainings","hrPerfReviews","hrPayroll","hrInvoices","hrReports","hrSettings","hrIntegrations"],
   admin:["hrDashboard","hrPeople","hrAttendance","hrLeave","hrTasks","hrCalendar","hrTrainings","hrPerfReviews","hrChat","hrSettings","hrRoster"],
   hr:["hrDashboard","hrPeople","hrAttendance","hrLeave","hrTasks","hrCalendar","hrTrainings","hrPerfReviews","hrChat","hrHiring"],
-  finance:["hrDashboard","hrPayroll","hrInvoices","hrExpenses","hrReports"],
-  employee:["hrDashboard","hrProfile","hrAttendance","hrLeave","hrTasks","hrCalendar","hrTrainings","hrPerfReviews","hrChat"],
+  finance:["hrDashboard","hrPayroll","hrInvoices","hrExpenses","hrReports","hrPeople"],
+  employee:["hrDashboard","hrProfile","hrAttendance","hrLeave","hrTasks","hrCalendar","hrTrainings","hrPerfReviews","hrChat","hrPeople"],
 };
 function orderModulesForRole(modules,role){
   const order=HR_NAV_PRIORITY[role]||[];

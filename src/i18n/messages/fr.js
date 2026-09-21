@@ -2554,6 +2554,7 @@ export const fr = {
       carryoverExpiryHint: "0 = ils n'expirent pas",
       discardBtn: "Abandonner",
       saveChangesBtn: "Enregistrer les modifications",
+      savePlanBtn: "Enregistrer le forfait",
       allSavedBtn: "Tout enregistré",
       timeClocksLabel: "Horodateurs",
       chatSettingsLabel: "Paramètres de clavardage",

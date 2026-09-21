@@ -2441,6 +2441,7 @@ export const en = {
       carryoverExpiryHint: "0 = they don't expire",
       discardBtn: "Discard",
       saveChangesBtn: "Save changes",
+      savePlanBtn: "Save plan",
       allSavedBtn: "All saved",
       timeClocksLabel: "Time clocks",
       chatSettingsLabel: "Chat settings",

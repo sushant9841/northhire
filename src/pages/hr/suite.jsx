@@ -2724,7 +2724,7 @@ function _BenefitsPlanEditor({plan,onSave,onCancel}){
     </div>
     <div className="flex gap-2 justify-end">
       <Btn kind="ghost" size="sm" onClick={onCancel}>{t("hr.settings.discardBtn")}</Btn>
-      <Btn kind="primary" size="sm" icon="check" onClick={()=>onSave({name:draft.name,config:{tiers:draft.tiers,rrspMatch:draft.rrspMatch,openEnrollment:draft.openEnrollment}})}>{t("hr.settings.saveChangesBtn")}</Btn>
+      <Btn kind="primary" size="sm" icon="check" onClick={()=>onSave({name:draft.name,config:{tiers:draft.tiers,rrspMatch:draft.rrspMatch,openEnrollment:draft.openEnrollment}})}>{t("hr.settings.savePlanBtn")}</Btn>
     </div>
   </div>;
 }
