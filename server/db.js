@@ -168,6 +168,30 @@ CREATE TABLE IF NOT EXISTS employer_invoices (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+/* Priority-4 #9: employer referral program credit issuance. One row per referral relationship
+   that has actually converted (the referred employer's first paid invoice) - attribution alone
+   (employers.referred_by_employer_id) lives on the employers table since day one; this table is
+   the credit-issuance half, real Stripe customer-balance credits with a replayable audit trail.
+   status: 'pending' (not yet attempted) -> 'issued' (Stripe call succeeded) or 'pending_stripe'
+   (Stripe not configured on this server - retry once a key is set) or 'failed' (Stripe call
+   errored - retry button in admin surfaces this). One row per referred_employer_id - a referred
+   company only ever triggers its referrer's credit once, on its own first paid month. */
+CREATE TABLE IF NOT EXISTS employer_referral_credits (
+  id TEXT PRIMARY KEY,
+  referrer_employer_id TEXT NOT NULL REFERENCES employers(id),
+  referred_employer_id TEXT NOT NULL REFERENCES employers(id),
+  amount_cents INTEGER NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'CAD',
+  status TEXT NOT NULL DEFAULT 'pending',
+  stripe_reference_id TEXT,
+  error_message TEXT,
+  trigger_reason TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  issued_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_referral_credits_referrer ON employer_referral_credits(referrer_employer_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_referral_credits_referred ON employer_referral_credits(referred_employer_id);
+
 /* Per-employer audit trail for team-management actions - who invited/removed whom, when.
    The platform-wide activity_log serves admin-side events; this one is scoped to a single
    employer so its owner can see what happened on their own account without needing admin

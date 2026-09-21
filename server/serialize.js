@@ -89,6 +89,15 @@ export function serializeEmployerInvoice(row) {
   return { id: row.id, employerId: row.employer_id, plan: row.plan, amountPretax: row.amount_pretax,
     tax: row.tax, taxLabel: row.tax_label, total: row.total, status: row.status, billingCycle: row.billing_cycle || "monthly", createdAt: sqlTime(row.created_at).getTime() };
 }
+export function serializeReferralCredit(row) {
+  if (!row) return null;
+  return {
+    id: row.id, referrerEmployerId: row.referrer_employer_id, referredEmployerId: row.referred_employer_id,
+    amountCents: row.amount_cents, currency: row.currency, status: row.status,
+    stripeReferenceId: row.stripe_reference_id, errorMessage: row.error_message, triggerReason: row.trigger_reason,
+    createdAt: sqlTime(row.created_at).getTime(), issuedAt: row.issued_at ? sqlTime(row.issued_at).getTime() : null,
+  };
+}
 export function serializeEmployer(row) {
   if (!row) return null;
   return {
