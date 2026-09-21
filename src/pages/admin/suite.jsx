@@ -3,9 +3,9 @@ import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
-import { Page, Btn, Banner, Stat, Card, Switch, Input, Sel, SmartPortrait, Tag, Tabs, Empty, Bar, H1, H2, Modal, ConfirmDialog, Field, Area, usePagination, Pagination } from "../../design/primitives.jsx";
+import { Page, Btn, Banner, Stat, Card, Switch, Input, Sel, SmartPortrait, Tag, Tabs, Empty, Bar, H1, H2, Modal, ConfirmDialog, Field, Area, usePagination, Pagination, Lbl } from "../../design/primitives.jsx";
 import { pay, payShort } from "../../helpers/utils.js";
-import { CATS, STAGES } from "../../store/seed/constants.js";
+import { CATS, STAGES, PROVS, PCODE } from "../../store/seed/constants.js";
 import { jobTone, jobStatusLabel } from "../../helpers/statusTone.js";
 import { applicationStageLabel } from "../../helpers/enumLabels.js";
 import { EmpMark } from "../shared/cards.jsx";
@@ -215,6 +215,18 @@ export function AdmEmployers(){
   const [tab,setTab]=useState("pending"); const [q,setQ]=useState("");
   const [holding,setHolding]=useState(null); const [holdReason,setHoldReason]=useState("");
   const [viewing,setViewing]=useState(null);
+  const [editing,setEditing]=useState(null); const [d,setD]=useState(null);
+  const startEdit=e=>{setEditing(e);setD({...e});};
+  const setF=(k,v)=>setD(prev=>({...prev,[k]:v}));
+  const dirty=!!(editing&&d)&&["name","industry","city","prov","size","founded","site","businessNumber","about","plan","locale"].some(k=>(d[k]??"")!==(editing[k]??""));
+  const saveEdit=async()=>{
+    const patch={};
+    ["name","industry","city","prov","size","founded","site","businessNumber","about","plan","locale"].forEach(k=>{
+      if((d[k]??"")!==(editing[k]??""))patch[k]=d[k];});
+    if(Object.keys(patch).length===0){setEditing(null);return;}
+    const r=await A.updateEmployerAdmin(editing.id,patch);
+    if(r.ok){A.toast(t("admin.employers.savedToast",{name:r.employer.name}),"ok");setEditing(null);}
+  };
   const match=e=>!q||e.name.toLowerCase().includes(q.toLowerCase())||e.industry.toLowerCase().includes(q.toLowerCase())||(e.owner||"").toLowerCase().includes(q.toLowerCase());
   const pending=A.employers.filter(e=>!e.verified&&!e.hold&&match(e)), held=A.employers.filter(e=>!e.verified&&e.hold&&match(e)), verified=A.employers.filter(e=>e.verified&&match(e));
   const list=tab==="pending"?pending:tab==="held"?held:verified;
@@ -252,6 +264,7 @@ export function AdmEmployers(){
             <div className="flex gap-2 pt-3 border-t border-line-soft flex-wrap">
               <Btn kind="ghost" size="sm" onClick={()=>A.openEmployer(e.id)}>{t("admin.employers.viewPage")}</Btn>
               <Btn kind="ghost" size="sm" onClick={()=>setViewing(e)}>{t("admin.employers.details")}</Btn>
+              <Btn kind="ghost" size="sm" icon="edit" onClick={()=>startEdit(e)}>{t("admin.employers.edit")}</Btn>
               <div className="flex-1"/>
               {e.verified?<Btn kind="outline" size="sm" onClick={()=>{A.verifyEmployer(e.id,false);A.toast(t("admin.employers.revokedToast",{name:e.name}),"danger");}}>{t("admin.employers.revoke")}</Btn>
                 :e.hold?<><Btn kind="ok" size="sm" icon="check" onClick={()=>{A.verifyEmployer(e.id,true);A.toast(t("admin.employers.approvedToast",{name:e.name}),"ok");}}>{t("admin.employers.approve")}</Btn>
@@ -302,6 +315,39 @@ export function AdmEmployers(){
         <Btn kind="outline" onClick={()=>{A.openEmployer(viewing.id);setViewing(null);}}>{t("admin.employers.viewPublicPage")}</Btn>
       </div>
     </Modal>}
+    {editing&&d&&(()=>{
+      const liveJobs=A.jobs.filter(j=>j.e===editing.id&&j.status==="live").length;
+      const planLimit=A.PLANS[d.plan]?.jobs;
+      const downgradeWarn=Number.isFinite(planLimit)&&planLimit<liveJobs;
+      return <Modal onClose={()=>setEditing(null)} title={t("admin.employers.editTitle",{name:editing.name})} wide>
+        <div className="grid gap-3.5 grid-cols-2">
+          <Field label={t("admin.employers.companyName")} required><Input value={d.name} onChange={e=>setF("name",e.target.value)}/></Field>
+          <Field label={t("admin.employers.industry")}><Input value={d.industry||""} onChange={e=>setF("industry",e.target.value)}/></Field>
+          <Field label={t("admin.employers.cityLabel")}><Input icon="pin" value={d.city||""} onChange={e=>setF("city",e.target.value)}/></Field>
+          <Field label={t("admin.employers.provinceLabel")}><Sel value={PROVS.find(p=>PCODE[p]===d.prov)||"Ontario"} onChange={e=>setF("prov",PCODE[e.target.value])}>
+            {PROVS.map(p=><option key={p}>{p}</option>)}</Sel></Field>
+          <Field label={t("admin.employers.size")}><Sel value={d.size||"1-50"} onChange={e=>setF("size",e.target.value)}>
+            {["1-50","51-200","201-1,000","1,000-5,000","5,000+","10,000+"].map(o=><option key={o}>{o}</option>)}</Sel></Field>
+          <Field label={t("admin.employers.foundedLabel")}><Input type="number" value={d.founded||""} onChange={e=>setF("founded",Number(e.target.value)||undefined)}/></Field>
+          <Field label={t("admin.employers.websiteLabel")}><Input icon="globe" value={d.site||""} onChange={e=>setF("site",e.target.value)}/></Field>
+          <Field label={t("admin.employers.craBusinessNumber")}><Input icon="file" value={d.businessNumber||""} onChange={e=>setF("businessNumber",e.target.value.replace(/\s/g,""))}/></Field>
+          <Field label={t("admin.employers.planLabel")}><Sel value={d.plan} onChange={e=>setF("plan",e.target.value)}>
+            {Object.keys(A.PLANS).map(p=><option key={p} value={p}>{p}</option>)}</Sel></Field>
+          <Field label={t("admin.employers.correspondenceLanguage")}><Sel value={d.locale||"en-CA"} onChange={e=>setF("locale",e.target.value)}>
+            <option value="en-CA">{t("account.languageEnglish")}</option>
+            <option value="fr-CA">{t("account.languageFrench")}</option>
+          </Sel></Field>
+          <Field label={t("admin.employers.aboutCompanyLabel")} style={{gridColumn:"span 2"}}>
+            <Area rows={4} value={d.about||""} onChange={e=>setF("about",e.target.value)}/></Field>
+        </div>
+        {downgradeWarn&&<Banner tone="warn" icon="alert" style={{marginTop:14}}>
+          {t(liveJobs===1?"admin.employers.planDowngradeWarningOne":"admin.employers.planDowngradeWarningOther",{limit:planLimit,name:editing.name,live:liveJobs})}
+        </Banner>}
+        <div className="flex gap-2.5 justify-end pt-4 mt-4 border-t border-line">
+          <Btn kind="ghost" onClick={()=>setEditing(null)}>{t("admin.employers.cancel")}</Btn>
+          <Btn kind="primary" icon="check" disabled={!dirty||!d.name?.trim()} onClick={saveEdit}>{t("admin.employers.saveChanges")}</Btn>
+        </div>
+      </Modal>;})()}
   </Page>;
 }
 

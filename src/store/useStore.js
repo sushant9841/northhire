@@ -1927,6 +1927,19 @@ export function useStore(){
       setEmployers(l=>l.map(e=>e.id===id?mapApiEmployer(employer):e));
       log("employer.hold",`${wasHeld?"Released":"Placed"} ${emp(id).name} ${wasHeld?"from":"on"} hold${!wasHeld&&reason?` — ${reason}`:""}`,"clock");
     }catch(err){toast(err.message,"danger");}};
+  /* Admin edit of an employer's own profile fields + plan — everything PATCH /employers/:id
+     accepts for an admin caller (name/industry/city/prov/size/about/site/businessNumber/founded
+     + plan, finance-scope gated server-side). Brand identity (mark/a/b logo colour) is
+     deliberately left out here: it's the employer's own visual branding, not a support/
+     verification field, and giving admin a raw colour-picker override would just duplicate the
+     employer's own branding UI for no support benefit. */
+  const updateEmployerAdmin=async(id,patch)=>{
+    try{
+      const {employer}=await api.patch(`/employers/${id}`,patch);
+      setEmployers(l=>l.map(e=>e.id===id?mapApiEmployer(employer):e));
+      log("employer.edit",`Updated ${emp(id).name}'s profile (${Object.keys(patch).join(", ")})`,"edit");
+      return {ok:true,employer:mapApiEmployer(employer)};
+    }catch(err){toast(err.message,"danger");return {ok:false,msg:err.message};}};
   const eraseUser=async(id)=>{
     try{
       await api.del(`/users/${id}`);
@@ -2410,7 +2423,7 @@ export function useStore(){
     openHrEmployeeProfile,hrProfileDeepLinkTab,setHrProfileDeepLinkTab,hrProfileFocusRecordId,setHrProfileFocusRecordId,openHrChatWith,hrChatPrefill,setHrChatPrefill,
     beginApply,submitApply,withdraw,acceptOffer,moveApp,rejectApp,noCvGateJobId,closeNoCvGate,
     lastAppliedId,focusAppId,setFocusAppId,
-    publishJob,getJobDistributeUrl,getAutofillSuggestions,recordAutofill,approveJob,toggleJobStatus,flagJob,reportJob,jobReports,loadJobReports,decideJobReport,setPipelineJob:setPipelineJobFn,saveCompany,verifyEmployer,holdEmployer,toggleSuspend,eraseUser,
+    publishJob,getJobDistributeUrl,getAutofillSuggestions,recordAutofill,approveJob,toggleJobStatus,flagJob,reportJob,jobReports,loadJobReports,decideJobReport,setPipelineJob:setPipelineJobFn,saveCompany,verifyEmployer,holdEmployer,updateEmployerAdmin,toggleSuspend,eraseUser,
     saveJobDraft,loadJobDraft,deleteJobDraft,
     team,loadTeam,loadTeamAudit,inviteTeammate,revokeInvite,removeTeammate,getInvite,acceptInvite,inviteToken,
     messageTemplates,saveMessageTemplate,deleteMessageTemplate,
