@@ -46,7 +46,12 @@ export default defineConfig({
       url: `${API_BASE}/api/health`,
       reuseExistingServer: !process.env.CI,
       timeout: 30_000,
-      env: { PORT: "8787" },
+      // Turnstile (server/turnstile.js) is gated purely on TURNSTILE_SECRET_KEY being set, and
+      // this repo's .env carries real Cloudflare Turnstile keys — signup would otherwise require
+      // solving a real captcha widget, which a headless suite can't do. Blanking both keys for
+      // just this spawned test-server process (never touching the real .env) disables that one
+      // check for the suite the same way local dev without the key configured already works.
+      env: { PORT: "8787", TURNSTILE_SITE_KEY: "", TURNSTILE_SECRET_KEY: "" },
     },
     {
       command: "npx vite --port 5173 --strictPort",

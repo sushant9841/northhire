@@ -206,7 +206,13 @@ export function serializeContentRevision(row) {
 export function serializeCv(row) {
   if (!row) return null;
   return {
-    id: row.id, name: row.name, template: row.template,
+    // `user` (mapped from the user_id column) was missing here entirely - every client-side
+    // "is this my CV" check (`c.user === A.user?.id`, in beginApply()'s zero-CV pre-flight gate,
+    // _CvPicker, and CvsPage's atLimit count - src/store/useStore.js / src/pages/seeker/apply.jsx
+    // / cv.jsx) always compared undefined to a real id and got false, so a seeker with any number
+    // of real CVs was treated as having zero every time they clicked Apply. Found by
+    // tests/e2e/seeker/apply.spec.ts.
+    id: row.id, user: row.user_id, name: row.name, template: row.template,
     name0: row.name0, title: row.title, email: row.email, phone: row.phone, city: row.city, prov: row.prov,
     summary: row.summary, skills: JSON.parse(row.skills_json || "[]"), certs: JSON.parse(row.certs_json || "[]"),
     exp: JSON.parse(row.exp_json || "[]"), edu: JSON.parse(row.edu_json || "[]"),

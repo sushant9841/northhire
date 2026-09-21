@@ -64,6 +64,27 @@ export async function loginAsHr(page: Page, loginId: string, password = "pcl2026
   await page.waitForURL(/\/hr\/dashboard/, { timeout: 10_000 });
 }
 
+/*
+ * A brand-new seeker account via the real signup wizard, rather than one of the fixed demo
+ * accounts. Demo accounts (Sarah, Marcus) accumulate CVs/applications across repeated suite
+ * runs against the same persistent dev DB — a CV-count or "already applied" assertion made
+ * against them is only true the first time the suite ever runs. Signing up fresh guarantees a
+ * true 0-CV, 0-application starting state every run, which is what apply.spec.ts's CV-picker
+ * states actually need to test deterministically.
+ */
+export async function signupFreshSeeker(page: Page, password = "Password123!") {
+  const email = `e2e.${Date.now()}.${Math.random().toString(36).slice(2, 8)}@example.ca`;
+  await page.goto("/signup");
+  await page.getByRole("button", { name: "I'm looking for work" }).click();
+  await page.getByRole("button", { name: "Next" }).click();
+  await page.getByPlaceholder("Jean").fill("E2E");
+  await page.getByPlaceholder(EMAIL_PLACEHOLDER).fill(email);
+  await page.getByPlaceholder("At least 8 characters").fill(password);
+  await page.getByRole("button", { name: "Finish and start matching" }).click();
+  await page.waitForURL((url) => url.pathname !== "/signup", { timeout: 10_000 });
+  return { email, password };
+}
+
 export const HR_PERSONAS = {
   owner: "rachel.martel@pcl.com",
   admin: "priya.r@pcl.com",
