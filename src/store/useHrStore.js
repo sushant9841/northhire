@@ -269,14 +269,19 @@ export function useHrStore(){
   /* --- Attendance --- */
   const punchIn=async(empId,source)=>{
     try{
-      const {record}=await api.post("/hr/attendance/punch-in",{employeeId:empId,source});
-      setHrAttendance(l=>[record,...l]);
-      return {ok:true,rec:record};
+      const r=await api.post("/hr/attendance/punch-in",{employeeId:empId,source});
+      // The service worker answers with {queued:true} instead of a real record when the device
+      // is offline - the punch is held in IndexedDB and replayed once connectivity returns.
+      if(r?.queued)return {ok:true,queued:true};
+      setHrAttendance(l=>[r.record,...l]);
+      return {ok:true,rec:r.record};
     }catch(e){return {ok:false,msg:e.message};}
   };
   const punchOut=async(empId)=>{
     try{
-      const {hours,earlyLeave,record}=await api.post("/hr/attendance/punch-out",{employeeId:empId});
+      const r=await api.post("/hr/attendance/punch-out",{employeeId:empId});
+      if(r?.queued)return {ok:true,queued:true};
+      const {hours,earlyLeave,record}=r;
       if(record)setHrAttendance(l=>l.map(a=>a.id===record.id?record:a));
       return {ok:true,hours,earlyLeave};
     }catch(e){return {ok:false,msg:e.message};}

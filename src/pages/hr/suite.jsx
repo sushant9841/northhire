@@ -260,11 +260,11 @@ export function HrDashboard(){
           </div>
           {!todayAttendance?<div>
             <p className="text-sm text-text-2 mb-3.5 leading-relaxed">{t("hr.dashboard.punchInPrompt")}</p>
-            <Btn kind="primary" icon="clock" disabled={punching} onClick={async()=>{setPunching(true); const r=await A.punchIn(emp.id,"web"); setPunching(false); if(!r.ok)A.toast(r.msg,"danger");}}>{t("hr.dashboard.punchInBtn")}</Btn>
+            <Btn kind="primary" icon="clock" disabled={punching} onClick={async()=>{setPunching(true); const r=await A.punchIn(emp.id,"web"); setPunching(false); if(!r.ok)A.toast(r.msg,"danger"); else if(r.queued)A.toast(t("hr.attendance.punchQueuedOffline"),"info");}}>{t("hr.dashboard.punchInBtn")}</Btn>
           </div>:!todayAttendance.clockOut?<div>
             <div className="text-base text-text mb-2">{t("hr.dashboard.punchedInAt")} <strong>{todayAttendance.clockIn}</strong></div>
             <p className="text-sm text-text-2 mb-3.5">{t("hr.dashboard.punchOutReminder")}</p>
-            <Btn kind="outline" icon="clock" disabled={punching} onClick={async()=>{setPunching(true); const r=await A.punchOut(emp.id); setPunching(false); if(!r.ok)A.toast(r.msg,"danger"); else if(r.earlyLeave)A.toast(t("hr.dashboard.punchOutEarlyLeave"),"warn");}}>{t("hr.dashboard.punchOutBtn")}</Btn>
+            <Btn kind="outline" icon="clock" disabled={punching} onClick={async()=>{setPunching(true); const r=await A.punchOut(emp.id); setPunching(false); if(!r.ok)A.toast(r.msg,"danger"); else if(r.queued)A.toast(t("hr.attendance.punchQueuedOffline"),"info"); else if(r.earlyLeave)A.toast(t("hr.dashboard.punchOutEarlyLeave"),"warn");}}>{t("hr.dashboard.punchOutBtn")}</Btn>
           </div>:<div>
             <div className="text-sm text-text">{t("hr.dashboard.attendanceSummary",{in:todayAttendance.clockIn,out:todayAttendance.clockOut,hours:todayAttendance.hours})}</div>
             <p className="text-sm text-text-2 mt-2">{t("hr.dashboard.goodWorkToday")}</p></div>}
@@ -1085,11 +1085,11 @@ export function HrAttendance(){
         <Tag tone={todayRecord?"ok":"neutral"} sm>{todayRecord?(todayRecord.clockOut?t("hr.dashboard.statusSignedOut"):t("hr.dashboard.statusWorking")):t("hr.dashboard.statusNotClockedIn")}</Tag>
       </div>
       {!todayRecord?
-        <Btn kind="primary" size="lg" icon="clock" disabled={punching} onClick={async()=>{setPunching(true); const r=await A.punchIn(emp.id,"web"); setPunching(false); if(!r.ok)A.toast(r.msg,"danger");}}>{t("hr.attendance.punchInNowBtn")}</Btn>
+        <Btn kind="primary" size="lg" icon="clock" disabled={punching} onClick={async()=>{setPunching(true); const r=await A.punchIn(emp.id,"web"); setPunching(false); if(!r.ok)A.toast(r.msg,"danger"); else if(r.queued)A.toast(t("hr.attendance.punchQueuedOffline"),"info");}}>{t("hr.attendance.punchInNowBtn")}</Btn>
         :!todayRecord.clockOut?
         <div className="flex gap-3 flex-wrap items-center">
           <div className="text-base text-text-2">{t("hr.attendance.punchedInAtVia",{time:todayRecord.clockIn,source:todayRecord.source})}</div>
-          <Btn kind="outline" icon="clock" disabled={punching} onClick={async()=>{setPunching(true); const r=await A.punchOut(emp.id); setPunching(false); if(!r.ok)A.toast(r.msg,"danger"); else if(r.earlyLeave)A.toast(t("hr.attendance.punchOutEarlyLeave"),"warn");}}>{t("hr.attendance.punchOutBtn")}</Btn>
+          <Btn kind="outline" icon="clock" disabled={punching} onClick={async()=>{setPunching(true); const r=await A.punchOut(emp.id); setPunching(false); if(!r.ok)A.toast(r.msg,"danger"); else if(r.queued)A.toast(t("hr.attendance.punchQueuedOffline"),"info"); else if(r.earlyLeave)A.toast(t("hr.attendance.punchOutEarlyLeave"),"warn");}}>{t("hr.attendance.punchOutBtn")}</Btn>
         </div>
         :
         <div className="text-base text-text-2">{t("hr.attendance.attendanceSummary",{in:todayRecord.clockIn,out:todayRecord.clockOut,hours:todayRecord.hours})}</div>}

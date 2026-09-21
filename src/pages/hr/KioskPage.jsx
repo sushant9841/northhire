@@ -55,7 +55,8 @@ export function KioskPage(){
     setBusy(true); setErr(""); setResult(null);
     try{
       const r=await api.post("/hr/kiosk/punch",{pin:code,deviceToken:token});
-      setResult(r);
+      if(r?.queued){setResult({queued:true});}
+      else setResult(r);
     }catch(e){
       setErr(e.message);
     }finally{
@@ -105,15 +106,19 @@ export function KioskPage(){
     <Card pad={26} style={{maxWidth:400,width:"100%"}}>
       {result
         ? <div className="text-center py-2">
-            <div className={`w-14 h-14 rounded-full mx-auto flex items-center justify-center ${result.action==="in"?"bg-ok":"bg-brand"}`}>
-              <I n="check" s={26} c="#fff" w={3}/></div>
-            <div className="text-lg font-bold text-text mt-3.5">{result.name}</div>
-            <div className="text-sm text-text-2 mt-1">
-              {result.action==="in"
-                ? t("hr.kiosk.punchedInAt",{time:result.time,lateSuffix:result.late?t("hr.kiosk.markedLateSuffix"):""})
-                : t("hr.kiosk.punchedOutAt",{time:result.time,hours:result.hours})}
-            </div>
-            {result.site&&<div className="text-xs text-text-3 mt-1">{result.site}</div>}
+            <div className={`w-14 h-14 rounded-full mx-auto flex items-center justify-center ${result.queued?"bg-amber-500":result.action==="in"?"bg-ok":"bg-brand"}`}>
+              <I n={result.queued?"clock":"check"} s={26} c="#fff" w={3}/></div>
+            {result.queued
+              ? <div className="text-sm font-semibold text-text mt-3.5">{t("hr.kiosk.punchQueuedOffline")}</div>
+              : <>
+                <div className="text-lg font-bold text-text mt-3.5">{result.name}</div>
+                <div className="text-sm text-text-2 mt-1">
+                  {result.action==="in"
+                    ? t("hr.kiosk.punchedInAt",{time:result.time,lateSuffix:result.late?t("hr.kiosk.markedLateSuffix"):""})
+                    : t("hr.kiosk.punchedOutAt",{time:result.time,hours:result.hours})}
+                </div>
+                {result.site&&<div className="text-xs text-text-3 mt-1">{result.site}</div>}
+              </>}
           </div>
         : <>
           <div className="text-center mb-4">
