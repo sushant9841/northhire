@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import { Router } from "express";
 import { db, nextId, sqlTime } from "../db.js";
 import { requireAuth, requireRole, requireAdminScope, hashPassword, createSessionCookie, publicUser, hasAdminScope } from "../auth.js";
-import { serializeEmployer } from "../serialize.js";
+import { serializeEmployer, serializeReferralCredit } from "../serialize.js";
 import { getConfig } from "../platformConfig.js";
 import { storeUpload, listUploads, getUpload, deleteUpload } from "../uploads.js";
 import { sendAndLogMail } from "../mail.js";
@@ -396,6 +396,19 @@ employersRouter.get("/me/locations", requireAuth, requireRole("employer"), (req,
     `SELECT DISTINCT city, prov FROM jobs WHERE employer_id = ? AND city IS NOT NULL AND prov IS NOT NULL ORDER BY city`
   ).all(req.user.employer_id);
   res.json({ locations: rows.map(r => ({ city: r.city, province: r.prov })) });
+});
+
+// Priority-4 #9: referral-program credits this employer has earned by referring other companies.
+// Read-only, own-data-only (referrer_employer_id = the signed-in employer - never another
+// company's row) - registered ahead of the generic "/:id" route for the same reason as
+// "/me/locations" above.
+employersRouter.get("/me/referral-credits", requireAuth, requireRole("employer"), (req, res) => {
+  const rows = db.prepare("SELECT * FROM employer_referral_credits WHERE referrer_employer_id = ? ORDER BY created_at DESC")
+    .all(req.user.employer_id);
+  const credits = rows.map(serializeReferralCredit);
+  const earnedCents = credits.filter(c => c.status === "issued").reduce((sum, c) => sum + c.amountCents, 0);
+  const pendingCents = credits.filter(c => c.status === "pending" || c.status === "pending_stripe").reduce((sum, c) => sum + c.amountCents, 0);
+  res.json({ credits, earnedCents, pendingCents });
 });
 
 /* Priority-4 #3 - Diversity of your applicant pool, opt-in aggregate reporting. Every bucket is

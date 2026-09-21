@@ -2319,6 +2319,9 @@ export function EmpTeam(){
   const [audit,setAudit]=useState([]);
   const refreshAudit=async()=>setAudit(await A.loadTeamAudit());
   useEffect(()=>{refreshAudit();/* eslint-disable-next-line react-hooks/exhaustive-deps */},[members.length,invites.length]);
+  /* Priority-4 #9 - real credit ledger for the referral card below, loaded once on mount. */
+  const [referralCredits,setReferralCredits]=useState(null);
+  useEffect(()=>{A.loadReferralCredits().then(setReferralCredits);/* eslint-disable-next-line react-hooks/exhaustive-deps */},[]);
   const actionLabel={
     "team.invite.sent":{icon:"mail",tone:"neutral",label:"Invite sent"},
     "team.invite.revoked":{icon:"x",tone:"warn",label:"Invite revoked"},
@@ -2383,20 +2386,43 @@ export function EmpTeam(){
       </div>
     </Card>}
     {/* Referral program: every employer account has a stable code. Sharing the signup URL with
-        another company owner records the attribution when they sign up; future work is to
-        actually issue a credit note when the referred account starts paying. Kept as a
-        display + share-URL only for now - no fake "you've earned $X" until the credit
-        pipeline is real. */}
+        another company owner records the attribution when they sign up, and a real Stripe
+        customer-balance credit is issued to this account once the referred company pays for its
+        first month (Priority-4 #9) - the earned/pending totals below come straight from the
+        server ledger, never a locally-computed guess. */}
     {A.company?.referralCode&&<Card pad={mob?20:26} style={{marginTop:16}}>
       <Lbl>{t("employer.team.referOtherCompany")}</Lbl>
       <div className="text-sm text-text-2 mb-3 leading-relaxed">
-        {t("employer.team.referralDesc",{code:<code className="bg-brand-wash border border-brand-line text-brand rounded px-2 py-0.5 font-semibold">{A.company.referralCode}</code>})}
+        {/* This i18n layer's interpolate() only ever does String(params[k]) - a JSX element
+            passed as a param renders literally as "[object Object]" (a real bug this surfaced
+            in QA screenshots). Interpolate the plain code string instead, then split the
+            resulting - already-translated, in whichever locale - text around it to wrap just
+            that substring in the styled chip. */}
+        {(()=>{const code=A.company.referralCode; const raw=t("employer.team.referralDesc",{code}); const idx=raw.indexOf(code);
+          if(idx<0)return raw;
+          return <>{raw.slice(0,idx)}<code className="bg-brand-wash border border-brand-line text-brand rounded px-2 py-0.5 font-semibold">{code}</code>{raw.slice(idx+code.length)}</>;})()}
       </div>
       {(()=>{const url=`${window.location.origin}/signup?ref=${encodeURIComponent(A.company.referralCode)}`;
         return <div className="flex gap-2 items-center flex-wrap">
           <code className="text-xs bg-white border border-line-2 rounded-lg py-1.5 px-2.5 break-all flex-1 min-w-50">{url}</code>
           <Btn kind="outline" size="sm" icon="copy" onClick={()=>{navigator.clipboard?.writeText(url); A.toast("Share link copied");}}>{t("employer.team.copyShareLink")}</Btn>
         </div>;})()}
+      {referralCredits&&<div className="flex gap-4 flex-wrap mt-4 pt-4 border-t border-line-soft">
+        <div>
+          <div className="text-xs text-text-3 uppercase tracking-wide">{t("employer.team.creditsEarned")}</div>
+          <div className="text-lg font-bold text-text mt-0.5">{money(referralCredits.earnedCents/100)}</div>
+        </div>
+        {referralCredits.pendingCents>0&&<div>
+          <div className="text-xs text-text-3 uppercase tracking-wide">{t("employer.team.creditsPending")}</div>
+          <div className="text-lg font-bold text-text mt-0.5">{money(referralCredits.pendingCents/100)}</div>
+        </div>}
+      </div>}
+      {referralCredits?.credits?.length>0&&<div className="flex flex-col mt-3">
+        {referralCredits.credits.map(c=><div key={c.id} className="flex items-center gap-3 py-2 border-t border-line-soft first:border-t-0">
+          <div className="flex-1 min-w-0 text-sm text-text">{t("employer.team.creditFor",{amount:money(c.amountCents/100)})}</div>
+          <Tag tone={c.status==="issued"?"ok":c.status==="failed"?"danger":"warn"} sm>{t(`employer.team.creditStatus_${c.status}`)}</Tag>
+        </div>)}
+      </div>}
     </Card>}
 
     {/* Audit trail - who did what on this account, and when. Any teammate can read it; the tracker

@@ -1041,6 +1041,12 @@ export function useStore(){
   /* --- payment / cards --- */
   const [paymentMethods,setPaymentMethods]=useState([]);
   const [employerInvoices,setEmployerInvoices]=useState([]);
+  /* Priority-4 #9 - own-account referral-credit ledger (earned + pending) for the referral card
+     on EmpTeam. Server-scoped to the signed-in employer's own rows. */
+  const loadReferralCredits=async()=>{
+    try{return await api.get("/employers/me/referral-credits");}
+    catch(err){toast(err.message,"danger");return {credits:[],earnedCents:0,pendingCents:0};}
+  };
   const verifyCheckout=async sessionId=>{
     try{
       const r=await api.get(`/billing/verify?session_id=${encodeURIComponent(sessionId)}`);
@@ -1208,6 +1214,13 @@ export function useStore(){
   };
   const deleteAdminPerfCycle=async id=>{
     try{await api.del(`/admin/perf-cycles/${id}`);return {ok:true};}
+    catch(err){return {ok:false,msg:err.message};}
+  };
+  const loadAdminReferralCredits=async()=>{
+    try{const {credits}=await api.get("/admin/referral-credits");return credits;}catch(err){toast(err.message,"danger");return [];}
+  };
+  const retryAdminReferralCredit=async id=>{
+    try{const {credit}=await api.post(`/admin/referral-credits/${id}/retry`,{});return {ok:true,credit};}
     catch(err){return {ok:false,msg:err.message};}
   };
   const setAdminScope=async(id,scope)=>{
@@ -2401,14 +2414,14 @@ export function useStore(){
     impersonate,stopImpersonating,
     PLANS,PLAN_ORDER,payrollTaxConfig,platformConfig,currentPlan,planName,can,limitOf,planRequires,upgradeModal,setUpgradeModal,requestUpgrade,
     oauthProviders,oauthStart,turnstileSiteKey,
-    paymentMethods,addPaymentMethod,removePaymentMethod,setDefaultPayment,employerInvoices,verifyCheckout,startCheckout,openBillingPortal,markWelcomeSeen,
+    paymentMethods,addPaymentMethod,removePaymentMethod,setDefaultPayment,employerInvoices,verifyCheckout,startCheckout,openBillingPortal,markWelcomeSeen,loadReferralCredits,
     twoFactor,enable2FA,disable2FA,
     references,addReference,removeReference,
     addReview,deleteReview,loadEmployerReviews,loadCandidateContact,candidateNotes,saveCandidateNote,loadScorecards,submitScorecard,
     submitContact,loadContactInbox,resolveContactMessage,listAdmins,setAdminScope,updatePlatformConfig,geocode,
     loadAdminSilverMedalistMatches,deleteAdminSilverMedalistMatch,refreshSilverMedalistMatches,recaptureSnapshot,
     loadAdminApplications,moderateAdminApplication,loadAdminInterviews,cancelAdminInterview,loadAdminOffers,revokeAdminOffer,loadAdminDemographicsAggregate,
-    loadAdminWorkflowRules,deleteAdminWorkflowRule,loadAdminBenefitsPlans,archiveAdminBenefitsPlan,loadAdminPerfCycles,deleteAdminPerfCycle,
+    loadAdminWorkflowRules,deleteAdminWorkflowRule,loadAdminBenefitsPlans,archiveAdminBenefitsPlan,loadAdminPerfCycles,deleteAdminPerfCycle,loadAdminReferralCredits,retryAdminReferralCredit,
     saved,following,enrolled,trainingProgress,suspended,suspensionInfo,invitedCandidates,notifications,activity,securitySignals,opsHealth,settings,userSettings,search,setSearch,
     toasts,toast,dismissToast,chatDock,setChatDock,
     jobId,empId,blogId,trainingId,cvId,editId,candidateId,hrEmpId,setHrEmpId,pipelineJob,applyDraft,setApplyDraft,
