@@ -36,3 +36,10 @@ server/data/*.sqlite-*
 .omc/
 v_*.png
 .claude/settings.json
+
+# Playwright E2E artifacts (screenshots/videos/traces + HTML report) - regenerate with
+# `npm run test:e2e`, never committed.
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
