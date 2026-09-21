@@ -97,7 +97,12 @@ app.use(cookieParser());
    over ~73 kB of real content, because the parser rejected the request before the route's own
    size check ever ran. The limit here sits above the upload ceiling (server/uploads.js) so the
    app's own validation - which returns a clear 413 - is what actually rejects an oversized file. */
-app.use(express.json({ limit: "6mb" }));
+// `verify` stashes the exact raw bytes alongside the parsed body - Stripe's webhook signature is
+// computed over the literal request bytes, and re-serializing the already-parsed JS object would
+// almost always produce different bytes (key order, spacing) and fail verification. The webhook
+// body is valid JSON either way, so express.json() still parses it normally for any other reader;
+// this just gives routes/billing.js a copy of what actually came over the wire.
+app.use(express.json({ limit: "6mb", verify: (req, res, buf) => { req.rawBody = buf; } }));
 
 // Baseline security headers - no helmet dependency needed for a handful of static values.
 app.use((req, res, next) => {

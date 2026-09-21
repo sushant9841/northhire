@@ -3,7 +3,7 @@ import { db, nextId } from "../db.js";
 import { requireAuth, requireRole } from "../auth.js";
 import { getConfig } from "../platformConfig.js";
 import { serializeEmployer, serializeEmployerInvoice } from "../serialize.js";
-import { stripeConfigured, createCheckoutSession, retrieveCheckoutSession, createPortalSession } from "../stripe.js";
+import { stripeConfigured, createCheckoutSession, retrieveCheckoutSession, createPortalSession, getStripe, issueReferralCreditNote } from "../stripe.js";
 
 export const billingRouter = Router();
 
@@ -99,4 +99,79 @@ billingRouter.get("/invoices", requireAuth, requireRole("employer"), (req, res) 
   const employer = resolveOwnEmployer(req, res); if (!employer) return;
   const rows = db.prepare("SELECT * FROM employer_invoices WHERE employer_id = ? ORDER BY created_at DESC").all(employer.id);
   res.json({ invoices: rows.map(serializeEmployerInvoice) });
+});
+
+/* Referral-program credit trigger: the referred employer's first successful invoice payment.
+   Kept idempotent two ways - employer_referral_credits has a UNIQUE index on referred_employer_id
+   (so a webhook redelivery, or invoice.paid firing again on a later renewal, can never create a
+   second credit for the same referral), and issueReferralCreditNote() itself no-ops if that row is
+   already 'issued'. */
+async function handleInvoicePaid(invoice) {
+  const customerId = typeof invoice.customer === "string" ? invoice.customer : invoice.customer?.id;
+  if (!customerId) return;
+  const employer = db.prepare("SELECT * FROM employers WHERE stripe_customer_id = ?").get(customerId);
+  if (!employer || !employer.referred_by_employer_id) return;
+
+  // Already have a credit row for this referral (any status, including a prior attempt) - this
+  // invoice.paid is either a later renewal or a webhook redelivery, not the triggering payment.
+  const already = db.prepare("SELECT 1 FROM employer_referral_credits WHERE referred_employer_id = ?").get(employer.id);
+  if (already) return;
+
+  // "First successful invoice payment" - guard against a renewal being mistaken for it by
+  // requiring this to be at most the first paid invoice we've recorded for this employer.
+  const { n: paidCount } = db.prepare("SELECT COUNT(*) AS n FROM employer_invoices WHERE employer_id = ? AND status = 'paid'").get(employer.id);
+  if (paidCount > 1) return;
+
+  const plan = getConfig("plans")[employer.plan];
+  const amountCents = Math.round((plan?.price || 0) * 100);
+  if (amountCents <= 0) return; // referred employer is on Free - nothing to credit yet
+
+  await issueReferralCreditNote(
+    employer.referred_by_employer_id,
+    employer.id,
+    amountCents,
+    "cad",
+    `Referral credit: ${employer.name || employer.id} completed their first paid month (${employer.plan})`
+  );
+}
+
+// Real Stripe webhook - signature-verified against STRIPE_WEBHOOK_SECRET (never trust an
+// unverified POST to this endpoint; anyone could forge one). Missing secret degrades to a 503
+// with a pointer to the Stripe CLI for local dev, rather than either crashing or - worse -
+// accepting unverified events. Mounted with the raw-body capture from index.js's express.json
+// verify callback so the signature is checked against the exact bytes Stripe signed.
+billingRouter.post("/stripe-webhook", (req, res) => {
+  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!secret) {
+    console.log("[stripe-webhook] STRIPE_WEBHOOK_SECRET not set - rejecting. Set it, or for local dev run: stripe listen --forward-to localhost:8787/api/billing/stripe-webhook");
+    return res.status(503).json({ error: "Webhook not configured. Set STRIPE_WEBHOOK_SECRET or use Stripe CLI: stripe listen --forward-to localhost:8787/api/billing/stripe-webhook" });
+  }
+  const client = getStripe();
+  if (!client) return res.status(503).json({ error: "Payments aren't configured on this server yet." });
+
+  let event;
+  try {
+    event = client.webhooks.constructEvent(req.rawBody, req.headers["stripe-signature"], secret);
+  } catch (e) {
+    console.log(`[stripe-webhook] signature verification failed: ${e.message}`);
+    return res.status(400).json({ error: `Webhook signature verification failed: ${e.message}` });
+  }
+
+  // Ack immediately, then process - Stripe retries on anything but a fast 2xx, and none of these
+  // handlers need to finish before the response goes out.
+  res.json({ received: true });
+
+  (async () => {
+    try {
+      if (event.type === "invoice.paid") {
+        await handleInvoicePaid(event.data.object);
+      } else if (event.type === "credit_note.created") {
+        console.log(`[stripe-webhook] credit_note.created ${event.data.object.id} for customer ${event.data.object.customer}`);
+      } else if (event.type === "charge.refunded") {
+        console.log(`[stripe-webhook] charge.refunded ${event.data.object.id} amount_refunded=${event.data.object.amount_refunded}`);
+      }
+    } catch (e) {
+      console.log(`[stripe-webhook] error handling ${event.type}: ${e.message}`);
+    }
+  })();
 });
