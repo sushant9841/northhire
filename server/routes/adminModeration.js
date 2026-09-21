@@ -1,9 +1,10 @@
 import { Router } from "express";
 import { db, nextId, sqlTime } from "../db.js";
 import { requireAuth, requireAdminScope } from "../auth.js";
-import { serializeApplication, serializeInterview } from "../serialize.js";
+import { serializeApplication, serializeInterview, serializeReferralCredit } from "../serialize.js";
 import { emit as liveEmit } from "../lib/liveBroker.js";
 import { DEMOGRAPHIC_FIELDS, suppressedBucket } from "../lib/demographics.js";
+import { issueReferralCreditNote } from "../stripe.js";
 
 /* Priority-5 admin CRUD sweep: applications, interviews and offers are all user-generated (a
    seeker applying, an employer scheduling/offering) - the admin surface for each is Read
@@ -164,4 +165,29 @@ adminModerationRouter.delete("/perf-cycles/:id", requireAuth, requireAdminScope(
   db.prepare("DELETE FROM perf_cycles WHERE id = ?").run(req.params.id);
   logAdminAction(req, "admin.perfCycleDelete", `Deleted perf cycle ${row.name} (company ${row.company_id})`);
   res.json({ ok: true });
+});
+
+/* ─── Referral credits (Priority-4 #9) ───────────────────────────────────────────────────────────
+   Cross-employer read (unlike GET /employers/me/referral-credits, which is scoped to the signed-in
+   employer's own rows) plus a retry verb for rows stuck at 'pending_stripe' (Stripe wasn't
+   configured, or the referrer had no Stripe customer yet, at the time the referred employer's
+   first invoice paid) or 'failed' (the Stripe API call itself errored) - never for a row already
+   'issued', so a credit can never be issued twice from this button either. */
+adminModerationRouter.get("/referral-credits", requireAuth, requireAdminScope("support", "moderator"), (req, res) => {
+  const rows = db.prepare(
+    `SELECT rc.*, ro.name AS referrer_name, re.name AS referred_name
+     FROM employer_referral_credits rc
+     LEFT JOIN employers ro ON ro.id = rc.referrer_employer_id
+     LEFT JOIN employers re ON re.id = rc.referred_employer_id
+     ORDER BY rc.created_at DESC LIMIT 500`
+  ).all();
+  res.json({ credits: rows.map(r => ({ ...serializeReferralCredit(r), referrerName: r.referrer_name, referredName: r.referred_name })) });
+});
+adminModerationRouter.post("/referral-credits/:id/retry", requireAuth, requireAdminScope("moderator"), async (req, res) => {
+  const row = db.prepare("SELECT * FROM employer_referral_credits WHERE id = ?").get(req.params.id);
+  if (!row) return res.status(404).json({ error: "Referral credit not found." });
+  if (row.status === "issued") return res.status(409).json({ error: "Already issued." });
+  const updated = await issueReferralCreditNote(row.referrer_employer_id, row.referred_employer_id, row.amount_cents, row.currency, row.trigger_reason);
+  logAdminAction(req, "admin.referralCreditRetry", `Retried referral credit ${row.id} — now ${updated.status}`);
+  res.json({ credit: serializeReferralCredit(updated) });
 });

@@ -4,7 +4,7 @@ import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
 import { Page, Btn, Banner, Stat, Card, Switch, Input, Sel, SmartPortrait, Tag, Tabs, Empty, Bar, H1, H2, Modal, ConfirmDialog, Field, Area, usePagination, Pagination, Lbl } from "../../design/primitives.jsx";
-import { pay, payShort } from "../../helpers/utils.js";
+import { pay, payShort, money } from "../../helpers/utils.js";
 import { CATS, STAGES, PROVS, PCODE } from "../../store/seed/constants.js";
 import { jobTone, jobStatusLabel } from "../../helpers/statusTone.js";
 import { applicationStageLabel } from "../../helpers/enumLabels.js";
@@ -670,6 +670,7 @@ export function AdmModeration(){
   const [tab,setTab]=useState("applications");
   const [apps,setApps]=useState(null); const [interviews,setInterviews]=useState(null); const [offers,setOffers]=useState(null);
   const [rules,setRules]=useState(null); const [plans,setPlans]=useState(null); const [cycles,setCycles]=useState(null);
+  const [credits,setCredits]=useState(null); const [retrying,setRetrying]=useState(null);
   const [hiding,setHiding]=useState(null); const [reason,setReason]=useState("");
   const loadAll=async()=>{
     if(tab==="applications"&&apps===null)setApps(await A.loadAdminApplications());
@@ -678,6 +679,7 @@ export function AdmModeration(){
     if(tab==="workflowRules"&&rules===null)setRules(await A.loadAdminWorkflowRules());
     if(tab==="benefitsPlans"&&plans===null)setPlans(await A.loadAdminBenefitsPlans());
     if(tab==="perfCycles"&&cycles===null)setCycles(await A.loadAdminPerfCycles());
+    if(tab==="referralCredits"&&credits===null)setCredits(await A.loadAdminReferralCredits());
   };
   useEffect(()=>{loadAll();},[tab]);
   /* Cross-org destructive actions land through the same admin-log path as applications/
@@ -699,6 +701,15 @@ export function AdmModeration(){
     const r=await A.deleteAdminPerfCycle(id);
     if(r.ok){setCycles(l=>l.filter(x=>x.id!==id));A.toast(t("admin.moderation.cycleDeletedToast"),"ok");}else A.toast(r.msg,"danger");
   };
+  const retryCredit=async id=>{
+    setRetrying(id);
+    const r=await A.retryAdminReferralCredit(id);
+    setRetrying(null);
+    if(r.ok){
+      setCredits(l=>l.map(x=>x.id===id?r.credit:x));
+      A.toast(r.credit.status==="issued"?t("admin.moderation.creditIssuedToast"):t("admin.moderation.creditRetryQueuedToast"),r.credit.status==="issued"?"ok":"warn");
+    }else A.toast(r.msg,"danger");
+  };
   const unhide=async id=>{const r=await A.moderateAdminApplication(id,false);
     if(r.ok){setApps(l=>l.map(a=>a.id===id?r.application:a));A.toast(t("admin.moderation.unhiddenToast"),"ok");}else A.toast(r.msg,"danger");};
   const doHide=async()=>{const id=hiding.id; const r=await A.moderateAdminApplication(id,true,reason.trim());
@@ -717,6 +728,7 @@ export function AdmModeration(){
         {k:"workflowRules",label:t("admin.moderation.tabWorkflowRules")},
         {k:"benefitsPlans",label:t("admin.moderation.tabBenefitsPlans")},
         {k:"perfCycles",label:t("admin.moderation.tabPerfCycles")},
+        {k:"referralCredits",label:t("admin.moderation.tabReferralCredits")},
       ]}
       value={tab} onChange={setTab} style={{marginBottom:18}}/>
     {tab==="applications"&&<Card pad={0} style={{overflow:"hidden"}}>
@@ -790,6 +802,19 @@ export function AdmModeration(){
               <div className="text-xs text-text-3 mt-0.5">{c.companyName||c.companyId} · {c.periodStart} → {c.periodEnd} · {t("admin.moderation.reviewsCount",{n:c.reviewCount})}</div></div>
             <Tag tone={c.status==="active"?"brand":"neutral"} sm>{c.status||"—"}</Tag>
             <Btn kind="dangerSoft" size="xs" onClick={()=>deletePerfCycle(c.id,c.name)}>{t("common.delete")}</Btn>
+          </div>)}
+    </Card>}
+    {tab==="referralCredits"&&<Card pad={0} style={{overflow:"hidden"}}>
+      {credits===null?<div className="text-sm text-text-3 py-5 text-center">{t("admin.stats.loading")}</div>
+        :credits.length===0?<Empty icon="search" title={t("admin.moderation.noReferralCredits")}/>
+        :credits.map((c,i)=>
+          <div key={c.id} className={`flex items-center gap-3 py-3 px-5 flex-wrap ${i<credits.length-1?"border-b border-line-soft":""}`}>
+            <div className="grow shrink basis-60 min-w-0">
+              <div className="text-sm font-semibold text-text">{c.referrerName||c.referrerEmployerId} ← {c.referredName||c.referredEmployerId}</div>
+              <div className="text-xs text-text-3 mt-0.5">{money(c.amountCents/100)} {c.currency} · {formatDateTime(c.createdAt,locale)}
+                {c.errorMessage&&<span className="text-red"> · {c.errorMessage}</span>}</div></div>
+            <Tag tone={c.status==="issued"?"ok":c.status==="failed"?"danger":"warn"} sm>{t(`admin.moderation.creditStatus_${c.status}`)}</Tag>
+            {c.status!=="issued"&&<Btn kind="outline" size="xs" disabled={retrying===c.id} onClick={()=>retryCredit(c.id)}>{retrying===c.id?t("admin.moderation.retrying"):t("admin.moderation.retry")}</Btn>}
           </div>)}
     </Card>}
     {hiding&&<Modal onClose={()=>setHiding(null)} title={t("admin.moderation.hideTitle")}>
