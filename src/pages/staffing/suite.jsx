@@ -1641,7 +1641,7 @@ export function AgencyWorkers(){
                   </div>
                   <div className="flex gap-2 mt-2 items-start">
                     <Area rows={1} defaultValue={r.notes} placeholder="What did they say?" onBlur={e=>save("notes",e.target.value)} style={{flex:1}}/>
-                    <Btn kind="ghost" size="xs" icon="trash" onClick={()=>A.updateWorker(w.id,{references:w.references.filter((_,j)=>j!==i)})}/>
+                    <Btn kind="ghost" size="xs" icon="trash" aria-label={`Remove reference${r.name?` for ${r.name}`:""}`} onClick={()=>A.updateWorker(w.id,{references:w.references.filter((_,j)=>j!==i)})}/>
                   </div>
                 </div>;})}
             </div>}
@@ -1763,7 +1763,7 @@ export function AgencyBranches(){
               <div className="text-base font-bold text-text">{b.name}</div>
               <div className="text-xs text-text-3 mt-0.5">{b.city}{b.city&&b.province?", ":""}{b.province}</div>
             </div>
-            <Btn kind="ghost" size="xs" icon="trash" onClick={()=>A.deleteBranch(b.id)}/>
+            <Btn kind="ghost" size="xs" icon="trash" aria-label={`Delete branch ${b.name||""}`} onClick={()=>A.deleteBranch(b.id)}/>
           </div>
           <div className="flex gap-4 mt-3.5 pt-3 border-t border-line-soft">
             <div><div className="text-lg font-bold text-brand">{clientCount}</div><div className="text-xs text-text-3">{t("staffing.branches.clients")}</div></div>

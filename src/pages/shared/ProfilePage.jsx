@@ -207,7 +207,7 @@ export function ProfilePage(){
                   <div className="text-sm text-text-2 mt-1">{r.title}{r.company?` at ${r.company}`:""}</div>
                   <div className="text-xs text-text-3 mt-1">{r.email} • {r.phone||t("profile.noPhone")}</div>
                   {r.relationship&&<div className="text-xs text-text-3 mt-1 italic">{r.relationship}</div>}</div>
-                <Btn kind="ghost" size="xs" icon="trash" onClick={()=>A.removeReference(r.id)}/></div>)}</div>}
+                <Btn kind="ghost" size="xs" icon="trash" aria-label={`Remove reference ${r.name||""}`} onClick={()=>A.removeReference(r.id)}/></div>)}</div>}
       </div>}
       {showRef&&<Modal onClose={()=>setShowRef(false)} title={t("profile.addRefModal")}>
         <div className="flex flex-col gap-3.5">

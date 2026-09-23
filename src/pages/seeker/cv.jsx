@@ -294,9 +294,9 @@ export function CvEditPage(){
                   <div className="flex justify-between items-center mb-3">
                     <span className="text-xs font-bold text-text-3 tracking-wide">{t("seeker.cv.roleLabel",{n:i+1})}</span>
                     <div className="flex gap-1">
-                      <Btn kind="ghost" size="xs" icon="chevU" disabled={i===0} onClick={()=>move("exp",x.id,-1)}/>
-                      <Btn kind="ghost" size="xs" icon="chevD" disabled={i===d.exp.length-1} onClick={()=>move("exp",x.id,1)}/>
-                      <Btn kind="ghost" size="xs" icon="trash" onClick={()=>rm("exp",x.id)}/></div></div>
+                      <Btn kind="ghost" size="xs" icon="chevU" aria-label="Move role up" disabled={i===0} onClick={()=>move("exp",x.id,-1)}/>
+                      <Btn kind="ghost" size="xs" icon="chevD" aria-label="Move role down" disabled={i===d.exp.length-1} onClick={()=>move("exp",x.id,1)}/>
+                      <Btn kind="ghost" size="xs" icon="trash" aria-label="Remove role" onClick={()=>rm("exp",x.id)}/></div></div>
                   <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-2"}`}>
                     <Field label={t("seeker.cv.jobTitleLabel")}><Input value={x.role} onChange={e=>upd("exp",x.id,"role",e.target.value)} placeholder="Journeyperson Electrician"/></Field>
                     <Field label={t("seeker.cv.employerLabel")}><Input value={x.org} onChange={e=>upd("exp",x.id,"org",e.target.value)} placeholder="PCL Construction"/></Field>
@@ -328,9 +328,9 @@ export function CvEditPage(){
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-xs font-bold text-text-3 tracking-wide">{t("seeker.cv.entryLabel")}</span>
                     <div className="flex gap-1">
-                      <Btn kind="ghost" size="xs" icon="chevU" disabled={d.edu.indexOf(x)===0} onClick={()=>move("edu",x.id,-1)}/>
-                      <Btn kind="ghost" size="xs" icon="chevD" disabled={d.edu.indexOf(x)===d.edu.length-1} onClick={()=>move("edu",x.id,1)}/>
-                      <Btn kind="ghost" size="xs" icon="trash" onClick={()=>rm("edu",x.id)}/></div></div>
+                      <Btn kind="ghost" size="xs" icon="chevU" aria-label="Move education entry up" disabled={d.edu.indexOf(x)===0} onClick={()=>move("edu",x.id,-1)}/>
+                      <Btn kind="ghost" size="xs" icon="chevD" aria-label="Move education entry down" disabled={d.edu.indexOf(x)===d.edu.length-1} onClick={()=>move("edu",x.id,1)}/>
+                      <Btn kind="ghost" size="xs" icon="trash" aria-label="Remove education entry" onClick={()=>rm("edu",x.id)}/></div></div>
                   <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-[2fr_2fr_1fr]"}`}>
                     <Field label={t("seeker.cv.qualificationLabel")}><Input value={x.qual} onChange={e=>upd("edu",x.id,"qual",e.target.value)} placeholder="Red Seal, Construction Electrician"/></Field>
                     <Field label={t("seeker.cv.institutionLabel")}><Input value={x.org} onChange={e=>upd("edu",x.id,"org",e.target.value)} placeholder="SAIT"/></Field>

@@ -1521,7 +1521,7 @@ export function HrCalendar(){
                 </div>
                 {ev.description&&<div className="text-sm text-text-2 leading-relaxed">{ev.description}</div>}
               </div>
-              {canAdd&&<Btn kind="ghost" size="xs" icon="trash" onClick={()=>A.deleteEvent(ev.id)}/>}
+              {canAdd&&<Btn kind="ghost" size="xs" icon="trash" aria-label={`Delete event ${ev.title||""}`} onClick={()=>A.deleteEvent(ev.id)}/>}
             </div>
           </Card>)}
         </div>}
@@ -1588,11 +1588,11 @@ export function HrChat(){
 
   const send=()=>{if(!msg.trim())return; A.sendHrMessage(selected,msg.trim()); setMsg("");};
 
-  return <div className="grid gap-3" style={{gridTemplateColumns:mob?"1fr":"280px 1fr",height:"calc(100vh - 130px)"}}>
+  return <div className="grid gap-3" style={{gridTemplateColumns:mob?"1fr":"280px 1fr",height:"calc(100dvh - 130px)"}}>
     {(showThreads||!mob)&&<Card pad={0} style={{borderRadius:14,overflow:"hidden",display:"flex",flexDirection:"column"}}>
       <div className="py-3.5 px-4 border-b border-line-soft flex justify-between items-center">
         <div className="text-sm font-semibold text-text">{t("hr.chat.conversations")}</div>
-        {(chatSettings.allowDirectMessages||chatSettings.allowGroupCreation)&&<Btn kind="ghost" size="xs" icon="plus" onClick={()=>setShowNew(true)}/>}
+        {(chatSettings.allowDirectMessages||chatSettings.allowGroupCreation)&&<Btn kind="ghost" size="xs" icon="plus" aria-label="New conversation" onClick={()=>setShowNew(true)}/>}
       </div>
       <div className="flex-1 overflow-y-auto">
         {myChats.map(c=>{const isActive=selected===c.id; const unread=!isActive&&c.unreadCount>0;
@@ -1614,13 +1614,13 @@ export function HrChat(){
     {(!showThreads||!mob)&&chat&&<Card pad={0} style={{borderRadius:14,overflow:"hidden",display:"flex",flexDirection:"column"}}>
       <div className="py-3.5 px-5 border-b border-line-soft flex justify-between items-center bg-white">
         <div>
-          {mob&&<Btn kind="ghost" size="xs" icon="chevL" onClick={()=>setShowThreads(true)}>{t("hr.chat.back")}</Btn>}
+          {mob&&<Btn kind="ghost" size="xs" icon="chevL" style={{minHeight:44}} onClick={()=>setShowThreads(true)}>{t("hr.chat.back")}</Btn>}
           <div className="text-base font-semibold text-text">{chat.name}</div>
           <div className="text-xs text-text-3 mt-0.5">{chat.about}</div>
         </div>
         {chatSettings.allowCalls&&<div className="flex gap-1.5">
-          <Btn kind="ghost" size="xs" icon="phone" title={t("hr.chat.callBtn",{name:chat.name})} onClick={()=>A.toast(t("hr.chat.voiceVideoNotAvailable"))}/>
-          <Btn kind="ghost" size="xs" icon="play" title={t("hr.chat.videoCallBtn",{name:chat.name})} onClick={()=>A.toast(t("hr.chat.voiceVideoNotAvailable"))}/>
+          <Btn kind="ghost" size="xs" icon="phone" style={{minHeight:44,minWidth:44}} title={t("hr.chat.callBtn",{name:chat.name})} onClick={()=>A.toast(t("hr.chat.voiceVideoNotAvailable"))}/>
+          <Btn kind="ghost" size="xs" icon="play" style={{minHeight:44,minWidth:44}} title={t("hr.chat.videoCallBtn",{name:chat.name})} onClick={()=>A.toast(t("hr.chat.voiceVideoNotAvailable"))}/>
         </div>}
       </div>
 
@@ -1643,7 +1643,7 @@ export function HrChat(){
            approved / task assigned / birthday / anniversary, one tap fills the box (still editable,
            still requires a separate Send). */}
         <div className="relative">
-          <Btn kind="ghost" size="sm" icon="sparkle" onClick={()=>setShowTemplates(s=>!s)} title={t("hr.chat.templatesBtn")}/>
+          <Btn kind="ghost" size="sm" icon="sparkle" style={{minHeight:44,minWidth:44}} onClick={()=>setShowTemplates(s=>!s)} title={t("hr.chat.templatesBtn")}/>
           {showTemplates&&<div className="absolute bottom-full left-0 mb-1.5 bg-white border border-line rounded-xl shadow-lg p-1.5 z-20" style={{minWidth:240,maxHeight:220,overflowY:"auto"}}>
             {defaultHrMessageTemplates(t,A.hrEmp(chat?.members?.split(",").find(m=>m!==emp.id))?.name?.split(" ")[0]).map(tm=>
               <button key={tm.id} onClick={()=>{setMsg(tm.body); setShowTemplates(false);}}
@@ -3089,7 +3089,7 @@ export function HrPolicies(){
             <div className="text-xs text-text-3 mt-0.5">{t("hr.policies.signedOf",{signed:d.signedCount,target:d.targetCount})}</div></div>
           <div className="flex gap-2">
             <Btn kind="ghost" size="xs" onClick={()=>openSigs(d)}>{t("hr.policies.viewSignatures")}</Btn>
-            <Btn kind="ghost" size="xs" icon="trash" onClick={async()=>{const r=await A.removeSignDocument(d.id);if(r.ok)A.toast(t("hr.policies.removed"),"ok");}}/>
+            <Btn kind="ghost" size="xs" icon="trash" aria-label={`Remove policy document ${d.title||""}`} onClick={async()=>{const r=await A.removeSignDocument(d.id);if(r.ok)A.toast(t("hr.policies.removed"),"ok");}}/>
           </div>
         </div>)}
         {A.hrSignDocsAll.length===0&&<div className="text-sm text-text-3">{t("hr.policies.noPoliciesPublished")}</div>}
@@ -3163,9 +3163,9 @@ export function HrRoster(){
   return <div>
     <div className="flex justify-between items-center mb-4 flex-wrap gap-2.5">
       <div className="flex items-center gap-2">
-        <Btn kind="ghost" size="sm" icon="chevL" onClick={()=>setAnchor(a=>{const d=new Date(a);d.setDate(d.getDate()-7);return d;})}/>
+        <Btn kind="ghost" size="sm" icon="chevL" aria-label="Previous week" onClick={()=>setAnchor(a=>{const d=new Date(a);d.setDate(d.getDate()-7);return d;})}/>
         <div className="text-sm font-semibold text-text">{from} → {to}</div>
-        <Btn kind="ghost" size="sm" icon="chevR" onClick={()=>setAnchor(a=>{const d=new Date(a);d.setDate(d.getDate()+7);return d;})}/>
+        <Btn kind="ghost" size="sm" icon="chevR" aria-label="Next week" onClick={()=>setAnchor(a=>{const d=new Date(a);d.setDate(d.getDate()+7);return d;})}/>
         <Btn kind="ghost" size="xs" onClick={()=>setAnchor(new Date())}>{t("hr.roster.thisWeekBtn")}</Btn>
       </div>
       {isPriv&&<Btn kind="primary" size="sm" icon="plus" onClick={()=>{setNs({employeeId:emp.id,date:from,startTime:"09:00",endTime:"17:00",role:"",site:"",notes:""});setShowAdd(true);}}>{t("hr.roster.addShiftBtn")}</Btn>}
@@ -3185,7 +3185,7 @@ export function HrRoster(){
                       <div className="text-xs text-text-3">{s.startTime}–{s.endTime}{s.role?` · ${s.role}`:""}{s.site?` · ${s.site}`:""}</div>
                     </div>
                   </div>
-                  {isPriv&&<Btn kind="ghost" size="xs" icon="trash" onClick={()=>A.removeShift(s.id)}/>}
+                  {isPriv&&<Btn kind="ghost" size="xs" icon="trash" aria-label={`Remove shift for ${se?.name||"employee"}`} onClick={()=>A.removeShift(s.id)}/>}
                 </div>;})}
             </div>}
         </Card>;})}
@@ -3266,7 +3266,7 @@ function _PerfReviewRow({A,review,me,priv,onChange,onDelete}){
       </div>
       <div className="flex items-center gap-2">
         <Tag tone={submitted?"ok":"neutral"} sm>{submitted?t("hr.perfReviews.submittedTag"):t("hr.perfReviews.pendingTag")}</Tag>
-        {priv&&!submitted&&<Btn kind="ghost" size="xs" icon="trash" onClick={()=>onDelete(review.id)}/>}
+        {priv&&!submitted&&<Btn kind="ghost" size="xs" icon="trash" aria-label="Delete review" onClick={()=>onDelete(review.id)}/>}
       </div>
     </div>
     {(isMine||submitted)&&<div className="mt-2">

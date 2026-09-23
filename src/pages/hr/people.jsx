@@ -371,7 +371,7 @@ function _EmployeeDocuments({empId}){
         {docs.map(d=><div key={d.id} className="flex justify-between items-center py-2 px-3 bg-bg rounded-lg">
           <button type="button" onClick={()=>A.downloadEmployeeDocument(d.id)} className="bg-transparent border-0 p-0 text-xs font-semibold text-text cursor-pointer text-left flex-1">{d.name}</button>
           <span className="text-xs text-text-3 mr-2">{(d.size/1024/1024*0.75).toFixed(1)} MB</span>
-          <Btn kind="ghost" size="xs" icon="trash" onClick={async()=>{await A.deleteEmployeeDocument(d.id);refresh();}}/>
+          <Btn kind="ghost" size="xs" icon="trash" aria-label={`Delete document ${d.name||""}`} onClick={async()=>{await A.deleteEmployeeDocument(d.id);refresh();}}/>
         </div>)}
       </div>}
   </div>;
@@ -583,7 +583,7 @@ function HrPeople_Manage(){
                     <div className="flex gap-1.5 items-center">
                       {expired&&<Tag tone="danger" sm>{t("hrPeople.manage.expired")}</Tag>}
                       {soon&&<Tag tone="warn" sm>{t("hrPeople.manage.expiringSoon")}</Tag>}
-                      <Btn kind="ghost" size="xs" icon="trash" onClick={()=>removeCert(i)}/></div></div>;})}
+                      <Btn kind="ghost" size="xs" icon="trash" aria-label={`Remove certification${c.name?` ${c.name}`:""}`} onClick={()=>removeCert(i)}/></div></div>;})}
               </div>}
         </div>
         <_EmployeeDocuments empId={editing.id}/>

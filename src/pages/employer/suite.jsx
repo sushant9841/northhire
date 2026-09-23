@@ -1467,7 +1467,7 @@ export function EmpCandidate({inline=false,onClose}={}){
           <div className="flex-1 min-w-0">
             <div className="text-sm font-semibold text-text">{iv.mode==="video"?t("employer.candidate.videoCall"):t("employer.candidate.onsiteInterview")} on {iv.when}</div>
             {iv.notes&&<div className="text-xs text-text-2 mt-1">{iv.notes}</div>}</div>
-          <Btn kind="ghost" size="xs" icon="x" onClick={()=>A.cancelInterview(iv.id)}/></div>)}</div></Card>}
+          <Btn kind="ghost" size="xs" icon="x" aria-label="Cancel interview" onClick={()=>A.cancelInterview(iv.id)}/></div>)}</div></Card>}
 
     {showMsg&&(()=>{const allTemplates=[...defaultMessageTemplates(t),...A.messageTemplates]; return <Modal onClose={()=>{setShowMsg(false);setSavingTemplate(false);}} title={`Message ${u.name}`}>
       {allTemplates.length>0&&<Field label={t("employer.candidate.startFromTemplate")}>
@@ -1890,7 +1890,7 @@ export function TrainingEditor(){
                       <div className="flex gap-0.5">
                         <Btn kind="ghost" size="xs" onClick={()=>moveMod(m.id,-1)} disabled={i===0}>↑</Btn>
                         <Btn kind="ghost" size="xs" onClick={()=>moveMod(m.id,1)} disabled={i===d.mods.length-1}>↓</Btn>
-                        <Btn kind="ghost" size="xs" icon="trash" onClick={()=>delMod(m.id)}/>
+                        <Btn kind="ghost" size="xs" icon="trash" aria-label={`Delete module${m.title?` ${m.title}`:""}`} onClick={()=>delMod(m.id)}/>
                       </div>
                     </div>
                     <Input value={m.videoUrl||""} onChange={e=>updMod(m.id,{videoUrl:e.target.value})}
@@ -1930,7 +1930,7 @@ export function TrainingEditor(){
                     <div className="flex gap-2 items-center mb-2.5">
                       <div className="w-6 h-6 rounded-full bg-warn-bg text-warn flex items-center justify-center text-xs font-bold shrink-0">Q{i+1}</div>
                       <Input value={t.question} onChange={e=>updTest(t.id,{question:e.target.value})} placeholder="Question text"/>
-                      <Btn kind="ghost" size="xs" icon="trash" onClick={()=>delTest(t.id)}/>
+                      <Btn kind="ghost" size="xs" icon="trash" aria-label={`Delete question ${i+1}`} onClick={()=>delTest(t.id)}/>
                     </div>
                     <div className="flex flex-col gap-1.5">
                       {t.options.map((o,j)=><label key={j} className="flex gap-2 items-center cursor-pointer">
@@ -2185,7 +2185,7 @@ function _ConditionNode({node,onChange,onRemove,stages,depth,t}){
       ?<Sel value={node.value} onChange={e=>onChange({...node,value:e.target.value})} style={{minWidth:140}}>
           <option value="">{t("employer.workflowRules.chooseEllipsis")}</option>{stages.map(s=><option key={s} value={s}>{s}</option>)}</Sel>
       :<Input value={node.value} onChange={e=>onChange({...node,value:e.target.value})} style={{minWidth:140,flex:1}} placeholder={t("employer.workflowRules.valuePlaceholder")}/>}
-    <Btn kind="ghost" size="xs" icon="trash" onClick={onRemove}/>
+    <Btn kind="ghost" size="xs" icon="trash" aria-label="Remove condition" onClick={onRemove}/>
   </div>;
 }
 
@@ -2209,7 +2209,7 @@ function _ActionRow({action,onChange,onRemove,templates,members,t}){
       <Sel value={action.userId||""} onChange={e=>onChange({...action,userId:e.target.value})} style={{minWidth:130}}>
         <option value="">{t("employer.workflowRules.chooseTeammateOption")}</option>{members.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</Sel>
       <Input value={action.message||""} onChange={e=>onChange({...action,message:e.target.value})} placeholder={t("employer.workflowRules.messageOptionalPlaceholder")} style={{flex:1,minWidth:140}}/></>}
-    <Btn kind="ghost" size="xs" icon="trash" onClick={onRemove}/>
+    <Btn kind="ghost" size="xs" icon="trash" aria-label="Remove action" onClick={onRemove}/>
   </div>;
 }
 
@@ -2295,8 +2295,8 @@ function _WorkflowRulesEditor({A,mob}){
         </div>
         {isOwner&&<div className="flex gap-1.5 shrink-0">
           <Btn kind="ghost" size="xs" onClick={()=>A.toggleWorkflowRule(rule.id,!rule.enabled)}>{rule.enabled?t("employer.workflowRules.disable"):t("employer.workflowRules.enable")}</Btn>
-          <Btn kind="ghost" size="xs" icon="pencil" onClick={()=>setEditing(rule)}/>
-          <Btn kind="ghost" size="xs" icon="trash" onClick={()=>setConfirmDelete(rule)}/>
+          <Btn kind="ghost" size="xs" icon="pencil" aria-label={`Edit rule ${rule.name||""}`} onClick={()=>setEditing(rule)}/>
+          <Btn kind="ghost" size="xs" icon="trash" aria-label={`Delete rule ${rule.name||""}`} onClick={()=>setConfirmDelete(rule)}/>
         </div>}
       </div>)}
     </div>
@@ -2370,7 +2370,7 @@ export function EmpTeam(){
             <div className="text-sm font-semibold text-text">{m.name}{m.id===A.user?.id&&<span className="text-text-3 font-normal"> (you)</span>}</div>
             <div className="text-xs text-text-3 overflow-hidden text-ellipsis whitespace-nowrap">{m.email}</div></div>
           <Tag tone={m.role==="owner"?"brand":"neutral"} sm>{m.role==="owner"?t("employer.team.owner"):t("employer.team.member")}</Tag>
-          {isOwner&&m.role!=="owner"&&<Btn kind="ghost" size="xs" icon="trash" onClick={()=>setRemoving(m)}/>}
+          {isOwner&&m.role!=="owner"&&<Btn kind="ghost" size="xs" icon="trash" aria-label={`Remove ${m.name||"team member"}`} onClick={()=>setRemoving(m)}/>}
         </div>)}
       </div>
     </Card>
@@ -2381,7 +2381,7 @@ export function EmpTeam(){
           <div className="w-9 h-9 rounded-lg bg-wash text-brand flex items-center justify-center shrink-0"><I n="mail" s={16}/></div>
           <div className="flex-1 min-w-0 text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap">{inv.email}</div>
           <Tag tone="warn" sm>Pending</Tag>
-          <Btn kind="ghost" size="xs" icon="x" onClick={()=>A.revokeInvite(inv.id)}/>
+          <Btn kind="ghost" size="xs" icon="x" aria-label={`Revoke invite for ${inv.email||""}`} onClick={()=>A.revokeInvite(inv.id)}/>
         </div>)}
       </div>
     </Card>}

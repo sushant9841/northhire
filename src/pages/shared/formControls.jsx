@@ -237,7 +237,7 @@ export function QuestionBuilder({value=[],onChange}){
           <div className="ml-auto flex gap-1.5 items-center">
             <label className="flex gap-1.5 items-center text-xs text-text-2 cursor-pointer">
               <input type="checkbox" checked={q.required} onChange={e=>upd(q.id,{required:e.target.checked})}/>{t("formControls.qRequired")}</label>
-            <Btn kind="ghost" size="xs" icon="trash" onClick={()=>del(q.id)}/>
+            <Btn kind="ghost" size="xs" icon="trash" aria-label={`Delete question ${i+1}`} onClick={()=>del(q.id)}/>
           </div>
         </div>
         <Input value={q.prompt} onChange={e=>upd(q.id,{prompt:e.target.value})} placeholder={t("formControls.qPlaceholder")}/>
@@ -245,7 +245,7 @@ export function QuestionBuilder({value=[],onChange}){
           {q.options.map((o,j)=><div key={j} className="flex gap-2 items-center">
             <span className="text-text-3 text-xs">{q.type==="radio"?"○":"☐"}</span>
             <Input value={o} onChange={e=>updOpt(q.id,j,e.target.value)} placeholder={t("formControls.qOptionPlaceholder",{num:j+1})}/>
-            {q.options.length>2&&<Btn kind="ghost" size="xs" icon="x" onClick={()=>delOpt(q.id,j)}/>}
+            {q.options.length>2&&<Btn kind="ghost" size="xs" icon="x" aria-label={`Remove option ${j+1}`} onClick={()=>delOpt(q.id,j)}/>}
           </div>)}
           <Btn kind="ghost" size="xs" icon="plus" onClick={()=>addOpt(q.id)}>{t("formControls.qAddOption")}</Btn>
         </div>}

@@ -93,7 +93,7 @@ export function MessagesPage(){
                 <div className="p-3.5 border-t border-line-soft flex gap-2">
                   <Input value={reply[openThread]||""} onChange={e=>setReply(r=>({...r,[openThread]:e.target.value}))}
                     onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}} placeholder={t("messages.replyPlaceholder")}/>
-                  <Btn kind="primary" icon="send" disabled={!(reply[openThread]||"").trim()} onClick={send}/></div></Card>}
+                  <Btn kind="primary" icon="send" style={{minHeight:44,minWidth:44}} aria-label="Send message" disabled={!(reply[openThread]||"").trim()} onClick={send}/></div></Card>}
             </div>}
       </div>
     </section>

@@ -51,10 +51,10 @@ export function SavedSearchesPage(){
                     <strong className="text-brand text-lg font-bold">{n}</strong> {t(n===1?"seeker.savedSearches.matchesNowOne":"seeker.savedSearches.matchesNowOther",{count:n}).replace(String(n),"").trim()}
                     {s.alerts&&<span className="text-ok ml-2.5">• {FREQ_LABEL[s.frequency||"instant"]}</span>}</div>
                   <div className="flex gap-2">
-                    <Btn kind="ghost" size="sm" icon="edit" onClick={()=>openEdit(s)}/>
+                    <Btn kind="ghost" size="sm" icon="edit" aria-label={`Edit search ${s.name||""}`} onClick={()=>openEdit(s)}/>
                     <Btn kind="outline" size="sm" onClick={()=>editFilters(s)}>{t("seeker.savedSearches.editFiltersBtn")}</Btn>
                     <Btn kind="outline" size="sm" onClick={()=>runSearch(s)}>{t("seeker.savedSearches.runSearchBtn")}</Btn>
-                    <Btn kind="ghost" size="sm" icon="trash" onClick={()=>A.deleteSavedSearch(s.id)}/></div></div></div>;})}</div>}
+                    <Btn kind="ghost" size="sm" icon="trash" aria-label={`Delete search ${s.name||""}`} onClick={()=>A.deleteSavedSearch(s.id)}/></div></div></div>;})}</div>}
       </div>
     </section>
     {editing&&<Modal onClose={()=>setEditing(null)} title={t("seeker.savedSearches.editModalTitle")}>

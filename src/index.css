@@ -92,6 +92,24 @@
   font-weight: 600; text-decoration: none;
 }
 
+/* ─── Reduced motion (Phase F) ──────────────────────────────────────────────────────────────
+   App.jsx's inline <style> tag already guards its own hand-rolled @keyframes animations behind
+   this same media query, but that only covers what's mounted through App.jsx. This global,
+   stylesheet-level copy is the belt-and-suspenders version: it catches ANY animation/transition
+   anywhere (including ones added later, in a component that never imports App.jsx's style block,
+   or a future third-party widget) rather than depending on every author remembering to check for
+   the query themselves. `scroll-behavior:auto` also cancels the smooth-scroll a `scrollIntoView`
+   or CSS `scroll-behavior:smooth` call might otherwise trigger for someone who has this OS-level
+   preference set specifically because motion causes them discomfort. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* ─── Print stylesheet ────────────────────────────────────────────────────────────────────
    For pages that are expected to be printed - org chart, employee directory, compliance
    dashboard, invoices, CVs, offer letters - opt in with .print-target on the container that

@@ -558,8 +558,17 @@ export function FeatureBoundary({A,feature,as="inline",label,icon="lock",require
 export function Modal({open=true,onClose,title,sub,children,footer,width=520}){
  const mob=useMedia("(max-width: 820px)");
  const boxRef=useRef(null);
+ const openerRef=useRef(null);
  useEffect(()=>{if(!open||typeof document==="undefined")return;const p=document.body.style.overflow;
   document.body.style.overflow="hidden";return()=>{document.body.style.overflow=p;};},[open]);
+ /* A11y: focus trap already existed (Tab/Shift+Tab cycling below), but nothing returned focus to
+    whatever triggered the modal once it closed - a keyboard user landed back at <body>, losing
+    their place entirely. Snapshot the triggering element on open, restore it on close/unmount. */
+ useEffect(()=>{
+  if(!open||typeof document==="undefined")return;
+  openerRef.current=document.activeElement;
+  return()=>{ openerRef.current?.focus?.(); };
+ },[open]);
  useEffect(()=>{
   if(!open)return;
   boxRef.current?.focus();
@@ -598,12 +607,30 @@ export function Modal({open=true,onClose,title,sub,children,footer,width=520}){
 export function BottomSheet({open,onClose,title,sub,children,footer,width=420}){
  const mob=useMedia("(max-width: 820px)");
  const boxRef=useRef(null);
+ const openerRef=useRef(null);
  useEffect(()=>{if(!open||typeof document==="undefined")return;const p=document.body.style.overflow;
   document.body.style.overflow="hidden";return()=>{document.body.style.overflow=p;};},[open]);
+ /* A11y: match Modal - snapshot the opener so focus returns to it on close, and trap Tab/Shift+Tab
+    inside the sheet while open (this previously only handled Escape, so a keyboard user could tab
+    straight out into the page behind the overlay). */
+ useEffect(()=>{
+  if(!open||typeof document==="undefined")return;
+  openerRef.current=document.activeElement;
+  return()=>{ openerRef.current?.focus?.(); };
+ },[open]);
  useEffect(()=>{
   if(!open)return;
   boxRef.current?.focus();
-  const onKey=e=>{if(e.key==="Escape")onClose?.();};
+  const onKey=e=>{
+   if(e.key==="Escape"){onClose?.();return;}
+   if(e.key==="Tab"&&boxRef.current){
+    const focusables=boxRef.current.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    if(!focusables.length)return;
+    const first=focusables[0],last=focusables[focusables.length-1];
+    if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+    else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+   }
+  };
   document.addEventListener("keydown",onKey);
   return()=>document.removeEventListener("keydown",onKey);
  },[open,onClose]);
@@ -614,7 +641,7 @@ export function BottomSheet({open,onClose,title,sub,children,footer,width=420}){
    className={`bg-white shadow-lg flex flex-col outline-none ${mob?"w-full rounded-t-3xl max-h-[90vh]":"h-full"}`}
    style={{width:mob?undefined:width,maxWidth:mob?undefined:"92vw",
     animation:mob?"up .26s cubic-bezier(.22,.68,.35,1)":"slideInR .22s cubic-bezier(.22,.68,.35,1)"}}>
-   {mob&&<div className="w-10 h-1 bg-line rounded-full mt-2.5 mx-auto mb-0.5 shrink-0"/>}
+   {mob&&<div className="w-10 h-1 bg-line rounded-full mt-2.5 mx-auto mb-0.5 shrink-0" role="img" aria-label="Drag handle — swipe down to close"/>}
    <div className="py-5 px-6 border-b border-line-soft flex justify-between gap-3.5 items-start shrink-0">
     <div><div className="text-lg font-bold tracking-tight text-text">{title}</div>
      {sub&&<div className="text-sm text-text-2 mt-1">{sub}</div>}</div>
