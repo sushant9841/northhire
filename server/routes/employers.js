@@ -492,11 +492,15 @@ employersRouter.patch("/:id", requireAuth, (req, res) => {
     if (!hasAdminScope(req.user, "moderator")) return res.status(403).json({ error: "This admin account doesn't have access to employer verification." });
     db.prepare("UPDATE employers SET verified = ?, hold = CASE WHEN ? THEN 0 ELSE hold END WHERE id = ?")
       .run(verified ? 1 : 0, verified ? 1 : 0, req.params.id);
+    logEmployerAudit(req.params.id, req.user, verified ? "admin.verified" : "admin.verification_revoked",
+      `${req.user.name} ${verified ? "verified this company" : "revoked verification for this company"}`);
   }
   if (hold !== undefined) {
     if (!isAdmin) return res.status(403).json({ error: "Only an administrator can hold a company." });
     if (!hasAdminScope(req.user, "moderator")) return res.status(403).json({ error: "This admin account doesn't have access to employer holds." });
     db.prepare("UPDATE employers SET hold = ? WHERE id = ?").run(hold ? 1 : 0, req.params.id);
+    logEmployerAudit(req.params.id, req.user, hold ? "admin.hold" : "admin.hold_released",
+      `${req.user.name} ${hold ? "placed this company on hold" : "released this company from hold"}`);
   }
   if (plan !== undefined) {
     if (!isOwner && !isAdmin) return res.status(403).json({ error: "Not your company." });
@@ -506,7 +510,10 @@ employersRouter.patch("/:id", requireAuth, (req, res) => {
     // (finance scope) can still set any plan directly, for comps/trials/support overrides.
     const targetPrice = getConfig("plans")[plan]?.price ?? 0;
     if (isOwner && !isAdmin && targetPrice > 0) return res.status(402).json({ error: "Upgrading to a paid plan requires checkout." });
+    const fromPlan = row.plan;
     db.prepare("UPDATE employers SET plan = ? WHERE id = ?").run(plan, req.params.id);
+    logEmployerAudit(req.params.id, req.user, "plan.changed",
+      `${isAdmin ? `Admin ${req.user.name}` : "Account owner"} changed the plan from ${fromPlan} to ${plan}`);
   }
   // locale: Bill 96 tail - lets an employer set the language used for mail sent to contacts who
   // have no NorthHire account of their own (e.g. their staffing client's billing contact).
@@ -526,6 +533,8 @@ employersRouter.patch("/:id", requireAuth, (req, res) => {
   if (setCols.length) {
     const stmt = db.prepare(`UPDATE employers SET ${setCols.map(k => `${fieldMap[k]} = ?`).join(", ")} WHERE id = ?`);
     stmt.run(...setCols.map(k => profileFields[k]), req.params.id);
+    logEmployerAudit(req.params.id, req.user, isAdmin ? "admin.profile_edited" : "profile.edited",
+      `${isAdmin ? `Admin ${req.user.name}` : "Account owner"} updated: ${setCols.join(", ")}`);
   }
 
   const updated = db.prepare(`${WITH_OWNER} WHERE employers.id = ?`).get(req.params.id);

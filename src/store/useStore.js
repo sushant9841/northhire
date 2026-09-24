@@ -1843,7 +1843,7 @@ export function useStore(){
 
   const saveCompany=async d=>{
     try{
-      const {employer}=await api.patch(`/employers/${d.id}`,{name:d.name,industry:d.industry,city:d.city,prov:d.prov,size:d.size,about:d.about,site:d.site,businessNumber:d.businessNumber,locale:d.locale});
+      const {employer}=await api.patch(`/employers/${d.id}`,{name:d.name,industry:d.industry,city:d.city,prov:d.prov,size:d.size,about:d.about,site:d.site,businessNumber:d.businessNumber,founded:d.founded,mark:d.mark,a:d.a,b:d.b,locale:d.locale});
       setEmployers(l=>l.map(e=>e.id===d.id?{...d,...mapApiEmployer(employer)}:e));
       log("company.update",`Updated ${d.name} profile`,"building");
     }catch(err){toast(err.message,"danger");}};
