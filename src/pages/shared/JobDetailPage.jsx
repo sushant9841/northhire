@@ -206,22 +206,27 @@ export function JobDetailPage({previewJob,preview}={}){
               <Btn kind="outline" size="sm" full onClick={()=>A.go("profile")}>{t("shared.jobDetail.updateSkills")}</Btn></div>;})()}
           {(()=>{const s=A.salaryInsight(job.t,job.prov);
             if(!s)return null;
-            /* salaryInsight always computes in annualized terms internally (the only way to
-               compare an hourly trades job against a salaried office job on one scale) - but
-               showing ONLY that figure for an hourly/per-mile posting, with no link back to the
-               job's own $/hr or $/mi terms, forced the reader to mentally convert. Show both. */
+            // QA-r5 followup: same class of $0k bug the pay() helper had — this card renders
+            // p25/median/p75 as $Xk and would show "$0k / $0k / $98k" when the aggregate has
+            // low-value corrupt rows. Suppress the whole card when every tier rounds to zero
+            // (no useful signal there), and hide any single tier that rounds to zero rather
+            // than falsely reassuring the seeker they'd earn "$0k".
+            const kR=v=>Math.round((Number(v)||0)/1000);
+            const tiers=[[t("shared.jobDetail.low"),s.p25],[t("shared.jobDetail.median"),s.median],[t("shared.jobDetail.high"),s.p75]]
+              .filter(([,v])=>kR(v)>0);
+            if(tiers.length===0)return null;
             const perUnit=job.unit==="hr"?v=>v/2080:job.unit==="mi"?v=>v/110000:null;
             const unitLabel=job.unit==="hr"?"/hr":job.unit==="mi"?"/mi":null;
             return <div className="bg-white rounded-3xl p-6 border border-line">
               <Lbl>{t("shared.jobDetail.salaryInsight")}</Lbl>
               <p className="text-sm text-text-2 mb-3.5 leading-normal">
                 {t("shared.jobDetail.basedOn",{count:s.count,prov:job.prov})}</p>
-              <div className="grid grid-cols-3 gap-2 mb-3.5">
-                {[[t("shared.jobDetail.low"),s.p25],[t("shared.jobDetail.median"),s.median],[t("shared.jobDetail.high"),s.p75]].map(([lbl,v],i)=>
-                  <div key={lbl} className={`text-center py-3 px-1.5 rounded-xl border ${i===1?"bg-tint border-line-2":"bg-bg border-line"}`}>
+              <div className={`grid gap-2 mb-3.5`} style={{gridTemplateColumns:`repeat(${tiers.length},1fr)`}}>
+                {tiers.map(([lbl,v],i)=>{const medianIdx=tiers.findIndex(([l])=>l===t("shared.jobDetail.median"));const isMedian=i===medianIdx;
+                  return <div key={lbl} className={`text-center py-3 px-1.5 rounded-xl border ${isMedian?"bg-tint border-line-2":"bg-bg border-line"}`}>
                     <div className="text-xs text-text-3 font-semibold tracking-wide uppercase">{lbl}</div>
-                    <div className={`text-base font-bold mt-1 tracking-tight ${i===1?"text-brand":"text-text"}`}>${Math.round(v/1000)}k</div>
-                    {perUnit&&<div className="text-xs text-text-3 mt-0.5">${perUnit(v).toFixed(2)}{unitLabel}</div>}</div>)}</div>
+                    <div className={`text-base font-bold mt-1 tracking-tight ${isMedian?"text-brand":"text-text"}`}>${kR(v)}k</div>
+                    {perUnit&&<div className="text-xs text-text-3 mt-0.5">${perUnit(v).toFixed(2)}{unitLabel}</div>}</div>;})}</div>
               <div className="text-xs text-text-3 text-center">{perUnit?t(job.unit==="hr"?"shared.jobDetail.annualizedHourly":"shared.jobDetail.annualizedMiles",{unit:unitLabel}):t("shared.jobDetail.annualizedFull")}</div></div>;})()}
         </div>}
       </div>

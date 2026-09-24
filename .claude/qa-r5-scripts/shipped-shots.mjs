@@ -20,6 +20,12 @@ async function walk(browser, persona, viewport, fn) {
 }
 
 const targets = [
+  // Public: homepage — must NOT show duplicate jobs across sections OR "Urgent · Closed" cards
+  ["seeker", "home-fixed", async (page, vp) => {
+    await page.goto("http://localhost:5173/", { waitUntil: "domcontentloaded", timeout: 15000 });
+    await page.waitForTimeout(2000);
+    await page.screenshot({ path: shot("seeker", "home-fixed", vp), fullPage: true });
+  }],
   // Public: job detail on a real seed job — must NOT show "$0k – $0k" or "4.913..." or scale text
   ["seeker", "job-detail-fixed", async (page, vp) => {
     // Land on any real seed job — j122_mu5f1vi2 (QA Publish Verification Role)
