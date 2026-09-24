@@ -13,6 +13,7 @@ import { hiringSummary, timeToHire } from "../../helpers/hiringAnalytics.js";
 import { defaultMessageTemplates } from "../../helpers/messageTemplates.js";
 import { postingRules, checkPayRange, findCanadianExperience, applicationDecisionNotice, AI_DISCLOSURE_TEXT } from "../../helpers/jobPostingLaw.js";
 import { pay, payShort, dlText, money, uid, matchesQuery, matchesBooleanQuery, focusFirstError } from "../../helpers/utils.js";
+import { useDismissed } from "../../helpers/useDismissed.js";
 import { sanitizeHtml } from "../../helpers/sanitize.js";
 import { PROVS, PCODE, CATS, CATM } from "../../store/seed/constants.js";
 import { jobTone, jobStatusLabel } from "../../helpers/statusTone.js";
@@ -351,6 +352,19 @@ function _EditJobModal({job,onClose}){
    Field-by-field this mirrors exactly what publishJob()/buildPayload() send to the server -
    any field the wizard doesn't otherwise convert (duties/reqs from newline text to arrays, pay
    range vs fixed, closing date to a days-remaining int) is converted here the same way. */
+/* QA-r4 tail dismiss sweep: the wizard-step-4 "Scoring is automatic" educational banner is
+   shown every time an employer visits the last step. Persist a dismissal so a repeat poster
+   isn't nagged by it every listing. Uses the shared useDismissed hook (helpers/useDismissed.js)
+   so future one-off tips can follow the same pattern. */
+function _DismissableScoringBanner(){
+  const [dismissed, dismiss] = useDismissed("emp-post-scoring-banner:v1");
+  if (dismissed) return null;
+  return <Banner tone="brand" icon="sparkle" title="Scoring is automatic"
+    action={<Btn kind="ghost" size="xs" onClick={dismiss} aria-label="Dismiss">Dismiss</Btn>}>
+    Every applicant is scored out of 100 against your must-have skills and experience. Your pipeline shows the best fit first, ranked by the system.
+  </Banner>;
+}
+
 function _buildPreviewJob(f,company){
   return {
     id:undefined, e:company?.id,
@@ -858,8 +872,7 @@ export function EmpPost(){
             <div className="text-xs text-text-2 leading-snug">{AI_DISCLOSURE_TEXT}</div>
           </div>}
         </div>
-        <Banner tone="brand" icon="sparkle" title="Scoring is automatic">
-          Every applicant is scored out of 100 against your must-have skills and experience. Your pipeline shows the best fit first, ranked by the system.</Banner>
+        <_DismissableScoringBanner/>
 
         {/* Multi-post distribution + forward-email. Sits at the end of the wizard because it
            doesn't affect the listing itself - just where it's syndicated + where applications

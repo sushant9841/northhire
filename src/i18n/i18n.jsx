@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import { en } from "./messages/en.js";
 import { fr } from "./messages/fr.js";
+import { setCurrentLocale } from "./format.js";
 
 /* ═══════════════ Lightweight in-house i18n (Bill 96 / Quebec French requirement) ═══════════════
    Deliberately NOT react-intl / i18next — this app only needs two locales and flat namespaced
@@ -42,7 +43,14 @@ export function LocaleProvider({ children }) {
   useEffect(() => {
     if (typeof document === "undefined") return;
     document.documentElement.lang = locale === "fr-CA" ? "fr-CA" : "en-CA";
+    // QA-r4 Bill 96 tail: sync the module-level locale so money() and currentNumber() in
+    // non-component contexts (utils.js, print helpers, CSV exports) format for the active locale
+    // — no per-call-site rewiring needed.
+    setCurrentLocale(locale);
   }, [locale]);
+  // Initialize the module-level locale synchronously on first render so any pre-mount call to
+  // money() before the effect runs still gets the right formatter.
+  if (typeof window !== "undefined") setCurrentLocale(locale);
 
   const setLocale = useCallback(next => {
     const norm = normalizeLocale(next);

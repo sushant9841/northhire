@@ -1,3 +1,5 @@
+import { currentMoney as _currentMoney } from "../i18n/format.js";
+
 /* Scrolls to and focuses the first invalid field on a form after a failed submit, so a validation
    error above the fold (or off-screen on a long form) doesn't leave the visitor staring at a
    button that silently refused to submit. Wire it into a submit handler right after the errors
@@ -20,7 +22,12 @@ export const focusFirstError=errObj=>{
   }
 };
 export const uid=p=>p+Math.random().toString(36).slice(2,9);
-export const money=n=>"$"+n.toLocaleString();
+// QA-r4 tail: was hardcoded en-CA ("$1,234"). Now delegates to the active i18n locale so
+// fr-CA renders "1 234,00 $" (dollar sign after, space as thousands separator) — the format
+// required by Bill 96 for Quebec employers. LocaleProvider syncs _currentLocale on every user
+// locale change; callers don't need to pass the locale explicitly. Import at top so this file
+// stays a pure-helpers module.
+export const money=n=>_currentMoney(n);
 export const pay=j=>j.unit==="yr"?`$${Math.round(j.lo/1000)}k – $${Math.round(j.hi/1000)}k`:j.unit==="mi"?`$${j.lo.toFixed(2)} – $${j.hi.toFixed(2)}`:`$${j.lo} – $${j.hi}`;
 export const payUnit=j=>j.unit==="yr"?"per year":j.unit==="mi"?"per mile":"per hour";
 export const payShort=j=>j.unit==="yr"?"/yr":j.unit==="mi"?"/mi":"/hr";

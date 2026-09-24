@@ -4,6 +4,21 @@
 
 const intlLocale = locale => (locale === "fr-CA" ? "fr-CA" : "en-CA");
 
+/* Module-level "current locale" that non-component helpers (money(), pay(), etc. in
+   src/helpers/utils.js) can read without needing a hook. LocaleProvider calls
+   setCurrentLocale on mount + on every user locale change, so any call to money()
+   anywhere in the app formats using the viewer's active locale. QA-r4 tail Bill 96 polish:
+   was previously hardcoded en-CA via toLocaleString() with no locale wiring at all. */
+let _currentLocale = "en-CA";
+export function setCurrentLocale(l) { _currentLocale = l === "fr-CA" ? "fr-CA" : "en-CA"; }
+export function getCurrentLocale() { return _currentLocale; }
+export function currentMoney(amount, currency = "CAD") {
+  return formatCurrency(amount, _currentLocale, currency);
+}
+export function currentNumber(n, opts) {
+  return formatNumber(n, _currentLocale, opts);
+}
+
 export function formatDate(date, locale, opts) {
   const d = date instanceof Date ? date : new Date(date);
   if (isNaN(d.getTime())) return "";
