@@ -37,17 +37,24 @@ export function JobDetailPage({previewJob,preview}={}){
   if(!job) return <Page><Empty icon="briefcase" title={t("shared.jobDetail.notFound")} body={t("shared.jobDetail.notFoundBody")}
     action={<Btn kind="primary" onClick={()=>A.go("search")}>{t("shared.jobDetail.browseJobs")}</Btn>}/></Page>;
   const applied=!preview&&A.appliedJobIds.has(job.id); const score=preview?0:A.score(job);
-  const relatedJobs=A.jobs.filter(j=>j.id!==job.id&&j.status==="live"&&(j.cat===job.cat||(j.city===job.city&&j.prov===job.prov))).slice(0,3);
+  // QA-r5: only show related jobs that are actually accepting applications — a live-status
+  // job whose deadline passed rendered as "Urgent · Closed", which is nonsense to a seeker
+  // trying to decide where to spend their next application. dl > 0 means the deadline is future.
+  const relatedJobs=A.jobs.filter(j=>j.id!==job.id&&j.status==="live"&&j.dl>0&&(j.cat===job.cat||(j.city===job.city&&j.prov===job.prov))).slice(0,3);
   const employerReviews=A.reviews.filter(r=>r.employer===e.id);
   const Meta=({icon,k,v,onClick})=><div onClick={onClick} className={`flex gap-3 items-start ${onClick?"cursor-pointer":""}`}>
     <div className="w-10 h-10 rounded-xl bg-bg flex items-center justify-center text-brand shrink-0"><I n={icon} s={17}/></div>
     <div className="min-w-0"><div className="text-xs text-text-3 mb-1 font-medium tracking-wide">{k}</div>
       <div className="text-sm font-semibold text-text leading-snug">{v}</div></div></div>;
-  const Sec=({title,children})=><section className="mb-8">
+  // QA-r5: hide entire section when the content is empty — a heading like "What you will be
+  // doing" with nothing below reads as a broken page. A partially-filled listing is common;
+  // never show empty scaffolding.
+  const Sec=({title,children,hideWhen})=>hideWhen?null:<section className="mb-8">
     <div className={`font-bold text-text tracking-tight mb-3.5 ${mob?"text-lg":"text-xl"}`}>{title}</div>{children}</section>;
   const Bul=({items})=><ul className="m-0 p-0 list-none flex flex-col gap-3">
-    {items.map(x=><li key={x} className="flex gap-3 text-base text-text-2 leading-relaxed">
+    {(items||[]).map(x=><li key={x} className="flex gap-3 text-base text-text-2 leading-relaxed">
       <span className="text-brand mt-1 shrink-0 flex"><I n="check" s={16} w={2.4}/></span>{x}</li>)}</ul>;
+  const _hasArr=a=>Array.isArray(a)&&a.length>0;
 
   const apply=()=>{ if(preview)return; if(!A.user) return A.go("login"); if(A.user.role!=="seeker") return A.go("denied"); A.beginApply(job.id); };
   const onLocationTap=()=>{
@@ -130,20 +137,20 @@ export function JobDetailPage({previewJob,preview}={}){
           {A.jobHiringType(job.id)==="agency-perm"&&<Banner tone="brand" icon="award" title={t("shared.jobDetail.recruiterSearch")} style={{marginBottom:24}}>
             {t("shared.jobDetail.recruiterSearchBody",{company:e.name})}
           </Banner>}
-          <Sec title={t("shared.jobDetail.aboutRole")}><p className="text-base text-text-2 leading-relaxed">{job.desc}</p></Sec>
-          <Sec title={t("shared.jobDetail.whatYouWillDo")}><Bul items={job.duties}/></Sec>
-          <Sec title={t("shared.jobDetail.whatWeLookFor")}><Bul items={job.reqs}/></Sec>
-          <Sec title={t("shared.jobDetail.skillsCerts")}>
+          <Sec title={t("shared.jobDetail.aboutRole")} hideWhen={!job.desc||!job.desc.trim()}><p className="text-base text-text-2 leading-relaxed">{job.desc}</p></Sec>
+          <Sec title={t("shared.jobDetail.whatYouWillDo")} hideWhen={!_hasArr(job.duties)}><Bul items={job.duties}/></Sec>
+          <Sec title={t("shared.jobDetail.whatWeLookFor")} hideWhen={!_hasArr(job.reqs)}><Bul items={job.reqs}/></Sec>
+          <Sec title={t("shared.jobDetail.skillsCerts")} hideWhen={!_hasArr(job.skills)}>
             <div className="flex flex-wrap gap-2">
-              {job.skills.map(s=>{const mine=A.user?.role==="seeker"&&(A.user.skills||[]).some(x=>x.toLowerCase()===s.toLowerCase());
+              {(job.skills||[]).map(s=>{const mine=A.user?.role==="seeker"&&(A.user.skills||[]).some(x=>x.toLowerCase()===s.toLowerCase());
                 return <Tag key={s} tone={mine?"ok":"neutral"} icon={mine?"check":undefined}>{s}</Tag>;})}</div>
-            {A.user?.role==="seeker"&&<div className="text-sm text-text-3 mt-3">{t("shared.jobDetail.highlightedSkills")}</div>}</Sec>
-          <Sec title={t("shared.jobDetail.benefitsOffered")}>
+            {A.user?.role==="seeker"&&_hasArr(job.skills)&&<div className="text-sm text-text-3 mt-3">{t("shared.jobDetail.highlightedSkills")}</div>}</Sec>
+          <Sec title={t("shared.jobDetail.benefitsOffered")} hideWhen={!_hasArr(job.perks)}>
             <div className="grid gap-2.5" style={{gridTemplateColumns:`repeat(auto-fit,minmax(${mob?220:260}px,1fr))`}}>
-              {job.perks.map(p=><div key={p} className="flex gap-3 items-center bg-ok-bg border border-ok-ln rounded-xl py-3.5 px-4">
+              {(job.perks||[]).map(p=><div key={p} className="flex gap-3 items-center bg-ok-bg border border-ok-ln rounded-xl py-3.5 px-4">
                 <span className="text-ok flex shrink-0"><I n="check" s={16} w={2.4}/></span>
                 <span className="text-sm text-text font-medium">{p}</span></div>)}</div></Sec>
-          <Sec title={t("shared.jobDetail.howToApply")}><p className="text-base text-text-2 leading-relaxed">{job.how}</p></Sec>
+          <Sec title={t("shared.jobDetail.howToApply")} hideWhen={!job.how||!job.how.trim()}><p className="text-base text-text-2 leading-relaxed">{job.how}</p></Sec>
           {/* Ontario Bill 149 requires these disclosures to appear on the posting itself, not
               just be collected from the employer. See helpers/jobPostingLaw.js. */}
           {(job.aiScreening||job.vacancyConfirmed)&&<Sec title={t("shared.jobDetail.transparency")}>
@@ -181,7 +188,9 @@ export function JobDetailPage({previewJob,preview}={}){
             <div className="flex gap-3.5 items-center mb-3.5">
               <EmpMark e={e} size={48} radius={12}/>
               <div className="min-w-0"><div className="text-base font-bold text-text">{e.name}</div>
-                <div className="text-sm text-text-2 mt-0.5">{e.industry} • {e.size} {t("shared.jobDetail.staff")}</div></div></div>
+                <div className="text-sm text-text-2 mt-0.5">{/* QA-r5: don't render industry if the company name already contains it — "PCL Construction Construction" reads badly. */}
+                  {e.industry&&!e.name?.toLowerCase().includes(e.industry.toLowerCase())?<>{e.industry} • </>:null}
+                  {e.size} {t("shared.jobDetail.staff")}</div></div></div>
             <p className="text-sm text-text-2 leading-relaxed mb-4">{e.about}</p>
             <Btn kind="outline" size="sm" full iconR="chevR" onClick={()=>A.openEmployer(e.id)}>{t("shared.jobDetail.allOpenings")}</Btn></div>
           {A.user?.role==="seeker"&&(()=>{const g=A.skillsGap(job);
@@ -225,7 +234,10 @@ export function JobDetailPage({previewJob,preview}={}){
           <div className="flex gap-2.5 justify-center flex-wrap">
             <Btn kind={applied?"soft":"primary"} size="lg" iconR={applied?"check":"arrowR"} disabled={applied} onClick={apply}>
               {applied?t("shared.jobDetail.applicationSent"):t("shared.jobDetail.applyRole")}</Btn>
-            <Btn kind="outline" size="lg" onClick={()=>{if(!preview)A.toggleSave(job.id);}} icon="bookmark">{A.saved.has(job.id)?t("shared.jobDetail.saved"):t("shared.jobDetail.saveForLater")}</Btn>
+            {/* QA-r5: on desktop the sidebar already carries a Save button; a second one here
+                is duplicate visual weight for the same action. Mobile has no sidebar, so keep
+                it there — where it's the only Save affordance below the fold. */}
+            {mob&&<Btn kind="outline" size="lg" onClick={()=>{if(!preview)A.toggleSave(job.id);}} icon="bookmark">{A.saved.has(job.id)?t("shared.jobDetail.saved"):t("shared.jobDetail.saveForLater")}</Btn>}
           </div>
           {A.user?.role==="seeker"&&<button type="button" onClick={()=>{setReportReason("");setReportSent(false);setReporting(true);}}
             className="bg-transparent border-0 p-0 mt-4 text-xs text-text-3 cursor-pointer underline">{t("shared.jobDetail.reportListing")}</button>}

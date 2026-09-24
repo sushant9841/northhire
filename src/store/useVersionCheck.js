@@ -19,6 +19,11 @@ export function useVersionCheck() {
   const [outdated, setOutdated] = useState(false);
   useEffect(() => {
     if (typeof window === "undefined") return;
+    // QA-r5: in dev, Vite's frontend id and the server's git-rev id drift every time the
+    // Node server restarts (a common dev workflow), producing a false "new version available"
+    // banner on nearly every page load. HMR handles code updates in dev; this banner exists
+    // purely for a shipped production user whose tab has been open across a real deploy.
+    if (import.meta.env?.DEV) return;
     // Frontend's own build id. Undefined only in a broken build; in that case we
     // adopt whatever the server says on first fetch and only warn on later drift.
     // eslint-disable-next-line no-undef

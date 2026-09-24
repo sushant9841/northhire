@@ -61,7 +61,9 @@ export function JobCard({job,delay=0}){
     <div className="flex gap-2 flex-wrap items-center">
       <HiringTypeBadge jobId={job.id}/>
       {job.mode!=="On-site"&&<Tag tone="ok" sm>{job.mode}</Tag>}
-      {job.urgent&&<Tag tone="warn" sm icon="alert">{t("cards.urgent")}</Tag>}
+      {/* QA-r5: don't render "Urgent" on a card whose deadline passed — "Urgent · Closed"
+          on the same card is a semantic contradiction that erodes trust. */}
+      {job.urgent&&job.dl>0&&<Tag tone="warn" sm icon="alert">{t("cards.urgent")}</Tag>}
       {/* Roadmap B1-03: badge listings <48h old so early applicants can see they're early.
           Real ATS data: applicants in the first 48h convert 4× more often than later ones. */}
       {job.createdAt&&(Date.now()-job.createdAt)<48*3600000&&!applied&&
