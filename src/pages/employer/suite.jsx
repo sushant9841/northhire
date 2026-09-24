@@ -256,7 +256,7 @@ export function EmpJobs(){
                 <Btn kind="outline" size="sm" onClick={()=>A.openJob(j.id,{preview:true})}>{t("employer.jobs.preview")}</Btn>
                 {j.pendingOwnerApproval&&A.user?.employerRole==="owner"&&
                   <Btn kind="ok" size="sm" icon="check" onClick={()=>A.approveJob(j.id)}>{t("employer.jobs.approve")}</Btn>}
-                <Btn kind="outline" size="sm" onClick={()=>A.toggleJobStatus(j.id)}>{j.status==="live"?t("employer.jobs.pause"):t("employer.jobs.reopen")}</Btn>
+                {j.status!=="review"&&<Btn kind="outline" size="sm" onClick={()=>A.toggleJobStatus(j.id)}>{j.status==="live"?t("employer.jobs.pause"):t("employer.jobs.reopen")}</Btn>}
                 <Btn kind="primary" size="sm" onClick={()=>{A.setPipelineJob(j.id);A.go("empPipeline");}}>{t("employer.jobs.candidatesN",{n:apps.length})}</Btn></div></div></Card>;})}</div>
       <Pagination {...pg}/></>}
   </Page>;

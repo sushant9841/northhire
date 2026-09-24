@@ -239,20 +239,24 @@ grep -r "test\\.skip\\|test\\.todo\\|fixme" tests/e2e/
 
 **Owner:** Platform ops (user)
 
-### Issue 3: Employer & Jobs Full-Update Audits Deferred (OPEN)
+### Issue 3: Employer & Jobs Full-Update Audits (CLOSED 2026-09-23, one item deferred)
 
-**Status:** OPEN — feature completeness, not a bug
+**Status:** Deep-audited this session. Employer module: 2 bugs found and fixed. Jobs module: 1 moderation-bypass bug found and fixed; 1 larger feature gap deferred below (out of small-surgical-fix budget).
 
-**Summary:** PATCH /api/employers/:id (owner updating company name, logo, etc.) and PATCH /api/jobs/:id (edit job after posting) were implemented in E2's employer-transformation but not fully audit-tested for edge cases.
+**Employer module (server/routes/employers.js PATCH /:id, admin/suite.jsx AdmEmployers, employer/suite.jsx EmpCompany) — commit 253546a:**
+- IDOR: none found — PATCH is correctly scoped to the caller's own employer_id or admin role.
+- Plan changes, locale (fr-CA) persistence: correctly enforced server-side, not UI-only.
+- Fixed: `saveCompany()` in useStore.js never sent `founded`/`mark`/`a`/`b` in its PATCH payload even though EmpCompany's founded-year field and logo/brand-colour pickers are editable in the same form — a save appeared to succeed, then silently reverted those fields in local state.
+- Fixed: admin verify/hold/plan-change/profile-edit actions on an employer were never written to `employer_audit_log` — the only record was an ephemeral client-side activity feed that never reached the server. Added `logEmployerAudit()` calls to each branch.
 
-**Potential issues:**
-- Editing job pay-range: does wage-law validation re-run? (yes, by code inspection, but not E2E tested)
-- Updating employer plan mid-cycle: does it take effect immediately? (yes, but referral credits not recalculated retroactively)
-- Uploading logo: does stale image cache? (SmartImg retries 404, should swap to mark, but not tested on real failure)
+**Jobs module (server/routes/jobs.js, employer/suite.jsx EmpJobs/EmpPost) — commit pending:**
+- IDOR: none found — PATCH is correctly scoped to `job.employer_id === req.user.employer_id` for non-admins.
+- Distribution channels/forward email: correctly editable post-publish, employer-only, admin blocked.
+- Fixed (moderation bypass, real bug): `PATCH /jobs/:id` accepted `status:"live"` from an employer regardless of the job's *current* status. A job sitting in `"review"` (server-assigned when `autoApproveJobs` is off, meant to sit in the admin moderation queue seen on `AdmJobs`) could be pushed straight to `"live"` by the job's own owner — the EmpJobs list's "Reopen" button is shown for every non-"live" status including "review", and `toggleJobStatus()` just flips status with no FROM-state check. Fixed server-side (403 if `status==="review"` and caller isn't admin) and hid the button client-side for review-status jobs so the UI doesn't offer a dead end that used to work.
+- **Deferred (feature gap, not a bug):** there is no edit path for a job's actual content at all. `PATCH /jobs/:id` only ever accepts `status`, `flagged`, `approve`, `scoreWeights`, `recruitingCost`, `distributionChannels`, `forwardEmail` — never `title`/`description`/wage/location/type/category/duties/requirements/skills/perks/screening questions/Bill 149 flags. `EmpPost` (the posting wizard) only calls `publishJob()`, which always `POST`s a brand-new job; there is no `EmpJobEdit` component and no "Edit" button anywhere in `EmpJobs`. An employer who needs to fix a typo'd title, correct a wage range, or update a description after publishing has no way to do it short of closing the listing and reposting from scratch (losing its application history/view count). This is a real product gap worth prioritizing, but building the edit surface (wizard prefill + new PATCH field acceptance + re-running `checkPostingLaw()` against the edited fields, matching the create path) is an actual feature, not a small fix — well over the "surgical edit" budget for this pass.
+- **Also deferred (status-model gap):** the schema/enum only has `live`/`paused`/`review`/`closed` — no `draft` or `archived` distinct from `job_drafts` (the pre-publish autosave table) and closed listings. `closed` isn't enforced as terminal: an employer can move a `closed` job straight back to `live` via the same toggle, with no re-validation (e.g. against a since-changed plan cap edge case, or stale wage-law rules if provincial minimums moved). Not clearly wrong (re-listing a closed role is a legitimate use case) but the intended lifecycle isn't actually modeled or enforced anywhere — flagging for a deliberate design decision rather than guessing at one here.
 
-**Action:** Lower priority—core CRUD works, edge cases deferred for v2 polish pass.
-
-**Owner:** Defer (user's discretion on priority)
+**Owner:** Jobs content-edit feature — user's discretion on priority (real gap, sizeable build). Status-model lifecycle — needs a design decision, not a guess-and-fix.
 
 ---
 

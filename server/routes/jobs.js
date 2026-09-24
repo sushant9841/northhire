@@ -296,6 +296,13 @@ jobsRouter.patch("/:id", requireAuth, requireRole("employer", "admin"), (req, re
   if (status !== undefined) {
     if (!["live", "paused", "review", "closed"].includes(status)) return res.status(400).json({ error: "Invalid status." });
     if (isAdmin && !hasAdminScope(req.user, "moderator")) return res.status(403).json({ error: "This admin account doesn't have access to listing moderation." });
+    // A listing sitting in "review" is there because it's awaiting ADMIN moderation, not because
+    // the employer paused it - without this check, the employer's own "reopen" toggle could set
+    // status straight to "live" and skip moderation entirely, since nothing else here looks at
+    // the FROM state, only the TO state.
+    if (status === "live" && job.status === "review" && !isAdmin) {
+      return res.status(403).json({ error: "This listing is awaiting moderation review before it can go live." });
+    }
     if (status === "live" && job.status !== "live" && !isAdmin) {
       const plan = employerPlan(job.employer_id);
       const liveCount = db.prepare("SELECT COUNT(*) AS n FROM jobs WHERE employer_id = ? AND status = 'live' AND id != ?").get(job.employer_id, req.params.id).n;
