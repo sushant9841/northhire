@@ -185,8 +185,15 @@ seekerMiscRouter.delete("/saved-searches/:id", requireAuth, (req, res) => {
 
 /* ─── Messages ─── */
 seekerMiscRouter.get("/messages", requireAuth, (req, res) => {
-  const rows = db.prepare("SELECT * FROM messages WHERE from_user_id = ? OR to_user_id = ? ORDER BY created_at DESC").all(req.user.id, req.user.id);
-  res.json({ messages: rows.map(serializeMessage) });
+  // QA-r4 scale: cap at 500 most recent so a heavy DM user (or a scale seed with 50k messages)
+  // doesn't drop a multi-MB list on every /messages page load. UI already scrolls.
+  const rawLimit = Number(req.query.limit);
+  const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 2000) : 500;
+  const rawOffset = Number(req.query.offset);
+  const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
+  const total = db.prepare("SELECT COUNT(*) AS n FROM messages WHERE from_user_id = ? OR to_user_id = ?").get(req.user.id, req.user.id).n;
+  const rows = db.prepare("SELECT * FROM messages WHERE from_user_id = ? OR to_user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?").all(req.user.id, req.user.id, limit, offset);
+  res.json({ messages: rows.map(serializeMessage), total, limit, offset });
 });
 // Simple in-memory per-sender sliding window against message-flooding, same shape as the
 // signup throttle in auth.js - no persistence needed, resets on restart.
@@ -230,10 +237,16 @@ seekerMiscRouter.patch("/messages/:id/read", requireAuth, (req, res) => {
 
 /* ─── Interviews ─── */
 seekerMiscRouter.get("/interviews", requireAuth, (req, res) => {
-  const rows = req.user.role === "employer"
-    ? db.prepare("SELECT * FROM interviews WHERE employer_id = ? ORDER BY created_at DESC").all(req.user.employer_id)
-    : db.prepare("SELECT * FROM interviews WHERE candidate_id = ? ORDER BY created_at DESC").all(req.user.id);
-  res.json({ interviews: rows.map(serializeInterview) });
+  // QA-r4 scale: employer at 5000 interviews across their jobs shouldn't ship all of them.
+  const rawLimit = Number(req.query.limit);
+  const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 2000) : 500;
+  const rawOffset = Number(req.query.offset);
+  const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
+  const isEmp = req.user.role === "employer";
+  const filter = isEmp ? ["employer_id = ?", req.user.employer_id] : ["candidate_id = ?", req.user.id];
+  const total = db.prepare(`SELECT COUNT(*) AS n FROM interviews WHERE ${filter[0]}`).get(filter[1]).n;
+  const rows = db.prepare(`SELECT * FROM interviews WHERE ${filter[0]} ORDER BY created_at DESC LIMIT ? OFFSET ?`).all(filter[1], limit, offset);
+  res.json({ interviews: rows.map(serializeInterview), total, limit, offset });
 });
 seekerMiscRouter.post("/interviews", requireAuth, requireRole("employer"), (req, res) => {
   const { applicationId, when, mode, notes } = req.body || {};
@@ -315,10 +328,17 @@ seekerMiscRouter.delete("/reviews/:id", requireAuth, (req, res) => {
 
 /* ─── Notifications ─── */
 seekerMiscRouter.get("/notifications", requireAuth, (req, res) => {
+  // QA-r4 scale: 20k+ notifications seed had users with hundreds each; cap for the bell UI.
+  const rawLimit = Number(req.query.limit);
+  const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 500) : 200;
+  const rawOffset = Number(req.query.offset);
+  const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
+  const where = "WHERE for_value IS NULL OR for_value = ? OR for_value = ?";
+  const total = db.prepare(`SELECT COUNT(*) AS n FROM notifications ${where}`).get(req.user.id, req.user.role).n;
   const rows = db.prepare(
-    "SELECT * FROM notifications WHERE for_value IS NULL OR for_value = ? OR for_value = ? ORDER BY created_at DESC"
-  ).all(req.user.id, req.user.role);
-  res.json({ notifications: rows.map(serializeNotification) });
+    `SELECT * FROM notifications ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`
+  ).all(req.user.id, req.user.role, limit, offset);
+  res.json({ notifications: rows.map(serializeNotification), total, limit, offset });
 });
 seekerMiscRouter.patch("/notifications/:id/read", requireAuth, (req, res) => {
   const notif = db.prepare("SELECT * FROM notifications WHERE id = ?").get(req.params.id);

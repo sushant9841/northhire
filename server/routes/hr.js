@@ -197,8 +197,21 @@ function canViewSalary(viewerHrEmployee, targetEmployeeId) {
 
 /* â”€â”€â”€ Employees â”€â”€â”€ */
 hrRouter.get("/employees", requireHrAuth, (req, res) => {
-  const rows = db.prepare("SELECT * FROM hr_employees WHERE company_id = ?").all(req.hrEmployee.company_id);
-  res.json({ employees: rows.map(r => maskHrEmployeeForViewer(serializeHrEmployee(r), req.hrEmployee)) });
+  // QA-r4 scale: paginate + optional server-side name/email/dept search. A company with 5000
+  // employees would otherwise ship 2MB+ per People page load. Default 1000 (covers a mid-size
+  // company in one shot), hard cap 5000, exposes total for the client's paginator.
+  const rawLimit = Number(req.query.limit);
+  const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 5000) : 1000;
+  const rawOffset = Number(req.query.offset);
+  const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
+  const q = (req.query.q || "").toString().trim();
+  const clauses = ["company_id = ?"];
+  const params = [req.hrEmployee.company_id];
+  if (q) { clauses.push("(name LIKE ? OR email LIKE ? OR title LIKE ?)"); const like = `%${q}%`; params.push(like, like, like); }
+  const where = " WHERE " + clauses.join(" AND ");
+  const total = db.prepare(`SELECT COUNT(*) AS n FROM hr_employees${where}`).get(...params).n;
+  const rows = db.prepare(`SELECT * FROM hr_employees${where} ORDER BY name LIMIT ? OFFSET ?`).all(...params, limit, offset);
+  res.json({ employees: rows.map(r => maskHrEmployeeForViewer(serializeHrEmployee(r), req.hrEmployee)), total, limit, offset });
 });
 hrRouter.post("/employees", requireHrAuth, requireHrPriv, (req, res) => {
   const d = req.body || {};
