@@ -143,26 +143,38 @@ export function requiresDualApproval(companyId, workflow, amount) {
 // UI. Privileged roles (owner/admin/hr) and an employee viewing their own record still see
 // everything; anyone else gets exactly what that person chose to show.
 function maskHrEmployeeForViewer(emp, viewerHrEmployee) {
-  if (isPriv(viewerHrEmployee) || emp.id === viewerHrEmployee.id) return emp;
-  // H2 permissions audit: the charter calls for Finance to get an "everyone-view" of People -
-  // name + department only, no personal data - which is stricter than the general colleague view
-  // below (that one still respects each employee's own visibility opt-outs, which cover public-
-  // profile fields, not "hide my salary from a Finance role that processes payroll anyway"). A
-  // hard, role-based floor here, independent of anyone's visibility toggles.
+  if (emp.id === viewerHrEmployee.id) return emp;
+  // QA-r3 P0: prior version treated any isPriv() role (owner/admin/hr) as fully privileged,
+  // leaking every colleague's salary to the "hr" role - which contradicts the spec: Salary is
+  // Owner/Finance only. Split the fast-path so only owner+admin get the raw record; hr gets
+  // the profile fields it needs for admin work with money fields masked.
+  if (["owner", "admin"].includes(viewerHrEmployee.role)) return emp;
+  // Finance: role-based "everyone-view" - name + dept only, no personal data.
   if (viewerHrEmployee.role === "finance") {
     return { id: emp.id, name: emp.name, title: emp.title, dept: emp.dept, seed: emp.seed, status: emp.status, role: emp.role };
   }
   const v = emp.visibility || {};
   const masked = { ...emp };
-  if (v.salary === false) masked.salary = null;
+  // Money fields are role-gated (Owner/Finance only via canViewSalary), not visibility-toggle
+  // gated - an employee can't opt IN to showing their salary to colleagues.
+  masked.salary = null;
+  masked.hourlyRate = null;
+  masked.benefitsPerPay = null;
+  if (viewerHrEmployee.role === "hr") {
+    // HR admin sees profile fields (phone/email/birthDate/manager) for their admin work;
+    // salary was already masked above.
+    masked.notes = "";
+    if (masked.sync) masked.sync = { consent: !!masked.sync.consent, linked: !!masked.sync.seekerId };
+    return masked;
+  }
+  // Ordinary colleague (employee role) - each field respects the target's visibility opt-outs.
   if (v.phone === false) masked.phone = null;
   if (v.birthDate === false) masked.birthDate = null;
   if (v.email === false) masked.email = null;
   if (v.manager === false) masked.manager = null;
   // notes (work-history/education summary carried over at hire) and the seeker-linkage id are
   // as sensitive as salary/birthDate - a colleague browsing the directory has no reason to see
-  // either, regardless of this employee's visibility toggles (those only cover fields the
-  // employee themself can choose to reveal).
+  // either, regardless of this employee's visibility toggles.
   masked.notes = "";
   if (masked.sync) masked.sync = { consent: !!masked.sync.consent, linked: !!masked.sync.seekerId };
   return masked;
@@ -274,6 +286,31 @@ hrRouter.patch("/employees/:id", requireHrAuth, requireHrPriv, (req, res) => {
   const row = db.prepare("SELECT * FROM hr_employees WHERE id = ? AND company_id = ?").get(req.params.id, req.hrEmployee.company_id);
   if (!row) return res.status(404).json({ error: "Employee not found." });
   const d = req.body || {};
+  // QA-r3 P0: prior version let any owner/admin/hr caller edit any employee's role and salary
+  // - a one-request full account takeover from any HR seat (promote self to owner, or promote
+  // any peer, or edit anyone's salary). Layered authority:
+  const caller = req.hrEmployee;
+  const isSelf = row.id === caller.id;
+  const callerIsOwnerOrAdmin = ["owner", "admin"].includes(caller.role);
+  // Senior-editing guard: hr role cannot edit an owner or admin (except themself).
+  if (!callerIsOwnerOrAdmin && ["owner", "admin"].includes(row.role) && !isSelf) {
+    return res.status(403).json({ error: "You cannot edit an Owner or Admin." });
+  }
+  // Role write: only Owner+Admin, only Owner may grant "owner", never demote the last active Owner.
+  if (d.role !== undefined && d.role !== row.role) {
+    if (!callerIsOwnerOrAdmin) return res.status(403).json({ error: "Only Owner or Admin can change roles." });
+    if (d.role === "owner" && caller.role !== "owner") return res.status(403).json({ error: "Only an Owner can promote to Owner." });
+    if (row.role === "owner" && d.role !== "owner") {
+      const ownerCount = db.prepare("SELECT COUNT(*) AS n FROM hr_employees WHERE company_id = ? AND role = 'owner' AND status = 'active'").get(caller.company_id).n;
+      if (ownerCount <= 1) return res.status(400).json({ error: "Cannot demote the last active Owner." });
+    }
+  }
+  // Salary/pay-type/hourly-rate/benefits write: Owner or Finance only (mirrors canViewSalary).
+  const moneyKeys = ["salary", "hourlyRate", "payType", "benefitsPerPay", "benefitsPlan", "benefitsTier"];
+  const touchesMoney = moneyKeys.some(k => d[k] !== undefined);
+  if (touchesMoney && !["owner", "finance"].includes(caller.role)) {
+    return res.status(403).json({ error: "Only Owner or Finance can change pay or benefits." });
+  }
   if (d.payType !== undefined && !["salary", "hourly"].includes(d.payType)) return res.status(400).json({ error: "payType must be 'salary' or 'hourly'." });
   const fields = { name: "name", title: "title", role: "role", dept: "dept", manager: "manager", phone: "phone", salary: "salary", benefitsPerPay: "benefits_per_pay", benefitsPlan: "benefits_plan", benefitsTier: "benefits_tier", payType: "pay_type", hourlyRate: "hourly_rate" };
   const setCols = []; const params = [];
@@ -1674,7 +1711,7 @@ hrRouter.get("/benefits/plans", requireHrAuth, (req, res) => {
   const rows = db.prepare("SELECT * FROM benefits_plans WHERE company_id = ? ORDER BY created_at ASC").all(req.hrEmployee.company_id);
   res.json({ plans: rows.map(serializeBenefitsPlan) });
 });
-hrRouter.post("/benefits/plans", requireHrAuth, requireHrMoney, (req, res) => {
+hrRouter.post("/benefits/plans", requireHrAuth, requireHrPriv, (req, res) => {
   const { name, config } = req.body || {};
   if (!name || !String(name).trim()) return res.status(400).json({ error: "Plan name is required." });
   const id = nextId("bp", "benefits_plans");
@@ -1684,7 +1721,7 @@ hrRouter.post("/benefits/plans", requireHrAuth, requireHrMoney, (req, res) => {
   logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "benefits_plan_created", `Created benefits plan "${name}"`);
   res.status(201).json({ plan: serializeBenefitsPlan(db.prepare("SELECT * FROM benefits_plans WHERE id = ?").get(id)) });
 });
-hrRouter.patch("/benefits/plans/:id", requireHrAuth, requireHrMoney, (req, res) => {
+hrRouter.patch("/benefits/plans/:id", requireHrAuth, requireHrPriv, (req, res) => {
   const row = db.prepare("SELECT * FROM benefits_plans WHERE id = ? AND company_id = ?").get(req.params.id, req.hrEmployee.company_id);
   if (!row) return res.status(404).json({ error: "Plan not found." });
   const { name, config, active } = req.body || {};
@@ -1699,7 +1736,7 @@ hrRouter.patch("/benefits/plans/:id", requireHrAuth, requireHrMoney, (req, res) 
 // Soft-delete only (active=0) - a plan already referenced by enrollment history must stay
 // resolvable (serializeBenefitsEnrollment still needs its name/config to show what someone *was*
 // enrolled in), so a hard DELETE would orphan that history instead of just retiring the plan.
-hrRouter.delete("/benefits/plans/:id", requireHrAuth, requireHrMoney, (req, res) => {
+hrRouter.delete("/benefits/plans/:id", requireHrAuth, requireHrPriv, (req, res) => {
   const row = db.prepare("SELECT * FROM benefits_plans WHERE id = ? AND company_id = ?").get(req.params.id, req.hrEmployee.company_id);
   if (!row) return res.status(404).json({ error: "Plan not found." });
   db.prepare("UPDATE benefits_plans SET active = 0 WHERE id = ?").run(row.id);
