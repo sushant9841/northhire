@@ -504,7 +504,7 @@ export function TrainingPage(){
             <p className={`text-text-2 leading-snug mb-6 ${mob?"text-base":"text-lg"}`}>{tAbout}</p>
             <div className="flex items-center gap-4 flex-wrap text-sm text-text-2 pt-6 border-t border-line-soft">
               <span className="flex items-center gap-2"><SmartPortrait seed={training.providerSeed} size={34}/><strong className="text-text font-semibold">{training.provider}</strong></span>
-              <span className="text-warn flex items-center gap-1 font-semibold"><I n="star" s={14} fill={C.warn} w={0}/>{training.rating}</span>
+              {Number(training.rating)>0&&Number(training.enrolled)>0&&<span className="text-warn flex items-center gap-1 font-semibold"><I n="star" s={14} fill={C.warn} w={0}/>{Number(training.rating).toFixed(1)}</span>}
               <span className="text-text-3">{t("training.enrolledLabel",{count:training.enrolled})}</span></div></div>
           <div className="bg-white rounded-2xl overflow-hidden border border-line shadow-md">
             <div className="bg-bg" style={{aspectRatio:"16/10"}}><SmartScene kind={training.scene} tone={training.tone} w="100%" h="100%" seed={training.id.length}/></div>

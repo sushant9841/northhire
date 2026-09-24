@@ -7,6 +7,7 @@ import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
 import { Btn, Tag, Input, Empty, Lbl, Modal, Field, Area, CheckRow, Page, SmartPortrait, HERO_WIDE, HERO_TIGHT, SECTION_CLS } from "../../design/primitives.jsx";
 import { EmpMark, JobCard } from "./cards.jsx";
+import { ratingLabel, ratingHasReviews } from "../../helpers/utils.js";
 
 export function EmployersPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)"); const [q,setQ]=useState("");
@@ -36,6 +37,7 @@ export function EmployersPage(){
         {list.length===0?<Empty icon="building" title={t("shared.employers.noMatchTitle")} body={t("shared.employers.noMatchBody")}/>:
         <div className="grid gap-4" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:300}px,1fr))`}}>
           {list.map(e=>{const n=A.jobs.filter(j=>j.e===e.id&&j.status==="live").length;
+            const empReviews=A.reviews.filter(r=>r.employer===e.id);
             return <div key={e.id} onClick={()=>A.openEmployer(e.id)} role="button" tabIndex={0}
               onKeyDown={ev=>{if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();A.openEmployer(e.id);}}}
               className="bg-white rounded-3xl p-6 border border-line cursor-pointer transition duration-200 hover:border-line-2 hover:-translate-y-1">
@@ -46,7 +48,9 @@ export function EmployersPage(){
               <div className="text-sm text-text-2 mt-1.5">{e.industry} • {e.city}, {e.prov}</div>
               <div className="text-xs text-text-3 mt-2">{e.size} {e.size===1?t("common.employee"):t("common.employees")}</div>
               <div className="flex justify-between items-center mt-5 pt-4 border-t border-line-soft">
-                <span className="text-sm text-warn font-bold flex items-center gap-1.5"><I n="star" s={13} fill={C.warn} w={0}/>{e.rating}</span>
+                {ratingHasReviews(e.rating,empReviews)
+                  ? <span className="text-sm text-warn font-bold flex items-center gap-1.5"><I n="star" s={13} fill={C.warn} w={0}/>{ratingLabel(e.rating)}</span>
+                  : <span className="text-xs text-text-3">{t("shared.employers.noReviewsYet")}</span>}
                 <span className="text-sm text-brand font-bold">{n} open {n===1?t("shared.employers.openRole"):t("shared.employers.openRoles")}</span></div></div>;})}</div>}
       </div>
     </section>
@@ -78,8 +82,9 @@ export function EmployerPublicPage(){
             <div className={`text-text-2 mb-2 ${mob?"text-sm":"text-base"}`}>
               {e.industry} • {e.city}, {e.prov} • {e.size} {e.size===1?t("common.employee"):t("common.employees")}</div>
             <div className="flex gap-3.5 items-center flex-wrap text-sm">
-              <span className="text-warn flex items-center gap-1.5 font-bold"><I n="star" s={14} fill={C.warn} w={0}/>{e.rating} {t("shared.employers.rating")}</span>
-              <span className="text-text-3">•</span>
+              {ratingHasReviews(e.rating,reviews)&&<>
+                <span className="text-warn flex items-center gap-1.5 font-bold"><I n="star" s={14} fill={C.warn} w={0}/>{ratingLabel(e.rating)} {t("shared.employers.rating")}</span>
+                <span className="text-text-3">•</span></>}
               <span className="text-brand font-bold">{jobs.length} open {jobs.length===1?t("shared.employers.openRole"):t("shared.employers.openRoles")}</span></div></div>
           <Btn kind="primary" size="lg" icon="bell" onClick={()=>A.followEmployer(e.id)}>{A.following.has(e.id)?t("shared.employers.followingBtn"):t("shared.employers.followBtn")}</Btn></div>
       </div>

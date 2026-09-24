@@ -77,20 +77,21 @@ export function JobDetailPage({previewJob,preview}={}){
             <div className="flex items-center gap-2.5 mt-2.5 flex-wrap text-base text-text-2">
               <button onClick={()=>A.openEmployer(e.id)} className="bg-transparent border-0 p-0 cursor-pointer text-base font-bold text-brand">{e.name}</button>
               {e.verified&&<Tag tone="brand" sm icon="checkC2">{t("shared.jobDetail.verified")}</Tag>}
-              {e.rating>0&&<button onClick={()=>A.openEmployer(e.id)} className="bg-transparent border-0 p-0 cursor-pointer flex items-center gap-1 text-sm text-warn font-semibold">
-                <I n="star" s={14} fill={C.warn} w={0}/>{e.rating}<span className="text-text-3 font-normal">({employerReviews.length} {employerReviews.length===1?t("shared.jobDetail.review"):t("shared.jobDetail.reviews")})</span></button>}
+              {/* QA-r5: a rating with zero reviews is a fabricated number — do not render the
+                  stars or a rating figure with a "(0 reviews)" suffix. Format to 1 decimal
+                  always so a raw float from seed data never surfaces as "4.913101164873179". */}
+              {e.rating>0&&employerReviews.length>0&&<button onClick={()=>A.openEmployer(e.id)} className="bg-transparent border-0 p-0 cursor-pointer flex items-center gap-1 text-sm text-warn font-semibold">
+                <I n="star" s={14} fill={C.warn} w={0}/>{Number(e.rating).toFixed(1)}<span className="text-text-3 font-normal">({employerReviews.length} {employerReviews.length===1?t("shared.jobDetail.review"):t("shared.jobDetail.reviews")})</span></button>}
               <span className="text-text-3">•</span>
               <span onClick={onLocationTap} className={onLocationTap&&A.user?.role==="seeker"&&!A.user.city?"cursor-pointer underline decoration-dotted":""}>{job.city}, {job.prov}</span></div>
-            {/* Above-fold answer set (JS-11): pay + employment type sit right under the title,
-                not only lower in a salary card — one line each, no wall of text before them. */}
-            <div className="flex items-baseline gap-1.5 mt-2.5 text-lg font-bold text-brand tracking-tight">
-              {pay(job)}<span className="text-sm font-semibold text-text-2">{payUnit(job)}</span></div>
+            {/* QA-r5: pay + deadline appear in the big Offered Salary card + Meta grid below,
+                so the header keeps only type/mode/urgent tags — no double render of pay ($0k…$0k
+                looked like a bug twice) or deadline (was Tag here + "Apply before" section below). */}
             <div className="flex gap-2 flex-wrap mt-3.5">
               <HiringTypeBadge jobId={job.id}/>
               <Tag icon="clock">{job.type}</Tag>
               {job.mode!=="On-site"&&<Tag tone="ok" icon="globe">{job.mode}</Tag>}
               {job.urgent&&<Tag tone="warn" icon="alert">{t("shared.jobDetail.urgentHiring")}</Tag>}
-              <Tag tone={job.dl<=7?"danger":"neutral"} icon="calendar">{dlText(job.dl)}</Tag>
               {/* Status pill tooltip (JS-06) - "Applied" is never left unexplained. */}
               {applied&&<span className="relative inline-block"
                 onMouseEnter={e=>{const r=e.currentTarget.getBoundingClientRect();setAppliedTip({top:r.top+r.height/2,left:r.right+10});}}

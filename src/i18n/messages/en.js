@@ -457,7 +457,7 @@ export const en = {
     recruiterSearch: "Recruiter search", recruiterSearchTip: "NorthHire Staffing is representing this hire for the client. You'd be on the client's payroll; the client pays our fee. Never a cost to you.",
     verifiedEmployer: "Verified employer",
     openingOne: "opening", openingOther: "openings",
-    onSite: "On-site", urgent: "Urgent", applied: "Applied",
+    onSite: "On-site", urgent: "Urgent", applied: "Applied", newBadge: "New",
     minRead: "{mins} min read",
     free: "Free", enrolled: "Enrolled", enrolledCount: "{count} enrolled",
   },

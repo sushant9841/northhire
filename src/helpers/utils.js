@@ -28,9 +28,28 @@ export const uid=p=>p+Math.random().toString(36).slice(2,9);
 // locale change; callers don't need to pass the locale explicitly. Import at top so this file
 // stays a pure-helpers module.
 export const money=n=>_currentMoney(n);
-export const pay=j=>j.unit==="yr"?`$${Math.round(j.lo/1000)}k – $${Math.round(j.hi/1000)}k`:j.unit==="mi"?`$${j.lo.toFixed(2)} – $${j.hi.toFixed(2)}`:`$${j.lo} – $${j.hi}`;
+// QA-r5 (user 2026-09-24): guard against $0k-$0k rendering when a yr-unit job carries hourly-
+// scale numbers, and against "$0 – $0" for genuinely missing pay. A range that rounds to zero
+// is data corruption; showing "Not specified" is honest, "$0k – $0k" is misleading.
+export const pay=j=>{
+  const lo=Number(j?.lo)||0, hi=Number(j?.hi)||0;
+  if(!lo&&!hi) return "Pay not specified";
+  if(j.unit==="yr"){
+    const kLo=Math.round(lo/1000), kHi=Math.round(hi/1000);
+    if(!kLo&&!kHi) return "Pay not specified"; // < $500/yr is corrupt data, not a real salary
+    return kLo===kHi?`$${kLo}k`:`$${kLo}k – $${kHi}k`;
+  }
+  if(j.unit==="mi") return lo===hi?`$${lo.toFixed(2)}`:`$${lo.toFixed(2)} – $${hi.toFixed(2)}`;
+  return lo===hi?`$${lo}`:`$${lo} – $${hi}`;
+};
 export const payUnit=j=>j.unit==="yr"?"per year":j.unit==="mi"?"per mile":"per hour";
 export const payShort=j=>j.unit==="yr"?"/yr":j.unit==="mi"?"/mi":"/hr";
+// QA-r5: shared rating formatter. NEVER render a raw rating float in JSX — the seed data can
+// carry 15-decimal-place floats that show up as "4.913101164873179" if not formatted. Also
+// gate on a real review count via ratingHasReviews() before rendering stars; a rating without
+// reviews behind it is a fabricated number.
+export const ratingLabel=r=>{const n=Number(r); return Number.isFinite(n)&&n>0?n.toFixed(1):"";};
+export const ratingHasReviews=(rating,reviews)=>Number(rating)>0&&Array.isArray(reviews)&&reviews.length>0;
 export const annual=j=>j.unit==="yr"?j.lo:j.unit==="hr"?Math.round(j.lo*2080):Math.round(j.lo*110000);
 export const dlText=d=>d<=0?"Closed":d===1?"Closes today":d<=7?`${d} days left`:`${d} days left`;
 export const _ago=ms=>Date.now()-ms;

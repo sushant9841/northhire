@@ -208,6 +208,13 @@ export function DashShell({modules,children,brandKind}){
             {user?.role==="employer"?company?.name:user?.name}</div>
           <div className="text-xs text-white/55 mt-px">
             {user?.role==="employer"?(company?.verified?t("dashShell.verifiedEmployer"):t("dashShell.awaitingVerification")):t("account.administrator")}</div>
+          {/* Roadmap B1-08: persistent scope pill for scoped admins. A finance/moderator/support/
+              readonly admin opening any admin page now always knows exactly why the nav looks
+              different or why a route is unreachable — no more silent access mismatch. */}
+          {user?.role==="admin"&&(user.adminScope||"full")!=="full"&&
+            <div className="mt-1.5 inline-flex items-center gap-1 py-0.5 px-1.5 rounded bg-accent/20 border border-accent/35 text-accent text-[10px] font-bold uppercase tracking-wide">
+              <I n="shield" s={9}/>{(user.adminScope||"full")} scope
+            </div>}
         </div>
       </div>
       {empStats&&<div className="grid grid-cols-2 gap-2">

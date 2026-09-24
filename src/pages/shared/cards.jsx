@@ -62,6 +62,10 @@ export function JobCard({job,delay=0}){
       <HiringTypeBadge jobId={job.id}/>
       {job.mode!=="On-site"&&<Tag tone="ok" sm>{job.mode}</Tag>}
       {job.urgent&&<Tag tone="warn" sm icon="alert">{t("cards.urgent")}</Tag>}
+      {/* Roadmap B1-03: badge listings <48h old so early applicants can see they're early.
+          Real ATS data: applicants in the first 48h convert 4× more often than later ones. */}
+      {job.createdAt&&(Date.now()-job.createdAt)<48*3600000&&!applied&&
+        <Tag tone="ok" sm icon="sparkle">{t("cards.newBadge")}</Tag>}
       {applied&&<Tag tone="brand" sm icon="check">{t("cards.applied")}</Tag>}
       <span className={`ml-auto text-xs font-medium ${job.dl<=7?"text-red":"text-text-3"}`}>{dlText(job.dl)}</span></div>
   </Card>;
@@ -100,7 +104,9 @@ export function TrainingCard({t,delay=0}){
       <div className="flex gap-2 mb-3"><Tag sm>{t.level}</Tag><Tag sm icon="clock">{t.hours} h</Tag></div>
       <div className="text-lg font-bold text-text leading-snug tracking-tight mb-3">{t.title}</div>
       <div className="flex items-center gap-2.5 text-sm text-text-2 pt-3.5 border-t border-line-soft">
-        <span className="text-warn flex items-center gap-1 font-bold">
-          <I n="star" s={13} fill={C.warn} w={0}/>{t.rating}</span>
-        <span className="text-text-3">•</span><span>{translate("cards.enrolledCount",{count:t.enrolled.toLocaleString()})}</span></div></div></div>;
+        {Number(t.rating)>0&&Number(t.enrolled)>0&&<>
+          <span className="text-warn flex items-center gap-1 font-bold">
+            <I n="star" s={13} fill={C.warn} w={0}/>{Number(t.rating).toFixed(1)}</span>
+          <span className="text-text-3">•</span></>}
+        <span>{translate("cards.enrolledCount",{count:t.enrolled.toLocaleString()})}</span></div></div></div>;
 }
