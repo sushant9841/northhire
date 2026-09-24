@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { Router } from "express";
 import { db, nextId, sqlTime } from "../db.js";
-import { hashPassword, verifyPassword, createSessionCookie, clearSessionCookie, publicUser, requireAuth } from "../auth.js";
+import { hashPassword, verifyPassword, createSessionCookie, clearSessionCookie, publicUser, requireAuth, userFromRequest } from "../auth.js";
 import { sendAndLogMail } from "../mail.js";
 import { localeForEmail, emailStrings } from "../emailLocale.js";
 import { PROVIDERS, isConfigured, buildAuthUrl, exchangeCodeForProfile, issueState, consumeState } from "../oauth.js";
@@ -280,8 +280,11 @@ authRouter.post("/logout", (req, res) => {
   res.json({ ok: true });
 });
 
-authRouter.get("/me", requireAuth, (req, res) => {
-  res.json({ user: publicUser(req.user) });
+// QA-r3 P1: session-probe returns 200-with-null instead of 401 for the "no session here" case
+// so devtools isn't flooded with red on every page load - callers already handle user===null.
+authRouter.get("/me", (req, res) => {
+  const user = userFromRequest(req);
+  res.json({ user: user ? publicUser(user) : null });
 });
 
 authRouter.get("/outbox", requireAuth, (req, res) => {

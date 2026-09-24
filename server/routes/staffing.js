@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import { Router } from "express";
 import { db, nextId, sqlTime } from "../db.js";
 import { storeUpload, listUploads, getUpload, deleteUpload } from "../uploads.js";
-import { verifyPassword, hashPassword, createSessionCookie, clearSessionCookie, requireAgencyAuth, requireAuth, requireRole } from "../auth.js";
+import { verifyPassword, hashPassword, createSessionCookie, clearSessionCookie, requireAgencyAuth, agencyStaffFromRequest, requireAuth, requireRole } from "../auth.js";
 import { salesTaxRate } from "../../src/helpers/salesTax.js";
 import { calcNetPay } from "../../src/helpers/payrollTax.js";
 import { calcStaffingEconomics } from "../../src/helpers/staffingEconomics.js";
@@ -57,8 +57,12 @@ staffingRouter.post("/login", (req, res) => {
   res.json({ staff: { id: pub.id, loginId: pub.login_id, name: pub.name, role: pub.role, title: pub.title, seed: pub.seed, email: pub.email } });
 });
 staffingRouter.post("/logout", (req, res) => { clearSessionCookie(req, res, "agency_session", "agency"); res.json({ ok: true }); });
-staffingRouter.get("/me", requireAgencyAuth, (req, res) => {
-  const s = req.agencyStaff;
+// QA-r3 P1: session-probe returns 200-with-null instead of 401 for the "no session here" case
+// (same pattern as /api/hr/me) so devtools console/network isn't flooded with red on every page
+// load across other scopes.
+staffingRouter.get("/me", (req, res) => {
+  const s = agencyStaffFromRequest(req);
+  if (!s) return res.json({ staff: null });
   res.json({ staff: { id: s.id, loginId: s.login_id, name: s.name, role: s.role, title: s.title, seed: s.seed, email: s.email } });
 });
 staffingRouter.get("/staff", requireAgencyAuth, (req, res) => {

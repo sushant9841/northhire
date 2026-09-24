@@ -333,7 +333,7 @@ const TRACK_TONE={
 
 export function HowItWorksPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
-  const { t: tFunc } = useTranslation();
+  const { t } = useTranslation();
   const [track,setTrack]=useState("seeker");
 
   const tracks={
@@ -341,19 +341,19 @@ export function HowItWorksPage(){
        Playwright capture at 1440×900). Not marketing-produced mockups: this is what the reader
        actually sees when they sign in, so a step's copy and its image can't drift. */
     seeker:{
-      label:tFunc("howItWorks.seeker.label"),color:C.brand,
-      steps:tFunc("howItWorks.seeker.steps")
+      label:t("howItWorks.seeker.label"),color:C.brand,
+      steps:t("howItWorks.seeker.steps")
     },
     employer:{
-      label:tFunc("howItWorks.employer.label"),color:C.violet,
-      steps:tFunc("howItWorks.employer.steps")
+      label:t("howItWorks.employer.label"),color:C.violet,
+      steps:t("howItWorks.employer.steps")
     },
     staffing:{
-      label:tFunc("howItWorks.staffing.label"),color:STAFFING_AMBER,
-      steps:tFunc("howItWorks.staffing.steps")
+      label:t("howItWorks.staffing.label"),color:STAFFING_AMBER,
+      steps:t("howItWorks.staffing.steps")
     },
   };
-  const t=tracks[track]; const tone=TRACK_TONE[track];
+  const trk=tracks[track]; const tone=TRACK_TONE[track];
 
   return <div className="bg-white">
     <section className={`text-center ${mob?"pt-13 px-4 pb-10":"pt-22 px-6 pb-15"}`} style={{background:`linear-gradient(180deg,${C.tint} 0%,#fff 100%)`}}>
@@ -382,7 +382,7 @@ export function HowItWorksPage(){
         <div className="relative">
           {/* Vertical line */}
           {!mob&&<div className={`absolute left-6 top-6 bottom-6 w-0.5 ${tone.bgOnly} opacity-15`}/>}
-          {t.steps.map((s,i)=><div key={i} className={`flex mb-8 items-start ${mob?"gap-3.5":"gap-6"}`}>
+          {trk.steps.map((s,i)=><div key={i} className={`flex mb-8 items-start ${mob?"gap-3.5":"gap-6"}`}>
             <div className={`w-12 h-12 rounded-full ${tone.bgOnly} text-white flex items-center justify-center text-lg font-bold shrink-0 z-1 relative`}>{i+1}</div>
             <div className={`flex-1 ${mob?"":"pb-2"} min-w-0`}>
               <div className={`font-bold text-text tracking-tight mb-2 ${mob?"text-lg":"text-2xl"}`}>{s.t}</div>
@@ -403,13 +403,13 @@ export function HowItWorksPage(){
 
         <div className={`mt-15 bg-bg rounded-2xl text-center ${mob?"py-6 px-5":"py-9 px-10"}`}>
           <div className={`font-bold text-text tracking-tight mb-2.5 ${mob?"text-lg":"text-2xl"}`}>
-            {track==="seeker"?tFunc("howItWorks.seeker.cta"):track==="employer"?tFunc("howItWorks.employer.cta"):tFunc("howItWorks.staffing.cta")}</div>
+            {track==="seeker"?t("howItWorks.seeker.cta"):track==="employer"?t("howItWorks.employer.cta"):t("howItWorks.staffing.cta")}</div>
           <div className="text-sm text-text-3 mb-5">
-            {track==="seeker"?tFunc("howItWorks.seeker.ctaSubtitle"):track==="employer"?tFunc("howItWorks.employer.ctaSubtitle"):tFunc("howItWorks.staffing.ctaSubtitle")}</div>
+            {track==="seeker"?t("howItWorks.seeker.ctaSubtitle"):track==="employer"?t("howItWorks.employer.ctaSubtitle"):t("howItWorks.staffing.ctaSubtitle")}</div>
           <div className="flex gap-2.5 justify-center flex-wrap">
-            <Btn kind="primary" onClick={()=>track==="seeker"?A.go("signup"):track==="employer"?A.go("signup"):A.go("contact")} style={{background:t.color,borderColor:t.color}}>
-              {track==="seeker"?tFunc("howItWorks.seeker.ctaBtn"):track==="employer"?tFunc("howItWorks.employer.ctaBtn"):tFunc("howItWorks.staffing.ctaBtn")}</Btn>
-            <Btn kind="ghost" onClick={()=>A.go("forEmployers")}>{tFunc("howItWorks.allProducts")}</Btn>
+            <Btn kind="primary" onClick={()=>track==="seeker"?A.go("signup"):track==="employer"?A.go("signup"):A.go("contact")} style={{background:trk.color,borderColor:trk.color}}>
+              {track==="seeker"?t("howItWorks.seeker.ctaBtn"):track==="employer"?t("howItWorks.employer.ctaBtn"):t("howItWorks.staffing.ctaBtn")}</Btn>
+            <Btn kind="ghost" onClick={()=>A.go("forEmployers")}>{t("howItWorks.allProducts")}</Btn>
           </div>
         </div>
       </div>

@@ -69,9 +69,15 @@ hrRouter.post("/auto-login", requireAuth, requireRole("employer"), (req, res) =>
   createSessionCookie(res, "hr_session", "hr", owner.id);
   res.json({ employee: serializeHrEmployee(owner), company: { id: company.id, name: company.name, plan: company.plan } });
 });
-hrRouter.get("/me", requireHrAuth, (req, res) => {
-  const company = db.prepare("SELECT * FROM employers WHERE id = ?").get(req.hrEmployee.company_id);
-  res.json({ employee: serializeHrEmployee(req.hrEmployee), company: { id: company.id, name: company.name, plan: company.plan } });
+// QA-r3 P1: /me is an explicit "is there a session here" probe fired on every page load across
+// all scopes - responding 401 when there isn't fills devtools with red errors that drown out
+// real problems. Return 200 with null values instead; every caller already handles the missing-
+// session case, and the semantic (no session) is unchanged.
+hrRouter.get("/me", (req, res) => {
+  const emp = hrEmployeeFromRequest(req);
+  if (!emp) return res.json({ employee: null, company: null });
+  const company = db.prepare("SELECT * FROM employers WHERE id = ?").get(emp.company_id);
+  res.json({ employee: serializeHrEmployee(emp), company: { id: company.id, name: company.name, plan: company.plan } });
 });
 
 function isPriv(emp) { return ["owner", "admin", "hr"].includes(emp.role); }

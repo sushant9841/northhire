@@ -12,13 +12,13 @@
   },
   {
     "id": "SK-002",
-    "severity": "P1",
+    "severity": "P0",
     "category": "console-error",
     "page": "how-it-works",
     "viewport": "both",
-    "description": "Uncaught page error: t is not a function",
+    "description": "PAGE CRASH (blank white screen, entire page fails to render) - uncaught error: t is not a function",
     "repro": "Navigate to how-it-works",
-    "fix_hint": "Check stack trace in seeker-console.log",
+    "fix_hint": "HowItWorksPage in src/pages/marketing/forEmployers.jsx (line ~334) calls t(\"howItWorks.seeker.steps\") etc. via useTranslation() from src/i18n/i18n.jsx. Something in that call chain makes t not callable at render time on this route (possibly a missing/malformed howItWorks.* translation namespace or an i18n hook edge case specific to this page). Whole page renders blank white on desktop and mobile - reproduces on every load, not just first visit.",
     "screenshot_ref": null
   },
   {
@@ -174,17 +174,6 @@
     "repro": "Load accessibility at 390x844, inspect listed elements",
     "fix_hint": "Increase padding/min-height/min-width to 44px for touch targets",
     "screenshot_ref": "accessibility-mobile.png"
-  },
-  {
-    "id": "SK-018",
-    "severity": "P1",
-    "category": "console-error",
-    "page": "how-it-works",
-    "viewport": "both",
-    "description": "Uncaught page error: t is not a function",
-    "repro": "Navigate to how-it-works",
-    "fix_hint": "Check stack trace in seeker-console.log",
-    "screenshot_ref": null
   },
   {
     "id": "SK-019",
@@ -449,5 +438,38 @@
     "repro": "Go to /settings",
     "fix_hint": "n/a - selector limitation, verify manually",
     "screenshot_ref": "settings-mobile.png"
+  },
+  {
+    "id": "SK-042",
+    "severity": "P1",
+    "category": "bug",
+    "page": "apply2",
+    "viewport": "desktop",
+    "description": "On apply wizard step 2 (Questions), the cookie-consent banner (\"We use cookies for sign-in, saved jobs and analytics... Got it\") renders as a floating overlay directly on top of a required radio-button question (\"This role asks for 5+ years — do you meet that? Yes / Close to it\"), partially covering the Yes option. The Review application button stays disabled until that hidden question is answered, so a seeker who has not yet dismissed the cookie banner may be unable to see or click the required option, silently blocking progress through the apply wizard.",
+    "repro": "Login, apply to a job whose step-2 Questions include a Yes/Close-to-it style radio question, do not pre-dismiss cookies; observe the banner overlapping the radio buttons",
+    "fix_hint": "Anchor the cookie banner so it never overlaps in-flow form controls (e.g. fixed to very bottom with page padding-bottom reserved, or move above the fold as a slim top bar), and/or persist the dismissal so it does not reappear per page",
+    "screenshot_ref": "apply-2-desktop.png"
+  },
+  {
+    "id": "SK-043",
+    "severity": "P2",
+    "category": "ux",
+    "page": "multiple",
+    "viewport": "desktop",
+    "description": "The cookie-consent banner (\"Got it\"/\"Compris\") reappears on page after page (seen on job-detail, apply step 2, etc.) rather than staying dismissed for the session after the first \"Got it\" click.",
+    "repro": "Login, click Got it on the cookie banner on one page, navigate to another page (e.g. job detail -> apply step 2)",
+    "fix_hint": "Persist cookie-consent acknowledgement (localStorage flag is fine here per site policy) so the banner shows once, not on every route change",
+    "screenshot_ref": "apply-2-desktop.png"
+  },
+  {
+    "id": "SK-044",
+    "severity": "P2",
+    "category": "bug",
+    "page": "search",
+    "viewport": "desktop",
+    "description": "Could not re-locate the \"Frontend Developer\" job via search to retry the apply flow after the cookie-banner blocker",
+    "repro": "Search for Frontend Developer on /jobs",
+    "fix_hint": "n/a - script limitation, verify manually",
+    "screenshot_ref": null
   }
 ]
