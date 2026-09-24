@@ -256,17 +256,26 @@ grep -r "test\\.skip\\|test\\.todo\\|fixme" tests/e2e/
 
 ---
 
-## QA Round 2 Findings (96-Page Playwright Screenshot Audit)
+## QA Round 2 Findings (96-Page Playwright Screenshot Audit) — CLOSED 2026-09-23
 
-After tracker hit 326/326 (all productionization items resolved), QA round 2 ran a comprehensive 96-page screenshot pass. Found 14 issues (3 already fixed, 11 open). Full report available in tracker artifact:
+After tracker hit 326/326 (all productionization items resolved), QA round 2 ran a comprehensive 96-page screenshot pass. Found 14 issues total (3 fixed pre-tracker as commit 15b302f: Q-01 CORS-as-500, Q-02 cookie banner over sidebar, Q-03 SSO grammar). Full report: https://claude.ai/code/artifact/b512d591-ea6e-4f41-b39a-fe7f325e0ad6
 
-**Link:** https://claude.ai/code/artifact/b512d591-ea6e-4f41-b39a-fe7f325e0ad6
+**Follow-up pass (2026-09-23):** re-verified all 11 remaining open findings (Q-04 through Q-14) against current code. 10 of the 11 had already been fixed in an earlier, undocumented session — each carries an inline code comment describing the exact defect from the report, confirming the fix targeted that finding:
+- Q-04 sidebar name/role mid-word truncation — `AgencyShell.jsx` uses real `text-ellipsis` + `title` attr instead of a hand-rolled two-word slice.
+- Q-05 `$3,435.2` missing trailing zero — `staffing/suite.jsx` money-on-desk card uses `toLocaleString(..., {minimumFractionDigits:2, maximumFractionDigits:2})`.
+- Q-07 payroll-tax JSON wall — `admin/suite.jsx` `JsonConfigEditor` now collapses to a one-line key-count summary with an expand/collapse toggle.
+- Q-08 "Open tasks (co.)" abbreviation — `hr.dashboard.kpiOpenTasksCompany` i18n key now reads "Open tasks · company".
+- Q-09 "1 yrs" pluralisation — `employer/suite.jsx` candidate cards use `yearSingular`/`yearPlural` i18n keys keyed off `years===1`.
+- Q-10 cookie banner over footer nav — `App.jsx` `_CookieBanner` now has an `IntersectionObserver` on the page footer that hides the banner once the footer is in view.
+- Q-11 "Signed-in unique" copy — `employer/suite.jsx` content-analytics stat now reads "Unique signed-in readers".
+- Q-12 cookie "Got it" tap target — button now has explicit `minHeight:48`.
+- Q-14 hardcoded "Project Management" filler on HR dashboard hero — `hr/suite.jsx` now shows a live daily-signal line instead of the department name.
+- Q-13 (guest-home stat row reading flat) was explicitly "nothing to fix" in the original report — real numbers, flagged for future revisit only.
 
-**Summary:**
-- 3 FIXED (version banner, CV apply bug, wage law validation)
-- 11 OPEN (mostly P2/P3 cosmetic, see artifact for details)
+**One finding was still genuinely open and is now fixed:**
+- **Q-06 — candidate pipeline board OFFER/HIRED columns cut off at 1440px.** `employer/suite.jsx` `_PipelineBoard`: the desktop path had no `overflow-x-auto` on the board container (only the mobile path did), so with 5-6 flex-1 columns at `min-w-56` the row could exceed the available width (1440px viewport minus the 256px dashboard sidebar) with no contained scroll — it either forced page-level horizontal scroll or was invisible past the fold in a viewport-sized capture. Fixed by making the board container `overflow-x-auto` unconditionally (mobile keeps its existing fixed-width-columns behavior; desktop columns still expand to fill via `flex-1` when they fit, and now scroll as a contained unit when they don't). Verified with `npm run build` (clean) and by tracing the JSX change — no new hooks, no state, no TDZ/hook-order risk.
 
-**Note:** Always verify against live tracker artifact, not this prose summary (memory drifts).
+**Status: 11/11 closed.** 10 were already fixed by prior undocumented work; 1 (Q-06) fixed this session in `src/pages/employer/suite.jsx`.
 
 ---
 

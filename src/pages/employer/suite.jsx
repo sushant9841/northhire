@@ -883,12 +883,16 @@ function _PipelineBoard({apps,job,sel,tog,selectStage,A,mob,stages,t,onOpen}){
     if(app&&app.stage!==over.id)A.moveApp(active.id,over.id);
   };
   /* No left/right padding on desktop — the sidebar and dashboard shell already provide the
-     outer gutter, and any extra padding here just squeezes the cards for no visual gain. On
-     desktop columns flex to fill the available width; on mobile they keep a fixed width and
-     the container scrolls horizontally. */
-  return <div className={`flex-1 ${mob?"overflow-x-auto p-2.5":"py-3"}`}>
+     outer gutter, and any extra padding here just squeezes the cards for no visual gain.
+     Columns are flex-1 with a min-width, so with 5-6+ stages the row can exceed the available
+     width at common viewports (e.g. 1440px with the dashboard sidebar) — without a scroll
+     container that overflow either clips silently in a full-page capture or forces the whole
+     page to scroll sideways. overflow-x-auto here keeps the board itself as the thing that
+     scrolls (columns still expand to fill when they fit) and mobile keeps its fixed-width,
+     always-scrolling treatment. */
+  return <div className={`flex-1 overflow-x-auto ${mob?"p-2.5":"py-3"}`}>
     <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-      <div className={`flex gap-2 items-start ${mob?"":"w-full"}`} style={mob?{minWidth:"max-content"}:undefined}>
+      <div className={`flex gap-2 items-start ${mob?"":"min-w-full"}`} style={mob?{minWidth:"max-content"}:undefined}>
         {stages.map(stage=><_PipelineColumn key={stage} stage={stage} items={apps.filter(a=>a.stage===stage)}
           job={job} sel={sel} tog={tog} selectStage={selectStage} A={A} mob={mob} stages={stages} t={t} onOpen={onOpen}/>)}
       </div>
