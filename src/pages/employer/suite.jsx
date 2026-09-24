@@ -206,6 +206,7 @@ export function EmpJobs(){
   const pg=usePagination(jobs,20);
   const [showImport,setShowImport]=useState(false);
   const [csv,setCsv]=useState(""); const [importResult,setImportResult]=useState(null);
+  const [editing,setEditing]=useState(null);
   const sampleCSV="title,city,province,type,pay_low,pay_high,pay_unit,category,mode,vacancies,experience,education,skills,perks,duties,requirements,description\nJourneyperson Electrician,Calgary,Alberta,Full Time,42,52,hr,trades,On-site,2,3+ years,Apprenticeship / trade certificate,Red Seal;WHMIS;Fall Protection,Health benefits;RRSP match,Site fit-out;Panel installation;Testing,Red Seal cert;5+ years commercial,Hiring a Red Seal electrician for commercial fit-outs in Calgary.";
   const applicantsN=A.applications.filter(a=>jobs.some(j=>j.id===a.job)).length;
   return <Page wide>
@@ -254,12 +255,95 @@ export function EmpJobs(){
                       <div className="text-base font-bold text-text mt-0.5">{v}</div></div>)}</div></div>
               <div className="flex gap-2 flex-wrap items-center">
                 <Btn kind="outline" size="sm" onClick={()=>A.openJob(j.id,{preview:true})}>{t("employer.jobs.preview")}</Btn>
+                {(j.status==="live"||j.status==="paused")&&
+                  <Btn kind="ghost" size="sm" icon="edit" onClick={()=>setEditing(j)} title="Edit listing">Edit</Btn>}
                 {j.pendingOwnerApproval&&A.user?.employerRole==="owner"&&
                   <Btn kind="ok" size="sm" icon="check" onClick={()=>A.approveJob(j.id)}>{t("employer.jobs.approve")}</Btn>}
-                {j.status!=="review"&&<Btn kind="outline" size="sm" onClick={()=>A.toggleJobStatus(j.id)}>{j.status==="live"?t("employer.jobs.pause"):t("employer.jobs.reopen")}</Btn>}
+                {j.status!=="review"&&j.status!=="closed"&&<Btn kind="outline" size="sm" onClick={()=>A.toggleJobStatus(j.id)}>{j.status==="live"?t("employer.jobs.pause"):t("employer.jobs.reopen")}</Btn>}
                 <Btn kind="primary" size="sm" onClick={()=>{A.setPipelineJob(j.id);A.go("empPipeline");}}>{t("employer.jobs.candidatesN",{n:apps.length})}</Btn></div></div></Card>;})}</div>
       <Pagination {...pg}/></>}
+    {editing&&<_EditJobModal job={editing} onClose={()=>setEditing(null)}/>}
   </Page>;
+}
+
+/* QA-r4 product decision: employers can now edit a live/paused listing without close+repost.
+   Scoped to the highest-value fields (title/desc/pay/location/deadline/skills/perks) — the
+   full wizard's screening-questions and Bill 149 flags still require going back through the
+   post wizard, which is fine (those are less common typos and the wizard already validates
+   them properly). Server-side re-runs the posting-law check on every save; a validation error
+   surfaces as a toast. */
+function _EditJobModal({job,onClose}){
+  const A=use(); const {t}=useTranslation();
+  const [f,setF]=useState({
+    t:job.t||"", desc:job.desc||"",
+    lo:job.lo??0, hi:job.hi??0, unit:job.unit||"hr",
+    city:job.city||"", prov:job.prov||"",
+    type:job.type||"Full Time", mode:job.mode||"On-site",
+    exp:job.exp||"", edu:job.edu||"",
+    skillsText:(job.skills||[]).join(", "),
+    perksText:(job.perks||[]).join(", "),
+    dutiesText:(job.duties||[]).join("\n"),
+    reqsText:(job.reqs||[]).join("\n"),
+    dlDate:job.dlDate||"",
+    urgent:!!job.urgent, featured:!!job.featured, aiScreening:job.aiScreening!==false, vacancyConfirmed:!!job.vacancyConfirmed,
+    how:job.how||"",
+  });
+  const [saving,setSaving]=useState(false);
+  const bind=k=>({value:f[k],onChange:e=>setF(x=>({...x,[k]:e.target.value}))});
+  const save=async()=>{
+    if(!f.t.trim())return A.toast("Title is required","danger");
+    if(!f.desc.trim())return A.toast("Description is required","danger");
+    setSaving(true);
+    const patch={
+      title:f.t.trim(), desc:f.desc.trim(),
+      lo:Number(f.lo)||0, hi:Number(f.hi)||0, unit:f.unit,
+      city:f.city.trim(), prov:f.prov, type:f.type, mode:f.mode,
+      exp:f.exp, edu:f.edu, dlDate:f.dlDate||null,
+      urgent:!!f.urgent, featured:!!f.featured,
+      aiScreening:f.aiScreening!==false, vacancyConfirmed:!!f.vacancyConfirmed,
+      skills:f.skillsText.split(",").map(s=>s.trim()).filter(Boolean),
+      perks:f.perksText.split(",").map(s=>s.trim()).filter(Boolean),
+      duties:f.dutiesText.split("\n").map(s=>s.trim()).filter(Boolean),
+      reqs:f.reqsText.split("\n").map(s=>s.trim()).filter(Boolean),
+      how:f.how.trim()||"Apply through NorthHire with your resume.",
+    };
+    const r=await A.updateJob(job.id,patch);
+    setSaving(false);
+    if(r.ok){A.toast("Listing updated","ok"); onClose();}
+  };
+  return <Modal onClose={onClose} title={`Edit — ${job.t}`} wide>
+    <div className="grid gap-3.5">
+      <Field label="Title *"><Input {...bind("t")}/></Field>
+      <Field label="Description *"><Area rows={5} {...bind("desc")}/></Field>
+      <div className="grid grid-cols-3 gap-3">
+        <Field label="Pay low"><Input type="number" {...bind("lo")}/></Field>
+        <Field label="Pay high"><Input type="number" {...bind("hi")}/></Field>
+        <Field label="Unit"><Sel {...bind("unit")}><option value="hr">$/hr</option><option value="yr">$/yr</option></Sel></Field>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="City"><Input {...bind("city")}/></Field>
+        <Field label="Province"><Sel {...bind("prov")}>{["ON","QC","BC","AB","MB","SK","NS","NB","NL","PE","YT","NT","NU"].map(p=><option key={p}>{p}</option>)}</Sel></Field>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Type"><Sel {...bind("type")}>{["Full Time","Part Time","Contract","Casual"].map(x=><option key={x}>{x}</option>)}</Sel></Field>
+        <Field label="Mode"><Sel {...bind("mode")}>{["On-site","Hybrid","Remote"].map(x=><option key={x}>{x}</option>)}</Sel></Field>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Experience"><Input {...bind("exp")} placeholder="e.g. 2+ years"/></Field>
+        <Field label="Education"><Input {...bind("edu")} placeholder="e.g. High school"/></Field>
+      </div>
+      <Field label="Application deadline"><Input type="date" {...bind("dlDate")}/></Field>
+      <Field label="Skills (comma-separated)"><Input {...bind("skillsText")}/></Field>
+      <Field label="Perks (comma-separated)"><Input {...bind("perksText")}/></Field>
+      <Field label="Duties (one per line)"><Area rows={3} {...bind("dutiesText")}/></Field>
+      <Field label="Requirements (one per line)"><Area rows={3} {...bind("reqsText")}/></Field>
+      <Field label="How to apply"><Input {...bind("how")}/></Field>
+    </div>
+    <div className="flex justify-end gap-2 mt-4">
+      <Btn kind="ghost" onClick={onClose}>Cancel</Btn>
+      <Btn kind="primary" icon="check" loading={saving} disabled={saving} onClick={save}>Save changes</Btn>
+    </div>
+  </Modal>;
 }
 
 /* E2 Step 4 preview: maps the wizard's in-progress form state to the same job shape a real
