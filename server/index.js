@@ -177,16 +177,15 @@ app.listen(PORT, () => {
   console.log(`NorthHire API listening on http://localhost:${PORT}`);
 });
 
-// Priority-4 #4 - daily-snapshot analytics: backfill the trailing 30 days from existing rows'
-// created_at timestamps on boot, then re-capture "today" every 24h so a long-running server keeps
-// its most recent day's counters fresh without needing a cron/scheduler dependency.
-backfillDailySnapshots(30);
+// QA-r4: both backfillDailySnapshots and refreshSilverMedalistMatches are O(N×M) synchronous
+// DB scans that block Node's event loop for tens of seconds at scale (100k users × 300k
+// applications). Deferring off the immediate tick so app.listen() actually responds first; the
+// weekly interval below picks up subsequent runs with no user-visible delay.
+setImmediate(() => {
+  try { backfillDailySnapshots(30); } catch (e) { console.error("boot: backfillDailySnapshots failed", e); }
+});
 setInterval(() => captureDailySnapshot(), 24 * 3600 * 1000);
-
-// Priority-4 #6 - silver-medalist candidate re-engagement: recompute matches once on boot (so a
-// freshly-restarted server doesn't wait a full week to catch up on new live jobs / new opt-ins)
-// and weekly thereafter. refreshSilverMedalistMatches() is also exposed as a callable for
-// admin/test use (see /api/admin/silver-medalist-matches/refresh) so this doesn't have to wait a
-// week to be verified either.
-refreshSilverMedalistMatches();
+setImmediate(() => {
+  try { refreshSilverMedalistMatches(); } catch (e) { console.error("boot: refreshSilverMedalistMatches failed", e); }
+});
 setInterval(() => refreshSilverMedalistMatches(), 7 * 24 * 3600 * 1000);

@@ -57,10 +57,6 @@ jobsRouter.get("/", (req, res) => {
 
   if (status && status !== "all") { clauses.push("status = ?"); params.push(status); }
   else if (!status) { clauses.push("status = 'live' AND pending_owner_approval = 0"); }
-  // status === "all" applies no status filter - used by an owning employer's "my jobs" list
-  // and admin moderation, both of which need to see paused/review/closed/pending-approval
-  // listings too. The default (public search) view excludes anything still awaiting the
-  // account owner's sign-off, even if it already cleared admin moderation to "live".
 
   if (employerId) { clauses.push("employer_id = ?"); params.push(employerId); }
   if (cat) { clauses.push("cat = ?"); params.push(cat); }
@@ -71,9 +67,18 @@ jobsRouter.get("/", (req, res) => {
   if (minPay) { clauses.push("(pay_hi >= ? OR pay_lo >= ?)"); params.push(Number(minPay), Number(minPay)); }
   if (q) { clauses.push("(title LIKE ? OR description LIKE ?)"); params.push(`%${q}%`, `%${q}%`); }
 
-  const sql = `SELECT * FROM jobs${clauses.length ? " WHERE " + clauses.join(" AND ") : ""} ORDER BY created_at DESC`;
-  const rows = db.prepare(sql).all(...params);
-  res.json({ jobs: rows.map(serializeJob) });
+  // QA-r4 scale: unbounded list returned 11.8MB and took 20s at 15k rows. Add real pagination
+  // + a total count so the client can render "N of M" and page controls. Default page = 500
+  // (enough for a first fold of results, small enough to send in ~200ms). Absolute max = 5000
+  // — anything beyond that is almost certainly a page bug asking for the whole table.
+  const rawLimit = Number(req.query.limit);
+  const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 5000) : 500;
+  const rawOffset = Number(req.query.offset);
+  const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
+  const where = clauses.length ? " WHERE " + clauses.join(" AND ") : "";
+  const total = db.prepare(`SELECT COUNT(*) AS n FROM jobs${where}`).get(...params).n;
+  const rows = db.prepare(`SELECT * FROM jobs${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`).all(...params, limit, offset);
+  res.json({ jobs: rows.map(serializeJob), total, limit, offset });
 });
 
 // Anonymised pay benchmark for a given category + province + experience shape, computed live

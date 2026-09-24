@@ -1190,6 +1190,36 @@ for (const stmt of [
   // jobs.flagged pattern - a flag admins can set/clear, not a delete.
   "ALTER TABLE applications ADD COLUMN admin_hidden_at TEXT",
   "ALTER TABLE applications ADD COLUMN admin_hidden_reason TEXT",
+  // QA-r4 scale-test perf indexes. Discovered at 100k users / 300k applications: every hot
+  // query without an index was doing a full table scan. Server startup hooks (silver-medalist
+  // refresh, daily-snapshot backfill) alone took >30s and blocked the event loop entirely,
+  // and every /api/jobs, /api/applications, /api/messages route returned 30s+ later or timed
+  // out. All these indexes are additive — CREATE INDEX IF NOT EXISTS is safe on already-seeded
+  // databases and idempotent across restarts.
+  "CREATE INDEX IF NOT EXISTS idx_applications_user ON applications(user_id)",
+  "CREATE INDEX IF NOT EXISTS idx_applications_job ON applications(job_id)",
+  "CREATE INDEX IF NOT EXISTS idx_applications_user_stage ON applications(user_id, stage)",
+  "CREATE INDEX IF NOT EXISTS idx_applications_stage ON applications(stage)",
+  "CREATE INDEX IF NOT EXISTS idx_applications_created ON applications(created_at DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_jobs_employer ON jobs(employer_id)",
+  "CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status)",
+  "CREATE INDEX IF NOT EXISTS idx_jobs_created ON jobs(created_at DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_jobs_flagged ON jobs(flagged)",
+  "CREATE INDEX IF NOT EXISTS idx_users_role ON users(role)",
+  "CREATE INDEX IF NOT EXISTS idx_users_employer ON users(employer_id)",
+  "CREATE INDEX IF NOT EXISTS idx_cvs_user ON cvs(user_id)",
+  "CREATE INDEX IF NOT EXISTS idx_saved_searches_user ON saved_searches(user_id)",
+  "CREATE INDEX IF NOT EXISTS idx_messages_from ON messages(from_user_id, created_at DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_messages_to ON messages(to_user_id, created_at DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_notifications_for ON notifications(for_value, created_at DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_interviews_application ON interviews(application_id)",
+  "CREATE INDEX IF NOT EXISTS idx_interviews_candidate ON interviews(candidate_id, when_text)",
+  "CREATE INDEX IF NOT EXISTS idx_interviews_employer ON interviews(employer_id, when_text)",
+  "CREATE INDEX IF NOT EXISTS idx_interviews_job ON interviews(job_id)",
+  "CREATE INDEX IF NOT EXISTS idx_hr_employees_company ON hr_employees(company_id)",
+  "CREATE INDEX IF NOT EXISTS idx_hr_employees_email ON hr_employees(company_id, email)",
+  "CREATE INDEX IF NOT EXISTS idx_hr_employees_role ON hr_employees(company_id, role)",
+  "CREATE INDEX IF NOT EXISTS idx_hr_employees_manager ON hr_employees(company_id, manager)",
 ]) {
   try { db.exec(stmt); } catch (e) { if (!/duplicate column/i.test(e.message)) console.error("migration:", stmt, e.message); }
 }

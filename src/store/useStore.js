@@ -151,7 +151,11 @@ export function useStore(){
     let cancelled=false;
     (async()=>{
       try{
-        const [jobsRes,employersRes]=await Promise.all([api.get("/jobs?status=all"),api.get("/employers")]);
+        // QA-r4 scale: /api/jobs + /api/employers now paginate server-side. Request the max
+        // page size for the initial hydrate so admin/employer/search views keep working today;
+        // the true fix (fetch per-viewport + server-side filter refetch) is queued as a bigger
+        // refactor. Default cap on the server is 500; explicit 5000 unblocks up to 5k rows.
+        const [jobsRes,employersRes]=await Promise.all([api.get("/jobs?status=all&limit=5000"),api.get("/employers?limit=5000")]);
         if(cancelled)return;
         setJobs(jobsRes.jobs.map(mapApiJob));
         setEmployers(employersRes.employers.map(mapApiEmployer));
@@ -203,7 +207,7 @@ export function useStore(){
     (async()=>{
       try{
         const path=user.role==="seeker"?"/applications/mine":"/applications/employer/mine";
-        const {applications:fresh}=await api.get(path);
+        const {applications:fresh}=await api.get(`${path}?limit=5000`);
         if(cancelled)return;
         setApplications(l=>{
           const freshIds=new Set(fresh.map(a=>a.id));

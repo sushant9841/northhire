@@ -75,29 +75,45 @@ applicationsRouter.post("/:id/scorecards", requireAuth, requireRole("employer"),
   res.status(201).json({ scorecard: { id, application: req.params.id, author: req.user.name, rating: r, notes: (notes || "").trim(), at: Date.now() } });
 });
 
+// QA-r4 scale: paginate — a seeker with 500 applications was fine, but the employer view
+// unions across ALL their jobs (PCL has 20+ jobs × hundreds of apps each = thousands of rows
+// serialized on every dashboard load). Default 500, cap 5000, expose total for UI.
+function paginate(req) {
+  const rawLimit = Number(req.query.limit);
+  const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 5000) : 500;
+  const rawOffset = Number(req.query.offset);
+  const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
+  return { limit, offset };
+}
+
 applicationsRouter.get("/mine", requireAuth, requireRole("seeker"), (req, res) => {
-  const rows = db.prepare("SELECT * FROM applications WHERE user_id = ? ORDER BY created_at DESC").all(req.user.id);
-  res.json({ applications: rows.map(serializeApplication) });
+  const { limit, offset } = paginate(req);
+  const total = db.prepare("SELECT COUNT(*) AS n FROM applications WHERE user_id = ?").get(req.user.id).n;
+  const rows = db.prepare("SELECT * FROM applications WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?").all(req.user.id, limit, offset);
+  res.json({ applications: rows.map(serializeApplication), total, limit, offset });
 });
 
-// Every application across every one of the employer's own jobs in one call - the frontend's
-// applicant counts (job cards, pipeline, analytics) all read one shared local `applications`
-// array rather than fetching per-job, so this is what keeps that array in sync with reality.
 applicationsRouter.get("/employer/mine", requireAuth, requireRole("employer"), (req, res) => {
+  const { limit, offset } = paginate(req);
+  const total = db.prepare(
+    `SELECT COUNT(*) AS n FROM applications JOIN jobs ON jobs.id = applications.job_id WHERE jobs.employer_id = ?`
+  ).get(req.user.employer_id).n;
   const rows = db.prepare(
     `SELECT applications.* FROM applications
      JOIN jobs ON jobs.id = applications.job_id
-     WHERE jobs.employer_id = ? ORDER BY applications.created_at DESC`
-  ).all(req.user.employer_id);
-  res.json({ applications: rows.map(serializeApplication) });
+     WHERE jobs.employer_id = ? ORDER BY applications.created_at DESC LIMIT ? OFFSET ?`
+  ).all(req.user.employer_id, limit, offset);
+  res.json({ applications: rows.map(serializeApplication), total, limit, offset });
 });
 
 applicationsRouter.get("/job/:jobId", requireAuth, requireRole("employer"), (req, res) => {
   const job = db.prepare("SELECT * FROM jobs WHERE id = ?").get(req.params.jobId);
   if (!job) return res.status(404).json({ error: "Job not found." });
   if (job.employer_id !== req.user.employer_id) return res.status(403).json({ error: "Not your listing." });
-  const rows = db.prepare("SELECT * FROM applications WHERE job_id = ? ORDER BY created_at DESC").all(req.params.jobId);
-  res.json({ applications: rows.map(serializeApplication) });
+  const { limit, offset } = paginate(req);
+  const total = db.prepare("SELECT COUNT(*) AS n FROM applications WHERE job_id = ?").get(req.params.jobId).n;
+  const rows = db.prepare("SELECT * FROM applications WHERE job_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?").all(req.params.jobId, limit, offset);
+  res.json({ applications: rows.map(serializeApplication), total, limit, offset });
 });
 
 applicationsRouter.post("/", requireAuth, requireRole("seeker"), (req, res) => {

@@ -33,8 +33,14 @@ const WITH_OWNER = `
 `;
 
 employersRouter.get("/", (req, res) => {
-  const rows = db.prepare(`${WITH_OWNER} ORDER BY employers.name`).all();
-  res.json({ employers: rows.map(serializeEmployer) });
+  // QA-r4 scale: unbounded list returned 1.2MB on 3k employers. Add pagination + total.
+  const rawLimit = Number(req.query.limit);
+  const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 5000) : 500;
+  const rawOffset = Number(req.query.offset);
+  const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
+  const total = db.prepare("SELECT COUNT(*) AS n FROM employers").get().n;
+  const rows = db.prepare(`${WITH_OWNER} ORDER BY employers.name LIMIT ? OFFSET ?`).all(limit, offset);
+  res.json({ employers: rows.map(serializeEmployer), total, limit, offset });
 });
 
 /* Must come before GET /:id, or "candidate-notes" would itself be matched as an :id. */
