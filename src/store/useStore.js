@@ -1826,6 +1826,16 @@ export function useStore(){
       setJobs(l=>l.map(x=>x.id===id?mapApiJob(updated):x));
       log("job.status",`${nextStatus==="paused"?"Paused":"Reopened"} "${j.t}"`,"briefcase");
     }catch(err){toast(err.message,"danger");}};
+  /* Edit a live or paused listing (QA-r4 product decision). Content-field patch mirrors the
+     publishJob payload shape so the server accepts the same names it did on create. Only fields
+     the caller passes are updated — a partial patch never clears untouched fields. */
+  const updateJob=async(id,patch)=>{
+    try{
+      const {job:updated}=await api.patch(`/jobs/${id}`,patch);
+      setJobs(l=>l.map(x=>x.id===id?mapApiJob(updated):x));
+      log("job.edit",`Edited "${updated.title||updated.t}"`,"edit");
+      return {ok:true};
+    }catch(err){toast(err.message,"danger"); return {ok:false,msg:err.message};}};
   const reportJob=async(id,reason)=>{
     try{await api.post(`/jobs/${id}/report`,{reason}); return {ok:true};}
     catch(err){return {ok:false,msg:err.message};}};
@@ -2443,7 +2453,7 @@ export function useStore(){
     openHrEmployeeProfile,hrProfileDeepLinkTab,setHrProfileDeepLinkTab,hrProfileFocusRecordId,setHrProfileFocusRecordId,openHrChatWith,hrChatPrefill,setHrChatPrefill,
     beginApply,submitApply,withdraw,acceptOffer,moveApp,rejectApp,noCvGateJobId,closeNoCvGate,
     lastAppliedId,focusAppId,setFocusAppId,
-    publishJob,getJobDistributeUrl,getAutofillSuggestions,recordAutofill,approveJob,toggleJobStatus,flagJob,reportJob,jobReports,loadJobReports,decideJobReport,setPipelineJob:setPipelineJobFn,saveCompany,verifyEmployer,holdEmployer,updateEmployerAdmin,toggleSuspend,eraseUser,
+    publishJob,updateJob,getJobDistributeUrl,getAutofillSuggestions,recordAutofill,approveJob,toggleJobStatus,flagJob,reportJob,jobReports,loadJobReports,decideJobReport,setPipelineJob:setPipelineJobFn,saveCompany,verifyEmployer,holdEmployer,updateEmployerAdmin,toggleSuspend,eraseUser,
     saveJobDraft,loadJobDraft,deleteJobDraft,
     team,loadTeam,loadTeamAudit,inviteTeammate,revokeInvite,removeTeammate,getInvite,acceptInvite,inviteToken,
     messageTemplates,saveMessageTemplate,deleteMessageTemplate,

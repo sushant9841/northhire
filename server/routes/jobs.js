@@ -301,12 +301,15 @@ jobsRouter.patch("/:id", requireAuth, requireRole("employer", "admin"), (req, re
   if (status !== undefined) {
     if (!["live", "paused", "review", "closed"].includes(status)) return res.status(400).json({ error: "Invalid status." });
     if (isAdmin && !hasAdminScope(req.user, "moderator")) return res.status(403).json({ error: "This admin account doesn't have access to listing moderation." });
-    // A listing sitting in "review" is there because it's awaiting ADMIN moderation, not because
-    // the employer paused it - without this check, the employer's own "reopen" toggle could set
-    // status straight to "live" and skip moderation entirely, since nothing else here looks at
-    // the FROM state, only the TO state.
     if (status === "live" && job.status === "review" && !isAdmin) {
       return res.status(403).json({ error: "This listing is awaiting moderation review before it can go live." });
+    }
+    // Product decision (QA-r4 tail): closed is a TERMINAL state. Only an admin (moderator scope)
+    // may reopen a closed listing — for the employer, "closed" means the search is finished
+    // and applicants have been notified. Keeps analytics honest and prevents accidental resurrection
+    // of postings whose applicants have already moved on.
+    if (job.status === "closed" && status !== "closed" && !isAdmin) {
+      return res.status(403).json({ error: "This listing has been closed. Post a new listing to hire for the same role." });
     }
     if (status === "live" && job.status !== "live" && !isAdmin) {
       const plan = employerPlan(job.employer_id);
@@ -314,6 +317,61 @@ jobsRouter.patch("/:id", requireAuth, requireRole("employer", "admin"), (req, re
       if (liveCount >= plan.jobs) return res.status(403).json({ error: `Your plan allows ${plan.jobs} live listing${plan.jobs === 1 ? "" : "s"}. Upgrade to republish this one.` });
     }
     db.prepare("UPDATE jobs SET status = ? WHERE id = ?").run(status, req.params.id);
+  }
+
+  // Product decision (QA-r4 tail): content editing was previously missing entirely — an employer
+  // with a typo had to close + repost, losing every applicant's history. Employers may now edit
+  // the fields of their OWN LIVE OR PAUSED listing (a job in "review" cannot be edited: an admin
+  // is looking at it as it stands; a "closed" job cannot be edited: the record is frozen). Bill
+  // 149 posting-law re-checked on every edit that touches wage or eligibility flags.
+  const CONTENT_KEYS = ["title", "desc", "cat", "city", "prov", "type", "mode", "lo", "hi", "unit", "vac", "exp", "edu", "dlDate", "urgent", "featured", "skills", "perks", "duties", "reqs", "how", "questions", "aiScreening", "vacancyConfirmed"];
+  const touchesContent = CONTENT_KEYS.some(k => req.body?.[k] !== undefined);
+  if (touchesContent) {
+    if (isAdmin) return res.status(403).json({ error: "Content editing is the employer's to do, not an administrator's." });
+    if (!["live", "paused"].includes(job.status)) {
+      return res.status(400).json({ error: `A ${job.status} listing cannot be edited. Reopen or duplicate it first.` });
+    }
+    const b = req.body;
+    // Re-run Bill 149 posting-law check against the merged edit + existing row.
+    const merged = {
+      title: b.title ?? job.title, desc: b.desc ?? job.description, cat: b.cat ?? job.cat,
+      city: b.city ?? job.city, prov: b.prov ?? job.prov, type: b.type ?? job.type, mode: b.mode ?? job.mode,
+      lo: b.lo ?? job.pay_lo, hi: b.hi ?? job.pay_hi, unit: b.unit ?? job.pay_unit,
+      vac: b.vac ?? job.vacancies, exp: b.exp ?? job.experience, edu: b.edu ?? job.education,
+      vacancyConfirmed: b.vacancyConfirmed ?? !!job.vacancy_confirmed,
+    };
+    if (!merged.title) return res.status(400).json({ error: "Title is required." });
+    if (!merged.desc) return res.status(400).json({ error: "Description is required." });
+    const employer = db.prepare("SELECT prov, size FROM employers WHERE id = ?").get(job.employer_id);
+    const lawErr = checkPostingLaw(merged, employer);
+    if (lawErr) return res.status(400).json({ error: lawErr });
+    // Featured quota check if switching on.
+    if (b.featured && !job.featured) {
+      const plan = employerPlan(job.employer_id);
+      const fCount = db.prepare("SELECT COUNT(*) AS n FROM jobs WHERE employer_id = ? AND featured = 1 AND status = 'live' AND id != ?").get(job.employer_id, req.params.id).n;
+      if (fCount >= plan.featured) return res.status(403).json({ error: `Your plan allows ${plan.featured} featured listing${plan.featured === 1 ? "" : "s"}.` });
+    }
+    const fields = {
+      title: "title", desc: "description", cat: "cat", city: "city", prov: "prov", type: "type", mode: "mode",
+      lo: "pay_lo", hi: "pay_hi", unit: "pay_unit", vac: "vacancies", exp: "experience", edu: "education", dlDate: "deadline_date",
+      how: "how_to_apply",
+    };
+    const setCols = []; const params = [];
+    for (const [k, col] of Object.entries(fields)) if (b[k] !== undefined) { setCols.push(`${col} = ?`); params.push(b[k]); }
+    if (b.urgent !== undefined) { setCols.push("urgent = ?"); params.push(b.urgent ? 1 : 0); }
+    if (b.featured !== undefined) { setCols.push("featured = ?"); params.push(b.featured ? 1 : 0); }
+    if (b.aiScreening !== undefined) { setCols.push("ai_screening = ?"); params.push(b.aiScreening === false ? 0 : 1); }
+    if (b.vacancyConfirmed !== undefined) { setCols.push("vacancy_confirmed = ?"); params.push(b.vacancyConfirmed ? 1 : 0); }
+    if (b.skills !== undefined) { setCols.push("skills_json = ?"); params.push(JSON.stringify(Array.isArray(b.skills) ? b.skills : [])); }
+    if (b.perks !== undefined) { setCols.push("perks_json = ?"); params.push(JSON.stringify(Array.isArray(b.perks) ? b.perks : [])); }
+    if (b.duties !== undefined) { setCols.push("duties_json = ?"); params.push(JSON.stringify(Array.isArray(b.duties) ? b.duties : [])); }
+    if (b.reqs !== undefined) { setCols.push("requirements_json = ?"); params.push(JSON.stringify(Array.isArray(b.reqs) ? b.reqs : [])); }
+    if (b.questions !== undefined) {
+      const clean = (Array.isArray(b.questions) ? b.questions : []).filter(q => q && q.prompt && q.prompt.trim()).slice(0, 10)
+        .map(q => ({ id: q.id, type: q.type, prompt: q.prompt.trim(), required: !!q.required, options: Array.isArray(q.options) ? q.options : [] }));
+      setCols.push("screening_questions_json = ?"); params.push(JSON.stringify(clean));
+    }
+    if (setCols.length) db.prepare(`UPDATE jobs SET ${setCols.join(", ")} WHERE id = ?`).run(...params, req.params.id);
   }
   if (flagged !== undefined) {
     if (!isAdmin) return res.status(403).json({ error: "Only an administrator can flag a listing." });
