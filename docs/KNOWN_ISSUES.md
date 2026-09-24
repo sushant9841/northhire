@@ -1,16 +1,31 @@
 # NorthHire — Known Issues & Open Blockers
 
-Date: 2026-09-23. This is the live issue register for the platform. All findings are grounded in QA audits (tracker artifact b512d591-ea6e-4f41-b39a-fe7f325e0ad6), memory notes, and test suite skip-markers. Update when resolving.
+Date: 2026-09-24. This is the live issue register for the platform. All findings are grounded in QA audits (tracker artifact b512d591-ea6e-4f41-b39a-fe7f325e0ad6), memory notes, and test suite skip-markers. Update when resolving.
 
 ---
 
 ## P0 (Critical — Ship Blockers)
 
-None currently. All P0 issues (auth, account takeover, data loss, payment failures) were fixed in prior security audits.
+None currently open. QA-r3 (2026-09-24, 5-persona Playwright audit) surfaced 5 P0s — all fixed this pass:
+
+- **HR privilege escalation via PATCH /api/hr/employees/:id** (b1a3301). Any HR/Admin seat could promote self to Owner or edit anyone's salary in one request. Added senior-editing guard + role-write authority (Owner+Admin only, Owner-only grants "owner", never demote last active Owner) + money-write authority (Owner+Finance only).
+- **HR salary leak in maskHrEmployeeForViewer** (b1a3301). The `hr` role hit isPriv() fast-path and got the raw record incl. every colleague's salary. Split the fast-path so only Owner+Admin get raw; HR gets profile fields with money masked; money masking is role-gated now (not visibility-toggle gated).
+- **Finance could admin benefits plans** (b1a3301). Contradicted spec (benefits plan definition is HR admin work). Changed POST/PATCH/DELETE /api/hr/benefits/plans from requireHrMoney → requireHrPriv.
+- **Enterprise plan's unlimited-jobs quota stored as null, not Infinity** (050ea5d). PCL Construction (flagship demo, 20 live jobs) couldn't republish any paused/closed job — plan-quota check `liveCount >= null` was permanently true (null coerces to 0). Rows written before infinityReplacer existed store Infinity as null in JSON. Fixed backfill to heal present-but-null numeric quotas back to Infinity.
+- **AgencyAssignments + AgencyPayroll rendered blank** (050ea5d). `t(...).map is not a function` — `staffing.assignments.tableHeaders` and `staffing.payroll.tableHeader` were arrays in fr.js but missing from en.js entirely. Added 74 missing en keys across staffing.assignments/payroll/placements + auth.* namespaces, plus defensive Array.isArray guards on the two .map sites.
+
+All fixes verified live via curl repro of the exact attack from the audit and by post-fix regression checks.
 
 ---
 
 ## P1 (Core-Flow Broken)
+
+### QA-r3 P1s (all fixed 2026-09-24)
+
+- **HowItWorks page crashed with "t is not a function"** (c71fb83). A local `const t = tracks[track]` shadowed the useTranslation() `t` — page went blank. Renamed shadow to `trk`.
+- **Cookie-consent banner overlapped required apply-wizard question** (683e292). On apply-step-2, the banner covered a Yes/No radio users had to answer to submit. Banner now sets body padding-bottom equal to its rendered height so nothing is hidden underneath.
+- **Every page load fired 3 devtools-noise /me probes returning 401** (c71fb83). Session-check probes on /api/auth/me, /api/hr/me, /api/staffing/me now return 200 with null instead — semantic unchanged, devtools stays clean.
+- **Placements page + login-page hero leaked raw i18n keys** (050ea5d). Same missing-en-namespace root cause as the P0 staffing crashes — fixed by the same catalog additions.
 
 ### Issue 1: Apply Flow CV Picker (FIXED 2026-09-12)
 
