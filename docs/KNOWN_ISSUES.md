@@ -28,6 +28,17 @@ Post-fix perf under scale: every hot list endpoint <200ms; frontend page loads 1
 
 Scale seed script + rerunnable perf walk: `server/seedScale.js` (idempotent via scl_% prefix) and `.claude/qa-r4-scripts/perf-walk.mjs`.
 
+### QA-r4 tail product decisions (all landed 2026-09-24)
+
+Long-deferred product calls closed this pass:
+
+- **Jobs content-edit path** — shipped. PATCH /api/jobs/:id now accepts every content field (title/desc/pay/city/prov/type/mode/deadline/skills/perks/duties/reqs/questions/screening/how-to-apply). Only live+paused editable; review and closed refused with a specific reason. Bill 149 posting-law re-runs on every save. EmpJobEdit modal wired on EmpJobs (commits 1b08d96 + aee396a).
+- **Closed is terminal** — only admin (moderator scope) can reopen a closed listing. Reopen button hidden client-side for closed jobs.
+- **Kanban DnD** — was already shipped via @dnd-kit/core wiring in EmpPipeline (nothing to add).
+- **Payroll/invoice undo** — decision: keep reverse-as-offsetting-adjustment (already implemented). Raw undo would destroy audit trail; the accounting-correct pattern is intact.
+- **CPP/EI/tax calc consolidation** — was already done via shared `src/helpers/payrollTax.js` (calcNetPay). Both HR and staffing servers import from it; no drift remains.
+- **draft/archived status enum** — deferred (needs SQLite CHECK-constraint table rebuild for low incremental value; live+paused+review+closed covers the real product needs today).
+
 ---
 
 ## P1 (Core-Flow Broken)
