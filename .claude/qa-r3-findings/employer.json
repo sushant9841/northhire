@@ -1,0 +1,34 @@
+[
+  {
+    "id": "EMP-001",
+    "severity": "P2",
+    "page": "auth/login",
+    "title": "Task-provided credential admin@pcl.ca does not exist; real PCL owner login is hr@pcl.com",
+    "detail": "The QA brief specified admin@pcl.ca/Employer123 as the PCL Construction employer persona. This account does not exist in src/store/seed/employers.js (owner field is hr@pcl.com). Used hr@pcl.com/Employer123 instead to proceed with the audit.",
+    "repro": null
+  },
+  {
+    "id": "EMP-002",
+    "severity": "P0",
+    "page": "jobs / plan-limits",
+    "title": "Enterprise plan's unlimited job quota is stored as null, not Infinity, in platform_config — blocks PCL Construction (Enterprise) from republishing any paused/closed job with a broken error message",
+    "detail": "PATCH /api/jobs/:id with {status:'live'} on a job owned by PCL Construction (plan=Enterprise, which should mean unlimited job.jobs=Infinity per src/store/seed/constants.js PLANS.Enterprise) returned 403 with body {\"error\":\"Your plan allows null live listings. Upgrade to republish this one.\"} — reproduced live against the dev server. Root cause: server/routes/jobs.js employerPlan()/getConfig('plans') reads the 'plans' row from the platform_config table; getConfig()'s backfill logic (platformConfig.js lines 52-59) only fills in a field that is ABSENT from the stored plan object (`if (!(field in stored[planName]))`), not one that is PRESENT but wrong (e.g. already null). If the DB's persisted 'plans' row predates the infinityReplacer/Reviver round-trip helper (src/helpers/jsonInfinity.js) being wired in, or was written by any path that used plain JSON.stringify, Enterprise.jobs got silently corrupted from Infinity to null on that write and never self-heals. The template literal at jobs.js ~line 309 (`Your plan allows ${plan.jobs} live listing...`) then interpolates the literal string 'null'. This is a real production-blocking bug for the flagship Enterprise persona: PCL Construction cannot pause+republish, or otherwise reopen, any of its own job listings once it already has >=1 live job (which it does — 20 live jobs seeded). Likely also silently blocks any other action gated on plan.jobs (CSV import counts, 'my plan allows N more jobs' banners, etc.) for this employer.",
+    "repro": "1. Log in as hr@pcl.com / Employer123 (PCL Construction, Enterprise plan).\n2. Pick any of PCL's own jobs that is not currently 'live' (or pause a live one first via PATCH {status:'paused'}).\n3. PATCH http://localhost:8787/api/jobs/{jobId} with body {status:'live'} using the authenticated session cookie.\n4. Observe 403 {\"error\":\"Your plan allows null live listings. Upgrade to republish this one.\"} instead of success (Enterprise should have unlimited live jobs).\nFix direction: platformConfig.js's plan-backfill loop should also repair a present-but-null/non-finite value for known numeric-or-Infinity plan fields (jobs, seats, messagesPerMonth, analyticsHistoryDays, featured), not just an absent key; or add a one-time migration that re-applies infinityReplacer to the stored 'plans' config row."
+  },
+  {
+    "id": "EMP-003",
+    "severity": "P2",
+    "page": "all employer pages (global)",
+    "title": "Every employer-console page fires /api/hr/me and /api/staffing/me on mount and logs two 401 console errors each, even though the logged-in persona (hr@pcl.com, a plain employer) is neither an HR Suite employee nor a staffing agency user",
+    "detail": "Across all 20 routes screenshotted (dashboard, jobs, pipeline, company, billing, analytics, api, sso, content, staffing/*, messages, interviews), the console log shows a repeating pair of console.error 'Failed to load resource: 401' for GET /api/hr/me and GET /api/staffing/me on every single page load/navigation — roughly 80+ occurrences captured in employer-console.log for this one session. This is dead-weight network traffic and console noise on every employer page view; on a slower connection or when triaging real errors it drowns out genuine signal, and repeated 401 console.error entries are also picked up by any error-rate monitoring/Sentry-style tooling as real failures. Not blocking, but worth gating these calls behind an actual role/feature check (e.g. only fire /api/hr/me when the user has HR Suite access, only fire /api/staffing/me when staffing services are enabled for the plan) instead of firing unconditionally for every employer persona.",
+    "repro": "Log in as any plain employer without HR Suite/staffing access (hr@pcl.com) and open browser devtools Network/Console tab while navigating between /employer, /employer/jobs, /employer/company, etc. — two 401s fire on every navigation."
+  },
+  {
+    "id": "EMP-004",
+    "severity": "P3",
+    "page": "test-tooling note (not an app defect)",
+    "title": "Playwright networkidle + short wait produced false-positive blank screenshots for several routes; confirmed NOT reproducible with isolated navigation",
+    "detail": "An early pass of the automated route walk (waitUntil:'networkidle', 600ms settle) captured blank white full-page screenshots for /employer/pipeline, /employer/content, /employer/company, /employer/team, and intermittently /employer/jobs/new. Re-verified each of these routes individually with isolated browser contexts and generous wait (waitUntil:'load' + 2s, and a 4x-repeated isolated check) — all rendered correctly with full real content every time, no console/page errors. This was a test-harness artifact (rapid parallel context creation racing the client bundle's mount), not an app bug. Recorded here only so a future QA pass doesn't waste time re-chasing it; final screenshots in this deliverable were re-captured with the safer isolated method and show real rendered pages.",
+    "repro": null
+  }
+]

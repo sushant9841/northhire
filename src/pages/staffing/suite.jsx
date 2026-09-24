@@ -882,7 +882,7 @@ export function AgencyAssignments(){
     <Card pad={0} style={{borderRadius:14,overflow:"hidden"}}>
       <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:720}}>
         <thead><tr className="border-b-2 border-line text-left">
-          {t("staffing.assignments.tableHeaders").map(h=>
+          {(Array.isArray(t("staffing.assignments.tableHeaders"))?t("staffing.assignments.tableHeaders"):[]).map(h=>
             <th key={h} className={TH_CLS}>{h}</th>)}
         </tr></thead>
         <tbody>{pg.pageItems.map(a=>{const w=A.worker(a.worker); const person=w?(A.people||[]).find(p=>p.id===w.personId):null;
@@ -1071,7 +1071,7 @@ export function AgencyPayroll(){
     <Card pad={0} style={{borderRadius:14,overflow:"hidden"}}>
       <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:720}}>
         <thead><tr className="border-b-2 border-line text-left">
-          {t("staffing.payroll.tableHeader").map(h=>
+          {(Array.isArray(t("staffing.payroll.tableHeader"))?t("staffing.payroll.tableHeader"):[]).map(h=>
             <th key={h} className={TH_CLS}>{h}</th>)}
         </tr></thead>
         <tbody>{pg.pageItems.map(p=><tr key={p.id} className="border-b border-line-soft">

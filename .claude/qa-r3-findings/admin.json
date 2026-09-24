@@ -1,0 +1,58 @@
+[
+  {
+    "id": 1,
+    "severity": "P1",
+    "page": "login",
+    "title": "Raw i18n translation keys rendered on public login page hero panel",
+    "detail": "On /login (desktop, non-mobile layout) the right-hand hero illustration shows the LITERAL i18n keys instead of translated copy: 'auth.hiredCount', 'auth.hiredTimeframe' (in the floating avatar card), and 'auth.realJobsHeading' / 'auth.realJobsBody' (bottom-left overlay heading + body). Confirmed visually in login-desktop.png. Missing/broken translation keys for these four strings in the active locale bundle (src/pages/auth/pages.jsx LoginPage illusCol, ~lines 397-403).",
+    "status": "confirmed"
+  },
+  {
+    "id": 2,
+    "severity": "P2",
+    "page": "jobs",
+    "title": "No CSV export control on the Jobs moderation page",
+    "detail": "Users and Employers pages both have a working 'Export CSV' / 'Export filtered' button (confirmed: triggered real downloads seekers.csv and employers.csv). The Jobs moderation page (/admin/jobs) has no equivalent export control anywhere in the header/toolbar (confirmed via full-page screenshot jobs-desktop.png) despite the task spec expecting CSV export parity across users/employers/jobs/applications.",
+    "status": "confirmed"
+  },
+  {
+    "id": 3,
+    "severity": "P3",
+    "page": "all admin pages",
+    "title": "Every admin page fires 6 guaranteed console errors / 401s probing all 3 portal sessions",
+    "detail": "On every single admin route load, the app fires GET /api/auth/me, /api/hr/me, /api/staffing/me (each returning 401 for the admin session, since the admin is not simultaneously an hr/staffing user) - and it does this twice per page load in several cases. This is very likely an artifact of a shared 'am I logged in anywhere' probe that always checks all three portals rather than short-circuiting once the active role is known. Not user-facing/blocking, but it pollutes the console/network tab on every page, which will bury real 401s during future debugging and QA passes.",
+    "status": "confirmed"
+  },
+  {
+    "id": 4,
+    "severity": "P3",
+    "page": "config",
+    "title": "React warning: null value prop on controlled input on Business config page",
+    "detail": "Console warning captured once on /admin/config: \"`value` prop on `%s` should not be null. Consider using an empty string to clear the component or `undefined` for uncontrolled components. input\". Likely one of the numeric fields in Staffing agency policy (e.g. 'EI employer multiplier' or 'Admin fee per placed hour', both visibly blank in RECHECK_admin_config-desktop.png) is initialized to null instead of '' or undefined.",
+    "status": "confirmed"
+  },
+  {
+    "id": 5,
+    "severity": "informational",
+    "page": "users, employers, config, content-articles, content-trainings, admins, design-system, stats, log",
+    "title": "Retracted: initial-pass 'blank page' findings were false positives (script timing, not app bugs)",
+    "detail": "First automated pass flagged these pages as rendering blank bodies immediately (600ms) after navigation. Re-verified with a longer settle wait (1.5-2s) and via later interaction steps (suspend flow, CSV export, screenshots) - all pages render fully and correctly (confirmed: users-suspend-result-desktop.png, RECHECK_admin_employers-desktop.png, RECHECK_admin_config-desktop.png, jobs-desktop.png, settings-desktop.png, home-stats-desktop.png all show fully populated UI). No action needed; recorded here only so the false alarm isn't silently dropped.",
+    "status": "retracted-false-positive"
+  },
+  {
+    "id": 6,
+    "severity": "informational",
+    "page": "employers",
+    "title": "Retracted: 'No Verify button' was a terminology mismatch, not a missing feature",
+    "detail": "Automated script looked for a button literally labeled 'Verify'. The actual UI (RECHECK_admin_employers-desktop.png) uses 'Approve' / 'Hold' actions and already shows a full verification-evidence panel per employer card (website, business number, founded year, description) under the 'Awaiting review' tab. Feature exists and works as intended; only the QA script's selector was wrong.",
+    "status": "retracted-false-positive"
+  },
+  {
+    "id": 7,
+    "severity": "not-tested",
+    "page": "applications, interviews, offers, demographics, workflow rules, benefits plans, perf cycles, plans, integrations marketplace, API keys, referral credits, daily snapshots, silver-medalist matches, compliance register, moderation queue detail flows",
+    "title": "Scope not reached within timebox - no routes found in src/routes.js for these sections",
+    "detail": "src/routes.js only defines top-level admin routes: /admin (home/stats), /admin/users, /admin/employers, /admin/jobs, /admin/content/articles, /admin/content/trainings, /admin/settings, /admin/design-system, /admin/log, /admin/stats, /admin/config, /admin/admins. The remaining areas named in the task brief (applications, interviews, offers, demographics, workflow rules, benefits plans, perf cycles, plans, integrations marketplace, API keys, referral credits, daily snapshots+deltas, silver-medalist matches, compliance register, standalone moderation queue) were not located as distinct admin routes/tabs in the time available - they may live inside HR Suite (src/pages/hr/suite.jsx) rather than under /admin, or may not yet be implemented for the admin persona. Needs a follow-up pass to locate and test these specifically, or confirmation from the user on where they live.",
+    "status": "not-tested"
+  }
+]

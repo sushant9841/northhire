@@ -1,0 +1,46 @@
+[
+  {
+    "severity": "P0",
+    "title": "AgencyAssignments page crashes with unhandled JS exception — renders 100% blank (no error boundary)",
+    "detail": "Navigating to /staffing/assignments as nadia.singh throws \"t(...).map is not a function\" inside the <AgencyAssignments> component. React unmounts with no error boundary to catch it; document.body.innerText is empty (0 chars) — a pure white screen, no header/sidenav/error message, nothing. Reproduced twice in isolated fresh browser contexts (not a test artifact). This is one of the required routes in the QA scope and it is completely broken for the agency-owner persona.",
+    "page": "assignments",
+    "reproduction": "Log in as nadia.singh/staff2026, navigate to /staffing/assignments (or click Assignments in the left nav)."
+  },
+  {
+    "severity": "P0",
+    "title": "AgencyPayroll page crashes with the same unhandled JS exception — renders 100% blank",
+    "detail": "Same signature as the Assignments crash: \"t(...).map is not a function\" inside <AgencyPayroll>, no error boundary, body text is 0 chars (blank white screen). Payroll create/preview/finalize could not be tested at all because the page never renders. Same root cause pattern as Assignments strongly suggests a shared helper (likely something feeding an i18n t() call or a selector that is expected to return an array but returns undefined/an object) is broken for at least these two staffing pages.",
+    "page": "payroll",
+    "reproduction": "Log in as nadia.singh/staff2026, navigate to /staffing/payroll."
+  },
+  {
+    "severity": "P1",
+    "title": "Placements page shows raw, untranslated i18n keys instead of text",
+    "detail": "Visible on-screen literally: \"staffing.placements.subtitle\", \"staffing.placements.tabInProgress (1)\", \"staffing.placements.tabAccepted (1)\", \"staffing.placements.ta...\" (truncated). The page is functional (not blank) but the i18n lookup for the staffing.placements.* namespace is failing/missing keys, so the agency owner sees developer-facing translation keys instead of real labels.",
+    "page": "placements"
+  },
+  {
+    "severity": "P1",
+    "title": "Every staffing-console page fires 401 probe requests to /api/auth/me, /api/hr/me, /api/staffing/me on every load",
+    "detail": "On every single page navigation inside the staffing console, the app fires GET requests to /api/auth/me and /api/hr/me (and sometimes /api/staffing/me) which return 401 because the agency user has no consumer/HR session. These show as red errors in devtools on every page. Even if intentional (a shared session-check hook probing all scopes), the volume (3 failing requests x every nav) pollutes the console so badly that a genuine new error is easy to miss, and it will alarm anyone auditing network/console health.",
+    "page": "global"
+  },
+  {
+    "severity": "P2",
+    "title": "No route exists for a standalone \"Reports\" page",
+    "detail": "QA scope asked to audit a Reports page under staffing, but routes.js only defines agencyDashboard/JobOrders/Bench/Assignments/Timesheets/Payroll/Invoicing/Placements/Clients/Workers/Margins/Compliance/Branches/Settings — no agencyReports route or nav item exists. Reporting-style figures (AR outstanding, weekly run rate, open positions) currently only live on the Dashboard tile row. Flagging in case a dedicated Reports page was expected/planned but not shipped.",
+    "page": "reports"
+  },
+  {
+    "severity": "P2",
+    "title": "Session cookie is not literally named \"staffing\"",
+    "detail": "Prompt described the staffing scope as using \"session cookie staffing\" — the actual cookie set on login is named agency_session, not staffing. Not a bug, just naming: noting for accuracy since this was called out explicitly in the QA brief.",
+    "page": "login"
+  },
+  {
+    "severity": "P2",
+    "title": "Full-page screenshot occasionally times out on Placements (30s) despite the page rendering fine",
+    "detail": "One capture attempt via Playwright fullPage screenshot hit a 30s timeout waiting for fonts to load on /staffing/placements, even though a follow-up viewport screenshot of the same page succeeded instantly and body text was present. Possibly a web-font loading edge case worth a look if this repros for real users on slow connections, but could not confirm a user-facing symptom in the time available.",
+    "page": "placements"
+  }
+]

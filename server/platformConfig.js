@@ -54,7 +54,20 @@ export function getConfig(key) {
       for (const planName of Object.keys(DEFAULTS.plans)) {
         if (!stored[planName]) { stored[planName] = DEFAULTS.plans[planName]; healed = true; continue; }
         for (const field of Object.keys(DEFAULTS.plans[planName])) {
-          if (!(field in stored[planName])) { stored[planName][field] = DEFAULTS.plans[planName][field]; healed = true; }
+          const defVal = DEFAULTS.plans[planName][field];
+          if (!(field in stored[planName])) { stored[planName][field] = defVal; healed = true; continue; }
+          // QA-r3 P0: also repair numeric quota fields that persisted as null/non-finite (rows
+          // written before infinityReplacer existed store Infinity as null in JSON, and the
+          // reviver can't tell null-Infinity from null-because-null). Without this, every
+          // `liveCount >= plan.jobs` check treats null as 0, permanently blocking Enterprise
+          // (whose default is Infinity) from ever republishing a job.
+          const cur = stored[planName][field];
+          if (typeof defVal === "number" && (cur === null || (typeof cur === "number" && !Number.isFinite(cur) && !Number.isFinite(defVal)))) {
+            stored[planName][field] = defVal; healed = true;
+          }
+          if (defVal === Infinity && (cur === null || cur === undefined)) {
+            stored[planName][field] = Infinity; healed = true;
+          }
         }
       }
       if (healed) db.prepare("UPDATE platform_config SET value_json = ? WHERE key = ?").run(JSON.stringify(stored, infinityReplacer), key);

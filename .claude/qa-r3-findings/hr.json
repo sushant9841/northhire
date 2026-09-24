@@ -1,0 +1,42 @@
+[
+  {
+    "id": "HR-CRIT-1",
+    "ts": "2026-09-24T04:20:00.000Z",
+    "severity": "P0",
+    "persona": "linda (hr) / priya (admin) — any non-owner privileged role",
+    "area": "permissions / PATCH /api/hr/employees/:id",
+    "desc": "CRITICAL full privilege escalation + IDOR. PATCH /api/hr/employees/:id is gated only by requireHrPriv (owner/admin/hr), with no check that the target employee is within the caller's authority, no check that the caller isn't editing someone senior to them, and no field allowlist on the body. Verified live via curl: (1) logged in as Linda (linda.o@pcl.com, role=hr), PATCH /api/hr/employees/emp1 (Rachel, the company Owner) with body {\"role\":\"employee\",\"salary\":1} returned 200 and persisted — an HR-role account can demote and re-price the Owner. (2) Logged in as Linda, PATCH /api/hr/employees/emp7 (Linda's own record) with body {\"role\":\"owner\"} returned 200 and persisted — an HR-role account can self-promote to full company Owner with a single unauthenticated-beyond-login request. (3) Priya (role=admin) could likewise PATCH emp1's title. Only Isaac (finance) and Daniel (employee) were correctly blocked with 403. This is complete, unrestricted company takeover available to any HR or Admin seat. All test mutations (Rachel's title/role/salary, Linda's role) were reverted via the escalated session before the audit ended, so live data is restored to seed values.",
+    "repro": "1) POST /api/hr/login {companyName:'PCL Construction', loginId:'linda.o@pcl.com', password:'pcl2026'}. 2) PATCH /api/hr/employees/emp7 {\"role\":\"owner\"} -> 200, persists. Session is now Owner-privileged with zero further checks.",
+    "fileRef": "server/routes/hr.js:78 requireHrPriv, :273 PATCH /employees/:id"
+  },
+  {
+    "id": "HR-CRIT-2",
+    "ts": "2026-09-24T04:21:00.000Z",
+    "severity": "P0",
+    "persona": "linda (hr) vs isaac (finance)",
+    "area": "permissions / GET /api/hr/employees salary masking (inverted from spec)",
+    "desc": "Salary visibility on the People list endpoint (GET /api/hr/employees) is the exact inverse of both the task's stated persona rules ('Linda: Salary tab must 403', 'Isaac: sees Salary tab') and the app's own newer canViewSalary() helper (owner/finance/self only, per its in-code comment 'Salary is Finance/Owner only, full stop'). The list endpoint instead uses maskHrEmployeeForViewer(), whose isPriv() check treats role='hr' as fully privileged and returns EVERY field unmasked, including salary, for all 31 employees. Finance hits a separate, stricter branch in the same function that strips salary entirely (finance gets name/title/dept/seed/status/role only) for every row except the viewer's own. Verified live: GET /api/hr/employees as Linda (hr) returned real salary values for all 31 employees (e.g. Rachel $245,000, Priya $172,000). The same call as Isaac (finance) returned a non-null salary for only 1 row — himself. The per-profile detail endpoint (GET /employees/:id) uses the correct canViewSalary() gate and would behave oppositely (block Linda, allow Isaac), so the two endpoints actively disagree, and the more dangerous direction (HR seeing every salary) is the one with no protection. The People list/table view is the surface most likely to render from this endpoint.",
+    "repro": "1) Login as linda.o@pcl.com/pcl2026 -> GET /api/hr/employees -> salary populated on all rows. 2) Login as isaac.c@pcl.com/pcl2026 -> GET /api/hr/employees -> salary populated only on Isaac's own row.",
+    "fileRef": "server/routes/hr.js:145 maskHrEmployeeForViewer vs :176 canViewSalary; list route at :181, detail route ~:396"
+  },
+  {
+    "id": "HR-3-BENEFITS-ADMIN",
+    "ts": "2026-09-24T04:22:00.000Z",
+    "severity": "P1",
+    "persona": "isaac (finance)",
+    "area": "permissions / benefits admin",
+    "desc": "Task spec requires Finance (Isaac) to see the Salary tab but NOT have benefits-administration access. Server contradicts this: isMoneyRole() = isPriv() [owner/admin/hr] OR role==='finance', and every benefits-plan-admin write route (POST/PATCH/DELETE /api/hr/benefits/plans) is gated by requireHrMoney -> isMoneyRole. Verified live: logged in as Isaac, POST /api/hr/benefits/plans {name:'QA-TEST-PLAN-DELETE-ME'} returned 201 and created a real, active, company-wide benefits plan. Finance can fully administer benefits plans (create/edit/deactivate), contrary to the intended role boundary. Test plan was deactivated via DELETE afterward to leave no residue.",
+    "repro": "1) Login as isaac.c@pcl.com/pcl2026. 2) POST /api/hr/benefits/plans {\"name\":\"...\"} -> 201 Created.",
+    "fileRef": "server/routes/hr.js:85 isMoneyRole, :1677 POST /benefits/plans"
+  },
+  {
+    "id": "HR-4-NETWORKIDLE",
+    "ts": "2026-09-24T04:23:00.000Z",
+    "severity": "P3",
+    "persona": "n/a (test infra observation)",
+    "area": "screenshot sweep / perf",
+    "desc": "Playwright's networkidle wait timed out (15s) on several HR pages (policies, roster, perf-reviews, badges) even though the pages visually render — consistent with a background poll/interval (or long-lived connection) on those pages that never lets the network go idle. Not confirmed as a user-facing bug, but worth a follow-up: if a poll interval is firing every few seconds indefinitely while a page is open, that's extra server load with no visible benefit, and blocked our automated full-page screenshot capture for those three routes. Full exhaustive screenshot coverage (5 personas x 21 routes x 2 viewports) was not completed in the available time budget for this reason; a partial set (~27 shots, mostly Rachel/desktop plus a few Priya/mobile) was captured before the sweep was stopped to preserve the timebox for the higher-value security findings above.",
+    "repro": "Run the qa-r3-scripts/hr.mjs sweep; /hr/policies, /hr/roster, /hr/perf-reviews (desktop) and /hr/badges (mobile) exceed a 15s networkidle wait.",
+    "fileRef": ".claude/qa-r3-scripts/hr.mjs"
+  }
+]
