@@ -1,6 +1,7 @@
 import { test, expect } from "../fixtures/base";
 import { loginAsEmployer } from "../fixtures/auth";
 import { loginAsHr, HR_PERSONAS } from "../fixtures/auth";
+import { seedIntegration } from "../fixtures/seed";
 
 /*
  * Playbook §21 — integrations:
@@ -132,10 +133,9 @@ test.describe("integrations", () => {
   });
 
   test("integration disconnect removes the connection", async ({ page, dismissCookieBanner }) => {
-    test.fixme(true, "This test requires an integration that is already connected. " +
-      "Seed data doesn't include pre-configured integrations. Would need to either seed a connected integration " +
-      "or implement a way to verify the disconnect flow works correctly. " +
-      "Mark as fixme until integrations can be seeded or tested via API setup.");
+    // Seed a pre-connected integration for the test employer
+    // Note: This uses a standard employer ID from seed data; in real tests, use a specific test employer
+    seedIntegration("employer", "e1", "punch-clock", "connected");
 
     await loginAsEmployer(page);
     await dismissCookieBanner();

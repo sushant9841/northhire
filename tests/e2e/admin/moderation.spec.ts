@@ -1,5 +1,6 @@
 import { test, expect } from "../fixtures/base";
 import { loginAsAdmin } from "../fixtures/auth";
+import { seedBenefitsPlan, seedBenefitsEnrollment } from "../fixtures/seed";
 
 /*
  * Playbook §21 — admin moderation:
@@ -190,9 +191,9 @@ test.describe("admin moderation", () => {
   });
 
   test("admin cannot archive benefits plan with active enrollments", async ({ page, dismissCookieBanner }) => {
-    test.fixme(true, "This test requires a benefits plan with active enrollments. " +
-      "Current seed data doesn't have this scenario. Would need to either seed it or " +
-      "create a plan with enrollments via API. Mark as fixme until seeding infrastructure exists.");
+    // Seed a benefits plan with an active enrollment
+    const planId = seedBenefitsPlan("e1", "Active Enrollment Plan");
+    seedBenefitsEnrollment("emp_daniel", planId, "employee");
 
     await loginAsAdmin(page);
     await dismissCookieBanner();

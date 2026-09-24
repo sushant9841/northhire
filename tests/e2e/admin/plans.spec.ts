@@ -1,5 +1,6 @@
 import { test, expect } from "../fixtures/base";
 import { loginAsAdmin } from "../fixtures/auth";
+import { seedEmployerWithPlanAndJobs, hasLiveEmployersOnPlan } from "../fixtures/seed";
 
 /*
  * Playbook §21 — admin plans (pricing tiers):
@@ -79,10 +80,12 @@ test.describe("admin plans", () => {
   });
 
   test("deleting plan is rejected when live employers use it", async ({ page, dismissCookieBanner }) => {
-    test.fixme(true, "This test requires setting up a scenario where live employers are on a plan. " +
-      "Current seed data doesn't have this configuration. Would need to either seed it or " +
-      "verify programmatically that a plan has live employers before attempting deletion. " +
-      "Mark as fixme until seeding infrastructure or server-side validation can be tested.");
+    // Seed an employer on the Growth plan with 1 live job
+    seedEmployerWithPlanAndJobs("e_growth_with_jobs", "Growth Employer", "Growth", 1);
+
+    // Verify this plan has live employers before test runs
+    const hasLiveEmployers = hasLiveEmployersOnPlan("Growth");
+    expect(hasLiveEmployers).toBe(true);
 
     await loginAsAdmin(page);
     await dismissCookieBanner();
