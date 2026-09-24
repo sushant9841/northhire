@@ -137,25 +137,14 @@ export function SceneSvg({ kind="office", tone="#005CCC", w="100%", h=180, radiu
     className="block" style={{ width:w, height:h, borderRadius:radius, ...style }}>{S(tone)}</svg>;
 }
 
-/* --- Real-image URL catalogues, matched to each fallback --- */
-/* Unsplash: hotlinkable, no key needed, images.unsplash.com */
-export const SCENE_URLS = {
-  trades:    ["photo-1581094794329-c8112a89af12","photo-1504328345606-18bbc8c9d7d1","photo-1541888946425-d81bb19240f5","photo-1521737604893-d14cc237f11d"],
-  care:      ["photo-1584515933487-779824d29309","photo-1576091160399-112ba8d25d1d","photo-1631815589968-fdb09a223b1e","photo-1666214280391-8ff5bd3c0bf0"],
-  road:      ["photo-1601584115197-04ecc0da31d7","photo-1519003722824-194d4455a60c","photo-1586523731000-5b3540beb37c","photo-1586190848861-99aa4a171e90"],
-  office:    ["photo-1497366216548-37526070297c","photo-1541746972996-4e0b0f43e02a","photo-1497366754035-f200968a6e72","photo-1600880292203-757bb62b4baf"],
-  kitchen:   ["photo-1556909114-f6e7ad7d3136","photo-1577219491135-ce391730fb2c","photo-1466637574441-749b8f19452f","photo-1414235077428-338989a2e8c0"],
-  warehouse: ["photo-1553413077-190dd305871c","photo-1601598851547-4302969d0614","photo-1586528116311-ad8dd3c8310d","photo-1494412651409-8963ce7935a7"],
-  learn:     ["photo-1523240795612-9a054b0db644","photo-1509062522246-3755977927d7","photo-1513258496099-48168024aec0","photo-1503676260728-1c00da094a0b"],
-  money:     ["photo-1554224155-6726b3ff858f","photo-1579621970563-ebec7560ff3e","photo-1560472354-b33ff0c44a43","photo-1554224154-26032ffc0d07"],
-  resume:    ["photo-1586281380349-632531db7ed4","photo-1450101499163-c8848c66ca85","photo-1517245386807-bb43f82c33c4","photo-1434030216411-0b793f4b4173"],
-  safety:    ["photo-1503387762-592deb58ef4e","photo-1517502884422-41eaead166d4","photo-1541888946425-d81bb19240f5","photo-1581092160607-ee22621dd758"],
-};
-export function sceneUrl(kind, seed=0, w=640) {
-  const list = SCENE_URLS[kind] || SCENE_URLS.office;
-  const id = list[Math.abs(seed) % list.length];
-  return `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&q=70`;
-}
+/* QA-r4 tail: Unsplash CDN dependency removed. Every Scene / SmartScene now renders the
+   locally-drawn SceneSvg (see below) with no third-party network call — no adblock blocking,
+   no CDN privacy leak, no unexpected image URL in a corporate proxy log, no cost or license
+   ambiguity for a production platform. Old exports kept as no-op stubs so any external consumer
+   of sceneUrl() or SCENE_URLS still resolves (returns null / empty list, which Scene treats as
+   "no url → render fallback SVG"). */
+export const SCENE_URLS = {};
+export function sceneUrl() { return null; }
 
 /* Employer logos: real company logos from Wikimedia Commons where possible */
 export const EMPLOYER_LOGOS = {
@@ -224,26 +213,10 @@ export function Scene({ kind="office", tone="#005CCC", w="100%", h=180, radius=0
 }
 
 
-/* --- Curated real photos per scene kind (Unsplash) ---
-   These load in any environment with network access to images.unsplash.com.
-   In restricted sandboxes they fail silently and the SVG scene renders in place. */
-export const PHOTOS = {
-  trades:    ["photo-1581092160607-ee22621dd758","photo-1504328345606-18bbc8c9d7d1","photo-1621905251189-08b45d6a269e"],
-  care:      ["photo-1584515933487-779824d29309","photo-1576091160399-112ba8d25d1d","photo-1631815589968-fdb09a223b1e"],
-  road:      ["photo-1601584115197-04ecc0da31d7","photo-1519003722824-194d4455a60c","photo-1586191582056-b7f0abd0c3d4"],
-  office:    ["photo-1497215728101-856f4ea42174","photo-1600880292203-757bb62b4baf","photo-1552664730-d307ca884978"],
-  kitchen:   ["photo-1556910103-1c02745aae4d","photo-1466637574441-749b8f19452f","photo-1414235077428-338989a2e8c0"],
-  warehouse: ["photo-1553413077-190dd305871c","photo-1580674285054-bed31e145f59","photo-1601598851547-4302969d0614"],
-  learn:     ["photo-1522202176988-66273c2fd55f","photo-1516321318423-f06f85e504b3","photo-1523240795612-9a054b0db644"],
-  money:     ["photo-1554224155-8d04cb21cd6c","photo-1579621970563-ebec7560ff3e","photo-1553729459-efe14ef6055d"],
-  resume:    ["photo-1586281380349-632531db7ed4","photo-1454165804606-c3d57bc86b40","photo-1568992687947-868a62a9f521"],
-  safety:    ["photo-1590959651373-a3db0f38a961","photo-1503387762-592deb58ef4e","photo-1541888946425-d81bb19240f5"],
-};
-export function scenePhotoUrl(kind, seed = 0, w = 640) {
-  const arr = PHOTOS[kind] || PHOTOS.office;
-  const id = arr[Math.abs(seed) % arr.length];
-  return `https://images.unsplash.com/${id}?w=${w}&auto=format&fit=crop&q=80`;
-}
+/* QA-r4 tail: parallel Unsplash catalogue also removed. scenePhotoUrl kept as a no-op stub
+   for compat — every consumer now resolves to null and Scene renders the local SceneSvg. */
+export const PHOTOS = {};
+export function scenePhotoUrl() { return null; }
 export function SmartScene({ kind = "office", tone = C.brand, w = "100%", h = 180, radius = 0, style, seed = 0 }) {
   /* Was a bare <img> with no onError handler — silently broken (no fallback) despite the PHOTOS
      comment above claiming a graceful SVG fallback. Delegates to Scene, which actually has one
