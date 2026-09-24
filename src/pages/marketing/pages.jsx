@@ -19,10 +19,17 @@ import { JobCard, TrainingCard, BlogCard, EmpMark } from "../shared/cards.jsx";
 export function HomePage(){
   const A=use(); const mob=useMedia("(max-width: 900px)"); const {t}=useTranslation();
   const [q,setQ]=useState(""); const [where,setWhere]=useState("");
-  const live=A.jobs.filter(j=>j.status==="live");
+  // QA-r5: only show live jobs that are ACTUALLY accepting applications on the homepage.
+  // A live-status job whose deadline passed renders as "Urgent · Closed" on its card and is
+  // useless to a seeker. dl > 0 = deadline is in the future.
+  const live=A.jobs.filter(j=>j.status==="live"&&j.dl>0);
   const featured=live.filter(j=>j.featured).slice(0,6);
-  const trending=[...live].sort((a,b)=>(b.views||0)-(a.views||0)).slice(0,6);
-  const closingSoon=[...live].filter(j=>j.dl&&j.dl<=14).sort((a,b)=>(a.dl||99)-(b.dl||99)).slice(0,6);
+  const featuredIds=new Set(featured.map(j=>j.id));
+  // Homepage dedupe: a job in Featured shouldn't also appear in Trending — same page, two
+  // sections, same card twice looks broken and wastes prime real estate.
+  const trending=[...live].filter(j=>!featuredIds.has(j.id)).sort((a,b)=>(b.views||0)-(a.views||0)).slice(0,6);
+  const trendingIds=new Set(trending.map(j=>j.id));
+  const closingSoon=[...live].filter(j=>j.dl&&j.dl<=14&&!featuredIds.has(j.id)&&!trendingIds.has(j.id)).sort((a,b)=>(a.dl||99)-(b.dl||99)).slice(0,6);
   const blogs=A.blogs.filter(b=>b.status==="published").slice(0,3);
   const trainings=A.trainings.filter(t=>t.status==="published").slice(0,4);
 
