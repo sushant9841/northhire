@@ -1,5 +1,6 @@
 import { test, expect } from "../fixtures/base";
 import { loginAsHr, HR_PERSONAS } from "../fixtures/auth";
+import { seedBenefitsPlan, seedBenefitsEnrollment, seedBenefitsLifeEvent } from "../fixtures/seed";
 
 /*
  * Playbook §21 — HR benefits:
@@ -74,10 +75,11 @@ test.describe("HR benefits", () => {
   });
 
   test("enrollment during closed window is rejected", async ({ page, dismissCookieBanner }) => {
-    test.fixme(true, "This test requires a benefits plan that is in a closed enrollment period. " +
-      "Current seed data doesn't have this configured. Would need to either: " +
-      "(1) seed a plan with closed dates, (2) use API to create one, or (3) manipulate the system clock. " +
-      "Mark as fixme until benefits enrollment window testing can be properly isolated.");
+    // Seed a benefits plan with closed enrollment window (June-August, so outside current enrollment)
+    seedBenefitsPlan("e1", "Closed Window Plan", {
+      openEnrollmentStart: { month: 6, day: 1 },
+      openEnrollmentEnd: { month: 8, day: 31 },
+    });
 
     await loginAsHr(page, HR_PERSONAS.employee); // Daniel
     await dismissCookieBanner();
@@ -110,10 +112,14 @@ test.describe("HR benefits", () => {
   });
 
   test("enrollment with life-event override works", async ({ page, dismissCookieBanner }) => {
-    test.fixme(true, "This test requires a benefits plan in a closed window and life-event handling. " +
-      "Needs seeding infrastructure to create this scenario. Enrollment override via life-event " +
-      "requires the event to be flagged in the system and the override logic to be invoked. " +
-      "Mark as fixme pending benefits + life-events test support.");
+    // Seed a closed enrollment window plan
+    const planId = seedBenefitsPlan("e1", "Life Event Plan", {
+      openEnrollmentStart: { month: 6, day: 1 },
+      openEnrollmentEnd: { month: 8, day: 31 },
+    });
+
+    // Seed a life event for Daniel that opens the enrollment window
+    seedBenefitsLifeEvent("emp_daniel", "marriage");
 
     await loginAsHr(page, HR_PERSONAS.employee); // Daniel
     await dismissCookieBanner();
@@ -150,10 +156,14 @@ test.describe("HR benefits", () => {
   });
 
   test("life event opens enrollment window", async ({ page, dismissCookieBanner }) => {
-    test.fixme(true, "This test requires adding a life event to an employee's record " +
-      "and verifying it automatically opens a benefits enrollment window. " +
-      "Needs life-event creation flow and enrollment window opening logic. " +
-      "Mark as fixme pending life-events testing support.");
+    // Seed a closed enrollment window plan
+    seedBenefitsPlan("e1", "Life Event Open Plan", {
+      openEnrollmentStart: { month: 6, day: 1 },
+      openEnrollmentEnd: { month: 8, day: 31 },
+    });
+
+    // Seed a life event for an employee to open the window
+    seedBenefitsLifeEvent("emp_daniel", "birth");
 
     await loginAsHr(page, HR_PERSONAS.owner); // Rachel
     await dismissCookieBanner();
