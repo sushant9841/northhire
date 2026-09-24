@@ -1,5 +1,6 @@
 import { test, expect } from "../fixtures/base";
 import { loginAsEmployer } from "../fixtures/auth";
+import { seedEmployerWithPlanAndJobs } from "../fixtures/seed";
 
 /*
  * Playbook §21 — employer plan limits:
@@ -9,11 +10,10 @@ import { loginAsEmployer } from "../fixtures/auth";
  */
 test.describe("employer plan limits", () => {
   test("Free plan hitting job limit shows UpgradePromptModal with 5-part copy", async ({ page, dismissCookieBanner }) => {
-    test.fixme(true, "This test requires a Free plan employer with 1 live job seeded. " +
-      "Current test data doesn't have this setup; would need seeding infrastructure. " +
-      "Mark as fixme until seed.js is updated to create this scenario, or use API to craft it.");
+    // Seed a Free plan employer with 1 live job
+    seedEmployerWithPlanAndJobs("e_free_1", "Free Test Employer", "Free", 1);
 
-    await loginAsEmployer(page);
+    await loginAsEmployer(page, "hr@freetestemployer.com", "Employer123");
     await dismissCookieBanner();
     await page.goto("/employer");
 

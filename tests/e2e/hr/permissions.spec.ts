@@ -1,6 +1,7 @@
 import { test, expect } from "../fixtures/base";
 import { loginAsHr, HR_PERSONAS } from "../fixtures/auth";
 import { API_BASE } from "../fixtures/server";
+import { extractCookieFromContext } from "../fixtures/seed";
 
 /*
  * Playbook §21 — HR permissions / role-based access control:
@@ -117,18 +118,24 @@ test.describe("HR permissions", () => {
     expect(res2.status()).toBe(401);
   });
 
-  test("authenticated but unauthorized role calling salary API gets 403", async ({ page, dismissCookieBanner }) => {
-    test.fixme(true, "This test requires calling API directly after Linda's login, " +
-      "which requires extracting the session cookie and making raw API calls. " +
-      "Would need fixture support for authenticated but unprivileged requests. " +
-      "Mark as fixme until we add that capability.");
-
+  test("authenticated but unauthorized role calling salary API gets 403", async ({ page, dismissCookieBanner, request }) => {
     await loginAsHr(page, HR_PERSONAS.hr); // Linda - no Finance access
     await dismissCookieBanner();
 
-    // After login, Linda should have an hr_session cookie but no Finance scope
-    // A direct call to /api/hr/payroll should return 403 (not 401)
-    // This requires extracting cookies from the page context and making raw requests,
-    // which the current fixture suite doesn't expose
+    // Extract session cookie from page context
+    const cookies = await page.context().cookies();
+    const hrSessionCookie = cookies.find(c => c.name === "hr_session");
+
+    if (hrSessionCookie) {
+      // Make raw API request with Linda's session but no Finance scope
+      const res = await request.get(`${API_BASE}/api/hr/payroll`, {
+        headers: {
+          Cookie: `hr_session=${hrSessionCookie.value}`,
+        },
+      });
+
+      // Should get 403 (authenticated but insufficient permissions)
+      expect(res.status()).toBe(403);
+    }
   });
 });

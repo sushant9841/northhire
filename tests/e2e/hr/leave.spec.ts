@@ -1,5 +1,6 @@
 import { test, expect } from "../fixtures/base";
 import { loginAsHr, HR_PERSONAS } from "../fixtures/auth";
+import { countNotifications } from "../fixtures/seed";
 
 /*
  * Playbook §21 — HR leave flow:
@@ -146,22 +147,72 @@ test.describe("HR leave", () => {
   });
 
   test("exactly ONE notification fires on leave approval", async ({ page, dismissCookieBanner }) => {
-    test.fixme(true, "This test requires setting up a leave approval scenario " +
-      "and monitoring notifications in real-time. Notifications may be dismissible " +
-      "or auto-hide, making count assertions fragile. Would need a notification hook " +
-      "or fixed-position notification container selector. Mark as fixme until " +
-      "notification testing infrastructure is available.");
+    // Get Daniel's user ID from the HR_PERSONAS lookup
+    // Note: In a real implementation, we'd query the DB for the actual ID
+    // For now, use a known fixture pattern
+    const danielId = "emp_daniel";
 
-    // Set up: Daniel has a pending leave request
-    // Act: Linda approves it
-    // Assert: exactly 1 notification appears
+    // Count notifications before approval
+    const notificationCountBefore = countNotifications(danielId);
 
-    // This is complex because notifications might:
-    // - Be in a toast container that auto-dismisses
-    // - Not appear on the approver's side (only on Daniel's side)
-    // - Appear in multiple locations (toast + badge + email)
+    // Set up: Daniel has a pending leave request (same as second test)
+    let danielPage = page;
+    await loginAsHr(danielPage, HR_PERSONAS.employee);
+    await dismissCookieBanner();
+    await danielPage.goto("/hr/leave");
+    await danielPage.waitForLoadState("networkidle");
 
-    // For now, we'd need a way to hook into the notification system
-    // or identify a stable selector for counting them
+    const requestBtn = danielPage.getByRole("button", { name: /Request|New|Submit|Apply/i }).first();
+    if (await requestBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await requestBtn.click();
+      await danielPage.waitForTimeout(500);
+
+      const modal = danielPage.locator("[class*='modal'], [role='dialog']").filter({ hasText: /Leave/i });
+      if (await modal.isVisible({ timeout: 3000 }).catch(() => false)) {
+        const startDate = modal.locator("input[type='date']").first();
+        if (await startDate.isVisible()) {
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          await startDate.fill(tomorrow.toISOString().split('T')[0]);
+        }
+
+        const endDate = modal.locator("input[type='date']").nth(1);
+        if (await endDate.isVisible()) {
+          const endTime = new Date();
+          endTime.setDate(endTime.getDate() + 3);
+          await endDate.fill(endTime.toISOString().split('T')[0]);
+        }
+
+        const submitBtn = modal.getByRole("button", { name: /Submit|Request/i });
+        if (await submitBtn.isVisible()) {
+          await submitBtn.click();
+          await danielPage.waitForTimeout(1000);
+        }
+      }
+    }
+
+    // Act: Linda approves the leave
+    await loginAsHr(page, HR_PERSONAS.hr); // Linda
+    await dismissCookieBanner();
+    await page.goto("/hr/leave");
+    await page.waitForLoadState("networkidle");
+
+    const pendingRequests = page.locator("[class*='pending'], [class*='request']").filter({ hasText: /Daniel|Pending|Approve/i });
+
+    if (await pendingRequests.first().isVisible({ timeout: 3000 }).catch(() => false)) {
+      await pendingRequests.first().click();
+      await page.waitForTimeout(500);
+
+      const approveBtn = page.getByRole("button", { name: /Approve|Accept/i });
+
+      if (await approveBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+        await approveBtn.click();
+        await page.waitForTimeout(1000);
+      }
+    }
+
+    // Assert: exactly 1 notification was added for Daniel
+    const notificationCountAfter = countNotifications(danielId);
+    expect(notificationCountAfter).toBe(notificationCountBefore + 1);
   });
 });
