@@ -16,6 +16,18 @@ None currently open. QA-r3 (2026-09-24, 5-persona Playwright audit) surfaced 5 P
 
 All fixes verified live via curl repro of the exact attack from the audit and by post-fix regression checks.
 
+### QA-r4 scale P0s (all fixed 2026-09-24, commits 886d18e + 694627d)
+
+Load-tested with 648,535 seeded rows (100k users / 15k jobs / 300k applications / 100k CVs / 50k msgs / 20k notifs / 5k HR employees). Three classes of P0:
+
+- **Server startup blocked the event loop** — backfillDailySnapshots + refreshSilverMedalistMatches did full-table scans synchronously right after app.listen(); /api/version timed out for 30+ seconds after every restart. Fix: setImmediate.
+- **24 missing indexes** across applications, jobs, users, cvs, saved_searches, messages, notifications, interviews, hr_employees. Every hot query was doing a full table scan.
+- **8 unbounded list endpoints** dumped whole tables per request. /api/jobs was 11.8MB in 20s; paginated to 414KB in 1s. Same pattern applied to /api/employers, /api/applications/{mine, employer/mine, job/:jobId}, /api/hr/employees, /api/seeker/{messages, notifications, interviews}.
+
+Post-fix perf under scale: every hot list endpoint <200ms; frontend page loads 1.5-3s; memory stable 54-58MB across a 25-route walk; zero console errors.
+
+Scale seed script + rerunnable perf walk: `server/seedScale.js` (idempotent via scl_% prefix) and `.claude/qa-r4-scripts/perf-walk.mjs`.
+
 ---
 
 ## P1 (Core-Flow Broken)

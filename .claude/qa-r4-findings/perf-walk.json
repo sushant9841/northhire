@@ -1,0 +1,14 @@
+[
+  {
+    "severity": "P2",
+    "persona": "seeker",
+    "viewport": "desktop",
+    "category": "perf",
+    "page": "home",
+    "url": "http://localhost:5173/#home",
+    "elapsed_ms": 3058,
+    "fcp": 1788,
+    "mem_mb": 54,
+    "desc": "Sluggish load (3058ms)"
+  }
+]
