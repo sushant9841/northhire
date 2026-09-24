@@ -32,7 +32,7 @@ export function NotificationBell(){
   ].filter(([,items])=>items.length>0);
   return <div className="relative">
     <button onClick={()=>setOpen(v=>!v)} aria-label={t("nav.notificationsAria")} aria-haspopup="menu" aria-expanded={open}
-      className="relative bg-bg border-0 w-9 h-9 rounded-lg cursor-pointer flex items-center justify-center text-text">
+      className="relative bg-bg border-0 w-11 h-11 rounded-lg cursor-pointer flex items-center justify-center text-text">
       <I n="bell" s={17}/>
       {unread>0&&<span className="absolute top-1 right-1 min-w-3.5 h-3.5 px-1 rounded-full bg-brand text-white text-xs font-bold flex items-center justify-center border-2 border-white">{unread>9?"9+":unread}</span>}
     </button>

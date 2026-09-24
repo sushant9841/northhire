@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Ctx } from "./store/context.js";
 import { useStore } from "./store/useStore.js";
 import { useVersionCheck } from "./store/useVersionCheck.js";
@@ -245,7 +245,7 @@ export default function NorthHire(){
               <button onClick={stopImpersonating} style={{background:"#fff",color:C.warn,border:"none",padding:"6px 14px",borderRadius:8,cursor:"pointer",fontWeight:700,fontSize:13,fontFamily:"inherit"}}>Return to admin</button>
             </div>}
             <a href="#main-content" style={{position:"absolute",left:-9999,top:"auto",width:1,height:1,overflow:"hidden",zIndex:9999,
-              background:C.brand,color:"#fff",padding:"10px 16px",borderRadius:8,fontWeight:700,fontSize:14}}
+              background:C.brand,color:"#fff",padding:"14px 20px",minHeight:44,display:"inline-flex",alignItems:"center",borderRadius:8,fontWeight:700,fontSize:14}}
               onFocus={e=>Object.assign(e.currentTarget.style,{left:12,top:12,width:"auto",height:"auto",overflow:"visible"})}
               onBlur={e=>Object.assign(e.currentTarget.style,{left:-9999,top:"auto",width:1,height:1,overflow:"hidden"})}>Skip to main content</a>
             {!_isBare&&<Header/>}
@@ -286,6 +286,7 @@ export default function NorthHire(){
 function _CookieBanner({mob,onAccept,onGoPolicy}){
   const {t}=useTranslation();
   const [hidden,setHidden]=useState(false);
+  const ref=useRef(null);
   useEffect(()=>{
     const footer=document.querySelector("footer");
     if(!footer||typeof IntersectionObserver!=="function")return;
@@ -295,8 +296,23 @@ function _CookieBanner({mob,onAccept,onGoPolicy}){
     io.observe(footer);
     return ()=>io.disconnect();
   },[]);
+  // QA-r3 P1: banner covered a required Yes/No radio on apply-step-2 — user couldn't
+  // complete the wizard without dismissing cookies. Push page content up by the banner's real
+  // rendered height so nothing underneath is ever hidden. Cleared on hide/unmount.
+  useEffect(()=>{
+    if(hidden){document.body.style.paddingBottom="";return;}
+    const measure=()=>{
+      const h=ref.current?.getBoundingClientRect().height||0;
+      document.body.style.paddingBottom=h?(h+(mob?12:20))+"px":"";
+    };
+    measure();
+    const ro=typeof ResizeObserver!=="undefined"&&ref.current?new ResizeObserver(measure):null;
+    if(ro&&ref.current)ro.observe(ref.current);
+    window.addEventListener("resize",measure);
+    return ()=>{document.body.style.paddingBottom="";ro?.disconnect();window.removeEventListener("resize",measure);};
+  },[hidden,mob]);
   if(hidden)return null;
-  return <div style={{position:"fixed",bottom:mob?76:20,left:mob?12:20,right:mob?12:20,maxWidth:560,margin:mob?"0":"0",
+  return <div ref={ref} style={{position:"fixed",bottom:mob?76:20,left:mob?12:20,right:mob?12:20,maxWidth:560,margin:mob?"0":"0",
     background:C.ink,color:"#fff",borderRadius:14,padding:mob?"14px 16px":"16px 20px",boxShadow:SH.xl,
     display:"flex",gap:14,alignItems:"center",flexWrap:"wrap",zIndex:600}} data-cookie-accepted="false">
     <div style={{color:"#6AACFF",display:"flex",flexShrink:0}}><I n="shield" s={20}/></div>

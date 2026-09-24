@@ -1,16 +1,5 @@
 [
   {
-    "id": "SK-001",
-    "severity": "P2",
-    "category": "network-error",
-    "page": "home-public",
-    "viewport": "both",
-    "description": "HTTP 401 on http://localhost:8787/api/staffing/me (loggedIn=false, first seen on home-public)",
-    "repro": "Load home-public",
-    "fix_hint": "Check API endpoint / auth / route",
-    "screenshot_ref": null
-  },
-  {
     "id": "SK-002",
     "severity": "P0",
     "category": "console-error",
@@ -19,28 +8,6 @@
     "description": "PAGE CRASH (blank white screen, entire page fails to render) - uncaught error: t is not a function",
     "repro": "Navigate to how-it-works",
     "fix_hint": "HowItWorksPage in src/pages/marketing/forEmployers.jsx (line ~334) calls t(\"howItWorks.seeker.steps\") etc. via useTranslation() from src/i18n/i18n.jsx. Something in that call chain makes t not callable at render time on this route (possibly a missing/malformed howItWorks.* translation namespace or an i18n hook edge case specific to this page). Whole page renders blank white on desktop and mobile - reproduces on every load, not just first visit.",
-    "screenshot_ref": null
-  },
-  {
-    "id": "SK-003",
-    "severity": "P2",
-    "category": "network-error",
-    "page": "home",
-    "viewport": "both",
-    "description": "HTTP 401 on http://localhost:8787/api/hr/me (loggedIn=true, first seen on home)",
-    "repro": "Load home",
-    "fix_hint": "Check API endpoint / auth / route",
-    "screenshot_ref": null
-  },
-  {
-    "id": "SK-004",
-    "severity": "P2",
-    "category": "network-error",
-    "page": "home",
-    "viewport": "both",
-    "description": "HTTP 401 on http://localhost:8787/api/staffing/me (loggedIn=true, first seen on home)",
-    "repro": "Load home",
-    "fix_hint": "Check API endpoint / auth / route",
     "screenshot_ref": null
   },
   {

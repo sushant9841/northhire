@@ -2334,6 +2334,9 @@ export function useStore(){
   const exportEmployers=(list)=>{const rows=[["Name","Industry","City","Province","Size","Plan","Verified","On hold","Rating"],
     ...(list||employers).map(e=>[e.name,e.industry||"",e.city||"",e.prov||"",e.size||"",e.plan,e.verified?"Yes":"No",e.hold?"Yes":"No",e.rating])];
     downloadText("employers.csv",rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n"),"text/csv");};
+  const exportJobs=(list)=>{const rows=[["Title","Employer","City","Province","Type","Category","Pay","Status","Flagged","Applicants","Posted"],
+    ...(list||jobs).map(j=>{const e=emp(j.e); return [j.t,e?.name||"",j.city||"",j.prov||"",j.type||"",j.cat||"",pay(j),j.status||"",j.flagged?"Yes":"No",applications.filter(a=>a.job===j.id).length,j.posted||""];})];
+    downloadText("jobs.csv",rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n"),"text/csv");};
   /* Real share sheet / clipboard copy, not just a silent activity-log entry. Can't deep-link to
      this specific listing (no real per-item routing exists yet — see Systemic #8), so this
      shares the title as text rather than a URL that would just resolve to the generic home page. */
@@ -2447,7 +2450,7 @@ export function useStore(){
     editBlog,editTraining,saveBlog,saveTraining,deleteBlog,deleteTraining,toggleBlogStatus,toggleTrainingStatus,
     loadContentRevisions,restoreContentRevision,loadArticleAnalytics,
     enrol,confirmPaidEnrol,advanceTraining,paidTrainings,trainingBadgePrompts,dismissTrainingBadgePrompt,publishTrainingBadge,newCv,importResumeToNewCv,editCv,saveCv,duplicateCv,deleteCv,setDefaultCv,
-    printCv,printCert,printInvoice,printOfferLetter,exportApplicants,exportLog,exportUsers,exportEmployers,share,choosePlan,updateCard,setSetting,
+    printCv,printCert,printInvoice,printOfferLetter,exportApplicants,exportLog,exportUsers,exportEmployers,exportJobs,share,choosePlan,updateCard,setSetting,
     readNotif,markAllRead,logActivity:log,
     ...HR,
     ...STF};

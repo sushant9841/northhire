@@ -367,7 +367,8 @@ export function AdmJobs(){
   const bulkPause=()=>{selJobs.filter(j=>j.status==="live").forEach(j=>A.toggleJobStatus(j.id)); A.toast(t(selJobs.length===1?"admin.jobs.bulkPausedOne":"admin.jobs.bulkPausedOther",{n:selJobs.length})); setSel(new Set());};
   const bulkApprove=()=>{selJobs.filter(j=>j.status!=="live").forEach(j=>A.toggleJobStatus(j.id)); A.toast(t(selJobs.length===1?"admin.jobs.bulkApprovedOne":"admin.jobs.bulkApprovedOther",{n:selJobs.length}),"ok"); setSel(new Set());};
   return <Page wide>
-    <H1 sub={t("admin.jobs.subtitle")}>{t("admin.jobs.title")}</H1>
+    <H1 sub={t("admin.jobs.subtitle")}
+      action={<Btn kind="outline" size="sm" icon="download" onClick={()=>A.exportJobs(list)}>{list.length<A.jobs.length?t("admin.users.exportFiltered",{n:list.length}):t("admin.users.exportCsv")}</Btn>}>{t("admin.jobs.title")}</H1>
     <div className="flex gap-3 mb-5 flex-wrap items-center">
       <div className="grow shrink basis-60 max-w-90"><Input icon="search" placeholder={t("admin.jobs.searchPlaceholder")} value={q} onChange={e=>setQ(e.target.value)}/></div>
       <Tabs items={[{k:"all",label:t("admin.jobs.tabAll"),n:A.jobs.length},{k:"flagged",label:t("admin.jobs.tabFlagged"),n:A.jobs.filter(j=>j.flagged).length},

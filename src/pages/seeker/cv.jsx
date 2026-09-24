@@ -147,7 +147,7 @@ export function CvsPage(){
   const showTip=e=>{const r=e.currentTarget.getBoundingClientRect();setLimitTip({top:r.top+r.height/2,left:r.right+10});};
   if(!A.settings.cvBuilder)return <Page><Empty icon="lock" title={t("seeker.cv.cvBuilderUnavailableTitle")}
     body={t("seeker.cv.cvBuilderUnavailableBodyList")}/></Page>;
-  return <div className="bg-white min-h-full">
+  return <div className="bg-white min-h-full overflow-x-hidden">
     <section className={`${heroPad} bg-white border-b border-line-soft`}>
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-end gap-5 flex-wrap">
