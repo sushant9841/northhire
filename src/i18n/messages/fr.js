@@ -1655,6 +1655,7 @@ export const fr = {
     },
     invoicing: {
       title: "Facturation", subtitle: "Facturation client", desc: "Cycle de facturation hebdomadaire. Feuilles de temps approuvées → facture client.",
+      invoice: "Facture", amount: "Montant", dueDate: "Date d'échéance", paid: "Payée",
       arOutstanding: "Comptes clients impayés", overdue: "En souffrance", paidLast30d: "Payée les 30 derniers jours",
       statusPending: "En attente", statusPaid: "Payée",
       generateWeekly: "Générer les factures hebdomadaires",
