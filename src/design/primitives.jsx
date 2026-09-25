@@ -323,9 +323,15 @@ function clickableA11y(onClick){
  return{role:"button",tabIndex:0,onKeyDown:e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();onClick(e);}}};
 }
 export function Card({children,style,onClick,hover,pad=24,delay=0,className=""}){
+ // QA-r5 user report: "cards don't fade in when loaded". The delay prop is threaded through
+ // every list caller (JobCard, employer rows, dashboard tiles) but was never actually wired to
+ // an animation. Now each Card fades + rises with a delay proportional to its index in the list
+ // — the same rise keyframe App.jsx already defines. Guarded so a Card with delay=0 stays fully
+ // static (dashboard hero cards, single-instance cards) to avoid a page-load flash.
+ const animStyle = delay>0 ? {animation:"rise .38s cubic-bezier(.22,.9,.32,1) both", animationDelay: `${delay}s`} : {};
  return <div onClick={onClick} {...clickableA11y(onClick)}
   className={`bg-white border rounded-2xl transition-[border-color,box-shadow,transform] duration-200 ${onClick?"cursor-pointer":"cursor-default"} ${hover?"border-line hover:border-line-2 hover:shadow-md hover:-translate-y-1":"border-line"} ${className}`}
-  style={{padding:pad,...style}}>{children}</div>;
+  style={{padding:pad,...animStyle,...style}}>{children}</div>;
 }
 export const inp = "w-full bg-white border border-line rounded-xl py-3.5 px-4 text-base text-text outline-none transition-[border-color,box-shadow] duration-150 disabled:bg-bg disabled:text-text-3 disabled:cursor-not-allowed disabled:opacity-70";
 export function Input({icon,suffix,invalid,style,type,...r}){

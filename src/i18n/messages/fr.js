@@ -1206,6 +1206,7 @@ export const fr = {
       urgentTag: "Urgent", featuredTag: "En vedette",
     },
     pipeline: {
+      title: "Pipeline de candidat·e·s",
       pipelineFor: "Pipeline pour", exportCsv: "Exporter le CSV", pipelineTab: "Pipeline ({n})", filtersTab: "Filtres", talentPoolTab: "Vivier de talents ({n})",
       filterThisPipeline: "Filtrer ce pipeline", minimumMatchScore: "Score de correspondance minimum", any: "N'importe quel", province: "Province", allProvinces: "Toutes les provinces",
       search: "Recherche", searchHint: "Accepte ET, OU, PAS, « phrases entre guillemets » et crochets — p. ex. (soudure OU fabrication) PAS apprenti",

@@ -34,7 +34,10 @@ export function NotificationBell(){
     <button onClick={()=>setOpen(v=>!v)} aria-label={t("nav.notificationsAria")} aria-haspopup="menu" aria-expanded={open}
       className="relative bg-bg border-0 w-11 h-11 rounded-lg cursor-pointer flex items-center justify-center text-text">
       <I n="bell" s={17}/>
-      {unread>0&&<span className="absolute top-1 right-1 min-w-3.5 h-3.5 px-1 rounded-full bg-brand text-white text-xs font-bold flex items-center justify-center border-2 border-white">{unread>9?"9+":unread}</span>}
+      {/* QA-r5 user report: badge number was unreadable — 14x14px box with 2px border left ~10x10
+          for the digit, so "2" rendered as an illegible blob and "9+" clipped. Bumped to 18x18
+          with a tighter font that still fits a single digit or "9+" without truncation. */}
+      {unread>0&&<span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1.5 rounded-full bg-red text-white text-[11px] font-bold leading-none flex items-center justify-center border-2 border-white" aria-label={`${unread} unread notifications`}>{unread>99?"99+":unread}</span>}
     </button>
     {open&&<>
       <div onClick={()=>setOpen(false)} className="fixed inset-0 z-490"/>

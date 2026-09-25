@@ -1159,6 +1159,10 @@ export function EmpPipeline(){
 
   return <div className="flex flex-col min-h-full bg-bg">
     <div className={`bg-white border-b border-line ${mob?"py-3.5 px-4":"py-4 px-7"}`}>
+      <div className="max-w-site mx-auto">
+        {/* QA-r5: EmpPipeline had no h1 — a page-scale surface with no heading fails a11y +
+            SEO + screen-reader outline. Now has a scoped h1 above the job picker. */}
+        <h1 className="text-xl font-bold text-text tracking-tight mb-3">{t("employer.pipeline.title",{})||"Candidate pipeline"}</h1></div>
       <div className="max-w-site mx-auto flex gap-3.5 items-end flex-wrap">
         <div className="grow shrink basis-60 min-w-0">
           <Lbl style={{marginBottom:6}}>{t("employer.pipeline.pipelineFor")}</Lbl>

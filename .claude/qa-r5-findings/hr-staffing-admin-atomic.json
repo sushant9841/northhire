@@ -1,0 +1,142 @@
+[
+  {
+    "id": "A5-001",
+    "ts": "2026-09-24T16:49:47.894Z",
+    "persona": "hr-rachel",
+    "viewport": "desktop",
+    "route": "login",
+    "severity": "P0",
+    "kind": "login-failed",
+    "detail": "locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('button[type=submit], form button').last()\u001b[22m\n"
+  },
+  {
+    "id": "A5-002",
+    "ts": "2026-09-24T16:50:19.188Z",
+    "persona": "hr-rachel",
+    "viewport": "mobile",
+    "route": "login",
+    "severity": "P0",
+    "kind": "login-failed",
+    "detail": "locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('button[type=submit], form button').last()\u001b[22m\n"
+  },
+  {
+    "id": "A5-003",
+    "ts": "2026-09-24T16:50:51.621Z",
+    "persona": "hr-priya",
+    "viewport": "desktop",
+    "route": "login",
+    "severity": "P0",
+    "kind": "login-failed",
+    "detail": "locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('button[type=submit], form button').last()\u001b[22m\n"
+  },
+  {
+    "id": "A5-004",
+    "ts": "2026-09-24T16:51:23.767Z",
+    "persona": "hr-priya",
+    "viewport": "mobile",
+    "route": "login",
+    "severity": "P0",
+    "kind": "login-failed",
+    "detail": "locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('button[type=submit], form button').last()\u001b[22m\n"
+  },
+  {
+    "id": "A5-005",
+    "ts": "2026-09-24T16:51:55.542Z",
+    "persona": "hr-linda",
+    "viewport": "desktop",
+    "route": "login",
+    "severity": "P0",
+    "kind": "login-failed",
+    "detail": "locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('button[type=submit], form button').last()\u001b[22m\n"
+  },
+  {
+    "id": "A5-006",
+    "ts": "2026-09-24T16:52:27.308Z",
+    "persona": "hr-linda",
+    "viewport": "mobile",
+    "route": "login",
+    "severity": "P0",
+    "kind": "login-failed",
+    "detail": "locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('button[type=submit], form button').last()\u001b[22m\n"
+  },
+  {
+    "id": "A5-007",
+    "ts": "2026-09-24T16:52:59.358Z",
+    "persona": "hr-isaac",
+    "viewport": "desktop",
+    "route": "login",
+    "severity": "P0",
+    "kind": "login-failed",
+    "detail": "locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('button[type=submit], form button').last()\u001b[22m\n"
+  },
+  {
+    "id": "A5-008",
+    "ts": "2026-09-24T16:53:31.064Z",
+    "persona": "hr-isaac",
+    "viewport": "mobile",
+    "route": "login",
+    "severity": "P0",
+    "kind": "login-failed",
+    "detail": "locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('button[type=submit], form button').last()\u001b[22m\n"
+  },
+  {
+    "id": "A5-009",
+    "ts": "2026-09-24T16:54:02.659Z",
+    "persona": "hr-daniel",
+    "viewport": "desktop",
+    "route": "login",
+    "severity": "P0",
+    "kind": "login-failed",
+    "detail": "locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('button[type=submit], form button').last()\u001b[22m\n"
+  },
+  {
+    "id": "A5-010",
+    "ts": "2026-09-24T16:54:34.093Z",
+    "persona": "hr-daniel",
+    "viewport": "mobile",
+    "route": "login",
+    "severity": "P0",
+    "kind": "login-failed",
+    "detail": "locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('button[type=submit], form button').last()\u001b[22m\n"
+  },
+  {
+    "id": "A5-011",
+    "ts": "2026-09-24T16:55:05.748Z",
+    "persona": "nadia",
+    "viewport": "desktop",
+    "route": "login",
+    "severity": "P0",
+    "kind": "login-failed",
+    "detail": "locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('button[type=submit], form button').last()\u001b[22m\n"
+  },
+  {
+    "id": "A5-012",
+    "ts": "2026-09-24T16:55:36.995Z",
+    "persona": "nadia",
+    "viewport": "mobile",
+    "route": "login",
+    "severity": "P0",
+    "kind": "login-failed",
+    "detail": "locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('button[type=submit], form button').last()\u001b[22m\n"
+  },
+  {
+    "id": "A5-013",
+    "ts": "2026-09-24T16:56:09.055Z",
+    "persona": "admin",
+    "viewport": "desktop",
+    "route": "login",
+    "severity": "P0",
+    "kind": "login-failed",
+    "detail": "locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('button[type=submit], form button').last()\u001b[22m\n"
+  },
+  {
+    "id": "A5-014",
+    "ts": "2026-09-24T16:56:40.968Z",
+    "persona": "admin",
+    "viewport": "mobile",
+    "route": "login",
+    "severity": "P0",
+    "kind": "login-failed",
+    "detail": "locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('button[type=submit], form button').last()\u001b[22m\n"
+  }
+]

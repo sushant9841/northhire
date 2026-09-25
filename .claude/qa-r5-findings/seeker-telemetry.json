@@ -1,0 +1,259 @@
+{
+  "errors": [
+    {
+      "label": "profile",
+      "vp": "desktop",
+      "url": "/profile",
+      "text": "A component is changing an uncontrolled input to be controlled. This is likely caused by the value changing from undefined to a defined value, which should not happen. Decide between using a controlled or uncontrolled input element for the lifetime of the component. More info: https://react.dev/link"
+    },
+    {
+      "label": "profile",
+      "vp": "mobile",
+      "url": "/profile",
+      "text": "A component is changing an uncontrolled input to be controlled. This is likely caused by the value changing from undefined to a defined value, which should not happen. Decide between using a controlled or uncontrolled input element for the lifetime of the component. More info: https://react.dev/link"
+    }
+  ],
+  "netFails": [],
+  "longTasks": [
+    {
+      "label": "home",
+      "vp": "desktop",
+      "url": "/",
+      "dur": 3284
+    },
+    {
+      "label": "for-employers",
+      "vp": "desktop",
+      "url": "/for-employers",
+      "dur": 3023
+    },
+    {
+      "label": "about",
+      "vp": "desktop",
+      "url": "/about",
+      "dur": 3295
+    },
+    {
+      "label": "terms",
+      "vp": "desktop",
+      "url": "/terms",
+      "dur": 3266
+    },
+    {
+      "label": "forgot",
+      "vp": "desktop",
+      "url": "/forgot",
+      "dur": 3123
+    },
+    {
+      "label": "home-app",
+      "vp": "desktop",
+      "url": "/home",
+      "dur": 3201
+    },
+    {
+      "label": "search-empty",
+      "vp": "desktop",
+      "url": "/search",
+      "dur": 3258
+    },
+    {
+      "label": "search-query",
+      "vp": "desktop",
+      "url": "/search?q=engineer",
+      "dur": 3701
+    },
+    {
+      "label": "saved",
+      "vp": "desktop",
+      "url": "/saved",
+      "dur": 3136
+    },
+    {
+      "label": "alerts",
+      "vp": "desktop",
+      "url": "/alerts",
+      "dur": 3163
+    },
+    {
+      "label": "profile",
+      "vp": "desktop",
+      "url": "/profile",
+      "dur": 3088
+    },
+    {
+      "label": "apply-done",
+      "vp": "desktop",
+      "url": "/apply-done",
+      "dur": 3062
+    },
+    {
+      "label": "cv-edit",
+      "vp": "desktop",
+      "url": "/cv/edit/cv100059_mufizzns",
+      "dur": 3178
+    },
+    {
+      "label": "apply1",
+      "vp": "desktop",
+      "url": "/apply1/j122_mu5f1vi2",
+      "dur": 3038
+    },
+    {
+      "label": "apply2",
+      "vp": "desktop",
+      "url": "/apply2/j122_mu5f1vi2",
+      "dur": 3028
+    },
+    {
+      "label": "apply3",
+      "vp": "desktop",
+      "url": "/apply3/j122_mu5f1vi2",
+      "dur": 3213
+    },
+    {
+      "label": "home",
+      "vp": "mobile",
+      "url": "/",
+      "dur": 3851
+    },
+    {
+      "label": "pricing",
+      "vp": "mobile",
+      "url": "/pricing",
+      "dur": 3107
+    },
+    {
+      "label": "employers-public",
+      "vp": "mobile",
+      "url": "/employers",
+      "dur": 3162
+    },
+    {
+      "label": "for-employers",
+      "vp": "mobile",
+      "url": "/for-employers",
+      "dur": 3239
+    },
+    {
+      "label": "blogs",
+      "vp": "mobile",
+      "url": "/blogs",
+      "dur": 3696
+    },
+    {
+      "label": "about",
+      "vp": "mobile",
+      "url": "/about",
+      "dur": 3503
+    },
+    {
+      "label": "contact",
+      "vp": "mobile",
+      "url": "/contact",
+      "dur": 3448
+    },
+    {
+      "label": "privacy",
+      "vp": "mobile",
+      "url": "/privacy",
+      "dur": 3032
+    },
+    {
+      "label": "terms",
+      "vp": "mobile",
+      "url": "/terms",
+      "dur": 3115
+    },
+    {
+      "label": "pipeda",
+      "vp": "mobile",
+      "url": "/pipeda",
+      "dur": 3009
+    },
+    {
+      "label": "login",
+      "vp": "mobile",
+      "url": "/login",
+      "dur": 3170
+    },
+    {
+      "label": "forgot",
+      "vp": "mobile",
+      "url": "/forgot",
+      "dur": 3443
+    },
+    {
+      "label": "home-app",
+      "vp": "mobile",
+      "url": "/home",
+      "dur": 4356
+    },
+    {
+      "label": "search-empty",
+      "vp": "mobile",
+      "url": "/search",
+      "dur": 3248
+    },
+    {
+      "label": "search-query",
+      "vp": "mobile",
+      "url": "/search?q=engineer",
+      "dur": 3289
+    },
+    {
+      "label": "saved",
+      "vp": "mobile",
+      "url": "/saved",
+      "dur": 3003
+    },
+    {
+      "label": "status",
+      "vp": "mobile",
+      "url": "/status",
+      "dur": 3103
+    },
+    {
+      "label": "alerts",
+      "vp": "mobile",
+      "url": "/alerts",
+      "dur": 3073
+    },
+    {
+      "label": "apply-done",
+      "vp": "mobile",
+      "url": "/apply-done",
+      "dur": 3025
+    },
+    {
+      "label": "cv-edit",
+      "vp": "mobile",
+      "url": "/cv/edit/cv100059_mufizzns",
+      "dur": 3231
+    },
+    {
+      "label": "employer-detail",
+      "vp": "mobile",
+      "url": "/employer/e12",
+      "dur": 3044
+    },
+    {
+      "label": "apply1",
+      "vp": "mobile",
+      "url": "/apply1/j122_mu5f1vi2",
+      "dur": 3111
+    },
+    {
+      "label": "apply2",
+      "vp": "mobile",
+      "url": "/apply2/j122_mu5f1vi2",
+      "dur": 3103
+    },
+    {
+      "label": "apply3",
+      "vp": "mobile",
+      "url": "/apply3/j122_mu5f1vi2",
+      "dur": 3136
+    }
+  ]
+}

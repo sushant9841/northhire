@@ -1207,6 +1207,7 @@ export const en = {
       urgentTag: "Urgent", featuredTag: "Featured",
     },
     pipeline: {
+      title: "Candidate pipeline",
       pipelineFor: "Pipeline for", exportCsv: "Export CSV", pipelineTab: "Pipeline ({n})", filtersTab: "Filters", talentPoolTab: "Talent pool ({n})",
       filterThisPipeline: "Filter this pipeline", minimumMatchScore: "Minimum match score", any: "Any", province: "Province", allProvinces: "All provinces",
       search: "Search", searchHint: "Supports AND, OR, NOT, \"quoted phrases\" and brackets — e.g. (welding OR fabrication) NOT apprentice",
