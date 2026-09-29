@@ -185,7 +185,7 @@ export function EmpHome(){
             <div className="flex-1 min-w-0">
               <div className="text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap">{j.t}</div>
               <div className="text-xs text-text-3 mt-1">{t(n===1?"employer.home.applicantOne":"employer.home.applicantOther",{n})} • {t("employer.home.viewsCount",{n:formatNumber(j.views,locale)})} • {j.posted}</div></div>
-            <Tag tone={jobTone(j.status)} sm>{jobStatusLabel(j.status,t)}</Tag></div>;})}</Card>
+            <Tag tone={jobTone(j)} sm>{jobStatusLabel(j,t)}</Tag></div>;})}</Card>
       <div className="flex flex-col gap-4">
         <Card><H2>{t("employer.home.pipeline")}</H2>
           {stages.map(s=>{const n=byStage[s]||0;
@@ -246,7 +246,7 @@ export function EmpJobs(){
               <div className="grow shrink basis-60 min-w-0">
                 <div className="flex items-center gap-2.5 flex-wrap">
                   <span className="font-bold text-text tracking-tight" style={{fontSize:16.5}}>{j.t}</span>
-                  <Tag tone={jobTone(j.status)} sm>{jobStatusLabel(j.status,t)}</Tag>
+                  <Tag tone={jobTone(j)} sm>{jobStatusLabel(j,t)}</Tag>
                   {j.flagged&&<Tag tone="danger" sm icon="alert">{t("employer.jobs.flaggedByAdmin")}</Tag>}
                   {j.pendingOwnerApproval&&<Tag tone="warn" sm icon="shield">{t("employer.jobs.needsOwnerApproval")}</Tag>}</div>
                 <div className="text-sm text-text-2 mt-1.5">{j.city}, {j.prov} • {j.mode} • {j.type} • {pay(j)}{payShort(j)}</div>
@@ -2902,7 +2902,7 @@ export function EmpAnalyticsPage(){
               <tr key={j.id} className="border-b border-line-soft hover:bg-bg cursor-pointer" onClick={()=>{A.setPipelineJob(j.id); A.go("empPipeline");}}
                 title="Open pipeline for this job">
                 <td className="py-2.5 px-4 text-sm font-semibold text-text">{j.title}</td>
-                <td className="py-2.5 px-4"><Tag tone={jobTone(j.status)} sm>{jobStatusLabel(j.status,t)}</Tag></td>
+                <td className="py-2.5 px-4"><Tag tone={jobTone(j)} sm>{jobStatusLabel(j,t)}</Tag></td>
                 <td className="py-2.5 px-4 text-sm text-text-2 tabular-nums">{j.views.toLocaleString()}</td>
                 <td className="py-2.5 px-4 text-sm text-text-2 tabular-nums">{j.applications}</td>
                 <td className="py-2.5 px-4 text-sm text-text-2 tabular-nums">{j.conversion}%</td>

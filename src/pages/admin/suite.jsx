@@ -299,7 +299,7 @@ export function AdmEmployers(){
               <div className="text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap">{j.t}</div>
               <div className="text-xs text-text-3">{j.city}, {j.prov} · {t("admin.employers.viewsN",{n:j.views})} · {t(n===1?"admin.employers.applicantN":"admin.employers.applicantsN",{n})}</div>
             </div>
-            <Tag tone={jobTone(j.status)} sm>{jobStatusLabel(j.status,t)}</Tag>
+            <Tag tone={jobTone(j)} sm>{jobStatusLabel(j,t)}</Tag>
           </div>;})}
         {A.jobs.filter(j=>j.e===viewing.id).length===0&&<div className="text-sm text-text-3 py-3">{t("admin.employers.noListingsYet")}</div>}
       </div>
@@ -393,7 +393,7 @@ export function AdmJobs(){
             <div className="text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap">{j.t}</div>
             <div className="text-xs text-text-3 mt-0.5">{e.name} • {j.city}, {j.prov} • {pay(j)}{payShort(j)}</div></div>
           {!mob&&<div className="w-22 text-sm text-text-2">{t(n===1?"admin.jobs.applicantOne":"admin.jobs.applicantOther",{n})}</div>}
-          <Tag tone={jobTone(j.status)} sm>{jobStatusLabel(j.status,t)}</Tag>
+          <Tag tone={jobTone(j)} sm>{jobStatusLabel(j,t)}</Tag>
           <div className="flex gap-2 flex-wrap">
             <Btn kind="ghost" size="xs" icon="eye" title={t("admin.jobs.preview")} onClick={()=>A.openJob(j.id,{preview:true})}/>
             <Btn kind="outline" size="xs" onClick={()=>{const label=j.status==="live"?t("admin.jobs.statusPaused"):j.status==="review"?t("admin.jobs.statusApproved"):t("admin.jobs.statusRestored");A.toggleJobStatus(j.id);A.toast(t("admin.jobs.toastStatusChanged",{title:j.t,label}),j.status==="live"?"warn":"ok");}}>{j.status==="live"?t("admin.jobs.actionPause"):j.status==="review"?t("admin.jobs.actionApprove"):t("admin.jobs.actionRestore")}</Btn>

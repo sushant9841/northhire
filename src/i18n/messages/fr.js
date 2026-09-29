@@ -3548,6 +3548,7 @@ export const fr = {
       live: "En ligne",
       paused: "En pause",
       review: "En attente de révision",
+      expired: "Expirée",
       closed: "Fermée",
     },
     urgency: {

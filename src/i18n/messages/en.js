@@ -3491,6 +3491,7 @@ export const en = {
       live: "Live",
       paused: "Paused",
       review: "Pending review",
+      expired: "Expired",
       closed: "Closed",
     },
     urgency: {
