@@ -7,20 +7,24 @@
    honors prefers-reduced-motion by immediately marking every element as shown (no animation). */
 import { useEffect, useRef, useState } from "react";
 
-export function useReveal({ threshold = 0.15, once = true } = {}) {
+export function useReveal({ threshold = 0.05, once = true, fallbackMs = 700 } = {}) {
   const ref = useRef(null);
   const [shown, setShown] = useState(false);
   useEffect(() => {
     if (typeof window === "undefined") { setShown(true); return; }
-    // Respect reduced-motion: no animation at all.
     const mq = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)");
     if (mq && mq.matches) { setShown(true); return; }
     if (typeof IntersectionObserver === "undefined") { setShown(true); return; }
     const el = ref.current;
     if (!el) return;
+    // Fallback: if a below-fold section never enters the viewport within `fallbackMs` (user
+    // never scrolls, Playwright fullPage screenshot, headless snapshot bots), reveal anyway.
+    // Prevents the entire below-fold from staying at opacity:0 for users who don't scroll.
+    const fallback = setTimeout(() => setShown(true), fallbackMs);
     const obs = new IntersectionObserver((entries) => {
       entries.forEach((e) => {
         if (e.isIntersecting) {
+          clearTimeout(fallback);
           setShown(true);
           if (once) obs.unobserve(e.target);
         } else if (!once) {
@@ -29,7 +33,7 @@ export function useReveal({ threshold = 0.15, once = true } = {}) {
       });
     }, { threshold });
     obs.observe(el);
-    return () => obs.disconnect();
-  }, [threshold, once]);
+    return () => { clearTimeout(fallback); obs.disconnect(); };
+  }, [threshold, once, fallbackMs]);
   return [ref, shown];
 }
