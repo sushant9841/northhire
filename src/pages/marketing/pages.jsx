@@ -64,8 +64,10 @@ export function HomePage(){
   const pad=mob?"py-13 px-4":"py-20 px-8";
   const wrapCls="max-w-site mx-auto";
 
-  const H=(title,sub,tag,action)=><div className={`flex justify-between items-end gap-5 flex-wrap ${mob?"mb-6":"mb-8"}`}>
-    <div className="max-w-160">{tag&&<Tag tone="brand">{tag}</Tag>}
+  // QA-r5b: differentiated eyebrow tone per section — Featured=brand, Trending=violet,
+  // Closing-soon=warn. Was all "brand" so a scroller had no visual signal separating them.
+  const H=(title,sub,tag,action,tagTone="brand")=><div className={`flex justify-between items-end gap-5 flex-wrap ${mob?"mb-6":"mb-8"}`}>
+    <div className="max-w-160">{tag&&<Tag tone={tagTone} sm icon={tagTone==="warn"?"clock":tagTone==="violet"?"trend":"sparkle"}>{tag}</Tag>}
       <h2 className={`${SECTION_CLS} leading-tight ${tag?"mt-2.5 mb-2":"mt-0 mb-2"} ${mob?"text-2xl":"text-3xl"}`}>{title}</h2>
       {sub&&<p className={`text-text-2 leading-snug m-0 ${mob?"text-sm":"text-base"}`}>{sub}</p>}</div>
     {action}</div>;
@@ -216,7 +218,7 @@ export function HomePage(){
       <div className={wrapCls}>
         <div className={`grid text-center ${mob?"grid-cols-2 gap-6":"grid-cols-4 gap-8"}`}>
           {[[live.length.toLocaleString(),t("home.liveOpeningsLabel")],[hiringEmployerCount.toLocaleString(),t("home.employersHiringLabel")],["100%",t("home.wagesPublishedLabel")],["11 days",t("home.avgTimeToHireLabel")]].map(([v,l])=>
-            <div key={l}><div className={`font-extrabold text-brand tracking-tight leading-none ${mob?"text-3xl":"text-5xl"}`}>{v}</div>
+            <div key={l}><div className={`font-bold text-brand tracking-tight leading-none ${mob?"text-3xl":"text-5xl"}`}>{v}</div>
               <div className={`text-text-2 font-medium tracking-tight ${mob?"text-xs mt-2.5":"text-sm mt-3.5"}`}>{l}</div></div>)}</div>
       </div>
     </section>
@@ -225,12 +227,23 @@ export function HomePage(){
       <div className={wrapCls}>
         {H(t("home.browseBySectorTitle"),t("home.browseBySectorSub"),t("home.sectorsTag"),
           <Btn kind="outline" iconR="arrowR" onClick={()=>A.go("search")}>{t("home.allJobsBtn")}</Btn>)}
+        {/* QA-r5b: was 12 identical bg-wash/text-brand icon tiles — visually flat. Rotate through
+            6 sector color pairs so each card carries its own tone. Same bg/text token pattern
+            keeps dark-mode contrast automatic. */}
         <div className="grid gap-2.5" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?140:170}px,1fr))`}}>
-          {CATS.map(c=><button key={c.id} onClick={()=>{A.setSearch({q:"",where:"",cats:[c.id]});A.go("search");}}
-            data-card className={`flex flex-col gap-2.5 rounded-xl cursor-pointer border border-line bg-white text-left hover:border-brand hover:bg-tint transition-colors duration-150 ${mob?"p-3.5":"p-4"}`}>
-            <span className="w-9 h-9 rounded-lg bg-wash text-brand flex items-center justify-center shrink-0"><I n={c.icon} s={18}/></span>
-            <div><div className="text-sm font-semibold text-text tracking-tight mb-0.5">{c.label}</div>
-              <div className="text-xs text-text-3">{(industryCounts[c.id]||0).toLocaleString()} jobs</div></div></button>)}</div>
+          {CATS.map((c,i)=>{const pal=[
+              {bg:"bg-wash",fg:"text-brand"},
+              {bg:"bg-ok-bg",fg:"text-ok"},
+              {bg:"bg-warn-bg",fg:"text-warn"},
+              {bg:"bg-violet-bg",fg:"text-violet"},
+              {bg:"bg-red-bg",fg:"text-red"},
+              {bg:"bg-tint",fg:"text-brand-dark"},
+            ][i%6];
+            return <button key={c.id} onClick={()=>{A.setSearch({q:"",where:"",cats:[c.id]});A.go("search");}}
+              data-card className={`flex flex-col gap-2.5 rounded-xl cursor-pointer border border-line bg-white text-left hover:border-brand hover:bg-tint hover:-translate-y-0.5 transition-all duration-200 ${mob?"p-3.5":"p-4"}`}>
+              <span className={`w-10 h-10 rounded-lg ${pal.bg} ${pal.fg} flex items-center justify-center shrink-0`}><I n={c.icon} s={19}/></span>
+              <div><div className="text-sm font-semibold text-text tracking-tight mb-0.5">{c.label}</div>
+                <div className="text-xs text-text-3">{(industryCounts[c.id]||0).toLocaleString()} jobs</div></div></button>;})}</div>
       </div>
     </section>
 
@@ -242,13 +255,13 @@ export function HomePage(){
     </_HomeSection>
 
     <_HomeSection bg="white" pad={pad} wrapCls={wrapCls}>
-      {H(t("home.trendingTitle"),t("home.trendingSub"),"Trending",null)}
+      {H(t("home.trendingTitle"),t("home.trendingSub"),"Trending",null,"violet")}
       <div className="grid gap-3.5" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:300}px,1fr))`}}>
         {trending.map((j,i)=><JobCard key={j.id} job={j} delay={Math.min(i,6)*0.05}/>)}</div>
     </_HomeSection>
 
     <_HomeSection bg="bg" pad={pad} wrapCls={wrapCls}>
-      {H(t("home.closingSoonTitle"),t("home.closingSoonSub"),"Deadlines",null)}
+      {H(t("home.closingSoonTitle"),t("home.closingSoonSub"),"Deadlines",null,"warn")}
       <div className="grid gap-3.5" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:300}px,1fr))`}}>
         {closingSoon.length?closingSoon.map((j,i)=><JobCard key={j.id} job={j} delay={Math.min(i,6)*0.05}/>):<div className="text-text-3 text-sm text-center p-5" style={{gridColumn:"1/-1"}}>{t("home.noClosingSoonMsg")}</div>}</div>
     </_HomeSection>
