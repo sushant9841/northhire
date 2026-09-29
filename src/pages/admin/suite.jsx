@@ -145,7 +145,10 @@ export function AdmUsers(){
             {sus&&susInfo&&<div className="text-xs text-red mt-0.5">{t("admin.users.suspendedInfo",{at:susInfo.at,reason:susInfo.reason})}</div>}</div>
           {!mob&&<div className="w-40 text-sm text-text-2">{u.title}</div>}
           {!mob&&<div className="w-28 text-sm text-text-2">{u.city}, {u.prov}</div>}
-          {!mob&&<div className="w-24 text-xs text-text-3">{u.joined?t("admin.users.joined",{date:u.joined}):"—"}</div>}
+          {/* QA-r5c: only render the joined column when at least one user has a stamped date —
+              seed users don't have `joined` set, so this column was rendering "—" for every row,
+              a "column of empty" that adds visual weight without information. */}
+          {!mob&&pg.pageItems.some(x=>x.joined)&&<div className="w-24 text-xs text-text-3">{u.joined?t("admin.users.joined",{date:u.joined}):"—"}</div>}
           <div className="w-20 text-sm text-text-2">{t("admin.users.appsCount",{n:apps})}</div>
           <Tag tone={sus?"danger":"ok"} sm>{sus?t("admin.users.suspended"):t("admin.users.active")}</Tag>
           <Btn kind="ghost" size="xs" onClick={()=>setViewing(u)}>{t("admin.users.details")}</Btn>
@@ -154,7 +157,9 @@ export function AdmUsers(){
             if(sus){A.toggleSuspend(u.id);A.toast(t("admin.users.restoredToast",{name:u.name}),"ok");}
             else{setSuspending(u);setReason("");}
           }}>{sus?t("admin.users.restore"):t("admin.users.suspend")}</Btn>
-          <Btn kind="dangerSoft" size="xs" icon="trash" onClick={()=>setErasing(u)}>{t("admin.users.erase")}</Btn></div>;})}
+          {/* QA-r5c: GDPR erase is destructive + irreversible — moved out of the per-row action
+              rail to reduce misclick risk. Reachable from Details modal instead. Row rail is
+              Details / View as / Suspend only. */}</div>;})}
       {list.length===0&&<div className="p-5"><Empty icon="search" title={t("admin.users.noUsersMatch")} body={t("admin.users.tryDifferentSearch")}/></div>}</Card>
     <Pagination {...pg}/>
     {suspending&&<Modal onClose={()=>setSuspending(null)} title={t("admin.users.suspendTitle",{name:suspending.name})}>
@@ -202,9 +207,14 @@ export function AdmUsers(){
           </div>;})}
         {A.applications.filter(a=>a.user===viewing.id).length===0&&<div className="text-sm text-text-3 py-3">{t("admin.users.noApplicationsOnFile")}</div>}
       </div>
-      <div className="flex gap-2.5 justify-end pt-3 border-t border-line">
-        <Btn kind="ghost" onClick={()=>setViewing(null)}>{t("admin.users.close")}</Btn>
-        <Btn kind="outline" icon="eye" onClick={()=>{A.impersonate(viewing.id);setViewing(null);}}>{t("admin.users.viewAs")}</Btn>
+      {/* QA-r5c: GDPR erase relocated here from the per-row action rail — destructive +
+          irreversible action away from casual reach, gated behind opening the profile first. */}
+      <div className="flex gap-2.5 justify-between items-center pt-3 border-t border-line flex-wrap">
+        <Btn kind="dangerSoft" size="sm" icon="trash" onClick={()=>{const u=viewing;setViewing(null);setErasing(u);}}>{t("admin.users.erase")}</Btn>
+        <div className="flex gap-2.5">
+          <Btn kind="ghost" onClick={()=>setViewing(null)}>{t("admin.users.close")}</Btn>
+          <Btn kind="outline" icon="eye" onClick={()=>{A.impersonate(viewing.id);setViewing(null);}}>{t("admin.users.viewAs")}</Btn>
+        </div>
       </div>
     </Modal>}
   </Page>;
