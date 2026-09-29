@@ -10,11 +10,23 @@ import {
   usePagination, Pagination, HERO_WIDE, HERO_WRAP, HERO_QUIET, SECTION_CLS,
 } from "../../design/primitives.jsx";
 import { money, pay, payShort, matchesQuery } from "../../helpers/utils.js";
+import { useReveal } from "../../helpers/useReveal.js";
 import { sanitizeHtml } from "../../helpers/sanitize.js";
 import { CATS } from "../../store/seed/constants.js";
 import { SEED_BLOGS } from "../../store/seed/blogs.js";
 import { useTranslation } from "../../i18n/i18n.jsx";
 import { JobCard, TrainingCard, BlogCard, EmpMark } from "../shared/cards.jsx";
+
+// QA-r5b: wrap a homepage section in a scroll-triggered reveal. Section fades + rises when it
+// enters the viewport; honors reduced-motion via the .reveal CSS in index.css.
+function _HomeSection({ bg = "bg", pad, wrapCls, children }) {
+  const [ref, shown] = useReveal();
+  // Tailwind doesn't statically see `bg-${x}`; keep the two used names literal so JIT includes them.
+  const bgCls = bg === "white" ? "bg-white" : "bg-bg";
+  return <section ref={ref} className={`${bgCls} ${pad} reveal ${shown ? "reveal-in" : ""}`}>
+    <div className={wrapCls}>{children}</div>
+  </section>;
+}
 
 export function HomePage(){
   const A=use(); const mob=useMedia("(max-width: 900px)"); const {t}=useTranslation();
@@ -222,30 +234,24 @@ export function HomePage(){
       </div>
     </section>
 
-    <section className={`bg-bg ${pad}`}>
-      <div className={wrapCls}>
-        {H("Featured openings","Roles that employers are highlighting this week.","Featured this week",
-          <Btn kind="outline" iconR="arrowR" onClick={()=>A.go("search")}>{t("home.allJobsBtn")}</Btn>)}
-        <div className="grid gap-3.5" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:300}px,1fr))`}}>
-          {featured.map(j=><JobCard key={j.id} job={j}/>)}</div>
-      </div>
-    </section>
+    <_HomeSection bg="bg" pad={pad} wrapCls={wrapCls}>
+      {H("Featured openings","Roles that employers are highlighting this week.","Featured this week",
+        <Btn kind="outline" iconR="arrowR" onClick={()=>A.go("search")}>{t("home.allJobsBtn")}</Btn>)}
+      <div className="grid gap-3.5" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:300}px,1fr))`}}>
+        {featured.map((j,i)=><JobCard key={j.id} job={j} delay={Math.min(i,6)*0.05}/>)}</div>
+    </_HomeSection>
 
-    <section className={`bg-white ${pad}`}>
-      <div className={wrapCls}>
-        {H(t("home.trendingTitle"),t("home.trendingSub"),"Trending",null)}
-        <div className="grid gap-3.5" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:300}px,1fr))`}}>
-          {trending.map(j=><JobCard key={j.id} job={j}/>)}</div>
-      </div>
-    </section>
+    <_HomeSection bg="white" pad={pad} wrapCls={wrapCls}>
+      {H(t("home.trendingTitle"),t("home.trendingSub"),"Trending",null)}
+      <div className="grid gap-3.5" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:300}px,1fr))`}}>
+        {trending.map((j,i)=><JobCard key={j.id} job={j} delay={Math.min(i,6)*0.05}/>)}</div>
+    </_HomeSection>
 
-    <section className={`bg-bg ${pad}`}>
-      <div className={wrapCls}>
-        {H(t("home.closingSoonTitle"),t("home.closingSoonSub"),"Deadlines",null)}
-        <div className="grid gap-3.5" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:300}px,1fr))`}}>
-          {closingSoon.length?closingSoon.map(j=><JobCard key={j.id} job={j}/>):<div className="text-text-3 text-sm text-center p-5" style={{gridColumn:"1/-1"}}>{t("home.noClosingSoonMsg")}</div>}</div>
-      </div>
-    </section>
+    <_HomeSection bg="bg" pad={pad} wrapCls={wrapCls}>
+      {H(t("home.closingSoonTitle"),t("home.closingSoonSub"),"Deadlines",null)}
+      <div className="grid gap-3.5" style={{gridTemplateColumns:`repeat(auto-fill,minmax(${mob?260:300}px,1fr))`}}>
+        {closingSoon.length?closingSoon.map((j,i)=><JobCard key={j.id} job={j} delay={Math.min(i,6)*0.05}/>):<div className="text-text-3 text-sm text-center p-5" style={{gridColumn:"1/-1"}}>{t("home.noClosingSoonMsg")}</div>}</div>
+    </_HomeSection>
 
     <section className={`bg-white ${pad}`}>
       <div className={wrapCls}>

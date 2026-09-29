@@ -44,7 +44,7 @@ export function JobCard({job,delay=0}){
     <div className="flex gap-3.5 items-start mb-3">
       <EmpMark e={e}/>
       <div className="flex-1 min-w-0">
-        <div className="text-base font-bold text-text leading-snug tracking-tight">{job.t}</div>
+        <div className="text-base font-semibold text-text leading-snug tracking-tight">{job.t}</div>
         <div className="text-sm text-text-2 mt-1 flex items-center gap-1.5">
           <span className="overflow-hidden text-ellipsis whitespace-nowrap">{e.name}</span>
           {e.verified&&<span className="text-brand flex shrink-0" title={t("cards.verifiedEmployer")}><I n="checkC2" s={14} w={2}/></span>}</div>
@@ -52,7 +52,7 @@ export function JobCard({job,delay=0}){
       <SaveBtn id={job.id}/>
     </div>
     <div className="flex items-baseline gap-2 bg-tint border border-line-2 rounded-xl py-2.5 px-3 mb-3">
-      <span className="text-lg font-bold text-brand tracking-tight">{pay(job)}</span>
+      <span className="text-lg font-semibold text-brand tracking-tight">{pay(job)}</span>
       <span className="text-xs text-brand opacity-75 font-medium">{payUnit(job)}</span></div>
     <div className="flex gap-3.5 flex-wrap text-sm text-text-2 mb-3">
       <span className="flex items-center gap-1.5"><I n="pin" s={14} c={C.text3}/>{job.city}, {job.prov}</span>
@@ -82,7 +82,7 @@ export function BlogCard({b,delay=0,compact}){
     <div className="aspect-[16/10] bg-bg"><SmartScene kind={b.scene} tone={b.tone} w="100%" h="100%" seed={b.id.length}/></div>
     <div className="p-6">
       <Tag tone="brand" sm>{b.cat}</Tag>
-      <div className="text-lg font-bold text-text leading-snug tracking-tight mt-3 mb-2.5">{b.title}</div>
+      <div className="text-lg font-semibold text-text leading-snug tracking-tight mt-3 mb-2.5">{b.title}</div>
       {!compact&&<p className="text-sm text-text-2 leading-relaxed mb-4">{b.excerpt}</p>}
       <div className="flex items-center gap-2.5 pt-3.5 border-t border-line-soft">
         <button onClick={e=>{e.stopPropagation();A.filterBlogsByAuthor(b.author);}}
@@ -104,7 +104,7 @@ export function TrainingCard({t,delay=0}){
       {enrolled&&<div className="absolute top-3.5 right-3.5"><Tag tone="brand" sm icon="check">{translate("cards.enrolled")}</Tag></div>}</div>
     <div className="p-6">
       <div className="flex gap-2 mb-3"><Tag sm>{t.level}</Tag><Tag sm icon="clock">{t.hours} h</Tag></div>
-      <div className="text-lg font-bold text-text leading-snug tracking-tight mb-3">{t.title}</div>
+      <div className="text-lg font-semibold text-text leading-snug tracking-tight mb-3">{t.title}</div>
       <div className="flex items-center gap-2.5 text-sm text-text-2 pt-3.5 border-t border-line-soft">
         {Number(t.rating)>0&&Number(t.enrolled)>0&&<>
           <span className="text-warn flex items-center gap-1 font-bold">

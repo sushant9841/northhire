@@ -451,11 +451,15 @@ export function Lbl({children,style}){return <div className="text-xs font-bold t
    (a homepage hero vs. a job-detail-page title vs. a section header aren't the same size),
    so that stays a literal ternary at each call site for Tailwind's static scanner to see -
    only the weight/tracking/leading/color identity is shared here. */
-export const HERO_TIGHT="font-extrabold tracking-tighter leading-none text-text"; /* standard + detail-page hero titles */
-export const HERO_WIDE="font-extrabold tracking-tight leading-none text-text"; /* top-of-funnel "mega" hero titles (home, blogs, trainings) */
-export const HERO_WRAP="font-extrabold tracking-tight text-text leading-tight"; /* hero titles holding dynamic content that may wrap to 2+ lines (article/training titles) - leading-tight not leading-none */
-export const HERO_QUIET="font-bold tracking-tight text-text"; /* de-emphasized utility-page h1s (legal docs, confirmation screens) - no forced leading, callers keep their own */
-export const SECTION_CLS="font-bold text-text tracking-tight"; /* in-page section headers on public pages - callers add their own leading-tight/-snug/-none */
+// QA-r5b user 2026-09-24: "fonts are too bold throughout the site". font-extrabold (800) at
+// hero sizes reads like an ad; modern job/HR products (Ashby, Rippling, Notion) sit at 600-700.
+// Reduced every tier by one weight step; tracking already compensates for the perceptual density
+// change so the hero doesn't feel weak. Callers using these tokens don't need to change.
+export const HERO_TIGHT="font-bold tracking-tighter leading-none text-text"; /* standard + detail-page hero titles */
+export const HERO_WIDE="font-bold tracking-tight leading-none text-text"; /* top-of-funnel "mega" hero titles (home, blogs, trainings) */
+export const HERO_WRAP="font-bold tracking-tight text-text leading-tight"; /* hero titles holding dynamic content that may wrap to 2+ lines (article/training titles) - leading-tight not leading-none */
+export const HERO_QUIET="font-semibold tracking-tight text-text"; /* de-emphasized utility-page h1s (legal docs, confirmation screens) - no forced leading, callers keep their own */
+export const SECTION_CLS="font-semibold text-text tracking-tight"; /* in-page section headers on public pages - callers add their own leading-tight/-snug/-none */
 /* `spark` (optional): array of numbers, oldest first - rendered as a tiny inline sparkline under
    the value (Priority-4 #4, daily-snapshot analytics). `deltaTone` colors the delta line - a
    plain string label defaults to "ok" (existing callers, unchanged); pass "warn"/"text-3" for a
