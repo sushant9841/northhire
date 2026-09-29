@@ -120,7 +120,7 @@ export function JobDetailPage({previewJob,preview}={}){
         <div className={`bg-white rounded-3xl border border-line ${mob?"p-6":"p-9"}`}>
           <div className={`bg-tint border border-line-2 rounded-2xl mb-8 ${mob?"py-5 px-6":"py-7 px-7"}`}>
             <div className="text-xs text-brand font-bold tracking-widest uppercase mb-2">{t("shared.jobDetail.offeredSalary")}</div>
-            <div className={`font-extrabold text-brand tracking-tighter leading-none ${mob?"text-3xl":"text-5xl"}`}>
+            <div className={`font-bold text-brand tracking-tighter leading-none ${mob?"text-3xl":"text-5xl"}`}>
               {pay(job)} <span className={`font-semibold opacity-75 ${mob?"text-lg":"text-xl"}`}>{payUnit(job)}</span></div>
             {job.unit!=="yr"&&<div className="text-sm text-text-2 mt-2.5">
               {t("shared.jobDetail.annualizedNote",{annual:money(annual(job))})}</div>}</div>

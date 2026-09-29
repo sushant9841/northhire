@@ -645,7 +645,7 @@ export function WelcomeTourPage({kind}){
           <div className="w-18 h-18 rounded-2xl text-white flex items-center justify-center mb-6 shadow-[0_8px_20px_-6px_rgba(0,92,204,0.4)]" style={{background:`linear-gradient(135deg,${C.brand} 0%,#003D8C 100%)`}}>
             <I n={cur.ic} s={34}/>
           </div>
-          <h1 className={`font-extrabold tracking-tight text-text mb-3.5 leading-tight ${mob?"text-2xl":"text-3xl"}`}>{cur.t}</h1>
+          <h1 className={`font-bold tracking-tight text-text mb-3.5 leading-tight ${mob?"text-2xl":"text-3xl"}`}>{cur.t}</h1>
           <p className="text-base text-text-2 leading-relaxed mb-7">{cur.s}</p>
 
           {cur.cta&&!isLast&&<Btn kind="outline" size="sm" icon={cur.ic} style={{marginBottom:20}} onClick={()=>A.go(cur.cta.go)}>{cur.cta.label}</Btn>}

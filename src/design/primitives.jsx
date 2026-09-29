@@ -470,7 +470,7 @@ export function Stat({label,value,tone=C.text,icon,delta,deltaTone="ok",spark,on
   className={`bg-white border rounded-2xl py-6 px-6 transition-[border-color,transform] duration-150 ${onClick?"cursor-pointer border-line hover:border-line-2 hover:-translate-y-0.5":"cursor-default border-line"}`}>
   <div className="flex items-center gap-2.5 mb-3.5 text-text-3">
    {icon&&<I n={icon} s={16}/>}<span className="text-sm text-text-2 font-semibold">{label}</span></div>
-  <div className="text-4xl font-extrabold leading-none tracking-tighter" style={{color:tone}}>{value}</div>
+  <div className="text-4xl font-bold leading-none tracking-tighter" style={{color:tone}}>{value}</div>
   {Array.isArray(spark)&&spark.length>1&&(()=>{
     const max=Math.max(...spark,1),min=Math.min(...spark,0),range=Math.max(max-min,1);
     const w=100,h=24,step=w/(spark.length-1);

@@ -274,7 +274,7 @@ export function HomePage(){
             [t("home.step2Icon"),t("home.step2Title"),t("home.step2Body")],
             [t("home.step3Icon"),t("home.step3Title"),t("home.step3Body")]].map(([ic,title,body],i)=>
             <div key={title} data-card className={`bg-bg rounded-3xl border border-line ${mob?"p-7":"p-9"}`}>
-              <div className={`font-extrabold text-brand tracking-tight leading-none mb-5 ${mob?"text-4xl":"text-5xl"}`}>0{i+1}</div>
+              <div className={`font-bold text-brand tracking-tight leading-none mb-5 ${mob?"text-4xl":"text-5xl"}`}>0{i+1}</div>
               <div className="w-11 h-11 rounded-xl bg-wash text-brand flex items-center justify-center mb-5"><I n={ic} s={22}/></div>
               <div className={`font-bold text-text tracking-tight mb-2.5 leading-tight ${mob?"text-xl":"text-2xl"}`}>{title}</div>
               <p className={`text-text-2 leading-relaxed m-0 ${mob?"text-sm":"text-base"}`}>{body}</p></div>)}</div>
@@ -474,7 +474,7 @@ export function TrainingsPage(){
         <div className={`grid grid-cols-3 mx-auto max-w-160 ${mob?"gap-5":"gap-11"}`}>
           {[[pub.filter(t=>t.price===0).length,t("trainings.freeCourses")],[pub.length,t("trainings.totalCourses")],
             [pub.reduce((s,t)=>s+t.enrolled,0).toLocaleString(),t("trainings.learnersEnrolled")]].map(([v,l])=>
-            <div key={l}><div className={`font-extrabold text-brand tracking-tight leading-none ${mob?"text-3xl":"text-4xl"}`}>{v}</div>
+            <div key={l}><div className={`font-bold text-brand tracking-tight leading-none ${mob?"text-3xl":"text-4xl"}`}>{v}</div>
               <div className={`text-text-2 font-semibold ${mob?"text-xs mt-2":"text-sm mt-3"}`}>{l}</div></div>)}</div>
       </div>
     </section>
@@ -535,7 +535,7 @@ export function TrainingPage(){
           <div className="bg-white rounded-2xl overflow-hidden border border-line shadow-md">
             <div className="bg-bg" style={{aspectRatio:"16/10"}}><SmartScene kind={training.scene} tone={training.tone} w="100%" h="100%" seed={training.id.length}/></div>
             <div className={mob?"p-6":"p-7"}>
-              <div className={`font-extrabold text-text tracking-tight mb-1.5 leading-none ${mob?"text-4xl":"text-5xl"}`}>{training.price===0?t("trainings.freePriceLabel"):money(training.price)}</div>
+              <div className={`font-bold text-text tracking-tight mb-1.5 leading-none ${mob?"text-4xl":"text-5xl"}`}>{training.price===0?t("trainings.freePriceLabel"):money(training.price)}</div>
               <div className="text-sm text-text-2 mb-6">{training.price===0?t("training.freePriceLabel"):t("training.paidPriceLabel")}</div>
               {enrolled?<>
                 <div className="mb-4">
@@ -697,7 +697,7 @@ export function AboutPage(){
         <div className={`grid ${mob?"grid-cols-2 gap-3":"grid-cols-4"} rounded-3xl overflow-hidden`} style={{border:mob?"none":`1px solid ${C.line}`}}>
           {[["612k+","Job seekers"],["4,180","Employers"],["21,340","Live jobs"],["50k+","Hires made"]].map(([v,l],i)=>
             <div key={l} className={`bg-white text-center ${mob?"py-7 px-5 rounded-2xl border border-line":"py-11 px-8"}`} style={!mob&&i<3?{borderRight:`1px solid ${C.line}`}:undefined}>
-              <div className={`font-extrabold text-brand tracking-tight leading-none ${mob?"text-4xl":"text-6xl"}`}>{v}</div>
+              <div className={`font-bold text-brand tracking-tight leading-none ${mob?"text-4xl":"text-6xl"}`}>{v}</div>
               <div className={`text-text-2 font-semibold mt-3 ${mob?"text-sm":"text-sm"}`}>{l}</div></div>)}</div>
         <div className={`grid gap-3 mt-3 ${mob?"grid-cols-1":"grid-cols-3"}`}>
           {[["11 days","Median time to hire"],["13/13","Provinces and territories"],["EN + FR","Fully bilingual"]].map(([v,l])=>
@@ -837,7 +837,7 @@ export function AboutPage(){
 
     <section className={`bg-white ${pad}`}>
       <div className={`max-w-280 mx-auto bg-ink rounded-3xl text-center text-white relative overflow-hidden ${mob?"py-12 px-6":"py-20 px-15"}`}>
-        <h2 className={`font-extrabold tracking-tight mb-5 leading-tight ${mob?"text-3xl":"text-5xl"}`}>
+        <h2 className={`font-bold tracking-tight mb-5 leading-tight ${mob?"text-3xl":"text-5xl"}`}>
           Say hello.</h2>
         <p className={`text-white/70 mx-auto mb-9 max-w-130 leading-snug ${mob?"text-base":"text-lg"}`}>
           A real person, within one business day. From <span className="text-accent font-semibold">support@northhire.ca</span>.</p>
@@ -1083,7 +1083,7 @@ export function PricingPage(){
               <div className={`font-bold text-text tracking-tight mb-2 ${mob?"text-2xl":"text-3xl"}`}>{p.n}</div>
               <div className={`text-sm text-text-2 leading-snug mb-5 ${mob?"":"min-h-11"}`}>{p.summary}</div>
               <div className="flex items-baseline gap-1.5 mb-6 pb-6 border-b border-line-soft flex-wrap">
-                <span className={`font-extrabold text-text tracking-tight leading-none ${mob?"text-5xl":"text-6xl"}`}>${billing==="annual"&&p.p>0?Math.round(p.p*(1-annualPct)):p.p}</span>
+                <span className={`font-bold text-text tracking-tight leading-none ${mob?"text-5xl":"text-6xl"}`}>${billing==="annual"&&p.p>0?Math.round(p.p*(1-annualPct)):p.p}</span>
                 <span className="text-base text-text-3">{p.p===0?t("pricing.forever"):t("pricing.perMonth")}</span>
                 {billing==="annual"&&p.p>0&&<span className="text-xs text-text-3 basis-full mt-1">{t("pricing.billedAnnually",{price:Math.round(p.p*(1-annualPct)*12).toLocaleString(),savings:Math.round(p.p*annualPct*12).toLocaleString()})}</span>}
               </div>
