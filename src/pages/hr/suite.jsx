@@ -150,7 +150,7 @@ function _HrAttentionStack({A,emp}){
           <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{background:`${tone}18`,color:tone}}>
             <I n={a.icon} s={18}/></div>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-semibold text-text">{t(`hr.attention.${key}Title`,{n:a.n})}</div>
+            <div className="text-sm font-semibold text-text">{t(`hr.attention.${key}Title${a.n===1?"":"Plural"}`,{n:a.n})}</div>
             <div className="text-xs text-text-2 mt-0.5">{t(`hr.attention.${key}Body`)}</div></div>
           <Tag sm>{t("hr.attention.reviewCta")}</Tag>
         </button>;})}
