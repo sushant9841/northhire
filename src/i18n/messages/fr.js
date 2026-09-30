@@ -1759,8 +1759,8 @@ export const fr = {
       licenseValid: "Permis {license} valide jusqu'au {date}. Limites de crédit ${amount} au dossier.",
       wsib: "Couverture CSPAAT", wsibBody: "Inscrit dans {provinces}. Groupe de taux {group}.",
       statutory: "Rappels statutaires",
-      roes: "Les ROE doivent être délivrées dans 5 jours de la fin de toute assignation avec une pause de 7+ jours.",
-      t4s: "Les T4 doivent être délivrées avant la fin de février chaque année pour tous les travailleur·euse·s payé·e·s l'année précédente.",
+      roes: "doivent être délivrées dans 5 jours de la fin de toute assignation avec une pause de 7+ jours.",
+      t4s: "doivent être délivrées avant la fin de février chaque année pour tous les travailleur·euse·s payé·e·s l'année précédente.",
       vacation: "La paie de congé s'accumule à 4% du brut (fédéral) — configurée pour s'accumuler plutôt que d'être versée par période de paie.",
       payEquity: "Certification d'équité salariale requise pour les assignations Ontario de plus de 3 mois. Client·e à certifier taux équivalents.",
       missing: "Manquant", td1: "TD1", directDeposit: "Dépôt direct", workEligibility: "Admissibilité au travail",
@@ -2427,6 +2427,7 @@ export const fr = {
       detailTitle: "Paie · {period}",
       runStatus: {
         draft: "Brouillon",
+        scheduled: "Planifiée",
         approved: "Approuvée",
         paid: "Payée",
         reversed: "Annulée",
