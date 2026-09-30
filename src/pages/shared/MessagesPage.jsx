@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
-import { C } from "../../design/tokens.js";
 import { Btn, Card, Tag, Input, Empty, SmartPortrait, Page, HERO_TIGHT } from "../../design/primitives.jsx";
 import { useTranslation } from "../../i18n/i18n.jsx";
 import { formatDate, formatDateTime } from "../../i18n/format.js";

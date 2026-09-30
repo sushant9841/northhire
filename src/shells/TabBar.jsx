@@ -1,5 +1,4 @@
 import { use } from "../store/context.js";
-import { C } from "../design/tokens.js";
 import { I } from "../design/icons.jsx";
 import { ROUTES, TABS_BY_ROLE } from "../routes.js";
 import { useTranslation } from "../i18n/i18n.jsx";

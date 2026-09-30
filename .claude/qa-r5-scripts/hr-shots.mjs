@@ -30,6 +30,13 @@ async function captureHr(browser, vp) {
     ["hrPayroll", "/hr/payroll"],
     ["hrReports", "/hr/reports"],
     ["hrSettings", "/hr/settings"],
+    ["hrCalendar", "/hr/calendar"],
+    ["hrTrainings", "/hr/trainings"],
+    ["hrPerf", "/hr/performance"],
+    ["hrProfile", "/hr/profile"],
+    ["hrExpenses", "/hr/expenses"],
+    ["hrInvoices", "/hr/invoices"],
+    ["hrIntegrations", "/hr/integrations"],
   ];
   for (const [label, url] of routes) {
     try {
@@ -63,6 +70,11 @@ async function captureStaffing(browser, vp) {
     ["agencyInvoicing", "/staffing/invoicing"],
     ["agencyClients", "/staffing/clients"],
     ["agencyCompliance", "/staffing/compliance"],
+    ["agencyWorkers", "/staffing/workers"],
+    ["agencyPlacements", "/staffing/placements"],
+    ["agencyMargins", "/staffing/margins"],
+    ["agencyBranches", "/staffing/branches"],
+    ["agencySettings", "/staffing/settings"],
   ];
   for (const [label, url] of routes) {
     try {

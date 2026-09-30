@@ -1728,7 +1728,16 @@ export const en = {
       statusChangeError: "This worker is on an active assignment — end the assignment before marking them inactive.",
       inProgress: "in-progress", failed: "failed", passed: "passed", notStarted: "not-started",
     },
-    margins: { title: "Margins", profit: "Profit margin", revenue: "Revenue", cost: "Cost" },
+    margins: {
+      title: "Margins", profit: "Profit margin", revenue: "Revenue", cost: "Cost",
+      subtitle: "Margins and burden rates",
+      desc: "Live margin per active assignment (weekly figures use each assignment's recent average hours, defaulting to 40 when no timesheet history exists).",
+      weeklyBill: "Weekly bill", weeklyWage: "Weekly wage", weeklyMargin: "Weekly margin", avgMarkup: "Average markup",
+      belowFloor: "{n} assignments below markup floor",
+      belowFloorBody: "These lose money after employer burden. Rebalance rates or end the assignment.",
+      worker: "Worker", client: "Client", pay: "Pay", burden: "Burden", trueCost: "True cost", bill: "Bill",
+      marginHr: "Margin/hr", markupPct: "Markup %",
+    },
     branches: {
       title: "Branches", location: "Location", manager: "Manager", workers: "Workers",
       countBranches: "{n} branches", desc: "Assign clients and recruiters to a branch/office instead of one shared book.",

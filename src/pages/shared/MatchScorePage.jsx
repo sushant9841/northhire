@@ -1,7 +1,7 @@
 import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { I } from "../../design/icons.jsx";
-import { Page, H1, H2, Card, Btn, Banner, Bar, Lbl } from "../../design/primitives.jsx";
+import { Page, H1, Card, Btn, Banner, Bar, Lbl } from "../../design/primitives.jsx";
 
 /* A plain-language account of what the match score actually computes. Two reasons this page
    exists rather than being a tooltip:
