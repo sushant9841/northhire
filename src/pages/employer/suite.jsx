@@ -989,7 +989,7 @@ function _PipelineBoard({apps,job,sel,tog,selectStage,A,mob,stages,t,onOpen}){
      always-scrolling treatment. */
   return <div className={`flex-1 overflow-x-auto ${mob?"p-2.5":"py-3"}`}>
     <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-      <div className={`flex gap-2 items-start ${mob?"":"min-w-full"}`} style={mob?{minWidth:"max-content"}:undefined}>
+      <div className="flex gap-2 items-start" style={{minWidth:"max-content"}}>
         {stages.map(stage=><_PipelineColumn key={stage} stage={stage} items={apps.filter(a=>a.stage===stage)}
           job={job} sel={sel} tog={tog} selectStage={selectStage} A={A} mob={mob} stages={stages} t={t} onOpen={onOpen}/>)}
       </div>
