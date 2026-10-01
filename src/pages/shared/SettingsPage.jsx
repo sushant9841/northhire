@@ -12,7 +12,7 @@ import { formatDate } from "../../i18n/format.js";
 /* Email verification. The account keeps working while unverified — locking someone out of
    browsing jobs because a confirmation mail is slow helps nobody — but the state is real and
    shown, because a wrong address means job alerts and employer messages go to a stranger. */
-function _EmailVerification({u,t}){
+function EmailVerification({u,t}){
   const [sent,setSent]=useState(false); const [err,setErr]=useState(""); const [busy,setBusy]=useState(false);
   const [verified,setVerified]=useState(!!u.emailVerified);
   useEffect(()=>{
@@ -38,7 +38,7 @@ function _EmailVerification({u,t}){
 
 /* Devices that skip the 2FA prompt. Revoking has to work from a DIFFERENT device — that's what
    someone reaches for after losing a laptop — so this lists them per account, not per cookie. */
-function _TrustedDevices({t,locale}){
+function TrustedDevices({t,locale}){
   const [devices,setDevices]=useState([]);
   const load=()=>api.get("/auth/trusted-devices").then(r=>setDevices(r.devices)).catch(()=>{});
   useEffect(()=>{load();},[]);
@@ -82,7 +82,7 @@ export function SettingsPage(){
       {sub&&<div className="text-sm text-text-2 mt-1 leading-normal">{sub}</div>}</div>{children}</div>;
   return <Page narrow>
     <H1 sub={t("settings.sub")}>{t("settings.title")}</H1>
-    <_EmailVerification u={u} t={t}/>
+    <EmailVerification u={u} t={t}/>
     <Card pad={mob?18:24} style={{marginBottom:16}}>
       <Lbl>{t("settings.language")}</Lbl>
       <Row icon="globe" title={t("account.language")} sub={t("settings.languageSub")}>
@@ -106,7 +106,7 @@ export function SettingsPage(){
       <Row icon="mail" title={t("settings.marketingTitle")} sub={t("settings.marketingSub")}>
         <Switch on={S.marketing} onChange={v=>A.setUserSetting("marketing",v)}/></Row>
     </Card>
-    <_TrustedDevices t={t} locale={locale}/>
+    <TrustedDevices t={t} locale={locale}/>
     {u.role==="seeker"&&<Card pad={mob?18:24} style={{marginBottom:16}}>
       <Lbl>{t("settings.privacy")}</Lbl>
       <Row icon="eye" title={t("settings.privacyProfileTitle")} sub={t("settings.privacyProfileSub")}>

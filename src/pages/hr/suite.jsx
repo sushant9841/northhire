@@ -27,7 +27,7 @@ import { IntegrationsPanel } from "../shared/IntegrationsPanel.jsx";
 /* Small pill-style tab bar reused across most HR Suite modules (attendance view,
    leave/tasks/calendar/invoices scope switches). Not string-interpolated into a
    className — each branch is a complete literal so Tailwind's scanner sees both. */
-function _PillTabs({items,value,onChange}){
+function PillTabs({items,value,onChange}){
   return <div className="flex bg-bg rounded-lg p-0.5 border border-line flex-wrap" style={{width:"fit-content"}}>
     {items.map(([v,l])=><button key={v} onClick={()=>onChange(v)}
       className={`border-0 py-1.5 px-3.5 rounded-md cursor-pointer text-xs font-semibold ${value===v?"bg-white text-brand":"bg-transparent text-text-3"}`}>{l}</button>)}
@@ -132,7 +132,7 @@ const HR_ATTENTION_COPY={
    access - "danger"/"neutral" aren't literal C.* keys (C has `red`/no neutral swatch at all), so
    this maps the selector's tone vocabulary onto real tokens at render time. */
 const HR_ATTENTION_TONE={warn:C.warn,danger:C.red,ok:C.ok,neutral:C.text3,brand:C.brand};
-function _HrAttentionStack({A,emp}){
+function HrAttentionStack({A,emp}){
   const {t}=useTranslation();
   const items=A.hrAttentionQueue(emp.role,emp.id);
   if(items.length===0)return <Card style={{marginBottom:20}}>
@@ -239,7 +239,7 @@ export function HrDashboard(){
        of "what data do I have?", ordered by urgency. Same visual pattern as EmpHome's attention
        stack (employer transformation E1), composed from A.hrAttentionQueue(role, userId) - a
        selector over data the store already has loaded, not a new endpoint. */}
-    <_HrAttentionStack A={A} emp={emp}/>
+    <HrAttentionStack A={A} emp={emp}/>
 
     <div className={`grid gap-3 mb-6 ${mob?"grid-cols-2":"grid-cols-4"}`}>
       {kpis.map(k=><Card key={k.label} pad={mob?18:22} style={{borderRadius:16}}>
@@ -343,7 +343,7 @@ export function HrDashboard(){
 /* ─── Profile: edit own details + visibility toggles for public NorthHire ─── */
 /* Read-only view for an employee's own Documents card - uploading is an HR/admin/owner action
    from the People page's edit modal, not a self-service one. */
-function _MyDocuments({empId}){
+function MyDocuments({empId}){
   const A=use(); const {t}=useTranslation();
   const [docs,setDocs]=useState(null);
   useEffect(()=>{A.loadEmployeeDocuments(empId).then(setDocs);},[empId]);
@@ -462,7 +462,7 @@ export function HrProfile(){
       </div>
 
       <div className="flex flex-col gap-3.5">
-        <_TrainingBadgeOfferCard prompts={A.trainingBadgePrompts||[]} onPublish={A.publishTrainingBadge} onDismiss={A.dismissTrainingBadgePrompt}/>
+        <TrainingBadgeOfferCard prompts={A.trainingBadgePrompts||[]} onPublish={A.publishTrainingBadge} onDismiss={A.dismissTrainingBadgePrompt}/>
         <Card pad={20} style={{borderRadius:16,background:`linear-gradient(135deg,${C.tint} 0%,#F0F7FF 100%)`,border:`1px solid ${C.line2}`}}>
           <div className="text-xs font-bold text-brand tracking-wide uppercase mb-2.5">{t("hr.profile.publicProfilePreview")}</div>
           <div className="flex gap-3 items-center mb-3.5">
@@ -489,7 +489,7 @@ export function HrProfile(){
 
         <Card pad={20} style={{borderRadius:16}}>
           <Lbl>{t("hr.profile.yourDocumentsLabel")}</Lbl>
-          <_MyDocuments empId={emp.id}/>
+          <MyDocuments empId={emp.id}/>
         </Card>
 
         <Card pad={20} style={{borderRadius:16}}>
@@ -506,9 +506,9 @@ export function HrProfile(){
                 </div>)}
               </div>}
         </Card>
-        {sync?.linked&&<_ProfileSyncCard sync={sync} onConsent={setSyncConsent}/>}
-        <_PunchPinCard A={A} empId={emp.id}/>
-        {emp.manager&&<_OneOnOneLog A={A} managerId={emp.manager} reportId={emp.id} me={emp}/>}
+        {sync?.linked&&<ProfileSyncCard sync={sync} onConsent={setSyncConsent}/>}
+        <PunchPinCard A={A} empId={emp.id}/>
+        {emp.manager&&<OneOnOneLog A={A} managerId={emp.manager} reportId={emp.id} me={emp}/>}
       </div>
     </div>
     {mob&&dirty&&<div style={{height:76}}/>}
@@ -586,18 +586,18 @@ export function HrProfilePage(){
       </button>)}
     </div>
 
-    {tab==="about"&&<_HrProfileAboutTab A={A} emp={emp} data={data}/>}
-    {tab==="attendance"&&<_HrProfileAttendanceTab A={A} empId={emp.id} focusId={focusRecordId} onFocusConsumed={()=>setFocusRecordId(null)}/>}
-    {tab==="leave"&&<_HrProfileLeaveTab A={A} empId={emp.id} focusId={focusRecordId} onFocusConsumed={()=>setFocusRecordId(null)}/>}
-    {tab==="tasks"&&<_HrProfileTasksTab A={A} empId={emp.id}/>}
-    {tab==="training"&&<_HrProfileTrainingTab A={A} empId={emp.id}/>}
-    {tab==="documents"&&<Card pad={22} style={{borderRadius:16}}><_MyDocuments empId={emp.id}/></Card>}
-    {tab==="salary"&&data.canViewSalary&&<_HrProfileSalaryTab A={A} emp={emp} viewer={viewer}/>}
-    {tab==="communication"&&<_HrProfileCommunicationTab A={A} emp={emp} isSelf={isSelf}/>}
+    {tab==="about"&&<HrProfileAboutTab A={A} emp={emp} data={data}/>}
+    {tab==="attendance"&&<HrProfileAttendanceTab A={A} empId={emp.id} focusId={focusRecordId} onFocusConsumed={()=>setFocusRecordId(null)}/>}
+    {tab==="leave"&&<HrProfileLeaveTab A={A} empId={emp.id} focusId={focusRecordId} onFocusConsumed={()=>setFocusRecordId(null)}/>}
+    {tab==="tasks"&&<HrProfileTasksTab A={A} empId={emp.id}/>}
+    {tab==="training"&&<HrProfileTrainingTab A={A} empId={emp.id}/>}
+    {tab==="documents"&&<Card pad={22} style={{borderRadius:16}}><MyDocuments empId={emp.id}/></Card>}
+    {tab==="salary"&&data.canViewSalary&&<HrProfileSalaryTab A={A} emp={emp} viewer={viewer}/>}
+    {tab==="communication"&&<HrProfileCommunicationTab A={A} emp={emp} isSelf={isSelf}/>}
   </div>;
 }
 
-function _HrProfileAboutTab({A,emp,data}){
+function HrProfileAboutTab({A,emp,data}){
   const {t}=useTranslation();
   return <div className="grid gap-4" style={{gridTemplateColumns:"1.3fr 1fr"}}>
     <Card pad={22} style={{borderRadius:16}}>
@@ -628,7 +628,7 @@ function _HrProfileAboutTab({A,emp,data}){
    focusAppId: poll briefly for the row to mount (pagination/tab switch may still be settling),
    scroll it into view, hold a brief highlight, then tell the caller to clear the id so a later
    visit to this profile doesn't re-trigger it. */
-function _useRowFocusScroll(focusId,onConsumed){
+function useRowFocusScroll(focusId,onConsumed){
   const rowRefs=useRef({});
   const [highlightId,setHighlightId]=useState(null);
   useEffect(()=>{
@@ -650,11 +650,11 @@ function _useRowFocusScroll(focusId,onConsumed){
   return {rowRefs,highlightId};
 }
 
-function _HrProfileAttendanceTab({A,empId,focusId,onFocusConsumed}){
+function HrProfileAttendanceTab({A,empId,focusId,onFocusConsumed}){
   const {t,locale}=useTranslation();
   const rows=A.hrAttendance.filter(a=>a.employee===empId).sort((a,b)=>new Date(b.date)-new Date(a.date));
   const pg=usePagination(rows,15);
-  const {rowRefs,highlightId}=_useRowFocusScroll(focusId,onFocusConsumed);
+  const {rowRefs,highlightId}=useRowFocusScroll(focusId,onFocusConsumed);
   if(rows.length===0)return <Card pad={22} style={{borderRadius:16}}><Empty icon="clock" title={t("hr.employeeProfile.noAttendance")}/></Card>;
   return <Card pad={0} style={{borderRadius:16,overflow:"hidden"}}>
     <div className="overflow-x-auto"><table className="w-full border-collapse">
@@ -671,10 +671,10 @@ function _HrProfileAttendanceTab({A,empId,focusId,onFocusConsumed}){
   </Card>;
 }
 
-function _HrProfileLeaveTab({A,empId,focusId,onFocusConsumed}){
+function HrProfileLeaveTab({A,empId,focusId,onFocusConsumed}){
   const {t,locale}=useTranslation();
   const rows=A.hrLeave.filter(l=>l.employee===empId).sort((a,b)=>b.requestedAt-a.requestedAt);
-  const {rowRefs,highlightId}=_useRowFocusScroll(focusId,onFocusConsumed);
+  const {rowRefs,highlightId}=useRowFocusScroll(focusId,onFocusConsumed);
   if(rows.length===0)return <Card pad={22} style={{borderRadius:16}}><Empty icon="calendar" title={t("hr.employeeProfile.noLeave")}/></Card>;
   return <Card pad={22} style={{borderRadius:16}}>
     <div className="flex flex-col gap-2">
@@ -687,7 +687,7 @@ function _HrProfileLeaveTab({A,empId,focusId,onFocusConsumed}){
   </Card>;
 }
 
-function _HrProfileTasksTab({A,empId}){
+function HrProfileTasksTab({A,empId}){
   const {t}=useTranslation();
   const rows=A.hrTasks.filter(x=>x.assignee===empId);
   if(rows.length===0)return <Card pad={22} style={{borderRadius:16}}><Empty icon="check" title={t("hr.dashboard.noOpenTasks")}/></Card>;
@@ -703,7 +703,7 @@ function _HrProfileTasksTab({A,empId}){
   </Card>;
 }
 
-function _HrProfileTrainingTab({A,empId}){
+function HrProfileTrainingTab({A,empId}){
   const {t,locale}=useTranslation();
   const now=Date.now();
   const rows=(A.hrEvents||[]).filter(ev=>ev.type==="training"&&(ev.invitees==="all"||(ev.invitees||"").split(",").includes(empId)));
@@ -725,7 +725,7 @@ function _HrProfileTrainingTab({A,empId}){
 /* Server already strips salary/hourlyRate/benefits from the payload when the viewer isn't
    allowed to see them (canViewSalary=false) - this tab only ever renders when the caller already
    checked data.canViewSalary, so there's nothing left to gate here client-side. */
-function _HrProfileSalaryTab({A,emp,viewer}){
+function HrProfileSalaryTab({A,emp,viewer}){
   const {t,locale}=useTranslation();
   // Mirrors the server's isMoneyRole (owner/admin/hr/finance) - the actual guard lives server-side
   // on every write route below, this just decides whether to render the edit controls at all.
@@ -739,14 +739,14 @@ function _HrProfileSalaryTab({A,emp,viewer}){
           <div className="text-sm font-semibold text-text mt-1">{emp.benefitsPlan} · {emp.benefitsTier||"Employee"}</div></div>}
       </div>
     </Card>
-    <_BenefitsEnrollmentCard A={A} emp={emp} canManage={canManageBenefits} locale={locale} t={t}/>
+    <BenefitsEnrollmentCard A={A} emp={emp} canManage={canManageBenefits} locale={locale} t={t}/>
   </div>;
 }
 
 /* Priority-4 #5 - full per-tier benefits premium logic, employee-facing half. Reads/writes
    /hr/benefits/* directly via the passthrough hrApi* helpers (same pattern as the 1:1 log widget)
    rather than growing useHrStore.js for a module scoped to one profile tab. */
-function _BenefitsEnrollmentCard({A,emp,canManage,locale,t}){
+function BenefitsEnrollmentCard({A,emp,canManage,locale,t}){
   const [current,setCurrent]=useState(undefined); // undefined = loading, null = none
   const [history,setHistory]=useState([]);
   const [plans,setPlans]=useState([]);
@@ -895,7 +895,7 @@ function _BenefitsEnrollmentCard({A,emp,canManage,locale,t}){
   </Card>;
 }
 
-function _HrProfileCommunicationTab({A,emp,isSelf}){
+function HrProfileCommunicationTab({A,emp,isSelf}){
   const {t}=useTranslation();
   const viewer=A.hrCurrentEmp();
   const existingChat=(A.hrChats||[]).find(c=>c.kind==="dm"&&c.members!=="all"&&c.members.split(",").includes(emp.id)&&c.members.split(",").includes(viewer.id));
@@ -913,7 +913,7 @@ function _HrProfileCommunicationTab({A,emp,isSelf}){
 /* H1 - Recruit -> Hire -> Employee handoff: first-visit (and ongoing) opt-in offer to keep this
    HR profile's skills linked with the employee's own NorthHire seeker profile. Opt-in only, and
    one-click to unlink - never assumed just because the two accounts share an email. */
-function _ProfileSyncCard({sync,onConsent}){
+function ProfileSyncCard({sync,onConsent}){
   const {t}=useTranslation();
   if(sync.consent)return <Card pad={20} style={{borderRadius:16,marginTop:16}}>
     <div className="flex gap-3 items-start">
@@ -939,7 +939,7 @@ function _ProfileSyncCard({sync,onConsent}){
    shown for the just-completed training(s) in this session; consenting awards an HR badge
    "Certified in X" (which republishes to the linked seeker profile server-side, if that profile
    is already sync-consented). Declining just dismisses - never auto-awarded. */
-function _TrainingBadgeOfferCard({prompts,onPublish,onDismiss}){
+function TrainingBadgeOfferCard({prompts,onPublish,onDismiss}){
   const {t}=useTranslation();
   if(!prompts.length)return null;
   return <Card pad={20} style={{borderRadius:16,marginBottom:16,background:"#FFF5EB",border:`1px solid ${C.warnLn}`}}>
@@ -960,7 +960,7 @@ function _TrainingBadgeOfferCard({prompts,onPublish,onDismiss}){
 /* Manager 1:1 log for a manager-report pair. The employee viewing their own profile sees
    the log with their manager; a manager viewing People and opening a direct report sees the
    log with that report. Notes are private to the two on the pair (plus HR/owner). */
-function _OneOnOneLog({A,managerId,reportId,me}){
+function OneOnOneLog({A,managerId,reportId,me}){
   const {t,locale}=useTranslation();
   const [entries,setEntries]=useState(null);
   const [showNew,setShowNew]=useState(false);
@@ -1011,7 +1011,7 @@ function _OneOnOneLog({A,managerId,reportId,me}){
 
 /* Your own punch PIN for the shared time clock. Deliberately separate from your password: you key
    this in on a tablet in front of colleagues, so it opens nothing but the time clock. */
-function _PunchPinCard({A,empId}){
+function PunchPinCard({A,empId}){
   const {t}=useTranslation();
   const [pin,setPin]=useState(""); const [confirm,setConfirm]=useState("");
   const [msg,setMsg]=useState(null); const [busy,setBusy]=useState(false);
@@ -1109,7 +1109,7 @@ export function HrAttendance(){
     <Card pad={mob?16:20} style={{borderRadius:14}}>
       <div className="flex gap-2.5 items-center mb-3.5 flex-wrap">
         <Lbl style={{margin:0,flex:1}}>{view==="mine"?t("hr.attendance.myHistoryLabel"):t("hr.attendance.teamLogLabel")}</Lbl>
-        {canSeeAll&&<_PillTabs items={[["mine",t("hr.attendance.mineTab")],["team",t("hr.attendance.teamTab")]]} value={view} onChange={setView}/>}
+        {canSeeAll&&<PillTabs items={[["mine",t("hr.attendance.mineTab")],["team",t("hr.attendance.teamTab")]]} value={view} onChange={setView}/>}
         {canSeeAll&&view==="team"&&<Sel value={empFilter} onChange={e=>setEmpFilter(e.target.value)} style={{maxWidth:200}}>
           <option value="all">{t("hr.attendance.allEmployeesOption")}</option>
           {A.hrEmpsAtCompany(company.id).map(e=><option key={e.id} value={e.id}>{e.name}</option>)}</Sel>}
@@ -1240,7 +1240,7 @@ export function HrLeave(){
 
     <Card pad={mob?16:20} style={{borderRadius:14}}>
       <div className="flex justify-between items-center mb-3.5 flex-wrap gap-2.5">
-        <_PillTabs items={[["mine",t("hr.leave.myRequestsTab")],...(canApprove?[["pending",t("hr.leave.pendingTabPrefix")+pending.length+t("hr.leave.pendingTabSuffix")],["all",t("hr.leave.allTab")]]:[])]} value={tab} onChange={setTab}/>
+        <PillTabs items={[["mine",t("hr.leave.myRequestsTab")],...(canApprove?[["pending",t("hr.leave.pendingTabPrefix")+pending.length+t("hr.leave.pendingTabSuffix")],["all",t("hr.leave.allTab")]]:[])]} value={tab} onChange={setTab}/>
         {/* H6 mobile pass: "Request leave" is the one action every employee actually comes to this
            page to do - on a phone it moves to a fixed thumb-zone bar instead of a small top-right
            button that's a stretch to reach one-handed. Desktop is unaffected. */}
@@ -1301,7 +1301,7 @@ export function HrLeave(){
 
 /* ─── Tasks: kanban board, real drag-and-drop via @dnd-kit on top of the existing ←/→ buttons
    (kept as the accessible, no-pointer-required path). ─── */
-function _TaskCard({t: task,col,cols,emp,A,onComments,mob}){
+function TaskCard({t: task,col,cols,emp,A,onComments,mob}){
   const {t}=useTranslation();
   /* H6 mobile pass: these are the only way to advance a task without dragging, which is the
      realistic mobile path (a phone tap-and-hold drag across a whole stacked kanban column is
@@ -1335,7 +1335,7 @@ function _TaskCard({t: task,col,cols,emp,A,onComments,mob}){
 }
 
 /* Discussion on a task, kept with the work rather than in a chat thread nobody can find later. */
-function _TaskCommentsModal({task,emp,A,onClose}){
+function TaskCommentsModal({task,emp,A,onClose}){
   const {t,locale}=useTranslation();
   const [comments,setComments]=useState([]);
   const [body,setBody]=useState(""); const [busy,setBusy]=useState(false); const [err,setErr]=useState("");
@@ -1375,7 +1375,7 @@ function _TaskCommentsModal({task,emp,A,onClose}){
     </div>
   </Modal>;
 }
-function _TaskColumn({col,tasks,cols,emp,A,onComments,mob}){
+function TaskColumn({col,tasks,cols,emp,A,onComments,mob}){
   const {t}=useTranslation();
   const {setNodeRef,isOver}=useDroppable({id:col.k});
   return <div ref={setNodeRef} className="bg-bg rounded-2xl p-3 transition-colors duration-150" style={{minHeight:200,outline:isOver?`2px solid ${C.brand}`:"none"}}>
@@ -1387,12 +1387,12 @@ function _TaskColumn({col,tasks,cols,emp,A,onComments,mob}){
       <Tag tone="neutral" sm>{tasks.length}</Tag>
     </div>
     <div className="flex flex-col gap-2">
-      {[...tasks].sort((a,b)=>a.due.localeCompare(b.due)).map(task=><_TaskCard key={task.id} t={task} col={col} cols={cols} emp={emp} A={A} onComments={onComments} mob={mob}/>)}
+      {[...tasks].sort((a,b)=>a.due.localeCompare(b.due)).map(task=><TaskCard key={task.id} t={task} col={col} cols={cols} emp={emp} A={A} onComments={onComments} mob={mob}/>)}
       {tasks.length===0&&<div className="p-5 text-center text-xs text-text-3">{t("hr.tasks.noTasksHere")}</div>}
     </div>
   </div>;
 }
-function _TaskBoard({cols,source,emp,A,mob,onComments}){
+function TaskBoard({cols,source,emp,A,mob,onComments}){
   const sensors=useSensors(useSensor(PointerSensor,{activationConstraint:{distance:8}}));
   const onDragEnd=({active,over})=>{
     if(!over)return;
@@ -1401,7 +1401,7 @@ function _TaskBoard({cols,source,emp,A,mob,onComments}){
   };
   return <DndContext sensors={sensors} onDragEnd={onDragEnd}>
     <div className={`grid gap-3 ${mob?"grid-cols-1":"grid-cols-3"}`}>
-      {cols.map(col=><_TaskColumn key={col.k} col={col} tasks={source.filter(t=>t.status===col.k)} cols={cols} emp={emp} A={A} onComments={onComments} mob={mob}/>)}
+      {cols.map(col=><TaskColumn key={col.k} col={col} tasks={source.filter(t=>t.status===col.k)} cols={cols} emp={emp} A={A} onComments={onComments} mob={mob}/>)}
     </div>
   </DndContext>;
 }
@@ -1426,7 +1426,7 @@ export function HrTasks(){
   return <div>
     <div className="flex justify-between items-center mb-4 flex-wrap gap-2.5">
       <div className="flex items-center gap-2.5 flex-wrap">
-        <_PillTabs items={[["mine",t("hr.tasks.myTasksTab")],...(canAssignOthers?[["assigned",t("hr.tasks.assignedByMeTab")],["all",t("hr.tasks.allCompanyTab")]]:[])]} value={scope} onChange={v=>{setScope(v);setAssigneeFilter("");}}/>
+        <PillTabs items={[["mine",t("hr.tasks.myTasksTab")],...(canAssignOthers?[["assigned",t("hr.tasks.assignedByMeTab")],["all",t("hr.tasks.allCompanyTab")]]:[])]} value={scope} onChange={v=>{setScope(v);setAssigneeFilter("");}}/>
         {scope==="all"&&<Sel value={assigneeFilter} onChange={e=>setAssigneeFilter(e.target.value)} style={{width:170}}>
           <option value="">{t("hr.tasks.allAssigneesOption")}</option>
           {A.hrEmpsAtCompany(company.id).filter(e=>e.status==="active").map(e=><option key={e.id} value={e.id}>{e.name}</option>)}
@@ -1438,8 +1438,8 @@ export function HrTasks(){
       {!mob&&<Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowAdd(true)}>{t("hr.tasks.newTaskBtn")}</Btn>}
     </div>
 
-    <_TaskBoard cols={cols} source={source} emp={emp} A={A} mob={mob} onComments={setTaskComments}/>
-    {taskComments&&<_TaskCommentsModal task={taskComments} emp={emp} A={A} onClose={()=>setTaskComments(null)}/>}
+    <TaskBoard cols={cols} source={source} emp={emp} A={A} mob={mob} onComments={setTaskComments}/>
+    {taskComments&&<TaskCommentsModal task={taskComments} emp={emp} A={A} onClose={()=>setTaskComments(null)}/>}
 
     {mob&&<>
       <div style={{height:76}}/>
@@ -1492,7 +1492,7 @@ export function HrCalendar(){
 
   return <div>
     <div className="flex justify-between items-center mb-4 flex-wrap gap-2.5">
-      <_PillTabs items={[["upcoming",t("hr.calendar.upcomingTab")+" ("+upcoming.length+")"],["past",t("hr.calendar.pastTab")]]} value={tab} onChange={setTab}/>
+      <PillTabs items={[["upcoming",t("hr.calendar.upcomingTab")+" ("+upcoming.length+")"],["past",t("hr.calendar.pastTab")]]} value={tab} onChange={setTab}/>
       {canAdd&&<Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowAdd(true)}>{t("hr.calendar.newEventBtn")}</Btn>}
     </div>
 
@@ -1657,12 +1657,12 @@ export function HrChat(){
     </Card>}
 
     {showNew&&<Modal onClose={()=>setShowNew(false)} title={t("hr.chat.startNewConversation")}>
-      <_HrNewChat allowDm={chatSettings.allowDirectMessages} allowGroup={chatSettings.allowGroupCreation} t={t}
+      <HrNewChat allowDm={chatSettings.allowDirectMessages} allowGroup={chatSettings.allowGroupCreation} t={t}
         onClose={()=>setShowNew(false)} onCreate={id=>{setSelected(id); setShowNew(false);}}/>
     </Modal>}
   </div>;
 }
-function _HrNewChat({onClose,onCreate,allowDm=true,allowGroup=true,t}){
+function HrNewChat({onClose,onCreate,allowDm=true,allowGroup=true,t}){
   const A=use(); const emp=A.hrCurrentEmp();
   const [kind,setKind]=useState(allowDm?"dm":"group"); /* dm | group */
   const [name,setName]=useState("");
@@ -1749,7 +1749,7 @@ export function HrInvoices(){
         </Card>)}
     </div>
     <div className="flex justify-between items-center mb-3.5 flex-wrap gap-2.5">
-      <_PillTabs items={[["all",t("hr.invoices.allTab")],["pending",t("hr.invoices.pending")],["paid",t("hr.invoices.paid")],["overdue",t("hr.invoices.overdue")]]} value={tab} onChange={setTab}/>
+      <PillTabs items={[["all",t("hr.invoices.allTab")],["pending",t("hr.invoices.pending")],["paid",t("hr.invoices.paid")],["overdue",t("hr.invoices.overdue")]]} value={tab} onChange={setTab}/>
       {canManage&&<Btn kind="primary" size="sm" icon="plus" onClick={()=>setShowAdd(true)}>{t("hr.invoices.newInvoiceBtn")}</Btn>}
     </div>
     <Card pad={0} style={{borderRadius:14,overflow:"hidden"}}>
@@ -1917,7 +1917,7 @@ function InvoiceDetailModal({invoice:inv,company,onClose,canManage,onMarkPaid,on
    or can produce an ROE. Both printouts state plainly that nothing has been filed with CRA or
    Service Canada - generating the slip and filing it are different things, and an employer
    assuming otherwise would be a genuinely costly misunderstanding. */
-function _YearEndSlips({A,mob,isEmployee,isPayrollMgr}){
+function YearEndSlips({A,mob,isEmployee,isPayrollMgr}){
   const {t}=useTranslation();
   const [years,setYears]=useState([]);
   const [year,setYear]=useState(null);
@@ -2023,7 +2023,7 @@ function _YearEndSlips({A,mob,isEmployee,isPayrollMgr}){
    they actually pull the PDF, Disputed (final, until HR/Finance follows up outside this flow) if
    they flag it. The employee only ever marks their OWN line - see the server route comments. */
 const STUB_STATUS_TONE={draft:"neutral",sent:"brand",viewed:"ok",downloaded:"ok",disputed:"danger"};
-function _MyPayslips({A,mob,emp,company}){
+function MyPayslips({A,mob,emp,company}){
   const {t}=useTranslation();
   const slips=A.myPayslips();
   const [disputing,setDisputing]=useState(null); /* run.id while the dispute-reason box is open */
@@ -2142,7 +2142,7 @@ export function HrPayroll(){
       </Card>
     </>}
 
-    <_YearEndSlips A={A} mob={mob} isEmployee={isEmployee} isPayrollMgr={isPayrollMgr}/>
+    <YearEndSlips A={A} mob={mob} isEmployee={isEmployee} isPayrollMgr={isPayrollMgr}/>
 
     <Card pad={mob?16:20} style={{borderRadius:14}}>
       <div className="flex justify-between items-center flex-wrap gap-3 mb-3">
@@ -2178,7 +2178,7 @@ export function HrPayroll(){
       </table></div>
     </Card>
 
-    {isEmployee&&<_MyPayslips A={A} mob={mob} emp={emp} company={company}/>}
+    {isEmployee&&<MyPayslips A={A} mob={mob} emp={emp} company={company}/>}
 
     {showNew&&<Modal onClose={()=>setShowNew(false)} title={t("hr.payroll.createPayrollRunBtn")}>
       <div className="flex flex-col gap-3.5">
@@ -2288,7 +2288,7 @@ function PayrollDetailModal({run,onClose,canApprove,onApprove,onExecute,onRevers
    here calls POST /hr/trainings/:id/assign (assignTraining in useHrStore.js), which creates one
    task per employee (shows up on their task list, due-dated on the calendar the same as any other
    task) and sends one email each - see that route's comment for why. */
-function _AssignTrainingModal({training,onClose}){
+function AssignTrainingModal({training,onClose}){
   const A=use(); const mob=useMedia("(max-width: 900px)"); const {t}=useTranslation();
   const company=A.hrCurrentCompany();
   const [selected,setSelected]=useState([]);
@@ -2349,7 +2349,7 @@ export function HrTrainings(){
           onClick={e=>{e.stopPropagation();setAssigning(training);}}>{t("hr.trainings.assignBtn")}</Btn>}
       </div>)}
     </div>
-    {assigning&&<_AssignTrainingModal training={assigning} onClose={()=>setAssigning(null)}/>}
+    {assigning&&<AssignTrainingModal training={assigning} onClose={()=>setAssigning(null)}/>}
   </div>;
 }
 
@@ -2597,7 +2597,7 @@ export function HrReports(){
    code is shown exactly once, at creation — the list endpoint never returns it, so a screen left
    open later can't hand someone a working terminal credential. Revoking a lost tablet is
    deleting its row, which takes effect on its very next punch. */
-function _TimeClocks({A,mob}){
+function TimeClocks({A,mob}){
   const {t}=useTranslation();
   const [devices,setDevices]=useState([]);
   const [name,setName]=useState(""); const [site,setSite]=useState("");
@@ -2664,7 +2664,7 @@ function _TimeClocks({A,mob}){
 }
 
 /* ─── Priority-4 #5: Benefits plans (employer-wide) editor ───
-   Self-contained, like _TimeClocks above - its own fetch/CRUD against /hr/benefits/plans rather
+   Self-contained, like TimeClocks above - its own fetch/CRUD against /hr/benefits/plans rather
    than folded into HrSettings' `d`/save flow, since a plan add/edit/deactivate takes effect the
    moment it's confirmed (no "discard" concept - matches how the server treats it). */
 function _slugifyTierKey(label,existing){
@@ -2672,7 +2672,7 @@ function _slugifyTierKey(label,existing){
   let key=base,i=2; while(existing.includes(key)){key=`${base}_${i++}`;}
   return key;
 }
-function _BenefitsPlanEditor({plan,onSave,onCancel}){
+function BenefitsPlanEditor({plan,onSave,onCancel}){
   const {t}=useTranslation();
   const [draft,setDraft]=useState({name:plan.name,tiers:plan.config.tiers.map(x=>({...x})),rrspMatch:plan.config.rrspMatch.map(x=>({...x})),openEnrollment:{...plan.config.openEnrollment}});
   const setTier=(i,patch)=>setDraft(p=>({...p,tiers:p.tiers.map((tr,j)=>j===i?{...tr,...patch}:tr)}));
@@ -2729,7 +2729,7 @@ function _BenefitsPlanEditor({plan,onSave,onCancel}){
     </div>
   </div>;
 }
-function _BenefitsPlansEditor({A,mob}){
+function BenefitsPlansEditor({A,mob}){
   const {t,locale}=useTranslation();
   const [plans,setPlans]=useState([]);
   const [editing,setEditing]=useState(null); // plan id being edited
@@ -2781,7 +2781,7 @@ function _BenefitsPlansEditor({A,mob}){
                 <Btn kind="ghost" size="xs" onClick={()=>toggleActive(plan)}>{plan.active?t("hr.settings.deactivatePlanBtn"):t("hr.settings.reactivatePlanBtn")}</Btn>
               </div>
             </div>
-            {editing===plan.id&&<_BenefitsPlanEditor plan={plan} onCancel={()=>setEditing(null)} onSave={patch=>save(plan.id,patch)}/>}
+            {editing===plan.id&&<BenefitsPlanEditor plan={plan} onCancel={()=>setEditing(null)} onSave={patch=>save(plan.id,patch)}/>}
           </div>)}
         </div>}
 
@@ -2917,7 +2917,7 @@ export function HrSettings(){
       </div>
     </Card>
 
-    <_TimeClocks A={A} mob={mob}/>
+    <TimeClocks A={A} mob={mob}/>
 
     <Card pad={mob?20:26} style={{borderRadius:16,marginBottom:16}}>
       <Lbl>{t("hr.settings.leavePolicy")}</Lbl>
@@ -3017,7 +3017,7 @@ export function HrSettings(){
       </>}
     </Card>
 
-    <_BenefitsPlansEditor A={A} mob={mob}/>
+    <BenefitsPlansEditor A={A} mob={mob}/>
 
     <IntegrationsPanel scope="hr"/>
 
@@ -3227,7 +3227,7 @@ function _fmtDateOnly(d,locale){
   return new Intl.DateTimeFormat(locale==="fr"||locale==="fr-CA"?"fr-CA":"en-CA",{year:"numeric",month:"long",day:"numeric"}).format(new Date(d+"T00:00"));
 }
 
-function _RatingStars({value,onChange,readOnly}){
+function RatingStars({value,onChange,readOnly}){
   return <div className="flex gap-1">
     {[1,2,3,4,5].map(n=><button key={n} type="button" disabled={readOnly}
       onClick={()=>onChange?.(n)}
@@ -3237,7 +3237,7 @@ function _RatingStars({value,onChange,readOnly}){
   </div>;
 }
 
-function _PerfReviewRow({A,review,me,priv,onChange,onDelete}){
+function PerfReviewRow({A,review,me,priv,onChange,onDelete}){
   const {t,locale}=useTranslation();
   const [rating,setRating]=useState(review.rating||0);
   const [notes,setNotes]=useState(review.notes?.body||"");
@@ -3273,7 +3273,7 @@ function _PerfReviewRow({A,review,me,priv,onChange,onDelete}){
     {(isMine||submitted)&&<div className="mt-2">
       <Lbl style={{marginBottom:4}}>{t("hr.perfReviews.ratingLabel")}</Lbl>
       <div className="flex items-center gap-2.5 mb-2">
-        <_RatingStars value={rating} onChange={isMine&&!submitted?setRating:undefined} readOnly={!isMine||submitted}/>
+        <RatingStars value={rating} onChange={isMine&&!submitted?setRating:undefined} readOnly={!isMine||submitted}/>
         <span className="text-xs text-text-3">{t("hr.perfReviews.ratingScaleHint")}</span>
       </div>
       {isMine&&!submitted
@@ -3414,7 +3414,7 @@ export function HrPerfReviews(){
     {myReviews.length>0&&<div className="mb-5">
       <div className="text-xs font-semibold text-text-3 uppercase tracking-wide mb-2">{t("hr.perfReviews.myReviewsTitle")}</div>
       <div className="flex flex-col gap-2.5">
-        {myReviews.map(r=><_PerfReviewRow key={r.id} A={A} review={r} me={emp} priv={priv} onChange={updateReviewInList} onDelete={id=>setConfirmDelete(id)}/>)}
+        {myReviews.map(r=><PerfReviewRow key={r.id} A={A} review={r} me={emp} priv={priv} onChange={updateReviewInList} onDelete={id=>setConfirmDelete(id)}/>)}
       </div>
     </div>}
 
@@ -3429,7 +3429,7 @@ export function HrPerfReviews(){
       :reviews.length===0?<Empty icon="trend" title={t("hr.perfReviews.noReviewsInCycle")}/>
       :<div className="flex flex-col gap-2.5">
         {reviews.filter(r=>!myReviews.some(m=>m.id===r.id)).map(r=>
-          <_PerfReviewRow key={r.id} A={A} review={r} me={emp} priv={priv} onChange={updateReviewInList} onDelete={id=>setConfirmDelete(id)}/>)}
+          <PerfReviewRow key={r.id} A={A} review={r} me={emp} priv={priv} onChange={updateReviewInList} onDelete={id=>setConfirmDelete(id)}/>)}
       </div>}
 
     {peerFor&&<Modal onClose={()=>setPeerFor(null)} title={t("hr.perfReviews.peerModalTitle")}>

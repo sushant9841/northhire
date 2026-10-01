@@ -61,7 +61,7 @@ function ApplyShell({step,job,children,onNext,onBack,nextLabel,nextDisabled}){
   </div>;
 }
 
-function _CvPicker(){
+function CvPicker(){
   const A=use(); const {t}=useTranslation();
   const [open,setOpen]=useState(false);
   const myCvs=(A.cvs||[]).filter(c=>c.user===A.user?.id);
@@ -110,8 +110,8 @@ function _CvPicker(){
 }
 
 export function Apply1(){
-  const A=use(); const job=A.job(A.applyDraft.job); if(!job) return null;
-  const e=A.emp(job.e); const u=A.user; const {t}=useTranslation();
+  const A=use(); const {t}=useTranslation(); const job=A.job(A.applyDraft.job); if(!job) return null;
+  const e=A.emp(job.e); const u=A.user;
   const missing=job.skills.filter(s=>!(u.skills||[]).some(x=>x.toLowerCase()===s.toLowerCase()));
   return <ApplyShell step={1} job={job} onBack={()=>A.go("job")} onNext={()=>A.go("apply2")} nextLabel={t("seeker.apply.continueBtn")}>
     <Card pad={22}>
@@ -132,7 +132,7 @@ export function Apply1(){
         <Btn kind="outline" size="sm" icon="edit" onClick={()=>A.go("profile")}>{t("seeker.apply.editBtn")}</Btn></div>
       <div className="mb-5">
         <Lbl>{t("seeker.apply.attachedCvLabel")}</Lbl>
-        <_CvPicker/>
+        <CvPicker/>
       </div>
       {(job.mustHave||[]).length>0&&(()=>{
         const mustMissing=job.mustHave.filter(s=>!(u.skills||[]).some(x=>x.toLowerCase()===s.toLowerCase()));
@@ -163,8 +163,8 @@ export function Apply1(){
     </Card></ApplyShell>;
 }
 export function Apply2(){
-  const A=use(); const job=A.job(A.applyDraft.job); if(!job) return null;
-  const e=A.emp(job.e); const {t}=useTranslation();
+  const A=use(); const {t}=useTranslation(); const job=A.job(A.applyDraft.job); if(!job) return null;
+  const e=A.emp(job.e);
   const d=A.applyDraft; const set=(k,v)=>A.setApplyDraft({...d,[k]:v});
   const setAnswer=(qid,v)=>set("screeningAnswers",{...(d.screeningAnswers||{}),[qid]:v});
   const toggleChecklistAnswer=(qid,opt)=>{const cur=d.screeningAnswers?.[qid]||[];
@@ -215,8 +215,8 @@ export function Apply2(){
       </div></Card></ApplyShell>;
 }
 export function Apply3(){
-  const A=use(); const job=A.job(A.applyDraft.job); if(!job) return null;
-  const e=A.emp(job.e); const d=A.applyDraft; const u=A.user; const {t}=useTranslation();
+  const A=use(); const {t}=useTranslation(); const job=A.job(A.applyDraft.job); if(!job) return null;
+  const e=A.emp(job.e); const d=A.applyDraft; const u=A.user;
   const selectedCv=(A.cvs||[]).find(c=>c.id===d.cv)||A.defaultCv;
   const rows=[[t("seeker.apply.rowPosition"),job.t],[t("seeker.apply.rowEmployer"),e.name],[t("seeker.apply.rowLocation"),`${job.city}, ${job.prov} • ${job.mode}`],
     [t("seeker.apply.rowPostedPay"),`${pay(job)} ${payUnit(job)}`],[t("seeker.apply.rowApplicant"),u.name],[t("seeker.apply.rowContact"),`${u.email} • ${u.phone}`],

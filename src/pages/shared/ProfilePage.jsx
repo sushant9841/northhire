@@ -226,7 +226,7 @@ export function ProfilePage(){
         {dirty&&<Btn kind="ghost" onClick={()=>setD({...u})}>{t("profile.discardChanges")}</Btn>}
         <Btn kind="primary" icon="check" disabled={!dirty} onClick={()=>A.saveProfile(d)}>{dirty?t("profile.saveChanges"):t("profile.saved")}</Btn></div>
     </Card>
-    <_DemographicsSection A={A} t={t} mob={mob}/>
+    <DemographicsSection A={A} t={t} mob={mob}/>
       </div>
     </section>
   </div>;
@@ -246,7 +246,7 @@ const DEMO_FIELD_DEFS=[
   {key:"disability",labelKey:"demoDisability",options:["yes","no","prefer-not-to-say"]},
   {key:"lgbtq",labelKey:"demoLgbtq",options:["yes","no","prefer-not-to-say"]},
 ];
-function _DemographicsSection({A,t,mob}){
+function DemographicsSection({A,t,mob}){
   const dismissKey=`northhire.demographics.dismissed.${A.user?.id||""}`;
   const [dismissed,setDismissed]=useState(()=>{try{return localStorage.getItem(dismissKey)==="1";}catch{return false;}});
   const dismiss=v=>{setDismissed(v);try{localStorage.setItem(dismissKey,v?"1":"0");}catch{/* per-viewer convenience only - fine if storage is unavailable */}};

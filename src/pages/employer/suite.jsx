@@ -263,7 +263,7 @@ export function EmpJobs(){
                 {j.status!=="review"&&j.status!=="closed"&&<Btn kind="outline" size="sm" onClick={()=>A.toggleJobStatus(j.id)}>{j.status==="live"?t("employer.jobs.pause"):t("employer.jobs.reopen")}</Btn>}
                 <Btn kind="primary" size="sm" onClick={()=>{A.setPipelineJob(j.id);A.go("empPipeline");}}>{t("employer.jobs.candidatesN",{n:apps.length})}</Btn></div></div></Card>;})}</div>
       <Pagination {...pg}/></>}
-    {editing&&<_EditJobModal job={editing} onClose={()=>setEditing(null)}/>}
+    {editing&&<EditJobModal job={editing} onClose={()=>setEditing(null)}/>}
   </Page>;
 }
 
@@ -273,7 +273,7 @@ export function EmpJobs(){
    post wizard, which is fine (those are less common typos and the wizard already validates
    them properly). Server-side re-runs the posting-law check on every save; a validation error
    surfaces as a toast. */
-function _EditJobModal({job,onClose}){
+function EditJobModal({job,onClose}){
   const A=use(); const {t}=useTranslation();
   const [f,setF]=useState({
     t:job.t||"", desc:job.desc||"",
@@ -356,7 +356,7 @@ function _EditJobModal({job,onClose}){
    shown every time an employer visits the last step. Persist a dismissal so a repeat poster
    isn't nagged by it every listing. Uses the shared useDismissed hook (helpers/useDismissed.js)
    so future one-off tips can follow the same pattern. */
-function _DismissableScoringBanner(){
+function DismissableScoringBanner(){
   const [dismissed, dismiss] = useDismissed("emp-post-scoring-banner:v1");
   if (dismissed) return null;
   return <Banner tone="brand" icon="sparkle" title="Scoring is automatic"
@@ -872,7 +872,7 @@ export function EmpPost(){
             <div className="text-xs text-text-2 leading-snug">{AI_DISCLOSURE_TEXT}</div>
           </div>}
         </div>
-        <_DismissableScoringBanner/>
+        <DismissableScoringBanner/>
 
         {/* Multi-post distribution + forward-email. Sits at the end of the wizard because it
            doesn't affect the listing itself - just where it's syndicated + where applications
@@ -916,7 +916,7 @@ export function EmpPost(){
    buttons (kept as the accessible, no-pointer-required path - drag is an addition, not a
    replacement). A PointerSensor activation distance stops an ordinary click-to-open-candidate
    from being swallowed as an accidental drag. ─── */
-function _PipelineCard({a,u,s,idx,selected,tog,A,notice,stages,t,onOpen}){
+function PipelineCard({a,u,s,idx,selected,tog,A,notice,stages,t,onOpen}){
   const {attributes,listeners,setNodeRef,transform,isDragging}=useDraggable({id:a.id});
   const style=transform?{transform:`translate3d(${transform.x}px,${transform.y}px,0)`,zIndex:50,opacity:0.9}:undefined;
   return <div ref={setNodeRef} style={{...style,border:`${selected?2:1}px solid ${selected?C.brand:C.line}`,padding:selected?12:13}}
@@ -948,7 +948,7 @@ function _PipelineCard({a,u,s,idx,selected,tog,A,notice,stages,t,onOpen}){
       {idx<stages.length-1&&<Btn kind="outline" size="xs" iconR="arrowR" onClick={()=>A.moveApp(a.id,stages[idx+1])} style={{flex:2}}>{t("employer.pipeline.advance")}</Btn>}</div>
   </div>;
 }
-function _PipelineColumn({stage,items,job,sel,tog,selectStage,A,mob,stages,t,onOpen}){
+function PipelineColumn({stage,items,job,sel,tog,selectStage,A,mob,stages,t,onOpen}){
   const {setNodeRef,isOver}=useDroppable({id:stage});
   const allSelected=items.length>0&&items.every(a=>sel.has(a.id));
   return <div ref={setNodeRef} className={`${mob?"w-52":"flex-1 min-w-56"} flex flex-col gap-2 rounded-2xl transition-colors duration-150`}
@@ -968,11 +968,11 @@ function _PipelineColumn({stage,items,job,sel,tog,selectStage,A,mob,stages,t,onO
         <span className="bg-wash text-brand border border-line-2 text-xs font-bold rounded-full flex items-center justify-center px-1.5" style={{minWidth:22,height:22}}>{items.length}</span></div></div>
     {items.map(a=>{const u=A.person(a.user); const s=A.scoreCandidate(u,job); const idx=stages.indexOf(stage);
       const notice=applicationDecisionNotice(a,postingRules({prov:job?.prov,employerSize:A.company?.size}));
-      return <_PipelineCard key={a.id} a={a} u={u} s={s} idx={idx} selected={sel.has(a.id)} tog={tog} A={A} notice={notice} stages={stages} t={t} onOpen={onOpen}/>;})}
+      return <PipelineCard key={a.id} a={a} u={u} s={s} idx={idx} selected={sel.has(a.id)} tog={tog} A={A} notice={notice} stages={stages} t={t} onOpen={onOpen}/>;})}
     {items.length===0&&<div className="rounded-2xl text-center text-xs text-text-3 py-6 px-3" style={{border:`1.5px dashed ${C.line}`}}>{t("employer.pipeline.emptyColumn")}</div>}
   </div>;
 }
-function _PipelineBoard({apps,job,sel,tog,selectStage,A,mob,stages,t,onOpen}){
+function PipelineBoard({apps,job,sel,tog,selectStage,A,mob,stages,t,onOpen}){
   const sensors=useSensors(useSensor(PointerSensor,{activationConstraint:{distance:8}}));
   const onDragEnd=({active,over})=>{
     if(!over)return;
@@ -990,7 +990,7 @@ function _PipelineBoard({apps,job,sel,tog,selectStage,A,mob,stages,t,onOpen}){
   return <div className={`flex-1 overflow-x-auto ${mob?"p-2.5":"py-3"}`}>
     <DndContext sensors={sensors} onDragEnd={onDragEnd}>
       <div className="flex gap-2 items-start" style={{minWidth:"max-content"}}>
-        {stages.map(stage=><_PipelineColumn key={stage} stage={stage} items={apps.filter(a=>a.stage===stage)}
+        {stages.map(stage=><PipelineColumn key={stage} stage={stage} items={apps.filter(a=>a.stage===stage)}
           job={job} sel={sel} tog={tog} selectStage={selectStage} A={A} mob={mob} stages={stages} t={t} onOpen={onOpen}/>)}
       </div>
     </DndContext>
@@ -1001,7 +1001,7 @@ function _PipelineBoard({apps,job,sel,tog,selectStage,A,mob,stages,t,onOpen}){
    certifications, a coordinator role weights experience far more — and until now one fixed
    formula was applied to every posting. Weights are normalised rather than required to total
    100, so moving one slider doesn't force rebalancing the other three by hand. */
-function _JobScoring({A,job,mob,t}){
+function JobScoring({A,job,mob,t}){
   const [open,setOpen]=useState(false);
   const [w,setW]=useState(()=>job?.scoreWeights||A.DEFAULT_SCORE_WEIGHTS);
   const [busy,setBusy]=useState(false); const [err,setErr]=useState("");
@@ -1121,6 +1121,15 @@ export function EmpPipeline(){
     return ()=>{document.removeEventListener("mousedown",onDocClick); document.removeEventListener("keydown",onKey);};
   },[bulkMenu]);
 
+  const [talentMinScore,setTalentMinScore]=useState(65);
+  const [talentQ,setTalentQ]=useState("");
+  const [inviteJobFor,setInviteJobFor]=useState({}); /* candidateId -> jobId, for the E5 per-card "invite to which job" picker */
+  const [noting,setNoting]=useState(null); const [noteText,setNoteText]=useState(""); const [noteTags,setNoteTags]=useState("");
+  const [viewingOutreach,setViewingOutreach]=useState(null); const [outreachEvents,setOutreachEvents]=useState([]);
+  const reverseCandidates=job?A.reverseMatch(jobId,talentMinScore)
+    .filter(({p})=>!talentQ||matchesBooleanQuery(talentQ,p.name,p.title,p.city,(p.skills||[]).join(" "))):[];
+  const talentPg=usePagination(reverseCandidates,12);
+  useEffect(()=>{talentPg.setPage(1);},[talentMinScore,talentQ]);
   if(!job) return <Page><Empty icon="users" title={t("employer.pipeline.noListingsReview")} body={t("employer.pipeline.noListingsReviewBody")}
     action={<Btn kind="primary" icon="plus" onClick={()=>A.go("empPost")}>{t("employer.jobs.postAJob")}</Btn>}/></Page>;
 
@@ -1145,17 +1154,8 @@ export function EmpPipeline(){
     clear(); setBulkMenu(false);
   };
 
-  const [talentMinScore,setTalentMinScore]=useState(65);
-  const [talentQ,setTalentQ]=useState("");
-  const [inviteJobFor,setInviteJobFor]=useState({}); /* candidateId -> jobId, for the E5 per-card "invite to which job" picker */
-  const [noting,setNoting]=useState(null); const [noteText,setNoteText]=useState(""); const [noteTags,setNoteTags]=useState("");
-  const [viewingOutreach,setViewingOutreach]=useState(null); const [outreachEvents,setOutreachEvents]=useState([]);
   const viewOutreach=async(p)=>{setViewingOutreach(p); setOutreachEvents(await A.loadCandidateOutreach(p.id));};
   const outreachIcon={invite:"send",message:"mail",note:"edit"};
-  const reverseCandidates=A.reverseMatch(jobId,talentMinScore)
-    .filter(({p})=>!talentQ||matchesBooleanQuery(talentQ,p.name,p.title,p.city,(p.skills||[]).join(" ")));
-  const talentPg=usePagination(reverseCandidates,12);
-  useEffect(()=>{talentPg.setPage(1);},[talentMinScore,talentQ]);
 
   return <div className="flex flex-col min-h-full bg-bg">
     <div className={`bg-white border-b border-line ${mob?"py-3.5 px-4":"py-4 px-7"}`}>
@@ -1179,7 +1179,7 @@ export function EmpPipeline(){
     </div>}
 
     {tab==="filters"&&<div className={`${mob?"p-4":"p-6"} max-w-site mx-auto w-full`}>
-      <_JobScoring A={A} job={job} mob={mob} t={t}/>
+      <JobScoring A={A} job={job} mob={mob} t={t}/>
       <Card style={{padding:mob?20:24,borderRadius:16}}>
         <Lbl>{t("employer.pipeline.filterThisPipeline")}</Lbl>
         <div className={`grid gap-3.5 ${mob?"grid-cols-1":"grid-cols-3"}`}>
@@ -1266,7 +1266,7 @@ export function EmpPipeline(){
         </div>
         <Btn kind="onDark" size="sm" icon="x" onClick={()=>setConfirmRejectAll(true)}>Reject all</Btn>
         <Btn kind="onDark" size="sm" onClick={clear}>Clear</Btn></div>}
-      <_PipelineBoard apps={apps} job={job} sel={sel} tog={tog} selectStage={selectStage} A={A} mob={mob} stages={pipelineStages} t={t} onOpen={openDrawer}/>
+      <PipelineBoard apps={apps} job={job} sel={sel} tog={tog} selectStage={selectStage} A={A} mob={mob} stages={pipelineStages} t={t} onOpen={openDrawer}/>
     </>}
     <ConfirmDialog open={confirmRejectAll} onClose={()=>setConfirmRejectAll(false)} confirmLabel="Reject all"
       title={`Reject ${sel.size} candidate${sel.size===1?"":"s"}?`} onConfirm={()=>runBulk("reject")}>
@@ -1320,10 +1320,10 @@ export function EmpPipeline(){
    caller's inline navigation instead of a full page navigation, so the kanban never unmounts
    behind it. Both modes read the SAME A.candidateId — the caller is responsible for setting it
    (A.openCandidate for a full navigation, A.openCandidateInline to stay on the pipeline route). */
-const _Frag=({children})=>children;
+const Frag=({children})=>children;
 export function EmpCandidate({inline=false,onClose}={}){
   const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
-  const Wrap=inline?_Frag:Page;
+  const Wrap=inline?Frag:Page;
   const close=onClose||(()=>A.go("empPipeline"));
   const nav=id=>{ if(inline)A.openCandidateInline(id); else A.openCandidate(id); };
   const [showMsg,setShowMsg]=useState(false); const [msgText,setMsgText]=useState("");
@@ -2130,9 +2130,9 @@ export function EmpCompany(){
       <div className="flex gap-2.5 justify-end mt-6 pt-5 border-t border-line-soft">
         {dirty&&<Btn kind="ghost" onClick={()=>setConfirmDiscard(true)}>{t("employer.company.discard")}</Btn>}
         <Btn kind="primary" icon="check" disabled={!dirty} onClick={()=>A.saveCompany(d)}>{dirty?t("employer.company.saveChanges"):t("employer.company.saved")}</Btn></div></Card>
-    <_PipelineStageEditor A={A} mob={mob}/>
-    <_StageAutomationsEditor A={A} mob={mob}/>
-    <_WorkflowRulesEditor A={A} mob={mob}/>
+    <PipelineStageEditor A={A} mob={mob}/>
+    <StageAutomationsEditor A={A} mob={mob}/>
+    <WorkflowRulesEditor A={A} mob={mob}/>
     <ConfirmDialog open={confirmDiscard} onClose={()=>setConfirmDiscard(false)} confirmLabel={t("employer.company.discard")}
       title={t("employer.company.discardTitle")} onConfirm={()=>setD({...A.company})}>
       {t("employer.company.discardBody")}
@@ -2143,7 +2143,7 @@ export function EmpCompany(){
 /* Custom hiring stages, sold on Growth+ and previously not built at all. The server refuses a
    save that would strand candidates in a stage no longer on the board, so the error surfaced
    here is the real one, naming which stages are still occupied. */
-function _PipelineStageEditor({A,mob}){
+function PipelineStageEditor({A,mob}){
   const canCustomise=A.can("customStages");
   const isOwner=A.user?.employerRole==="owner";
   const saved=A.stagesFor(A.company.id);
@@ -2200,7 +2200,7 @@ function _PipelineStageEditor({A,mob}){
    into that stage. Deliberately kept as a template BINDING rather than a "send this message"
    editor - the template already exists as its own object, and duplicating its body inline here
    would silently drift the moment the underlying template is edited. */
-function _StageAutomationsEditor({A,mob}){
+function StageAutomationsEditor({A,mob}){
   const {t}=useTranslation();
   const stages=A.stagesFor(A.company.id);
   const templates=A.messageTemplates;
@@ -2249,7 +2249,7 @@ const ruleActionOptions=t=>RULE_ACTION_VALUES.map((v,i)=>({v,l:t(`employer.workf
 const emptyGroup=()=>({type:"group",op:"and",children:[]});
 const emptyCondition=()=>({type:"condition",field:"stage",op:"eq",value:""});
 
-function _ConditionNode({node,onChange,onRemove,stages,depth,t}){
+function ConditionNode({node,onChange,onRemove,stages,depth,t}){
   const fieldOptions=ruleFieldOptions(t), opOptions=ruleOpOptions(t);
   if(node.type==="group"){
     const setOp=op=>onChange({...node,op,children:op==="not"?node.children.slice(0,1):node.children});
@@ -2268,7 +2268,7 @@ function _ConditionNode({node,onChange,onRemove,stages,depth,t}){
         {onRemove&&<Btn kind="ghost" size="xs" icon="trash" style={{marginLeft:"auto"}} onClick={onRemove}>{t("employer.workflowRules.removeGroup")}</Btn>}
       </div>
       <div className="flex flex-col gap-2 pl-3" style={{borderLeft:`2px solid ${C.line}`}}>
-        {node.children.map((child,i)=><_ConditionNode key={i} node={child} depth={depth+1} t={t}
+        {node.children.map((child,i)=><ConditionNode key={i} node={child} depth={depth+1} t={t}
           onChange={c=>updateChild(i,c)} onRemove={()=>removeChild(i)} stages={stages}/>)}
         {node.children.length===0&&<div className="text-xs text-text-3 italic py-1">{t("employer.workflowRules.noConditionsAlways")}</div>}
       </div>
@@ -2294,7 +2294,7 @@ function _ConditionNode({node,onChange,onRemove,stages,depth,t}){
   </div>;
 }
 
-function _ActionRow({action,onChange,onRemove,templates,members,t}){
+function ActionRow({action,onChange,onRemove,templates,members,t}){
   const actionOptions=ruleActionOptions(t);
   const setType=type=>onChange(type==="move_stage"?{type,stage:""}:type==="send_email"?{type,templateId:""}
     :type==="add_tag"?{type,tag:""}:type==="create_task"?{type,title:"",assigneeUserId:""}:{type,userId:"",message:""});
@@ -2318,7 +2318,7 @@ function _ActionRow({action,onChange,onRemove,templates,members,t}){
   </div>;
 }
 
-function _WorkflowRuleModal({A,rule,stages,onClose,t}){
+function WorkflowRuleModal({A,rule,stages,onClose,t}){
   const [d,setD]=useState(rule?{...rule}:{name:"",conditions:emptyGroup(),actions:[],enabled:true});
   const [err,setErr]=useState(""); const [saving,setSaving]=useState(false);
   const templates=A.messageTemplates; const members=A.team.members||[];
@@ -2338,12 +2338,12 @@ function _WorkflowRuleModal({A,rule,stages,onClose,t}){
       <Field label={t("employer.workflowRules.ruleNameLabel")} required><Input value={d.name} onChange={e=>setD({...d,name:e.target.value})} placeholder={t("employer.workflowRules.ruleNamePlaceholder")}/></Field>
       <div>
         <Lbl>{t("employer.workflowRules.ifLabel")}</Lbl>
-        <_ConditionNode node={d.conditions} depth={0} stages={stages} t={t} onChange={c=>setD({...d,conditions:c})}/>
+        <ConditionNode node={d.conditions} depth={0} stages={stages} t={t} onChange={c=>setD({...d,conditions:c})}/>
       </div>
       <div>
         <Lbl>{t("employer.workflowRules.thenLabel")}</Lbl>
         <div className="flex flex-col gap-2">
-          {d.actions.map((a,i)=><_ActionRow key={i} action={a} templates={templates} members={members} t={t}
+          {d.actions.map((a,i)=><ActionRow key={i} action={a} templates={templates} members={members} t={t}
             onChange={na=>setD({...d,actions:d.actions.map((x,k)=>k===i?na:x)})}
             onRemove={()=>setD({...d,actions:d.actions.filter((_,k)=>k!==i)})}/>)}
           <div><Btn kind="outline" size="sm" icon="plus" onClick={addAction}>{t("employer.workflowRules.addAction")}</Btn></div>
@@ -2358,7 +2358,7 @@ function _WorkflowRuleModal({A,rule,stages,onClose,t}){
   </Modal>;
 }
 
-function _WorkflowRulesEditor({A,mob}){
+function WorkflowRulesEditor({A,mob}){
   const {t}=useTranslation();
   const stages=A.stagesFor(A.company.id);
   const isOwner=A.user?.employerRole==="owner";
@@ -2405,7 +2405,7 @@ function _WorkflowRulesEditor({A,mob}){
         </div>}
       </div>)}
     </div>
-    {editing&&<_WorkflowRuleModal A={A} rule={editing.id?editing:null} stages={stages} t={t} onClose={()=>setEditing(null)}/>}
+    {editing&&<WorkflowRuleModal A={A} rule={editing.id?editing:null} stages={stages} t={t} onClose={()=>setEditing(null)}/>}
     <ConfirmDialog open={!!confirmDelete} onClose={()=>setConfirmDelete(null)} confirmLabel={t("employer.workflowRules.deleteRule")}
       title={t("employer.workflowRules.deleteConfirmTitle",{name:confirmDelete?.name})} onConfirm={()=>{A.deleteWorkflowRule(confirmDelete.id);setConfirmDelete(null);}}>
       {t("employer.workflowRules.deleteConfirmBody")}
@@ -2645,7 +2645,7 @@ export function EmpBilling(){
    real stage-transition timestamps every application already carried; the third needed genuine
    attribution, which now exists. Applications from before that field report as "Not recorded"
    rather than being folded into Direct, which would overstate that channel permanently. */
-function _HiringVelocity({A,mob}){
+function HiringVelocity({A,mob}){
   const {t}=useTranslation();
   const myJobs=A.jobs.filter(j=>j.e===A.company.id).map(j=>j.id);
   const apps=A.applications.filter(a=>myJobs.includes(a.job));
@@ -2777,7 +2777,7 @@ export function EmpAnalyticsPage(){
     </section>
     <section className={`bg-bg ${mob?"pt-8 px-4 pb-14":"pt-12 px-8 pb-24"}`}>
       <div className="max-w-280 mx-auto">
-        <_HiringVelocity A={A} mob={mob}/>
+        <HiringVelocity A={A} mob={mob}/>
         {insights.length>0&&<Card style={{marginBottom:16,padding:mob?18:20,borderRadius:16}}>
           <div className="flex flex-col gap-2.5">
             {insights.map((ins,i)=><div key={i} className="flex gap-3 items-center py-1">
@@ -2950,7 +2950,7 @@ export function EmpAnalyticsPage(){
               <div className="text-sm text-text-3 py-2">Not enough live listings across the platform to produce meaningful benchmarks yet.</div>}
           </div>
         </Card>}
-        <_DiversityReport A={A} mob={mob} t={t}/>
+        <DiversityReport A={A} mob={mob} t={t}/>
       </div>
     </section>
   </div>;
@@ -2961,7 +2961,7 @@ export function EmpAnalyticsPage(){
    server returns is already suppressed (see server/lib/demographics.js) - there is no raw count
    under 10 respondents anywhere in this response for the client to accidentally render. */
 const DEMO_FIELD_KEYS=["ageBand","gender","indigenous","racialized","disability","lgbtq"];
-function _DiversityBucketRow({bucket,t}){
+function DiversityBucketRow({bucket,t}){
   const label=bucket.suppressed?t("employer.analytics.diversitySuppressed"):null;
   return <div className="flex justify-between items-center py-1.5 text-sm">
     <span className="text-text-2">{t(`profile.demoOpt_${String(bucket.value).replace(/-/g,"_")}`)}</span>
@@ -2970,7 +2970,7 @@ function _DiversityBucketRow({bucket,t}){
       : <span className="font-semibold text-text tabular-nums">{bucket.count}</span>}
   </div>;
 }
-function _DiversityReport({A,mob,t}){
+function DiversityReport({A,mob,t}){
   const [open,setOpen]=useState(false);
   const [loading,setLoading]=useState(false);
   const [data,setData]=useState(null);
@@ -3000,10 +3000,10 @@ function _DiversityReport({A,mob,t}){
               return <div key={field} className="border border-line-soft rounded-xl p-3.5">
                 <Lbl style={{marginBottom:6}}>{t(`profile.demo${field.charAt(0).toUpperCase()}${field.slice(1)}`)}</Lbl>
                 <div className="text-xs text-text-3 mb-1">{t("employer.analytics.diversityApplicantsCol")}</div>
-                {f.applicants.map(b=><_DiversityBucketRow key={b.value} bucket={b} t={t}/>)}
+                {f.applicants.map(b=><DiversityBucketRow key={b.value} bucket={b} t={t}/>)}
                 {f.hires.length>0&&<>
                   <div className="text-xs text-text-3 mt-3 mb-1">{t("employer.analytics.diversityHiresCol")}</div>
-                  {f.hires.map(b=><_DiversityBucketRow key={b.value} bucket={b} t={t}/>)}
+                  {f.hires.map(b=><DiversityBucketRow key={b.value} bucket={b} t={t}/>)}
                 </>}
               </div>;})}
           </div>

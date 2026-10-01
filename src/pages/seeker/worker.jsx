@@ -120,12 +120,12 @@ export function WorkerTimesheet(){
   const [hours,setHours]=useState(existing?.hours||{mon:0,tue:0,wed:0,thu:0,fri:0,sat:0,sun:0});
   const [otHours,setOtHours]=useState(existing?.otHours||0);
   const [notes,setNotes]=useState(existing?.notes||"");
-  if(!A.user){A.go("login"); return null;}
-  if(!worker){A.go("workerDashboard"); return null;}
   useEffect(()=>{const e=A.timesheets.find(t=>t.assignment===asnId&&t.weekStart===weekStart);
     if(e){setHours(e.hours||{mon:0,tue:0,wed:0,thu:0,fri:0,sat:0,sun:0}); setOtHours(e.otHours||0); setNotes(e.notes||"");}
     else{setHours({mon:0,tue:0,wed:0,thu:0,fri:0,sat:0,sun:0}); setOtHours(0); setNotes("");}
   },[asnId,weekStart]);
+  if(!A.user){A.go("login"); return null;}
+  if(!worker){A.go("workerDashboard"); return null;}
 
   const total=Object.values(hours).reduce((s,h)=>s+(Number(h)||0),0);
   const asn=A.assignment(asnId);

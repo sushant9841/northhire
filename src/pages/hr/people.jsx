@@ -11,7 +11,7 @@ import { useTranslation } from "../../i18n/i18n.jsx";
 import { formatDate } from "../../i18n/format.js";
 
 /* Shared underline-style tab bar used by both the People and Expenses pages */
-function _UnderlineTabs({items,value,onChange}){
+function UnderlineTabs({items,value,onChange}){
   return <div className="flex gap-1 mb-5 overflow-x-auto border-b border-line">
     {items.map(t=><button key={t.k} onClick={()=>onChange(t.k)}
       className={`bg-transparent border-0 py-2.5 px-3.5 cursor-pointer text-sm flex gap-1.5 items-center shrink-0 transition-colors duration-150 -mb-px border-b-2 ${value===t.k?"font-bold text-brand border-brand":"font-medium text-text-2 border-transparent"}`}>
@@ -35,7 +35,7 @@ export function HrPeoplePage(){
   const isPriv=["hr","admin","owner"].includes(emp.role);
   const visibleTabs=isPriv?tabs:tabs.filter(t=>t.k!=="manage");
   return <div>
-    <_UnderlineTabs items={visibleTabs} value={tab} onChange={setTab}/>
+    <UnderlineTabs items={visibleTabs} value={tab} onChange={setTab}/>
     {tab==="directory"&&<HrPeople_Directory/>}
     {tab==="orgchart"&&<HrPeople_OrgChart/>}
     {tab==="departments"&&<HrPeople_Departments/>}
@@ -68,9 +68,8 @@ function HrPeople_Directory(){
   const [roleFilter,setRoleFilter]=useState("all"); const [locFilter,setLocFilter]=useState("all");
   const [statusFilter,setStatusFilter]=useState("all");
   const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
-  if(!emp||!company)return null;
-  const all=A.hrEmpsAtCompany(company.id);
-  const depts=A.hrDeptsAtCompany?.(company.id)||A.HR_DEPARTMENTS;
+  const all=emp&&company?A.hrEmpsAtCompany(company.id):[];
+  const depts=company?(A.hrDeptsAtCompany?.(company.id)||A.HR_DEPARTMENTS):[];
   const locations=[...new Set(all.map(e=>e.city).filter(Boolean))].sort();
   const filtered=all.filter(e=>{
     if(deptFilter!=="all"&&e.dept!==deptFilter)return false;
@@ -84,6 +83,7 @@ function HrPeople_Directory(){
     return e.name.toLowerCase().includes(s)||e.title?.toLowerCase().includes(s)||e.email.toLowerCase().includes(s);
   }).sort((a,b)=>a.name.localeCompare(b.name));
   const pg=usePagination(filtered,24);
+  if(!emp||!company)return null;
   const exportDirectory=()=>{
     const rows=[[t("hrPeople.directory.csvName"),t("hrPeople.directory.csvTitle"),t("hrPeople.directory.csvDepartment"),t("hrPeople.directory.csvEmail"),t("hrPeople.directory.csvPhone"),t("hrPeople.directory.csvCity"),t("hrPeople.directory.csvProvince"),t("hrPeople.directory.csvRole"),t("hrPeople.directory.csvManager"),t("hrPeople.directory.csvHired")],
       ...filtered.map(e=>{const d=depts.find(x=>x.id===e.dept); const mgr=A.hrEmp(e.manager);
@@ -149,10 +149,10 @@ function HrPeople_Directory(){
 /* ─── Org Chart: tree view of reporting lines ─── */
 function HrPeople_OrgChart(){
   const A=use(); const mob=useMedia("(max-width: 900px)"); const {t}=useTranslation();
+  const [q,setQ]=useState("");
   const company=A.hrCurrentCompany();
-  if(!company)return null;
-  const all=A.hrEmpsAtCompany(company.id).filter(e=>e.status==="active");
-  const depts=A.hrDeptsAtCompany?.(company.id)||A.HR_DEPARTMENTS;
+  const all=company?A.hrEmpsAtCompany(company.id).filter(e=>e.status==="active"):[];
+  const depts=company?(A.hrDeptsAtCompany?.(company.id)||A.HR_DEPARTMENTS):[];
   /* Build tree — find roots (no manager or manager not in list) */
   const empMap={}; all.forEach(e=>{empMap[e.id]=e;});
   const children={}; all.forEach(e=>{
@@ -161,7 +161,7 @@ function HrPeople_OrgChart(){
     children[mid].push(e);
   });
   const roots=children["__root__"]||[];
-  const [q,setQ]=useState("");
+  if(!company)return null;
   const searchActive=q.trim().length>0;
   /* Search auto-expands only the branches leading to a match, instead of forcing the whole
      (potentially large) tree open - a name search on a big org otherwise defeats its own purpose. */
@@ -343,7 +343,7 @@ function descendantIds(id,all,seen=new Set()){
 }
 
 const MAX_DOC_BYTES=3*1024*1024;
-function _EmployeeDocuments({empId}){
+function EmployeeDocuments({empId}){
   const A=use(); const {t}=useTranslation();
   const [docs,setDocs]=useState(null); const [err,setErr]=useState("");
   const refresh=()=>A.loadEmployeeDocuments(empId).then(setDocs);
@@ -389,11 +389,11 @@ function HrPeople_Manage(){
   const startOffboarding=e=>{setOffboarding(e);setOffboardChecked({});};
   const [ne,setNe]=useState({name:"",email:"",role:"employee",dept:"d1",title:"",city:"",prov:"AB",phone:"",salary:60000,manager:"",payType:"salary",hourlyRate:25});
   const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
-  if(!emp||!company)return null;
-  const depts=A.hrDeptsAtCompany?.(company.id)||A.HR_DEPARTMENTS;
-  const all=A.hrEmpsAtCompany(company.id);
+  const depts=company?(A.hrDeptsAtCompany?.(company.id)||A.HR_DEPARTMENTS):[];
+  const all=emp&&company?A.hrEmpsAtCompany(company.id):[];
   const active=all.filter(e=>e.status==="active");
   const pg=usePagination(all,25);
+  if(!emp||!company)return null;
   const submit=()=>{if(!ne.name.trim()||!ne.email.trim())return;
     if(ne.payType==="hourly"){if(!(Number(ne.hourlyRate)>0)){A.toast(t("hrPeople.manage.hourlyRateRequired"),"danger");return;}}
     else if(!(Number(ne.salary)>0)){A.toast(t("hrPeople.manage.salaryRequired"),"danger");return;}
@@ -586,7 +586,7 @@ function HrPeople_Manage(){
                       <Btn kind="ghost" size="xs" icon="trash" aria-label={`Remove certification${c.name?` ${c.name}`:""}`} onClick={()=>removeCert(i)}/></div></div>;})}
               </div>}
         </div>
-        <_EmployeeDocuments empId={editing.id}/>
+        <EmployeeDocuments empId={editing.id}/>
         <div className="flex gap-2.5 justify-end">
           <Btn kind="ghost" onClick={()=>setEditing(null)}>{t("hrPeople.common.cancel")}</Btn>
           <Btn kind="primary" onClick={saveEdit}>{t("hrPeople.common.save")}</Btn>
@@ -681,18 +681,23 @@ export function HrExpensesPage(){
   const [showSubmit,setShowSubmit]=useState(false);
   const [detail,setDetail]=useState(null);
   const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
-  if(!emp||!company)return null;
-  const isPriv=["hr","admin","owner","finance"].includes(emp.role);
+  const isPriv=emp?["hr","admin","owner","finance"].includes(emp.role):false;
   /* A plain-"employee"-role manager reviews just their own direct reports' claims - the real
      reporting chain (hr_employees.manager), previously ignored entirely in favour of a flat
      hr/admin/owner/finance role check. */
-  const myReports=A.hrEmployees.filter(e=>e.manager===emp.id);
+  const myReports=emp?A.hrEmployees.filter(e=>e.manager===emp.id):[];
   const isApprover=isPriv||myReports.length>0;
 
-  const myExp=A.empExpenses(emp.id);
-  const allExp=isPriv?A.companyExpenses(company.id):isApprover?A.companyExpenses(company.id).filter(x=>myReports.some(r=>r.id===x.employee)):[];
+  const myExp=emp?A.empExpenses(emp.id):[];
+  const allExp=emp&&company?(isPriv?A.companyExpenses(company.id):isApprover?A.companyExpenses(company.id).filter(x=>myReports.some(r=>r.id===x.employee)):[]):[];
   const queued=allExp.filter(x=>x.status==="submitted");
   const approved=allExp.filter(x=>x.status==="approved");
+
+  const list=tab==="mine"?myExp:tab==="queue"?queued:tab==="approved"?approved:allExp;
+  const totalPending=allExp.filter(x=>x.status==="submitted"||x.status==="approved").reduce((s,x)=>s+x.amount,0);
+  const pg=usePagination(list,20);
+  useEffect(()=>{pg.setPage(1);},[tab]);
+  if(!emp||!company)return null;
 
   const tabs=[{k:"mine",label:t("hrPeople.expenses.tabMine"),icon:"user",count:myExp.length}];
   if(isApprover){
@@ -700,11 +705,6 @@ export function HrExpensesPage(){
     tabs.push({k:"approved",label:t("hrPeople.expenses.tabApproved"),icon:"check",count:approved.length});
     tabs.push({k:"all",label:t("hrPeople.expenses.tabAll"),icon:"file",count:allExp.length});
   }
-
-  const list=tab==="mine"?myExp:tab==="queue"?queued:tab==="approved"?approved:allExp;
-  const totalPending=allExp.filter(x=>x.status==="submitted"||x.status==="approved").reduce((s,x)=>s+x.amount,0);
-  const pg=usePagination(list,20);
-  useEffect(()=>{pg.setPage(1);},[tab]);
 
   return <div>
     <div className="flex justify-between items-center mb-5 flex-wrap gap-3">
@@ -731,7 +731,7 @@ export function HrExpensesPage(){
       <Stat icon="trend" label={t("hrPeople.expenses.statThisMonth")} value={allExp.filter(x=>Date.now()-x.submitted<30*864e5).length}/>
     </div>}
 
-    <_UnderlineTabs items={tabs} value={tab} onChange={setTab}/>
+    <UnderlineTabs items={tabs} value={tab} onChange={setTab}/>
 
     <Card pad={0} style={{borderRadius:14,overflow:"hidden"}}>
       <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:720}}>

@@ -597,14 +597,14 @@ export function AdmStats(){
     <Card><H2 sub={t("admin.stats.revenueByPlanSub",{revenue:`$${formatNumber(totalRevenue,locale)}`,n:A.employers.length})}>{t("admin.stats.revenueByPlan")}</H2>
       {byPlan.map(p=><BarRow key={p.name} label={`${p.name} (${p.n})`} value={p.revenue} max={Math.max(1,totalRevenue)} tone={p.name==="Enterprise"?C.violet:p.name==="Growth"?C.brand:C.text3} total={totalRevenue}/>)}
     </Card>
-    <_SilverMedalistAdmin A={A} mob={mob} t={t}/>
-    <_DemographicsAdmin A={A} t={t}/>
+    <SilverMedalistAdmin A={A} mob={mob} t={t}/>
+    <DemographicsAdmin A={A} t={t}/>
   </Page>;
 }
 
 /* Read-only by design: an aggregation, never an admin-edited record. Every bucket under the
    10-respondent suppression floor is already replaced server-side with {suppressed:true}. */
-function _DemographicsAdmin({A,t}){
+function DemographicsAdmin({A,t}){
   const [agg,setAgg]=useState(undefined);
   useEffect(()=>{A.loadAdminDemographicsAggregate().then(setAgg);},[]);
   if(agg===undefined)return null;
@@ -633,7 +633,7 @@ function _DemographicsAdmin({A,t}){
    batch), so this is Read + manual delete + the existing refresh endpoint surfaced as a button -
    no admin Create/Update. Also exposes a manual daily-snapshot re-capture (system-generated,
    Read + re-capture; no Update). */
-function _SilverMedalistAdmin({A,mob,t}){
+function SilverMedalistAdmin({A,mob,t}){
   const [matches,setMatches]=useState(null);
   const [busy,setBusy]=useState(false);
   const load=async()=>setMatches(await A.loadAdminSilverMedalistMatches());

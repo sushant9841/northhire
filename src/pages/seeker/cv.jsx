@@ -21,7 +21,7 @@ export const cvTemplateName=(t,id)=>t(`seeker.cv.${CV_TEMPLATE_KEY[id]?.[0]||"te
    real pagination logic. ~120 words is a reasonable summary/bullet budget before a section alone
    risks pushing a one-page CV to two. */
 const _wordCount=html=>(html||"").replace(/<[^>]+>/g," ").replace(/&nbsp;/g," ").trim().split(/\s+/).filter(Boolean).length;
-function _WordCountHint({html,budget=120}){
+function WordCountHint({html,budget=120}){
   const {t}=useTranslation();
   const n=_wordCount(html);
   return <div className={`text-xs mt-1.5 text-right ${n>budget?"text-warn":"text-text-3"}`}>{t(n===1?"seeker.cv.wordCountOne":"seeker.cv.wordCountOther",{count:n})}{n>budget?t("seeker.cv.trimHint"):""}</div>;
@@ -205,10 +205,6 @@ export function CvEditPage(){
   const [sec,setSec]=useState("basics");
   const [confirmLeave,setConfirmLeave]=useState(false);
   useEffect(()=>{if(cv)setD({...cv});},[A.cvId]);
-  if(!A.settings.cvBuilder)return <Page><Empty icon="lock" title={t("seeker.cv.cvBuilderUnavailableTitle")}
-    body={t("seeker.cv.cvBuilderUnavailableBodyEdit")} action={<Btn kind="primary" onClick={()=>A.go("cvs")}>{t("common.back")}</Btn>}/></Page>;
-  if(!cv||!d) return <Page><Empty icon="file" title={t("seeker.cv.cvNotFoundTitle")} body={t("seeker.cv.cvNotFoundBody")}
-    action={<Btn kind="primary" onClick={()=>A.go("cvs")}>{t("seeker.cv.myCvsBtn")}</Btn>}/></Page>;
   const set=(k,v)=>setD(p=>({...p,[k]:v}));
   const dirty=JSON.stringify(d)!==JSON.stringify(cv);
   /* Seeker Tranche 5 (JS-08) autosave: 900ms debounce on any change, plus a footer indicator
@@ -228,6 +224,10 @@ export function CvEditPage(){
     },900);
     return()=>clearTimeout(id);
   },[JSON.stringify(d)]);
+  if(!A.settings.cvBuilder)return <Page><Empty icon="lock" title={t("seeker.cv.cvBuilderUnavailableTitle")}
+    body={t("seeker.cv.cvBuilderUnavailableBodyEdit")} action={<Btn kind="primary" onClick={()=>A.go("cvs")}>{t("common.back")}</Btn>}/></Page>;
+  if(!cv||!d) return <Page><Empty icon="file" title={t("seeker.cv.cvNotFoundTitle")} body={t("seeker.cv.cvNotFoundBody")}
+    action={<Btn kind="primary" onClick={()=>A.go("cvs")}>{t("seeker.cv.myCvsBtn")}</Btn>}/></Page>;
   const savedRelative=()=>{
     if(!savedAt) return "";
     const s=Math.round((nowTick-savedAt)/1000);
@@ -283,7 +283,7 @@ export function CvEditPage(){
             <Field label={t("seeker.cv.professionalSummaryLabel")} hint={t("seeker.cv.professionalSummaryHint")}>
               <RichText value={d.summary||""} onChange={v=>set("summary",v)} rows={4}
                 placeholder={t("seeker.cv.summaryPlaceholder")}/>
-              <_WordCountHint html={d.summary} budget={60}/></Field></div>}
+              <WordCountHint html={d.summary} budget={60}/></Field></div>}
 
           {sec==="exp"&&<div>
             <H2 sub={t("seeker.cv.workExperienceSub")} action={<Btn kind="outline" size="sm" icon="plus" onClick={addExp}>{t("seeker.cv.addRoleBtn")}</Btn>}>{t("seeker.cv.workExperienceTitle")}</H2>
@@ -317,7 +317,7 @@ export function CvEditPage(){
                   <Field label={t("seeker.cv.responsibilitiesLabel")} style={{marginTop:12}} hint={t("seeker.cv.responsibilitiesHint")}>
                     <RichText value={x.detail} onChange={v=>upd("exp",x.id,"detail",v)} rows={4}
                       placeholder={t("seeker.cv.responsibilitiesPlaceholder")}/>
-                    <_WordCountHint html={x.detail}/></Field></div>)}</div>}</div>}
+                    <WordCountHint html={x.detail}/></Field></div>)}</div>}</div>}
 
           {sec==="edu"&&<div>
             <H2 sub={t("seeker.cv.educationSub")} action={<Btn kind="outline" size="sm" icon="plus" onClick={addEdu}>{t("seeker.cv.addBtn")}</Btn>}>{t("seeker.cv.educationTitle")}</H2>

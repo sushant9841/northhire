@@ -106,7 +106,7 @@ function HrGlobalSearch(){
 /* H2 - visible "Permission denied" / "Disabled by admin" state, replacing the previous silent
    bounce-to-dashboard. Two of the charter's 6 states; distinct copy for each so a role doesn't
    read "ask your admin" when the real answer is "this isn't for your role at all". */
-function _HrModuleDenied({reason,onBack}){
+function HrModuleDenied({reason,onBack}){
   const {t}=useTranslation();
   const denied=reason==="role";
   return <Card pad={32} style={{borderRadius:16,textAlign:"center",maxWidth:440,margin:"48px auto 0"}}>
@@ -227,7 +227,7 @@ export function HrShell({children}){
     <div className="flex-1 min-w-0 flex flex-col">
       {topbar}
       <main data-scroll-region className={`w-full max-w-wide mx-auto ${mob?"pt-5 px-4 pb-10":"pt-8 px-8 pb-15"}`}>
-        {moduleBlocked?<_HrModuleDenied reason={moduleDeniedReason} onBack={()=>A.go("hrDashboard")}/>:children}
+        {moduleBlocked?<HrModuleDenied reason={moduleDeniedReason} onBack={()=>A.go("hrDashboard")}/>:children}
       </main>
     </div>
   </div>;

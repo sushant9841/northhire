@@ -91,7 +91,7 @@ export function ForEmployersPage(){
     {/* ─── Product 1: JOB PLATFORM ─── */}
     <section id="platform" className={`bg-bg border-y border-line ${mob?"py-14 px-4":"py-24 px-6"}`} style={{scrollMarginTop:80}}>
       <div className="max-w-290 mx-auto">
-        <_ProductHeader color={C.brand} kicker={t("forEmployers.platform.kicker")} title={t("forEmployers.platform.title")}
+        <ProductHeader color={C.brand} kicker={t("forEmployers.platform.kicker")} title={t("forEmployers.platform.title")}
           body={t("forEmployers.platform.body")}/>
 
         <div className={`grid gap-3.5 mb-13 ${mob?"grid-cols-1":"grid-cols-3"}`}>
@@ -132,14 +132,14 @@ export function ForEmployersPage(){
           </Card>)}
         </div>
 
-        <_TestimonialStrip quotes={t("forEmployers.platform.testimonials")} color={C.brand}/>
+        <TestimonialStrip quotes={t("forEmployers.platform.testimonials")} color={C.brand}/>
       </div>
     </section>
 
     {/* ─── Product 2: HR SUITE ─── */}
     <section id="hrsuite" className={`bg-white ${mob?"py-14 px-4":"py-24 px-6"}`} style={{scrollMarginTop:80}}>
       <div className="max-w-290 mx-auto">
-        <_ProductHeader color={C.violet} kicker={t("forEmployers.hrsuite.kicker")} title={t("forEmployers.hrsuite.title")}
+        <ProductHeader color={C.violet} kicker={t("forEmployers.hrsuite.kicker")} title={t("forEmployers.hrsuite.title")}
           body={t("forEmployers.hrsuite.body")}/>
 
         <div className={`grid gap-3 mb-13 ${mob?"grid-cols-2":"grid-cols-4"}`}>
@@ -170,14 +170,14 @@ export function ForEmployersPage(){
           </Card>)}
         </div>
 
-        <_TestimonialStrip quotes={t("forEmployers.hrsuite.testimonials")} color={C.violet}/>
+        <TestimonialStrip quotes={t("forEmployers.hrsuite.testimonials")} color={C.violet}/>
       </div>
     </section>
 
     {/* ─── Product 3: STAFFING ─── */}
     <section id="staffing" className={`bg-staffing-bg border-y border-staffing-line ${mob?"py-14 px-4":"py-24 px-6"}`} style={{scrollMarginTop:80}}>
       <div className="max-w-290 mx-auto">
-        <_ProductHeader color={STAFFING_AMBER} kicker={t("forEmployers.staffing.kicker")} title={t("forEmployers.staffing.title")}
+        <ProductHeader color={STAFFING_AMBER} kicker={t("forEmployers.staffing.kicker")} title={t("forEmployers.staffing.title")}
           body={t("forEmployers.staffing.body")}/>
 
         <div className={`grid gap-4 mb-13 ${mob?"grid-cols-1":"grid-cols-2"}`}>
@@ -237,7 +237,7 @@ export function ForEmployersPage(){
           </div>
         </Card>
 
-        <_TestimonialStrip quotes={t("forEmployers.staffing.testimonials")} color={STAFFING_AMBER}/>
+        <TestimonialStrip quotes={t("forEmployers.staffing.testimonials")} color={STAFFING_AMBER}/>
 
         <div className="mt-10 text-center">
           <Btn kind="primary" size="lg" onClick={()=>A.go("contact")} style={{background:STAFFING_AMBER,borderColor:STAFFING_AMBER}}>
@@ -300,7 +300,7 @@ export function ForEmployersPage(){
   </div>;
 }
 
-function _ProductHeader({color,kicker,title,body}){
+function ProductHeader({color,kicker,title,body}){
   const mob=useMedia("(max-width: 900px)");
   return <div className="mb-10">
     <div className="text-xs font-bold tracking-wide uppercase mb-3.5" style={{color}}>{kicker}</div>
@@ -309,7 +309,7 @@ function _ProductHeader({color,kicker,title,body}){
   </div>;
 }
 
-function _TestimonialStrip({quotes,color}){
+function TestimonialStrip({quotes,color}){
   const mob=useMedia("(max-width: 900px)");
   return <div className={`grid gap-3.5 mt-6 ${mob?"grid-cols-1":"grid-cols-2"}`}>
     {quotes.map((q,i)=><Card key={i} pad={mob?20:24} style={{borderRadius:14,borderLeft:`4px solid ${color}`}}>

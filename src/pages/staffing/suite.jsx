@@ -282,7 +282,7 @@ export function AgencyDashboard(){
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /* Reusable pill-tab bar — {label, count?} */
-function _PillTabs({items,value,onChange}){
+function PillTabs({items,value,onChange}){
   return <div className="flex bg-bg rounded-lg p-0.5 border border-line flex-wrap" style={{width:"fit-content"}}>
     {items.map(([v,l])=><button key={v} onClick={()=>onChange(v)}
       className={`border-0 py-1.5 px-3.5 rounded-md cursor-pointer text-xs font-semibold ${value===v?"bg-white text-brand":"bg-transparent text-text-3"}`}>{l}</button>)}
@@ -317,7 +317,7 @@ export function AgencyJobOrders(){
 
     <Card pad={mob?14:18} style={{marginBottom:14,borderRadius:12}}>
       <div className="flex gap-2.5 flex-wrap items-center">
-        <_PillTabs items={[["open",t("staffing.jobOrders.status.open")],["filled",t("staffing.jobOrders.status.filled")],["closed",t("staffing.jobOrders.status.closed")],["all",t("staffing.jobOrders.status.all")]]} value={tab} onChange={setTab}/>
+        <PillTabs items={[["open",t("staffing.jobOrders.status.open")],["filled",t("staffing.jobOrders.status.filled")],["closed",t("staffing.jobOrders.status.closed")],["all",t("staffing.jobOrders.status.all")]]} value={tab} onChange={setTab}/>
         <div className="grow shrink basis-55 min-w-0">
           <Input icon="search" value={q} onChange={e=>setQ(e.target.value)} placeholder={t("staffing.jobOrders.search")}/></div>
       </div>
@@ -352,22 +352,23 @@ export function AgencyJobOrders(){
     </div>
     <Pagination {...pg}/>
 
-    {selected&&<_JobOrderDetail id={selected} onClose={()=>setSelected(null)}/>}
-    {showAdd&&<_NewJobOrderModal onClose={()=>setShowAdd(false)}/>}
+    {selected&&<JobOrderDetail id={selected} onClose={()=>setSelected(null)}/>}
+    {showAdd&&<NewJobOrderModal onClose={()=>setShowAdd(false)}/>}
   </div>;
 }
 
 const SUBMITTAL_STAGE_ORDER=["submitted","client_review","interview","offer"];
-function _JobOrderDetail({id,onClose}){
+function JobOrderDetail({id,onClose}){
   const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const SUBMITTAL_STAGE_LABEL={submitted:t("staffing.jobOrders.stage_submitted"),client_review:t("staffing.jobOrders.stage_client_review"),interview:t("staffing.jobOrders.stage_interview"),offer:t("staffing.jobOrders.stage_offer"),placed:t("staffing.jobOrders.stage_placed"),rejected:t("staffing.jobOrders.stage_rejected")};
-  const jo=A.jobOrder(id); if(!jo)return null;
-  const client=A.staffingClient(jo.client);
-  const filled=A.assignments.filter(a=>a.jobOrder===jo.id);
   const [showPlace,setShowPlace]=useState(false);
   const [placingSubmittal,setPlacingSubmittal]=useState(null);
   const [showAllMatches,setShowAllMatches]=useState(false);
-  useEffect(()=>{A.loadSubmittals(jo.id);},[jo.id]);
+  const jo=A.jobOrder(id);
+  useEffect(()=>{if(jo)A.loadSubmittals(jo.id);},[jo?.id]);
+  if(!jo)return null;
+  const client=A.staffingClient(jo.client);
+  const filled=A.assignments.filter(a=>a.jobOrder===jo.id);
   const submittalList=(A.submittals[jo.id]||[]).filter(s=>!["placed","rejected"].includes(s.stage));
   const submittedWorkerIds=new Set((A.submittals[jo.id]||[]).filter(s=>!["placed","rejected"].includes(s.stage)).map(s=>s.worker));
   const advanceSubmittal=(s)=>{
@@ -480,14 +481,14 @@ function _JobOrderDetail({id,onClose}){
       </div>
     </div>
 
-    {showPlace&&<_PlaceWorkerModal jobOrder={jo} onClose={()=>setShowPlace(false)} onPlace={()=>{setShowPlace(false); onClose();}}/>}
-    {placingSubmittal&&<_PlaceWorkerModal jobOrder={jo} preselectWorkerId={placingSubmittal.worker}
+    {showPlace&&<PlaceWorkerModal jobOrder={jo} onClose={()=>setShowPlace(false)} onPlace={()=>{setShowPlace(false); onClose();}}/>}
+    {placingSubmittal&&<PlaceWorkerModal jobOrder={jo} preselectWorkerId={placingSubmittal.worker}
       onSubmittalPlaced={()=>A.updateSubmittal(placingSubmittal.id,jo.id,{stage:"placed"})}
       onClose={()=>setPlacingSubmittal(null)} onPlace={()=>{setPlacingSubmittal(null); onClose();}}/>}
   </Modal>;
 }
 
-function _PlaceWorkerModal({jobOrder,onClose,onPlace,preselectWorkerId,onSubmittalPlaced}){
+function PlaceWorkerModal({jobOrder,onClose,onPlace,preselectWorkerId,onSubmittalPlaced}){
   const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const [workerId,setWorkerId]=useState(preselectWorkerId||"");
   const [payRate,setPayRate]=useState(jobOrder.payRate);
@@ -571,7 +572,7 @@ function _PlaceWorkerModal({jobOrder,onClose,onPlace,preselectWorkerId,onSubmitt
 /* Placing a worker was only reachable via Job Orders -> detail -> Place modal (which picks a
    worker for a fixed order). This is the inverse: pick an open order for a fixed worker, so a
    recruiter scanning the bench can place someone directly from that row. */
-function _PlaceFromBenchModal({worker:w,onClose,onPlace}){
+function PlaceFromBenchModal({worker:w,onClose,onPlace}){
   const A=use(); const {t,locale}=useTranslation();
   const person=(A.people||[]).find(p=>p.id===w.personId);
   const openOrders=A.jobOrders.filter(j=>j.status==="open");
@@ -631,7 +632,7 @@ function _PlaceFromBenchModal({worker:w,onClose,onPlace}){
   </Modal>;
 }
 
-function _NewJobOrderModal({onClose}){
+function NewJobOrderModal({onClose}){
   const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const [d,setD]=useState({client:"",title:"",positions:1,location:"",province:"ON",
     startDate:_fmtDate(new Date()),endDate:"",ongoing:false,
@@ -813,7 +814,7 @@ export function AgencyBench(){
       </table></div>
     </Card>
     <Pagination {...pg}/>
-    {placing&&<_PlaceFromBenchModal worker={placing} onClose={()=>setPlacing(null)} onPlace={()=>{A.toast(t("staffing.bench.placementCreated"),"ok");setPlacing(null);}}/>}
+    {placing&&<PlaceFromBenchModal worker={placing} onClose={()=>setPlacing(null)} onPlace={()=>{A.toast(t("staffing.bench.placementCreated"),"ok");setPlacing(null);}}/>}
     {selected.size>0&&<div className="fixed left-1/2 -translate-x-1/2 bottom-5 z-40 bg-ink text-white rounded-full shadow-lg pl-5 pr-2 py-2 flex items-center gap-3 flex-wrap max-w-[95vw]">
       <span className="text-sm font-semibold">{t("staffing.bench.nSelected",{n:selected.size})}</span>
       <Btn kind="onDark" size="xs" icon="mail" onClick={()=>{setBulkBody("");setBulkSubject("");setBulkModal("message");}}>{t("staffing.bench.bulkMessage")}</Btn>
@@ -877,7 +878,7 @@ export function AgencyAssignments(){
       <div className="text-sm text-text-3 mt-0.5">{t("staffing.assignments.subtitle")}</div>
     </div>
 
-    <div className="mb-3.5"><_PillTabs items={[["active",t("staffing.assignments.tabActive")],["completed",t("staffing.assignments.tabCompleted")],["all",t("staffing.assignments.tabAll")]]} value={tab} onChange={setTab}/></div>
+    <div className="mb-3.5"><PillTabs items={[["active",t("staffing.assignments.tabActive")],["completed",t("staffing.assignments.tabCompleted")],["all",t("staffing.assignments.tabAll")]]} value={tab} onChange={setTab}/></div>
 
     <Card pad={0} style={{borderRadius:14,overflow:"hidden"}}>
       <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:720}}>
@@ -929,7 +930,7 @@ export function AgencyAssignments(){
 }
 
 /* ─── Timesheets ─── */
-function _TimesheetImportModal({onClose}){
+function TimesheetImportModal({onClose}){
   const A=use();
   const [csv,setCsv]=useState("");
   const [importing,setImporting]=useState(false);
@@ -986,9 +987,9 @@ export function AgencyTimesheets(){
       <Btn kind="outline" size="sm" icon="upload" onClick={()=>setImporting(true)}>{t("staffing.timesheets.importCsv")}</Btn>
     </div>
 
-    <div className="mb-3.5"><_PillTabs items={[["draft",t("staffing.timesheets.draft")],["submitted",t("staffing.timesheets.submitted")],["approved",t("staffing.timesheets.approved")],["paid",t("staffing.timesheets.paid")],["all",t("staffing.timesheets.all")]].map(([v,l])=>
+    <div className="mb-3.5"><PillTabs items={[["draft",t("staffing.timesheets.draft")],["submitted",t("staffing.timesheets.submitted")],["approved",t("staffing.timesheets.approved")],["paid",t("staffing.timesheets.paid")],["all",t("staffing.timesheets.all")]].map(([v,l])=>
       [v,`${l} (${A.timesheets.filter(ts=>v==="all"?true:ts.status===v).length})`])} value={tab} onChange={setTab}/></div>
-    {importing&&<_TimesheetImportModal onClose={()=>setImporting(false)}/>}
+    {importing&&<TimesheetImportModal onClose={()=>setImporting(false)}/>}
 
     <Card pad={0} style={{borderRadius:14,overflow:"hidden"}}>
       <div className="overflow-x-auto"><table className="w-full border-collapse" style={{minWidth:720}}>
@@ -1172,7 +1173,7 @@ export function AgencyInvoicing(){
     </div>
 
     <div className="flex justify-between items-center mb-3.5 flex-wrap gap-2.5">
-      <_PillTabs items={[["pending",t("staffing.invoicing.statusPending")],["overdue",t("staffing.invoicing.overdue")],["paid",t("staffing.invoicing.statusPaid")],["all",t("common.viewAll")]]} value={tab} onChange={setTab}/>
+      <PillTabs items={[["pending",t("staffing.invoicing.statusPending")],["overdue",t("staffing.invoicing.overdue")],["paid",t("staffing.invoicing.statusPaid")],["all",t("common.viewAll")]]} value={tab} onChange={setTab}/>
       <Btn kind="primary" size="sm" icon="plus" onClick={()=>{setGenWeek(_weekStart(1));setShowGen(true);}}>{t("staffing.invoicing.generateWeekly")}</Btn>
     </div>
 
@@ -1251,7 +1252,7 @@ export function AgencyPlacements(){
       </Card>
     </div>}
 
-    <div className="mb-3.5"><_PillTabs items={[["in-progress",t("staffing.placements.tabInProgress")],["accepted",t("staffing.placements.tabAccepted")],["guaranteed",t("staffing.placements.tabGuaranteed")],["clawed-back",t("staffing.placements.tabClawedBack")],["all",t("staffing.placements.tabAll")]].map(([v,l])=>
+    <div className="mb-3.5"><PillTabs items={[["in-progress",t("staffing.placements.tabInProgress")],["accepted",t("staffing.placements.tabAccepted")],["guaranteed",t("staffing.placements.tabGuaranteed")],["clawed-back",t("staffing.placements.tabClawedBack")],["all",t("staffing.placements.tabAll")]].map(([v,l])=>
       [v,`${l} (${A.placements.filter(p=>v==="all"?true:p.status===v).length})`])} value={tab} onChange={setTab}/></div>
 
     <div className="grid gap-3" style={{gridTemplateColumns:mob?"1fr":"repeat(auto-fill,minmax(340px,1fr))"}}>

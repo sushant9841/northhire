@@ -274,7 +274,7 @@ export default function NorthHire(){
                 footer; as soon as it enters the viewport the banner hides itself, since a
                 reader who scrolled all the way down clearly saw the page and doesn't need a
                 second dismissal prompt overlapping the footer nav links. */}
-            {!cookieAck&&!_isBare&&<_CookieBanner mob={mob} onAccept={acceptCookies} onGoPolicy={()=>{acceptCookies();go("privacy");}}/>}
+            {!cookieAck&&!_isBare&&<CookieBanner mob={mob} onAccept={acceptCookies} onGoPolicy={()=>{acceptCookies();go("privacy");}}/>}
           </>}
     </div></Ctx.Provider>;
 }
@@ -283,7 +283,7 @@ export default function NorthHire(){
    (or the bottom-of-page marker when no footer is rendered). Once the footer scrolls into
    view the banner is hidden - a reader who's read the whole page has clearly seen it and
    doesn't need a second dismissal prompt overlapping the footer's own nav links. */
-function _CookieBanner({mob,onAccept,onGoPolicy}){
+function CookieBanner({mob,onAccept,onGoPolicy}){
   const {t}=useTranslation();
   const [hidden,setHidden]=useState(false);
   const ref=useRef(null);

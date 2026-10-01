@@ -17,7 +17,7 @@ import {
    Keycloak). SAML is deliberately absent rather than half-built — validating XML signatures
    incorrectly is an authentication bypass, not a cosmetic bug — and the pricing copy now says
    OIDC to match. Endpoints are discovered from the issuer rather than pasted by hand. */
-function _SsoConfig({mob,isOwner}){
+function SsoConfig({mob,isOwner}){
   /* `loaded` distinguishes "we haven't heard back from the server yet" from "the server says the
      plan doesn't include SSO". Without this, a slow or briefly-failed /sso/config call rendered
      the entire page as nothing at all — the parent already gated by A.can("sso"), so an empty
@@ -100,7 +100,7 @@ export function EmpSsoPage(){
   return <Page narrow>
     <H1 sub="Let your team sign in with your own identity provider">Single sign-on</H1>
     {allowed
-      ? <_SsoConfig mob={mob} isOwner={isOwner}/>
+      ? <SsoConfig mob={mob} isOwner={isOwner}/>
       : <Card pad={mob?20:26}>
           <Empty icon="lock" title="Available on Enterprise"
             body="Single sign-on connects NorthHire to your own identity provider over OIDC — Microsoft Entra ID, Okta, Auth0, Google Workspace or Keycloak — so your team signs in with the account they already have."
@@ -112,7 +112,7 @@ export function EmpSsoPage(){
 export function EmpApiPage(){
   const A=use(); const mob=useMedia("(max-width: 900px)");
   const [data,setData]=useState({keys:[],webhooks:[],enabled:false,events:[]});
-  /* Same rationale as _SsoConfig: an in-flight /api-keys/ fetch is not proof the plan lacks API
+  /* Same rationale as SsoConfig: an in-flight /api-keys/ fetch is not proof the plan lacks API
      access. The client's own A.can("api") is the authoritative plan gate; we only fall back to
      the server's `enabled` flag as an extra safety check while data.enabled is still its default. */
   const [loaded,setLoaded]=useState(false);
