@@ -902,6 +902,10 @@ export const en = {
       silverMedalistRefreshedToast: "Refresh complete — {n} new match(es).", silverMedalistDeletedToast: "Match removed.",
       snapshotRecapturedToast: "Snapshot for {date} re-captured.",
       demographicsTitle: "Applicant demographics (platform-wide)", demographicsSub: "{n} respondents — every bucket under 10 people is suppressed",
+      demographicField: {
+        ageBand: "Age band", gender: "Gender", indigenous: "Indigenous identity",
+        racialized: "Racialized identity", disability: "Disability", lgbtq: "LGBTQ identity",
+      },
       totalApplicants: "Total applicants", totalHires: "Total hires", suppressed: "Suppressed (< 10)", noRespondents: "No respondents",
     },
     admins: {

@@ -901,6 +901,10 @@ export const fr = {
       silverMedalistRefreshedToast: "Actualisation terminée — {n} nouvelle(s) correspondance(s).", silverMedalistDeletedToast: "Correspondance retirée.",
       snapshotRecapturedToast: "Instantané du {date} recapturé.",
       demographicsTitle: "Données démographiques des candidat·e·s (plateforme entière)", demographicsSub: "{n} répondant·e·s — tout groupe de moins de 10 personnes est supprimé",
+      demographicField: {
+        ageBand: "Tranche d'âge", gender: "Genre", indigenous: "Identité autochtone",
+        racialized: "Identité racisée", disability: "Handicap", lgbtq: "Identité LGBTQ",
+      },
       totalApplicants: "Total des candidatures", totalHires: "Total des embauches", suppressed: "Supprimé (< 10)", noRespondents: "Aucun·e répondant·e",
     },
     admins: {

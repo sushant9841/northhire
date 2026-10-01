@@ -619,7 +619,7 @@ function _DemographicsAdmin({A,t}){
     <div className="grid grid-cols-2 gap-3">
       {Object.entries(agg.fields).map(([field,d])=>
         <div key={field} className="bg-bg rounded-xl py-2.5 px-3">
-          <div className="text-xs font-semibold text-text-2 mb-1.5">{field}</div>
+          <div className="text-xs font-semibold text-text-2 mb-1.5">{t("admin.stats.demographicField."+field,{defaultValue:field})}</div>
           <div className="flex flex-col gap-0.5">
             {d.applicants.length===0?<div className="text-xs text-text-3">{t("admin.stats.noRespondents")}</div>
               :d.applicants.map(b=><div key={b.value} className="text-xs text-text-2">{fmtBucket(b)}</div>)}
