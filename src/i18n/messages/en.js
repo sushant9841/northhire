@@ -3577,6 +3577,7 @@ export const en = {
       completed: "Completed",
     },
     expenseStatus: {
+      submitted: "Submitted",
       pending: "Pending",
       approved: "Approved",
       rejected: "Rejected",

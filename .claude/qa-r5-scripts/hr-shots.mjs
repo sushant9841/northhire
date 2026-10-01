@@ -32,7 +32,7 @@ async function captureHr(browser, vp) {
     ["hrSettings", "/hr/settings"],
     ["hrCalendar", "/hr/calendar"],
     ["hrTrainings", "/hr/trainings"],
-    ["hrPerf", "/hr/performance"],
+    ["hrPerf", "/hr/perf-reviews"],
     ["hrProfile", "/hr/profile"],
     ["hrExpenses", "/hr/expenses"],
     ["hrInvoices", "/hr/invoices"],

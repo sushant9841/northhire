@@ -1560,9 +1560,10 @@ export function HrChat(){
   const [selected,setSelected]=useState(A.hrChats[0]?.id||null);
   const [msg,setMsg]=useState("");
   const [showNew,setShowNew]=useState(false);
-  const [showThreads,setShowThreads]=useState(!mob);
+  const [showThreads,setShowThreads]=useState(true);
   const [showTemplates,setShowTemplates]=useState(false);
   useEffect(()=>{if(!mob)setShowThreads(true);},[mob]);
+  useEffect(()=>{if(!selected&&A.hrChats[0]?.id)setSelected(A.hrChats[0].id);/* eslint-disable-next-line */},[A.hrChats.length]);
   useEffect(()=>{if(selected)A.markHrChatRead(selected);},[selected]);
   /* H5 - "Message {employee} about their leave" deep-link: A.openHrChatWith (useStore.js) already
      resolved/created the right 1:1 thread and stashed {chatId,text} here before navigating - land
@@ -1589,7 +1590,7 @@ export function HrChat(){
   const send=()=>{if(!msg.trim())return; A.sendHrMessage(selected,msg.trim()); setMsg("");};
 
   return <div className="grid gap-3" style={{gridTemplateColumns:mob?"1fr":"280px 1fr",height:"calc(100dvh - 130px)"}}>
-    {(showThreads||!mob)&&<Card pad={0} style={{borderRadius:14,overflow:"hidden",display:"flex",flexDirection:"column"}}>
+    {(showThreads||!mob||!chat)&&<Card pad={0} style={{borderRadius:14,overflow:"hidden",display:"flex",flexDirection:"column"}}>
       <div className="py-3.5 px-4 border-b border-line-soft flex justify-between items-center">
         <div className="text-sm font-semibold text-text">{t("hr.chat.conversations")}</div>
         {(chatSettings.allowDirectMessages||chatSettings.allowGroupCreation)&&<Btn kind="ghost" size="xs" icon="plus" aria-label="New conversation" onClick={()=>setShowNew(true)}/>}

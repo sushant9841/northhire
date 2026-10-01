@@ -3567,6 +3567,7 @@ export const fr = {
       completed: "Terminée",
     },
     expenseStatus: {
+      submitted: "Soumise",
       pending: "En attente",
       approved: "Approuvée",
       rejected: "Refusée",
