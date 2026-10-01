@@ -31,6 +31,7 @@ import { infinityReplacer } from "../src/helpers/jsonInfinity.js";
 import { execSync } from "node:child_process";
 import { backfillDailySnapshots, captureDailySnapshot } from "./snapshots.js";
 import { refreshSilverMedalistMatches } from "./lib/silverMedalist.js";
+import { sweepStaleApplications } from "./lib/staleApplications.js";
 
 /* Build identity for this server process. Client checks this against its own __BUILD_ID__
    (defined at frontend build time - see vite.config.js) and shows a discreet refresh banner
@@ -189,3 +190,9 @@ setImmediate(() => {
   try { refreshSilverMedalistMatches(); } catch (e) { console.error("boot: refreshSilverMedalistMatches failed", e); }
 });
 setInterval(() => refreshSilverMedalistMatches(), 7 * 24 * 3600 * 1000);
+/* Roadmap B1-07: close stale applications (default Applied/Reviewed, past 90 days).
+   Deferred off the boot tick like the snapshots above so app.listen() isn't blocked. */
+setImmediate(() => {
+  try { sweepStaleApplications(); } catch (e) { console.error("boot: sweepStaleApplications failed", e); }
+});
+setInterval(() => sweepStaleApplications(), 24 * 3600 * 1000);
