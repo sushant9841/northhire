@@ -1861,7 +1861,7 @@ export const en = {
       publicProfileAtCompany: "at {company}",
       publicProfileYearsAtCompany: "years at company",
       publicProfileReportsTo: "Reports to",
-      publicProfileTrainingsCompleted: "trainings completed",
+      publicProfileTrainingsCompleted: "trainings completed", publicProfileTrainingCompletedSingular: "training completed",
       publicProfileRecognitions: "Recognitions:",
       publicProfilePhone: "Phone: ",
       publicProfileEmail: "Email: ",

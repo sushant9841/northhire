@@ -1849,7 +1849,7 @@ export const fr = {
       publicProfileAtCompany: "chez {company}",
       publicProfileYearsAtCompany: "ans à l'entreprise",
       publicProfileReportsTo: "Rend des comptes à",
-      publicProfileTrainingsCompleted: "formations complétées",
+      publicProfileTrainingsCompleted: "formations complétées", publicProfileTrainingCompletedSingular: "formation complétée",
       publicProfileRecognitions: "Reconnaissances :",
       publicProfilePhone: "Téléphone : ",
       publicProfileEmail: "Courriel : ",

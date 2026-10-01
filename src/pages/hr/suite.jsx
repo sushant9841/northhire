@@ -476,7 +476,7 @@ export function HrProfile(){
             {publicView.department&&<div>• {publicView.department} {t("hr.profile.publicProfileAtCompany",{company:publicView.company})}</div>}
             {publicView.tenureYears&&<div>• {publicView.tenureYears} {t("hr.profile.publicProfileYearsAtCompany")}</div>}
             {publicView.manager&&<div>• {t("hr.profile.publicProfileReportsTo")} {publicView.manager}</div>}
-            {publicView.trainingsCompleted>0&&<div>• {publicView.trainingsCompleted} {t("hr.profile.publicProfileTrainingsCompleted")}</div>}
+            {publicView.trainingsCompleted>0&&<div>• {publicView.trainingsCompleted} {t(publicView.trainingsCompleted===1?"hr.profile.publicProfileTrainingCompletedSingular":"hr.profile.publicProfileTrainingsCompleted")}</div>}
             {publicView.badges?.length>0&&<div className="mt-2">
               <div className="text-xs text-text-3 mb-1.5">{t("hr.profile.publicProfileRecognitions")}</div>
               <div className="flex flex-wrap gap-1">

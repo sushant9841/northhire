@@ -224,24 +224,24 @@ export function AgencyDashboard(){
         <Card pad={mob?18:20} style={{borderRadius:16}}>
           <Lbl>{t("staffing.dashboard.moneyOnDesk")}</Lbl>
           <div className="flex flex-col gap-2.5">
-            <div className="flex justify-between items-center py-2.5 px-3 bg-bg rounded-lg">
-              <span className="text-sm text-text-2">{t("staffing.dashboard.arOutstanding")}</span>
-              <span className="text-base font-bold text-brand tabular-nums">${kpi.arTotal.toLocaleString(locale==="fr-CA"?"fr-CA":"en-CA",{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+            <div className="flex justify-between items-center gap-2 py-2.5 px-3 bg-bg rounded-lg">
+              <span className="text-sm text-text-2 min-w-0 truncate">{t("staffing.dashboard.arOutstanding")}</span>
+              <span className="text-base font-bold text-brand tabular-nums shrink-0">${kpi.arTotal.toLocaleString(locale==="fr-CA"?"fr-CA":"en-CA",{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
             </div>
-            {kpi.overdueTotal>0&&<div className="flex justify-between items-center py-2.5 px-3 bg-red-bg rounded-lg border border-red-ln">
-              <span className="text-sm text-text-2">{t("staffing.dashboard.overdue")}</span>
+            {kpi.overdueTotal>0&&<div className="flex justify-between items-center gap-2 py-2.5 px-3 bg-red-bg rounded-lg border border-red-ln">
+              <span className="text-sm text-text-2 min-w-0 truncate">{t("staffing.dashboard.overdue")}</span>
               {/* Explicit min/max fraction digits so a value ending in .20 renders as $3,435.20
                   not $3,435.2 - a hand-rolled Math.round or toLocaleString() without options
                   drops the trailing zero, which reads as broken next to sibling values. */}
-              <span className="text-base font-bold text-red tabular-nums">${kpi.overdueTotal.toLocaleString(locale==="fr-CA"?"fr-CA":"en-CA",{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+              <span className="text-base font-bold text-red tabular-nums shrink-0">${kpi.overdueTotal.toLocaleString(locale==="fr-CA"?"fr-CA":"en-CA",{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
             </div>}
-            <div className="flex justify-between items-center py-2.5 px-3 bg-bg rounded-lg">
-              <span className="text-sm text-text-2">{t("staffing.dashboard.placementsInFlight")}</span>
-              <span className="text-base font-bold text-violet">{kpi.inProgressPlacements}</span>
+            <div className="flex justify-between items-center gap-2 py-2.5 px-3 bg-bg rounded-lg">
+              <span className="text-sm text-text-2 min-w-0 truncate">{t("staffing.dashboard.placementsInFlight")}</span>
+              <span className="text-base font-bold text-violet shrink-0">{kpi.inProgressPlacements}</span>
             </div>
-            {kpi.guaranteeExpiring>0&&<div className="flex justify-between items-center py-2.5 px-3 bg-warn-bg rounded-lg border border-warn-ln">
-              <span className="text-sm text-text-2">{t("staffing.dashboard.guaranteesEndingSoon")}</span>
-              <span className="text-base font-bold text-warn">{kpi.guaranteeExpiring}</span>
+            {kpi.guaranteeExpiring>0&&<div className="flex justify-between items-center gap-2 py-2.5 px-3 bg-warn-bg rounded-lg border border-warn-ln">
+              <span className="text-sm text-text-2 min-w-0 truncate">{t("staffing.dashboard.guaranteesEndingSoon")}</span>
+              <span className="text-base font-bold text-warn shrink-0">{kpi.guaranteeExpiring}</span>
             </div>}
           </div>
         </Card>
