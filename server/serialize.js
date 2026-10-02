@@ -81,6 +81,7 @@ export function serializeJob(row) {
     recruitingCost: Number(row.recruiting_cost || 0),
     distributionChannels: row.distribution_channels ? JSON.parse(row.distribution_channels) : [],
     forwardEmail: row.forward_email || null,
+    visibility: row.visibility || "public",
   };
 }
 

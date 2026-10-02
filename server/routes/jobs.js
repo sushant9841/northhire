@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, nextId } from "../db.js";
-import { requireAuth, requireRole, requireAdminScope, hasAdminScope } from "../auth.js";
+import { requireAuth, requireRole, requireAdminScope, hasAdminScope, userFromRequest, hrEmployeeFromRequest } from "../auth.js";
 import { serializeJob } from "../serialize.js";
 import { getConfig } from "../platformConfig.js";
 import { geocode } from "../geocode.js";
@@ -66,6 +66,21 @@ jobsRouter.get("/", (req, res) => {
   if (mode) { clauses.push("mode = ?"); params.push(mode); }
   if (minPay) { clauses.push("(pay_hi >= ? OR pay_lo >= ?)"); params.push(Number(minPay), Number(minPay)); }
   if (q) { clauses.push("(title LIKE ? OR description LIKE ?)"); params.push(`%${q}%`, `%${q}%`); }
+
+  /* Roadmap B1-05: visibility gating. Public baseline: visibility='public' OR 'internal_first'
+     whose 7-day internal-only window has elapsed. Admins skip the filter entirely (full view).
+     Employer users see every job on their own employer_id regardless of visibility; HR Suite
+     employees see every internal/internal_first job at their own company_id. All checks go
+     through additional OR branches at the SQL layer so one pass still uses the indexes. */
+  const authedUser = userFromRequest(req);
+  const hrEmp = hrEmployeeFromRequest(req);
+  const isAdmin = authedUser?.role === "admin";
+  if (!isAdmin) {
+    const visBranches = ["visibility = 'public'", "(visibility = 'internal_first' AND datetime(created_at) < datetime('now','-7 days'))"];
+    if (authedUser?.employer_id) { visBranches.push("employer_id = ?"); params.push(authedUser.employer_id); }
+    if (hrEmp?.company_id) { visBranches.push("(employer_id = ? AND visibility IN ('internal','internal_first'))"); params.push(hrEmp.company_id); }
+    clauses.push("(" + visBranches.join(" OR ") + ")");
+  }
 
   // QA-r4 scale: unbounded list returned 11.8MB and took 20s at 15k rows. Add real pagination
   // + a total count so the client can render "N of M" and page controls. Default page = 500
@@ -214,13 +229,16 @@ jobsRouter.post("/", requireAuth, requireRole("employer"), async (req, res) => {
     : [];
   const fwdEmail = (typeof b.forwardEmail === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.forwardEmail.trim()))
     ? b.forwardEmail.trim().toLowerCase() : null;
+  /* B1-05 visibility: public (default) / internal (HR of same company only) / internal_first
+     (hidden from public for 7 days then flips). Guard against unexpected values. */
+  const visibility = ["public","internal","internal_first"].includes(b.visibility) ? b.visibility : "public";
   db.prepare(
     `INSERT INTO jobs (id, employer_id, title, cat, city, prov, lat, lng, type, mode, pay_lo, pay_hi, pay_unit,
        vacancies, experience, education, deadline_date, urgent, featured, skills_json, perks_json,
        description, duties_json, requirements_json, how_to_apply, screening_questions_json,
        ai_screening, vacancy_confirmed, status, pending_owner_approval,
-       distribution_channels, forward_email)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+       distribution_channels, forward_email, visibility)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
   ).run(
     id, req.user.employer_id, b.title, b.cat || null, b.city || null, b.prov || null, geo?.lat ?? null, geo?.lng ?? null,
     b.type || null, b.mode || null,
@@ -233,7 +251,7 @@ jobsRouter.post("/", requireAuth, requireRole("employer"), async (req, res) => {
       .map(q => ({ id: q.id, type: q.type, prompt: q.prompt.trim(), required: !!q.required, options: Array.isArray(q.options) ? q.options : [] }))),
     b.aiScreening === false ? 0 : 1, b.vacancyConfirmed ? 1 : 0,
     initialStatus, needsOwnerApproval ? 1 : 0,
-    JSON.stringify(distChannels), fwdEmail
+    JSON.stringify(distChannels), fwdEmail, visibility
   );
   const row = db.prepare("SELECT * FROM jobs WHERE id = ?").get(id);
   res.status(201).json({ job: serializeJob(row) });
@@ -252,7 +270,15 @@ jobsRouter.patch("/:id", requireAuth, requireRole("employer", "admin"), (req, re
   const isAdmin = req.user.role === "admin";
   if (!isAdmin && job.employer_id !== req.user.employer_id) return res.status(403).json({ error: "Not your listing." });
 
-  const { status, flagged, approve, scoreWeights, recruitingCost, distributionChannels, forwardEmail } = req.body || {};
+  const { status, flagged, approve, scoreWeights, recruitingCost, distributionChannels, forwardEmail, visibility } = req.body || {};
+
+  /* B1-05: visibility editable by owner employer (not admin — this is a company call, not
+     moderation). Guard against unexpected values. */
+  if (visibility !== undefined) {
+    if (isAdmin) return res.status(403).json({ error: "Visibility is the employer's to configure." });
+    if (!["public","internal","internal_first"].includes(visibility)) return res.status(400).json({ error: "Unknown visibility value." });
+    db.prepare("UPDATE jobs SET visibility = ? WHERE id = ?").run(visibility, req.params.id);
+  }
 
   // Distribution channels + forward email are the employer's to edit on their own listing;
   // stored the same way as at create time.

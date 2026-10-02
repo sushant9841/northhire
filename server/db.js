@@ -1220,6 +1220,13 @@ for (const stmt of [
   "CREATE INDEX IF NOT EXISTS idx_hr_employees_email ON hr_employees(company_id, email)",
   "CREATE INDEX IF NOT EXISTS idx_hr_employees_role ON hr_employees(company_id, role)",
   "CREATE INDEX IF NOT EXISTS idx_hr_employees_manager ON hr_employees(company_id, manager)",
+  /* Roadmap B1-05: internal-mobility job visibility. 'public' (default) is Indeed-style open to
+     every job seeker; 'internal' hides the role from public listings and only shows it to HR
+     employees of the posting company's employer_id; 'internal_first' hides from public for 7
+     days after created_at then flips to public automatically (no server job needed — the GET
+     /jobs filter checks age at query time). */
+  "ALTER TABLE jobs ADD COLUMN visibility TEXT NOT NULL DEFAULT 'public'",
+  "CREATE INDEX IF NOT EXISTS idx_jobs_visibility ON jobs(visibility, status)",
 ]) {
   try { db.exec(stmt); } catch (e) { if (!/duplicate column/i.test(e.message)) console.error("migration:", stmt, e.message); }
 }

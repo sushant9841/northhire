@@ -566,7 +566,8 @@ export function EmpPost(){
     dl:f.dlDate?Math.max(1,Math.ceil((new Date(f.dlDate)-new Date())/(1000*60*60*24))):14,
     featured:f.featured,
     aiScreening:f.aiScreening,vacancyConfirmed:f.vacancyConfirmed,
-    distributionChannels:f.distributionChannels,forwardEmail:f.forwardEmail});
+    distributionChannels:f.distributionChannels,forwardEmail:f.forwardEmail,
+    visibility:f.visibility||"public"});
   const next=async()=>{if(!validate())return;
     if(step<4){setStep(step+1);return;}
     const payload=buildPayload();
@@ -899,6 +900,23 @@ export function EmpPost(){
           <Field label="Forward every application to (optional)" hint="A copy of each new application will be emailed here in addition to your NorthHire pipeline.">
             <Input icon="mail" type="email" value={f.forwardEmail||""} onChange={e=>set("forwardEmail",e.target.value)} placeholder="applications@yourcompany.ca"/>
           </Field>
+        </div>
+
+        {/* Roadmap B1-05: visibility picker. Public = standard open posting; Internal = your own
+           employees only (via HR Suite); Internal first = HR for the first 7 days, then auto-
+           flips public. Only renders for employers with an HR Suite — i.e. where the internal
+           audience actually exists. */}
+        <div className="mt-5 p-4 border border-line rounded-xl bg-white">
+          <Lbl>{t("employer.post.visibilityLabel")}</Lbl>
+          <div className={`grid gap-2 mb-2 ${mob?"grid-cols-1":"grid-cols-3"}`}>
+            {[["public","visibilityPublic","visibilityPublicDesc"],["internal_first","visibilityInternalFirst","visibilityInternalFirstDesc"],["internal","visibilityInternal","visibilityInternalDesc"]].map(([k,ln,dn])=>{
+              const on=(f.visibility||"public")===k;
+              return <button key={k} type="button" onClick={()=>set("visibility",k)}
+                className={`py-3 px-3.5 rounded-lg cursor-pointer text-left border-2 transition duration-150 ${on?"border-brand bg-tint":"border-line bg-white"}`}>
+                <div className={`text-sm ${on?"font-bold text-brand":"font-semibold text-text"}`}>{t("employer.post."+ln)}</div>
+                <div className="text-xs text-text-3 mt-0.5 leading-snug">{t("employer.post."+dn)}</div>
+              </button>;
+            })}</div>
         </div>
       </div>}
 
