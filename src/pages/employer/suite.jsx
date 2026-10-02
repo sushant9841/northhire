@@ -927,7 +927,7 @@ function PipelineCard({a,u,s,idx,selected,tog,A,notice,stages,t,onOpen}){
     onKeyDown={e=>{if((e.key==="Enter"||e.key===" ")&&!e.target.closest("[data-nc]")){e.preventDefault();onOpen(a.id);}}}>
     <div className="flex gap-2.5 items-center mb-2.5">
       {A.can("bulkActions")&&<div data-nc role="checkbox" aria-checked={selected} aria-label={`Select ${u.name}`} tabIndex={0}
-        onClick={()=>tog(a.id)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();tog(a.id);}}}
+        onClick={e=>tog(a.id,e.shiftKey)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();tog(a.id,e.shiftKey);}}}
         className="w-5 h-5 rounded-md cursor-pointer flex items-center justify-center shrink-0"
         style={{border:`1.5px solid ${selected?C.brand:C.line}`,background:selected?C.brand:"#fff"}}>
         {selected&&<I n="check" s={12} c="#fff" w={3}/>}</div>}
@@ -1108,6 +1108,9 @@ export function EmpPipeline(){
   const rawApps=A.applications.filter(a=>a.job===jobId);
   const [tab,setTab]=useState("pipeline");
   const [sel,setSel]=useState(new Set());
+  /* Roadmap B2-07: track last-toggled id so shift+click on another card selects the whole range
+     between them (within the same visual order — same stage first, then across all apps). */
+  const lastTogRef=useRef(null);
   const [f,setF]=useState({minScore:0,prov:"",q:""});
   const [bulkMenu,setBulkMenu]=useState(false);
   const [confirmRejectAll,setConfirmRejectAll]=useState(false);
@@ -1142,7 +1145,20 @@ export function EmpPipeline(){
     if(f.q&&!matchesBooleanQuery(f.q,u.name,u.title,u.city,(u.skills||[]).join(" ")))return false;
     return true;});
 
-  const tog=id=>{const n=new Set(sel);n.has(id)?n.delete(id):n.add(id);setSel(n);};
+  const tog=(id,shiftKey)=>{
+    const n=new Set(sel);
+    /* Shift+click: select every card between the last-toggled id and this one (inclusive).
+       Order follows the apps array (pipeline board renders apps grouped by stage, in order). */
+    if(shiftKey&&lastTogRef.current&&lastTogRef.current!==id){
+      const ids=apps.map(a=>a.id);
+      const i=ids.indexOf(lastTogRef.current), j=ids.indexOf(id);
+      if(i>=0&&j>=0){const [lo,hi]=i<j?[i,j]:[j,i]; for(let k=lo;k<=hi;k++)n.add(ids[k]);}
+    } else {
+      n.has(id)?n.delete(id):n.add(id);
+    }
+    lastTogRef.current=id;
+    setSel(n);
+  };
   const selectStage=stage=>{const items=apps.filter(a=>a.stage===stage).map(a=>a.id);
     const n=new Set(sel); const allSel=items.every(id=>n.has(id));
     items.forEach(id=>allSel?n.delete(id):n.add(id)); setSel(n);};
