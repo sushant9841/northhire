@@ -464,6 +464,16 @@ export function useStore(){
     setToasts(l=>[...l,{id,message,tone,onClick,pos}]);
     setTimeout(()=>setToasts(l=>l.filter(t=>t.id!==id)),3500);
   };
+  /* Roadmap B2-10: Gmail-style 5-second undo toast. The caller passes the undo function and we
+     surface it as a visible "Undo" action on the toast; dismissing the toast or letting it time
+     out leaves the destructive action in place. The action label is overridable so callers can
+     use "Restore" / "Cancel" / etc. where it reads better than "Undo". */
+  const toastUndo=(message,onUndo,{label,tone="brand",ms=5000}={})=>{
+    const id=uid("toast");
+    const action={label:label||"Undo",onClick:()=>{onUndo();setToasts(l=>l.filter(t=>t.id!==id));}};
+    setToasts(l=>[...l,{id,message,tone,action,pos:"bottom"}]);
+    setTimeout(()=>setToasts(l=>l.filter(t=>t.id!==id)),ms);
+  };
   const dismissToast=id=>setToasts(l=>l.filter(t=>t.id!==id));
 
   /* Real URL support, part 2: which entity id (if any) the target route needs, and the id's
@@ -2444,7 +2454,7 @@ export function useStore(){
     loadAdminApplications,moderateAdminApplication,loadAdminInterviews,cancelAdminInterview,loadAdminOffers,revokeAdminOffer,loadAdminDemographicsAggregate,
     loadAdminWorkflowRules,deleteAdminWorkflowRule,loadAdminBenefitsPlans,archiveAdminBenefitsPlan,loadAdminPerfCycles,deleteAdminPerfCycle,loadAdminReferralCredits,retryAdminReferralCredit,
     saved,following,enrolled,trainingProgress,suspended,suspensionInfo,invitedCandidates,notifications,activity,securitySignals,opsHealth,settings,userSettings,search,setSearch,
-    toasts,toast,dismissToast,chatDock,setChatDock,
+    toasts,toast,toastUndo,dismissToast,chatDock,setChatDock,
     jobId,empId,blogId,trainingId,cvId,editId,candidateId,hrEmpId,setHrEmpId,pipelineJob,applyDraft,setApplyDraft,
     contactPrefill,setContactPrefill,pendingPlan,setPendingPlan,employersPrefill,setEmployersPrefill,
     blogAuthorFilter,setBlogAuthorFilter,filterBlogsByAuthor,

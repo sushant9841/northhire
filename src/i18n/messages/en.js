@@ -140,6 +140,7 @@ export const en = {
     revoke: "Revoke", enable: "Enable", disable: "Disable", confirm: "Confirm",
     keepAccount: "Keep my account", deletePermanently: "Delete permanently",
     sending: "Sending…", getHelp: "Get help", status: "Status", due: "due", there: "there",
+    dismiss: "Dismiss", undo: "Undo",
   },
   primitives: {
     showingOfTotal: "Showing {from}–{to} of {total}",
@@ -3298,6 +3299,9 @@ export const en = {
       recentSearchesLabel: "Recent:", anyTitleChip: "Any title",
       updateSavedSearchBtn: "Update saved search", savedSearchUpdatedToast: "Saved search updated",
       saveThisSearchBtn: "Save this search", defaultSearchName: "Search",
+      alertCtaTitle: "Get alerts for this search",
+      alertCtaBody: "We'll email you the moment a new role matches these filters — no need to come check back.",
+      alertCtaBtn: "Alert me",
       listViewBtn: "List view", mapViewBtn: "Map view",
       bestMatchOption: "Best match", mostRecentOption: "Most recent",
       highestPayOption: "Highest pay", closingSoonOption: "Closing soon",

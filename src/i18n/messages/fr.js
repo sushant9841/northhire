@@ -141,6 +141,7 @@ export const fr = {
     revoke: "Révoquer", enable: "Activer", disable: "Désactiver", confirm: "Confirmer",
     keepAccount: "Conserver mon compte", deletePermanently: "Supprimer définitivement",
     sending: "Envoi en cours…", getHelp: "Obtenir de l'aide", status: "Statut", due: "échéance", there: "là",
+    dismiss: "Ignorer", undo: "Annuler",
   },
   primitives: {
     showingOfTotal: "Affichage de {from} à {to} sur {total}",
@@ -3288,6 +3289,9 @@ export const fr = {
       recentSearchesLabel: "Récentes :", anyTitleChip: "Tous les postes",
       updateSavedSearchBtn: "Mettre à jour la recherche sauvegardée", savedSearchUpdatedToast: "Recherche sauvegardée mise à jour",
       saveThisSearchBtn: "Sauvegarder cette recherche", defaultSearchName: "Recherche",
+      alertCtaTitle: "Recevoir des alertes pour cette recherche",
+      alertCtaBody: "Nous vous enverrons un courriel dès qu'un nouveau poste correspondra à ces filtres — plus besoin de revenir vérifier.",
+      alertCtaBtn: "M'alerter",
       listViewBtn: "Vue liste", mapViewBtn: "Vue carte",
       bestMatchOption: "Meilleure correspondance", mostRecentOption: "Plus récent",
       highestPayOption: "Salaire le plus élevé", closingSoonOption: "Fermeture prochaine",

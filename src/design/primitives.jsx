@@ -421,6 +421,9 @@ export function ToastHost({toasts,dismiss}){
     className={`w-full rounded-xl py-3 px-4 flex gap-3 items-center shadow-lg ${T[t.tone]||T.brand} ${t.onClick?"cursor-pointer":""}`}
     style={{animation:"up .22s cubic-bezier(.22,.68,.35,1) both"}}>
    <span className="text-sm font-medium flex-1 min-w-0">{t.message}</span>
+   {t.action&&<button onClick={e=>{e.stopPropagation();t.action.onClick();}}
+     className="border border-white/35 bg-transparent text-white text-xs font-bold uppercase tracking-wide py-1 px-2.5 rounded-md cursor-pointer shrink-0 hover:bg-white/15">
+     {t.action.label}</button>}
    <button onClick={e=>{e.stopPropagation();dismiss(t.id);}} className="border-0 bg-transparent p-0 cursor-pointer flex shrink-0 opacity-70"><I n="x" s={15} c="#fff"/></button>
   </div>;
  return <>

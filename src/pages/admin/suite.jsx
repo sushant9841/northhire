@@ -154,7 +154,9 @@ export function AdmUsers(){
           <Btn kind="ghost" size="xs" onClick={()=>setViewing(u)}>{t("admin.users.details")}</Btn>
           <Btn kind="ghost" size="xs" icon="eye" onClick={()=>A.impersonate(u.id)}>{t("admin.users.viewAs")}</Btn>
           <Btn kind={sus?"outline":"ghost"} size="xs" onClick={()=>{
-            if(sus){A.toggleSuspend(u.id);A.toast(t("admin.users.restoredToast",{name:u.name}),"ok");}
+            if(sus){A.toggleSuspend(u.id);
+              /* B2-10: 5s undo window on restore in case the admin misclicked. */
+              A.toastUndo(t("admin.users.restoredToast",{name:u.name}),()=>A.toggleSuspend(u.id),{tone:"ok"});}
             else{setSuspending(u);setReason("");}
           }}>{sus?t("admin.users.restore"):t("admin.users.suspend")}</Btn>
           {/* QA-r5c: GDPR erase is destructive + irreversible — moved out of the per-row action
@@ -168,7 +170,13 @@ export function AdmUsers(){
           <Area rows={3} value={reason} onChange={e=>setReason(e.target.value)} placeholder={t("admin.users.suspendPlaceholder")}/></Field>
         <div className="flex gap-2.5 justify-end">
           <Btn kind="ghost" onClick={()=>setSuspending(null)}>{t("admin.users.cancel")}</Btn>
-          <Btn kind="danger" disabled={!reason.trim()} onClick={()=>{A.toggleSuspend(suspending.id,reason.trim());A.toast(t("admin.users.suspendedToast",{name:suspending.name}),"danger");setSuspending(null);}}>{t("admin.users.suspend")}</Btn>
+          <Btn kind="danger" disabled={!reason.trim()} onClick={()=>{
+            const id=suspending.id,name=suspending.name;
+            A.toggleSuspend(id,reason.trim());
+            /* B2-10: 5s undo window on suspend — catches misclicks before the user even sees the next page. */
+            A.toastUndo(t("admin.users.suspendedToast",{name}),()=>A.toggleSuspend(id),{tone:"danger",label:t("common.undo")});
+            setSuspending(null);
+          }}>{t("admin.users.suspend")}</Btn>
         </div>
       </div>
     </Modal>}

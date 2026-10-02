@@ -10,6 +10,7 @@ import { JobCard } from "../shared/cards.jsx";
 import { matchJobsToFilters } from "../../helpers/jobSearch.js";
 import { JobsMap } from "./components/JobsMap.jsx";
 import { useTranslation } from "../../i18n/i18n.jsx";
+import { useDismissed } from "../../helpers/useDismissed.js";
 
 /* ═══════════════ SEARCH · MATCHED · SAVED · EMPLOYERS ═══════════════ */
 /* Job Seeker Transformation Tranche 2 — "Recent searches" list. This is pure UI convenience (what
@@ -59,6 +60,27 @@ function Filters({f,set,clear,n,q,where}){
     <div><Lbl>{t("seeker.search.minPayLabel")}</Lbl>
       <Sel value={f.minPay||""} onChange={e=>set({...f,minPay:e.target.value})}>
         <option value="">{t("seeker.search.anyPay")}</option>{[40000,50000,60000,75000,90000,110000].map(v=><option key={v} value={v}>{t("seeker.search.payKPlusPerYear",{amount:v/1000})}</option>)}</Sel></div>
+  </div>;
+}
+
+function SearchAlertCTA({A,t,q,where,f,mob}) {
+  const [dismissed, dismiss] = useDismissed("search-alert-cta:v1");
+  if (dismissed) return null;
+  const nm = q || CATM[f.cats?.[0]]?.label || t("seeker.search.defaultSearchName");
+  return <div className={`bg-brand-wash border border-brand-line rounded-2xl flex items-center gap-4 flex-wrap mb-5 ${mob?"p-4":"p-5"}`}>
+    <div className="w-10 h-10 rounded-xl bg-white border border-brand-line flex items-center justify-center text-brand shrink-0"><I n="bell" s={18}/></div>
+    <div className="flex-1 min-w-0" style={{minWidth:220}}>
+      <div className="text-sm font-bold text-text">{t("seeker.search.alertCtaTitle")}</div>
+      <div className="text-xs text-text-2 mt-0.5">{t("seeker.search.alertCtaBody")}</div>
+    </div>
+    <div className="flex gap-2 flex-wrap">
+      <Btn kind="primary" size="sm" icon="bell" onClick={() => A.saveSearch(q, where, f.cats, nm, f)}>
+        {t("seeker.search.alertCtaBtn")}
+      </Btn>
+      <Btn kind="ghost" size="sm" onClick={dismiss} aria-label={t("common.dismiss")}>
+        {t("common.dismiss")}
+      </Btn>
+    </div>
   </div>;
 }
 
@@ -183,6 +205,16 @@ export function SearchPage(){
         {!mob&&<div className="bg-white rounded-3xl p-6 border border-line sticky top-20">
           <Filters f={f} set={setF} clear={clear} n={n} q={q} where={where}/></div>}
         <div>
+          {/* Roadmap B2-03: prominent 'alert me when new roles match' CTA. Shown when a logged-in
+              seeker has a meaningful search (3+ results, some filter active) and hasn't dismissed
+              it this session. Clicking either saves the search immediately or sends to the saved-
+              searches page if it already exists. */}
+          {A.user?.role==="seeker"&&!A.editingSavedSearchId&&res.length>=3&&(q||where||f.cats?.length)&&(()=>{
+            const alreadySaved=(A.savedSearches||[]).some(s=>
+              s.q===q&&s.where===where&&JSON.stringify(s.cats||[])===JSON.stringify(f.cats||[]));
+            if(alreadySaved) return null;
+            return <SearchAlertCTA A={A} t={t} q={q} where={where} f={f} mob={mob}/>;
+          })()}
           <div className="flex justify-between items-center mb-5 gap-3 flex-wrap">
             <div className="text-base text-text-2"><strong className={`text-text font-bold tracking-tight ${mob?"text-lg":"text-2xl"}`}>{res.length}</strong> {res.length===1?t("seeker.matched.jobOne"):t("seeker.matched.jobOther")}
               {q&&<> for "<strong className="text-text">{q}</strong>"</>}</div>
