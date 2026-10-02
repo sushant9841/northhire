@@ -602,6 +602,27 @@ export function EmpPost(){
     const pubJob=published.job;
     const publicUrl=typeof window!=="undefined"?`${window.location.origin}/jobs/${pubJob.id}`:"";
     const matchCount=A.can("talentPool")?A.reverseMatch(pubJob.id,65).length:0;
+    /* Roadmap B4-02: smart post scoring. Predict first-7-day applicant volume from the
+       platform's own historical data — same (cat, prov, pay band) listings over the last 90
+       days. Simple median+IQR, no ML. Catches 'pay too low / too remote' before the employer
+       waits a week to notice. */
+    const forecast=(()=>{
+      const dayMs=86400000, now=Date.now(), ninetyDays=now-90*dayMs;
+      const payBand=Math.round(((pubJob.lo||0)+(pubJob.hi||0))/2000)*1000;
+      const peers=A.jobs.filter(j=>j.id!==pubJob.id&&j.cat===pubJob.cat&&j.prov===pubJob.prov&&j.createdAt>=ninetyDays);
+      if(peers.length<3) return null;
+      const counts=peers.map(j=>{
+        const posted=j.createdAt;
+        return A.applications.filter(a=>a.job===j.id&&new Date(a.at||a.createdAt||posted).getTime()<=posted+7*dayMs).length;
+      }).sort((a,b)=>a-b);
+      const p25=counts[Math.floor(counts.length*0.25)];
+      const p75=counts[Math.floor(counts.length*0.75)];
+      const median=counts[Math.floor(counts.length/2)];
+      const peerPay=peers.map(j=>Math.round(((j.lo||0)+(j.hi||0))/2));
+      const peerMedianPay=peerPay.sort((a,b)=>a-b)[Math.floor(peerPay.length/2)];
+      const payFlag=payBand>0&&peerMedianPay>0&&payBand<peerMedianPay*0.85;
+      return {p25,median,p75,n:peers.length,payFlag,peerMedianPay};
+    })();
     return <Page narrow>
       <SuccessCard title={t("employer.post.publishedTitle",{title:pubJob.t})} subtitle={t("employer.post.publishedSub")}
         actions={[
@@ -609,9 +630,14 @@ export function EmpPost(){
           <Btn key="copy" kind="outline" icon="copy" onClick={()=>navigator.clipboard?.writeText(publicUrl)}>{t("employer.post.copyPublicUrl")}</Btn>,
           <Btn key="done" kind="primary" onClick={()=>A.go("empJobs")}>{t("common.close")}</Btn>,
         ]}>
-        {matchCount>0&&<Banner tone="brand" icon="sparkle" style={{marginBottom:published.links.length?12:0}}
+        {matchCount>0&&<Banner tone="brand" icon="sparkle" style={{marginBottom:published.links.length||forecast?12:0}}
           action={<Btn kind="primary" size="sm" onClick={()=>{A.setPipelineJob(pubJob.id);A.go("empPipeline");}}>{t(matchCount===1?"employer.pipeline.showCandidates":"employer.pipeline.showCandidatesPlural",{n:matchCount})}</Btn>}>
           {t(matchCount===1?"employer.post.candidatesAlreadyMatch":"employer.post.candidatesAlreadyMatchPlural",{n:matchCount})}
+        </Banner>}
+        {forecast&&<Banner tone={forecast.payFlag?"warn":"neutral"} icon={forecast.payFlag?"alert":"trend"} style={{marginBottom:published.links.length?12:0}}>
+          <div className="text-sm font-semibold text-text">{t("employer.post.forecastTitle",{p25:forecast.p25,p75:forecast.p75})}</div>
+          <div className="text-xs text-text-2 mt-0.5">{t("employer.post.forecastBody",{n:forecast.n,median:forecast.median})}</div>
+          {forecast.payFlag&&<div className="text-xs text-warn mt-1.5 font-semibold">{t("employer.post.forecastPayLow",{median:Math.round(forecast.peerMedianPay/1000)})}</div>}
         </Banner>}
         {published.links.length>0&&<div>
           <Lbl style={{marginTop:matchCount>0?12:0}}>{t("employer.post.postToOtherBoards")}</Lbl>
