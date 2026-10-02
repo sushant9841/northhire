@@ -461,6 +461,11 @@ export const en = {
     onSite: "On-site", urgent: "Urgent", applied: "Applied", newBadge: "New",
     minRead: "{mins} min read",
     free: "Free", enrolled: "Enrolled", enrolledCount: "{count} enrolled",
+    addToCompare: "Add to compare", removeFromCompare: "Remove from compare",
+    compareCount: "{n} to compare", compareBtn: "Compare", clearCompare: "Clear",
+    compareModalTitle: "Compare roles",
+    compareFieldCol: "Field", pay: "Pay", location: "Location",
+    employmentType: "Employment type", workMode: "Work mode", applyBy: "Apply by", openings: "Openings",
   },
   formControls: {
     locationPlaceholder: "City or province", useMyLocation: "Use my location",

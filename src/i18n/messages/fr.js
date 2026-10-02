@@ -459,6 +459,11 @@ export const fr = {
     onSite: "Sur place", urgent: "Urgent", applied: "Candidature envoyée", newBadge: "Nouveau",
     minRead: "{mins} min de lecture",
     free: "Gratuit", enrolled: "Inscrit·e", enrolledCount: "{count} inscrit·e·s",
+    addToCompare: "Ajouter à la comparaison", removeFromCompare: "Retirer de la comparaison",
+    compareCount: "{n} à comparer", compareBtn: "Comparer", clearCompare: "Effacer",
+    compareModalTitle: "Comparer les postes",
+    compareFieldCol: "Champ", pay: "Rémunération", location: "Emplacement",
+    employmentType: "Type d'emploi", workMode: "Mode de travail", applyBy: "Postuler avant", openings: "Postes",
   },
   formControls: {
     locationPlaceholder: "Ville ou province", useMyLocation: "Utiliser ma localisation",

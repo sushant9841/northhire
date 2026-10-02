@@ -47,6 +47,7 @@ import { KioskPage } from "./pages/hr/KioskPage.jsx";
 import { EmpApiPage, EmpSsoPage } from "./pages/employer/api.jsx";
 import { HireOnboardingModal } from "./pages/shared/HireOnboardingModal.jsx";
 import { ToastHost, Modal, Btn } from "./design/primitives.jsx";
+import { pay, payUnit, dlText } from "./helpers/utils.js";
 import {
   AgencyLoginPage, AgencyDashboard, AgencyJobOrders, AgencyBench, AgencyAssignments,
   AgencyTimesheets, AgencyPayroll, AgencyInvoicing, AgencyPlacements, AgencyClients,
@@ -264,6 +265,7 @@ export default function NorthHire(){
               </div>
             </Modal>}
             <ToastHost toasts={A.toasts} dismiss={A.dismissToast}/>
+            <CompareBar/>
             {/* Cookie banner hides on dashboard-shell pages: a signed-in user is on a page whose
                 left rail carries the "Sign out" and bottom-of-nav controls, and the fixed
                 bottom-left banner was overlapping and hiding them. Signed-in users have
@@ -277,6 +279,53 @@ export default function NorthHire(){
             {!cookieAck&&!_isBare&&<CookieBanner mob={mob} onAccept={acceptCookies} onGoPolicy={()=>{acceptCookies();go("privacy");}}/>}
           </>}
     </div></Ctx.Provider>;
+}
+
+/* Roadmap B4-11: compare-jobs floating bar. Appears when the seeker has ticked 2+ jobs via the
+   JobCard checkbox; clicking Compare opens a side-by-side modal with pay/location/type/mode/
+   deadline rows. Session-scoped — clears on sign-out or by the Clear button. Hidden entirely
+   when nothing is selected so it doesn't clutter the page. */
+function CompareBar(){
+  const A=use(); const {t}=useTranslation();
+  const [showModal,setShowModal]=useState(false);
+  const ids=[...(A.compare||[])];
+  if(!ids.length) return null;
+  const picked=ids.map(id=>A.job(id)).filter(Boolean);
+  const rows=[
+    ["cards.pay", j=>pay(j)+" "+payUnit(j)],
+    ["cards.location", j=>`${j.city}, ${j.prov}`],
+    ["cards.employmentType", j=>j.type],
+    ["cards.workMode", j=>j.mode],
+    ["cards.applyBy", j=>dlText(j.dl)],
+    ["cards.openings", j=>String(j.vac)],
+  ];
+  return <>
+    <div className="fixed left-1/2 z-[800] bg-ink text-white rounded-full py-2 px-4 flex gap-3 items-center shadow-lg"
+      style={{bottom:24, transform:"translateX(-50%)"}}>
+      <span className="text-sm font-semibold">{t("cards.compareCount",{n:picked.length})}</span>
+      <button onClick={()=>setShowModal(true)} disabled={picked.length<2}
+        className={`bg-brand text-white border-0 rounded-full py-1.5 px-3.5 text-xs font-bold uppercase tracking-wide cursor-pointer ${picked.length<2?"opacity-50 cursor-not-allowed":""}`}>
+        {t("cards.compareBtn")}</button>
+      <button onClick={A.clearCompare} className="bg-transparent border-0 text-white/70 text-xs font-semibold cursor-pointer hover:text-white">
+        {t("cards.clearCompare")}</button>
+    </div>
+    {showModal&&<Modal onClose={()=>setShowModal(false)} title={t("cards.compareModalTitle")} wide>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse" style={{minWidth:picked.length*220}}>
+          <thead><tr><th className="text-left text-xs font-bold text-text-3 uppercase tracking-wide py-2.5 px-3 border-b border-line sticky left-0 bg-white z-10">{t("cards.compareFieldCol")}</th>
+            {picked.map(j=><th key={j.id} className="text-left py-2.5 px-3 border-b border-line min-w-50">
+              <button onClick={()=>{setShowModal(false);A.openJob(j.id);}} className="bg-transparent border-0 cursor-pointer text-left p-0">
+                <div className="text-sm font-bold text-text">{j.t}</div>
+                <div className="text-xs text-text-2 mt-0.5">{A.emp(j.e)?.name}</div></button></th>)}
+          </tr></thead>
+          <tbody>{rows.map(([k,getV])=><tr key={k}>
+            <td className="text-xs font-semibold text-text-3 py-3 px-3 border-b border-line-soft sticky left-0 bg-white z-10">{t(k)}</td>
+            {picked.map(j=><td key={j.id} className="text-sm text-text py-3 px-3 border-b border-line-soft">{getV(j)}</td>)}
+          </tr>)}</tbody>
+        </table>
+      </div>
+    </Modal>}
+  </>;
 }
 
 /* Cookie banner extracted so it can carry its own IntersectionObserver on the site footer

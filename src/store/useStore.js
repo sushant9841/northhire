@@ -68,6 +68,12 @@ export function useStore(){
   const [cvs,setCvs]=useState([]);
   const [saved,setSaved]=useState(new Set());
   const [following,setFollowing]=useState(new Set());
+  /* Roadmap B4-11: side-by-side job comparison. Seekers tick 2-4 jobs across search/saved and
+     open a modal that puts them in columns. Session-scoped (not persisted) — comparison is a
+     momentary decision, not a long-term list. Capped at 4 so the modal doesn't overflow on mobile. */
+  const [compare,setCompare]=useState(new Set());
+  const toggleCompare=id=>setCompare(p=>{const n=new Set(p); if(n.has(id))n.delete(id); else if(n.size<4)n.add(id); return n;});
+  const clearCompare=()=>setCompare(new Set());
   const [enrolled,setEnrolled]=useState(new Set());
   const [paidTrainings,setPaidTrainings]=useState(()=>new Set());
   const [trainingProgress,setTrainingProgress]=useState({});
@@ -2455,6 +2461,7 @@ export function useStore(){
     loadAdminWorkflowRules,deleteAdminWorkflowRule,loadAdminBenefitsPlans,archiveAdminBenefitsPlan,loadAdminPerfCycles,deleteAdminPerfCycle,loadAdminReferralCredits,retryAdminReferralCredit,
     saved,following,enrolled,trainingProgress,suspended,suspensionInfo,invitedCandidates,notifications,activity,securitySignals,opsHealth,settings,userSettings,search,setSearch,
     toasts,toast,toastUndo,dismissToast,chatDock,setChatDock,
+    compare,toggleCompare,clearCompare,
     jobId,empId,blogId,trainingId,cvId,editId,candidateId,hrEmpId,setHrEmpId,pipelineJob,applyDraft,setApplyDraft,
     contactPrefill,setContactPrefill,pendingPlan,setPendingPlan,employersPrefill,setEmployersPrefill,
     blogAuthorFilter,setBlogAuthorFilter,filterBlogsByAuthor,

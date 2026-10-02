@@ -40,6 +40,7 @@ export function HiringTypeBadge({jobId,size="sm"}){
 export function JobCard({job,delay=0}){
   const A=use(); const { t } = useTranslation(); const e=A.emp(job.e);
   const applied=A.appliedJobIds.has(job.id);
+  const inCompare=A.compare?.has(job.id);
   return <Card hover delay={delay} onClick={()=>A.openJob(job.id)} pad={18}>
     <div className="flex gap-3.5 items-start mb-3">
       <EmpMark e={e}/>
@@ -49,7 +50,17 @@ export function JobCard({job,delay=0}){
           <span className="overflow-hidden text-ellipsis whitespace-nowrap">{e.name}</span>
           {e.verified&&<span className="text-brand flex shrink-0" title={t("cards.verifiedEmployer")}><I n="checkC2" s={14} w={2}/></span>}</div>
       </div>
-      <SaveBtn id={job.id}/>
+      <div className="flex gap-1 items-center shrink-0">
+        {/* Roadmap B4-11: compare checkbox. Only shows for signed-in seekers (compare is a seeker
+            flow) and only when there's space in the Set OR this card is already in it. */}
+        {A.user?.role==="seeker"&&(inCompare||(A.compare?.size||0)<4)&&
+          <button onClick={e=>{e.stopPropagation(); A.toggleCompare(job.id);}}
+            aria-label={inCompare?t("cards.removeFromCompare"):t("cards.addToCompare")}
+            title={inCompare?t("cards.removeFromCompare"):t("cards.addToCompare")}
+            className={`bg-transparent border-0 cursor-pointer p-1 flex ${inCompare?"text-brand":"text-text-3"}`}>
+            <I n={inCompare?"checkC2":"plus"} s={18} w={inCompare?0:2}/></button>}
+        <SaveBtn id={job.id}/>
+      </div>
     </div>
     <div className="flex items-baseline gap-2 bg-tint border border-line-2 rounded-xl py-2.5 px-3 mb-3">
       <span className="text-lg font-semibold text-brand tracking-tight">{pay(job)}</span>
