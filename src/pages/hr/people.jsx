@@ -170,6 +170,27 @@ function HrPeople_OrgChart(){
     return (children[e.id]||[]).some(k=>subtreeMatches(k));
   };
 
+  /* Roadmap B2-11: drag-to-reassign-manager. HTML5 drag/drop on each node — drag an employee
+     onto another node to set that node as their manager. Server-side updateEmp refreshes the
+     tree. Guards: dropping on self is a no-op, dropping on current manager is a no-op, and
+     dropping on your own descendant is refused (would create a cycle). */
+  const [draggingId,setDraggingId]=useState(null);
+  const [overId,setOverId]=useState(null);
+  const isDescendantOf=(nodeId,targetId,seen=new Set())=>{
+    if(nodeId===targetId) return true;
+    if(seen.has(nodeId)) return false;
+    seen.add(nodeId);
+    return (children[nodeId]||[]).some(k=>isDescendantOf(k.id,targetId,seen));
+  };
+  const reassign=async(empId,newManagerId)=>{
+    const emp=empMap[empId];
+    if(!emp||empId===newManagerId||emp.manager===newManagerId) return;
+    if(isDescendantOf(empId,newManagerId)){
+      A.toast(t("hrPeople.orgChart.cycleRefused"),"warn"); return;
+    }
+    await A.updateEmp(empId,{manager:newManagerId});
+    A.toast(t("hrPeople.orgChart.reassignedToast",{name:emp.name,manager:empMap[newManagerId]?.name||""}),"ok");
+  };
   const Node=({e,depth=0,ancestors})=>{
     /* `ancestors` guards against a manager-reference cycle (e.g. two people accidentally set
        as each other's manager) recursing forever and crashing the tab — a bad cycle just stops
@@ -181,9 +202,17 @@ function HrPeople_OrgChart(){
     const isMatch=searchActive&&e.name.toLowerCase().includes(q.toLowerCase());
     const open=searchActive?subtreeMatches(e):manualOpen;
     if(searchActive&&!subtreeMatches(e))return null;
+    const isOver=overId===e.id&&draggingId&&draggingId!==e.id;
     return <div className="relative" style={{marginLeft:depth===0?0:mob?14:24,marginTop:depth===0?0:8}}>
       {depth>0&&<div className="absolute left-3.5 top-0 rounded-bl" style={{bottom:"50%",width:14,borderLeft:`2px solid ${C.line}`,borderBottom:`2px solid ${C.line}`}}/>}
-      <div className={`flex gap-2.5 items-center py-2.5 px-3 bg-white border rounded-xl transition-all duration-150 ${isMatch?"border-brand":"border-line"}`} style={isMatch?{boxShadow:`0 0 0 2px ${C.line2}`}:undefined}>
+      <div draggable
+        onDragStart={ev=>{setDraggingId(e.id); ev.dataTransfer.effectAllowed="move"; ev.dataTransfer.setData("text/plain",e.id);}}
+        onDragEnd={()=>{setDraggingId(null); setOverId(null);}}
+        onDragOver={ev=>{if(draggingId&&draggingId!==e.id){ev.preventDefault(); ev.dataTransfer.dropEffect="move"; setOverId(e.id);}}}
+        onDragLeave={()=>{if(overId===e.id) setOverId(null);}}
+        onDrop={ev=>{ev.preventDefault(); if(draggingId&&draggingId!==e.id) reassign(draggingId,e.id); setDraggingId(null); setOverId(null);}}
+        className={`flex gap-2.5 items-center py-2.5 px-3 bg-white border rounded-xl transition-all duration-150 ${isMatch?"border-brand":isOver?"border-ok":"border-line"} ${draggingId===e.id?"opacity-50":""}`}
+        style={{...(isMatch?{boxShadow:`0 0 0 2px ${C.line2}`}:undefined), cursor:draggingId?"grabbing":"grab"}}>
         {kids.length>0&&<button onClick={()=>setManualOpen(!manualOpen)} className="bg-transparent border-0 p-0.5 cursor-pointer text-text-3 flex">
           <I n={open?"chevD":"chevR"} s={14}/>
         </button>}

@@ -991,6 +991,8 @@ export const en = {
     },
     orgChart: {
       title: "Reporting structure", summaryOne: "{n} people · {r} report at the top level", summaryOther: "{n} people · {r} reports at the top level",
+      cycleRefused: "Can't move someone under their own report — would create a loop.",
+      reassignedToast: "{name} now reports to {manager}.",
       findPerson: "Find a person", noOneMatches: "No one matches that search", tryDifferentName: "Try a different name.",
       noOrgChartYet: "No org chart yet", onceManagersAssigned: "Once employees have managers assigned, the tree appears here.",
     },

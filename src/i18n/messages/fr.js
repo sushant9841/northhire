@@ -990,6 +990,8 @@ export const fr = {
     },
     orgChart: {
       title: "Structure hiérarchique", summaryOne: "{n} personnes · {r} relève directement de la direction", summaryOther: "{n} personnes · {r} relèvent directement de la direction",
+      cycleRefused: "Impossible de déplacer quelqu'un sous sa propre équipe — créerait une boucle.",
+      reassignedToast: "{name} relève maintenant de {manager}.",
       findPerson: "Trouver une personne", noOneMatches: "Personne ne correspond à cette recherche", tryDifferentName: "Essayez un autre nom.",
       noOrgChartYet: "Aucun organigramme pour l'instant", onceManagersAssigned: "Une fois des gestionnaires assigné·e·s aux employé·e·s, l'arborescence apparaît ici.",
     },
