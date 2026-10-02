@@ -15,15 +15,38 @@ export function MatchScoreDrawer({job,open,onClose}){
   const gap=A.skillsGap(job);
   const score=A.score(job);
 
-  /* A natural-language summary line beats a bare percentage — name the strongest concrete reason
-     rather than repeat the number the Ring already shows. */
+  /* Roadmap B4-01: upgrade the bare one-liner into a real conversational explainer — one paragraph
+     that synthesizes skills matched / missing / experience / location / sector into something a
+     seeker reads as 'why am I this %', not 'here's a number'. Still deterministic — no LLM yet —
+     just more of the structured data the drawer already has, strung together into prose. */
   const summary=(()=>{
-    const bits=[];
-    if(gap.have?.length)bits.push(t("shared.matchDrawer.summaryYourSkill",{skill:gap.have[0]}));
-    if(typeof u?.years==="number"&&u.years>0)bits.push(t("shared.matchDrawer.summaryYears",{years:u.years}));
-    if(!bits.length)return t("shared.matchDrawer.summaryGeneric");
-    return score>=75?t("shared.matchDrawer.summaryStrong",{reasons:bits.join(t("shared.matchDrawer.summaryJoin"))})
-      :t("shared.matchDrawer.summaryModerate",{reasons:bits.join(t("shared.matchDrawer.summaryJoin"))});
+    const sentences=[];
+    // 1. The headline — number + strongest fit frame.
+    const tone=score>=85?t("shared.matchDrawer.summaryStrong",{reasons:""}).replace(/\s*:\s*$/,"")
+      :score>=60?t("shared.matchDrawer.summaryModerate",{reasons:""}).replace(/\s*:\s*$/,"")
+      :t("shared.matchDrawer.summaryGeneric");
+    sentences.push(t("shared.matchDrawer.summaryScoreLine",{score,tone}));
+    // 2. Skills: how many of this role's required skills you bring, and what's missing (first 3).
+    const req=(job.skills||[]).length;
+    const have=gap.have?.length||0;
+    if(req>0){
+      if(have===req) sentences.push(t("shared.matchDrawer.summaryAllSkills",{n:req}));
+      else if(have>0) sentences.push(t("shared.matchDrawer.summarySomeSkills",{have,total:req,missing:(gap.missing||[]).slice(0,3).join(", ")}));
+      else sentences.push(t("shared.matchDrawer.summaryNoSkillsListed",{missing:(gap.missing||[]).slice(0,3).join(", ")}));
+    }
+    // 3. Experience vs role minimum, if the posting named one.
+    const minExp=Number(job.exp)||0;
+    if(typeof u?.years==="number"&&u.years>=0){
+      if(minExp>0&&u.years>=minExp) sentences.push(t("shared.matchDrawer.summaryExpOver",{years:u.years,min:minExp}));
+      else if(minExp>0) sentences.push(t("shared.matchDrawer.summaryExpUnder",{years:u.years,min:minExp}));
+      else if(u.years>0) sentences.push(t("shared.matchDrawer.summaryExpOnly",{years:u.years}));
+    }
+    // 4. Location fit — same province + on-site/hybrid is a plus; remote role irrelevant.
+    if(job.mode!=="Remote"&&u?.prov){
+      if(u.prov===job.prov) sentences.push(t("shared.matchDrawer.summaryLocalProv",{city:job.city||job.prov}));
+      else sentences.push(t("shared.matchDrawer.summaryOutOfProv",{city:job.city||job.prov,prov:job.prov}));
+    }
+    return sentences.join(" ");
   })();
 
   return <BottomSheet open={open} onClose={onClose} title={t("shared.matchDrawer.title")} width={440}>
