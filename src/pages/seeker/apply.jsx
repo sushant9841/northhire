@@ -206,7 +206,32 @@ export function Apply2(){
           <AutofillDatalist id="autofill-salary-expectation" field="salary_expectation"/></Field>
         <Field label={t("seeker.apply.anythingElseLabel")} hint={t("seeker.apply.anythingElseHint")}>
           <Area rows={6} value={d.letter} onChange={e=>set("letter",e.target.value)}
-            placeholder={t("seeker.apply.applyingForRolePlaceholder",{job:job.t})}/></Field>
+            placeholder={t("seeker.apply.applyingForRolePlaceholder",{job:job.t})}/>
+          {/* Roadmap B4-03: a 'Draft a starting letter' button that composes a short, honest
+             first draft from the seeker's own CV + the role's known fields. The seeker still
+             owns and edits the result — this is a scaffold, not a submission. */}
+          {!d.letter?.trim()&&<Btn kind="ghost" size="sm" icon="sparkle" style={{marginTop:8}}
+            onClick={()=>{
+              const u=A.user; const cv=A.cvs?.find(c=>c.id===A.applyDraft.cv)||A.defaultCv;
+              const empName=e?.name||"your team";
+              const firstName=u?.name?.split(" ")[0]||"";
+              const haveSkills=(job.skills||[]).filter(s=>(u?.skills||[]).some(x=>x.toLowerCase()===s.toLowerCase()));
+              const yrs=u?.years;
+              const topRole=cv?.exp?.[0]?.role||u?.title||"";
+              const parts=[];
+              parts.push(t("seeker.apply.coverGreeting",{team:empName}));
+              parts.push(t("seeker.apply.coverOpener",{role:job.t,employer:empName}));
+              if(haveSkills.length){
+                parts.push(t("seeker.apply.coverSkillsLine",{skills:haveSkills.slice(0,3).join(", "),role:job.t}));
+              }
+              if(typeof yrs==="number"&&yrs>0&&topRole){
+                parts.push(t("seeker.apply.coverExpLine",{years:yrs,role:topRole}));
+              } else if(topRole){
+                parts.push(t("seeker.apply.coverExpOnlyRoleLine",{role:topRole}));
+              }
+              parts.push(t("seeker.apply.coverCloser",{firstName}));
+              set("letter",parts.join("\n\n"));
+            }}>{t("seeker.apply.draftWithAiBtn")}</Btn>}</Field>
         {job.exp!=="No experience required"&&job.exp!=="Entry level welcome"&&
           <Field label={t("seeker.apply.roleAsksForLabel",{exp:t(EXP_KEY[job.exp]||job.exp)})} required>
             <div className="grid grid-cols-2 gap-2.5">
