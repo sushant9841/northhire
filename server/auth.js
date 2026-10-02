@@ -133,7 +133,7 @@ export function requireAgencyAuth(req, res, next) {
 
 export function publicUser(row) {
   if (!row) return null;
-  const { password_hash, password_salt, skills_json, types_json, modes_json, visibility_json, badges_json, opt_in_future_opportunities, ...rest } = row;
+  const { password_hash, password_salt, skills_json, types_json, modes_json, visibility_json, badges_json, opt_in_future_opportunities, quiet_hours_json, digest_frequency, ...rest } = row;
   return {
     ...rest,
     skills: JSON.parse(skills_json || "[]"),
@@ -145,5 +145,8 @@ export function publicUser(row) {
     badges: JSON.parse(badges_json || "[]"),
     // Priority-4 #6: CASL consent for silver-medalist re-engagement matching.
     optInFutureOpportunities: !!opt_in_future_opportunities,
+    // Roadmap B4-04: notification preferences surface so the client can render + edit them.
+    quietHours: JSON.parse(quiet_hours_json || "{}"),
+    digestFrequency: digest_frequency || "instant",
   };
 }

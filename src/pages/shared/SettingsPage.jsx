@@ -105,6 +105,31 @@ export function SettingsPage(){
         <Switch on={S.appAlerts} onChange={v=>A.setUserSetting("appAlerts",v)}/></Row>
       <Row icon="mail" title={t("settings.marketingTitle")} sub={t("settings.marketingSub")}>
         <Switch on={S.marketing} onChange={v=>A.setUserSetting("marketing",v)}/></Row>
+
+      {/* Roadmap B4-04: digest frequency + quiet hours. Both server-persisted via /api/users/me
+         so a signed-in device picks up the preference everywhere, including on a different
+         browser. 'instant' keeps the legacy behaviour; 'daily'/'weekly' batches non-urgent
+         notifications into an email at the next quiet-period boundary. Quiet hours are two
+         HH:MM strings; empty disables the window. */}
+      <Row icon="clock" title={t("settings.digestFrequencyTitle")} sub={t("settings.digestFrequencySub")}>
+        <select value={u.digestFrequency||"instant"} onChange={e=>A.saveProfile({...u,digestFrequency:e.target.value})}
+          className="rounded-lg border border-line bg-white py-1.5 px-2.5 text-sm text-text">
+          <option value="instant">{t("settings.digestInstant")}</option>
+          <option value="daily">{t("settings.digestDaily")}</option>
+          <option value="weekly">{t("settings.digestWeekly")}</option>
+        </select>
+      </Row>
+      <Row icon="moon" title={t("settings.quietHoursTitle")} sub={t("settings.quietHoursSub")}>
+        <div className="flex gap-1.5 items-center">
+          <input type="time" value={u.quietHours?.start||""} onChange={e=>A.saveProfile({...u,quietHours:{...u.quietHours||{},start:e.target.value}})}
+            className="rounded-lg border border-line bg-white py-1 px-2 text-sm text-text" style={{width:95}}/>
+          <span className="text-xs text-text-3">→</span>
+          <input type="time" value={u.quietHours?.end||""} onChange={e=>A.saveProfile({...u,quietHours:{...u.quietHours||{},end:e.target.value}})}
+            className="rounded-lg border border-line bg-white py-1 px-2 text-sm text-text" style={{width:95}}/>
+          {(u.quietHours?.start||u.quietHours?.end)&&<button onClick={()=>A.saveProfile({...u,quietHours:{}})}
+            className="bg-transparent border-0 text-text-3 text-xs font-semibold cursor-pointer px-1">×</button>}
+        </div>
+      </Row>
     </Card>
     <TrustedDevices t={t} locale={locale}/>
     {u.role==="seeker"&&<Card pad={mob?18:24} style={{marginBottom:16}}>

@@ -33,6 +33,18 @@ usersRouter.patch("/me", requireAuth, (req, res) => {
     const current = JSON.parse(db.prepare("SELECT visibility_json FROM users WHERE id = ?").get(req.user.id)?.visibility_json || "{}");
     setCols.push("visibility_json = ?"); params.push(JSON.stringify({ ...current, ...body.visibility }));
   }
+  /* B4-04 notification preferences: quietHours is {start:'HH:MM', end:'HH:MM'} or {} to clear;
+     digestFrequency is one of 'instant' / 'daily' / 'weekly'. Both validated here before writing. */
+  if (body.quietHours !== undefined) {
+    const q = body.quietHours || {};
+    const ok = q && typeof q === "object" && (!q.start || /^\d{2}:\d{2}$/.test(q.start)) && (!q.end || /^\d{2}:\d{2}$/.test(q.end));
+    if (!ok) return res.status(400).json({ error: "Quiet-hours start/end must be HH:MM." });
+    setCols.push("quiet_hours_json = ?"); params.push(JSON.stringify(q.start && q.end ? { start: q.start, end: q.end } : {}));
+  }
+  if (body.digestFrequency !== undefined) {
+    if (!["instant","daily","weekly"].includes(body.digestFrequency)) return res.status(400).json({ error: "Unknown digest frequency." });
+    setCols.push("digest_frequency = ?"); params.push(body.digestFrequency);
+  }
   if (setCols.length) {
     db.prepare(`UPDATE users SET ${setCols.join(", ")} WHERE id = ?`).run(...params, req.user.id);
   }

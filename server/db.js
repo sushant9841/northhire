@@ -1227,6 +1227,14 @@ for (const stmt of [
      /jobs filter checks age at query time). */
   "ALTER TABLE jobs ADD COLUMN visibility TEXT NOT NULL DEFAULT 'public'",
   "CREATE INDEX IF NOT EXISTS idx_jobs_visibility ON jobs(visibility, status)",
+  /* Roadmap B4-04: notification preferences. quiet_hours_json stores {start:'22:00', end:'07:00'}
+     and the client/server-worker guards against sending non-urgent notifications inside that
+     window; empty object = no quiet hours. digest_frequency: 'instant' / 'daily' / 'weekly'
+     controls whether in-app notification batches land as-they-happen or as a rolled-up email
+     at a quiet hour. Both default to the always-on legacy behaviour so no existing user is
+     silenced by this migration. */
+  "ALTER TABLE users ADD COLUMN quiet_hours_json TEXT DEFAULT '{}'",
+  "ALTER TABLE users ADD COLUMN digest_frequency TEXT NOT NULL DEFAULT 'instant' CHECK(digest_frequency IN ('instant','daily','weekly'))",
 ]) {
   try { db.exec(stmt); } catch (e) { if (!/duplicate column/i.test(e.message)) console.error("migration:", stmt, e.message); }
 }

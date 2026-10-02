@@ -891,7 +891,10 @@ export function useStore(){
     try{
       await api.patch("/users/me",{title:d.title,cat:d.cat,city:d.city,prov:d.prov,years:d.years,phone:d.phone,
         skills:d.skills,edu:d.edu,eligible:d.eligible,payMin:d.payMin,payUnit:d.payUnit,types:d.types,modes:d.modes,summary:d.summary,
-        visibility:d.visibility,optInFutureOpportunities:d.optInFutureOpportunities});
+        visibility:d.visibility,optInFutureOpportunities:d.optInFutureOpportunities,
+        /* B4-04 notification prefs persist alongside the profile; the server validates HH:MM
+           format + the digest enum before writing. */
+        quietHours:d.quietHours,digestFrequency:d.digestFrequency});
     }catch(err){toast(`Profile saved locally, but couldn't sync to the server: ${err.message}`,"warn");}
   };
   /* Priority-4 #6: a standalone opt-in toggle for the two lightweight surfaces (ApplyDone,
