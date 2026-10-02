@@ -1264,6 +1264,23 @@ for (const stmt of [
     UNIQUE(company_id, month, voter_hash)
   )`,
   "CREATE INDEX IF NOT EXISTS idx_hr_pulse_company_month ON hr_pulse_responses(company_id, month)",
+  /* Roadmap B3-18: lightweight typed event stream for funnel analysis + session replay. Each
+     row is a single named event with a free-form JSON payload. user_id is NULLable so anonymous
+     events (public pages, pre-login) still land. session_id groups events from the same browser
+     tab so an admin can scroll one user's day as a timeline. Minimal schema deliberately —
+     payload_json carries the rest, and the admin viewer renders it as-is. */
+  `CREATE TABLE IF NOT EXISTS session_events (
+    id TEXT PRIMARY KEY,
+    user_id TEXT REFERENCES users(id),
+    session_id TEXT,
+    event_type TEXT NOT NULL,
+    payload_json TEXT DEFAULT '{}',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`,
+  "CREATE INDEX IF NOT EXISTS idx_session_events_created ON session_events(created_at DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_session_events_user ON session_events(user_id, created_at DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_session_events_session ON session_events(session_id, created_at)",
+  "CREATE INDEX IF NOT EXISTS idx_session_events_type ON session_events(event_type, created_at DESC)",
 ]) {
   try { db.exec(stmt); } catch (e) { if (!/duplicate column/i.test(e.message)) console.error("migration:", stmt, e.message); }
 }

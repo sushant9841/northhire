@@ -160,3 +160,41 @@ platformRouter.patch("/contact/:id", requireAuth, requireAdminScope("support"), 
   db.prepare("UPDATE contact_messages SET status = ? WHERE id = ?").run(status, req.params.id);
   res.json({ message: serializeContactMessage(db.prepare("SELECT * FROM contact_messages WHERE id = ?").get(req.params.id)) });
 });
+
+/* Roadmap B3-18: typed event stream for funnel analysis + replay. Any authenticated client can
+   POST events; the admin viewer reads them scoped. Payload size is bounded so a buggy or
+   malicious client can't fill the table — the event_type is the strict shape, payload is just
+   extra context. */
+platformRouter.post("/events", requireAuth, (req, res) => {
+  const { eventType, sessionId, payload } = req.body || {};
+  if (typeof eventType !== "string" || !eventType.trim() || eventType.length > 80) {
+    return res.status(400).json({ error: "eventType must be a non-empty string ≤80 chars." });
+  }
+  const payloadStr = payload == null ? "{}" : JSON.stringify(payload).slice(0, 4000);
+  const id = nextId("ev", "session_events");
+  db.prepare(
+    "INSERT INTO session_events (id, user_id, session_id, event_type, payload_json) VALUES (?, ?, ?, ?, ?)"
+  ).run(id, req.user.id, sessionId && typeof sessionId === "string" ? sessionId.slice(0, 80) : null, eventType.trim(), payloadStr);
+  res.status(201).json({ ok: true });
+});
+
+/* Admin viewer. Scoped to support+ because event payloads carry per-user navigation detail. */
+platformRouter.get("/events", requireAuth, requireAdminScope("support", "moderator"), (req, res) => {
+  const { userId, sessionId, eventType, since } = req.query;
+  const clauses = [], params = [];
+  if (userId) { clauses.push("user_id = ?"); params.push(userId); }
+  if (sessionId) { clauses.push("session_id = ?"); params.push(sessionId); }
+  if (eventType) { clauses.push("event_type = ?"); params.push(eventType); }
+  if (since) { clauses.push("created_at >= ?"); params.push(since); }
+  const where = clauses.length ? " WHERE " + clauses.join(" AND ") : "";
+  const rawLimit = Number(req.query.limit);
+  const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 2000) : 500;
+  const rows = db.prepare(`SELECT * FROM session_events${where} ORDER BY created_at DESC LIMIT ?`).all(...params, limit);
+  res.json({
+    events: rows.map(r => ({
+      id: r.id, userId: r.user_id, sessionId: r.session_id, eventType: r.event_type,
+      payload: (() => { try { return JSON.parse(r.payload_json || "{}"); } catch { return {}; } })(),
+      createdAt: sqlTime(r.created_at).getTime(),
+    })),
+  });
+});
