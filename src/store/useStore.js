@@ -1576,6 +1576,10 @@ export function useStore(){
     if(!opts?.preview){
       setJobs(js=>js.map(j=>j.id===id?{...j,views:j.views+1}:j));
       api.post(`/jobs/${id}/view`).catch(()=>{}); /* best-effort - a failed view-count bump shouldn't block opening the job */
+      /* Roadmap B4-14: remember the last job a seeker opened so Home can resurface it.
+         Per-viewer convenience, so localStorage is correct per [[feedback-server-authoritative]].
+         Stored under the user id so switching accounts on one machine doesn't cross-contaminate. */
+      try { if (user?.role === "seeker") localStorage.setItem("nh:lastViewedJob:"+user.id, String(id)); } catch { /* storage disabled; silent */ }
     }
     const j=job(id); go("job",j?j.t:"Job details",id);};
   const openEmployer=id=>{setEmpId(id);const e=emp(id);go("employer",e?e.name:"Employer",id);};

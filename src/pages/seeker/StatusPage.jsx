@@ -175,6 +175,10 @@ export function StatusPage(){
                 <div className="text-xs text-text-3">{t("seeker.status.appliedLabel")}</div>
                 <div className="text-sm font-semibold text-text mt-0.5">{a.at}</div></div>}</div>
             {a.stage!=="Withdrawn"&&<div className="py-3.5 px-5 bg-bg border-t border-line-soft">
+              <div className="flex justify-between items-baseline mb-1.5">
+                <div className="text-xs font-semibold text-text-2">{t("seeker.status.stageOf",{n:idx+1,total:cardStages.length})}</div>
+                <div className="text-xs text-text-3">{Math.round(pct)}%</div>
+              </div>
               <Bar v={pct} tone={a.stage==="Offer"?C.ok:C.brand} h={6}/>
               <div className="flex justify-between mt-2.5">
                 {cardStages.map((s,k)=><div key={s} className="text-center flex-1">

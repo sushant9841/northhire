@@ -201,12 +201,33 @@ export function CvsPage(){
 export function CvEditPage(){
   const A=use(); const mob=useMedia("(max-width: 1024px)"); const {t}=useTranslation();
   const cv=A.cvs.find(c=>c.id===A.cvId);
-  const [d,setD]=useState(cv?{...cv}:null);
+  /* Roadmap B2-08: sessionStorage backstop against tab-crash during edit.
+     The debounced autosave below writes to the server every 900ms, but between keystrokes
+     a browser crash still lost up to a second of input. On mount, check for a stashed
+     draft newer than the server copy; on each change, mirror to sessionStorage. The stash
+     is per-CV so switching between CVs doesn't cross-contaminate drafts. */
+  const stashKey=cv?`cv-draft:${cv.id}`:null;
+  const stashedDraft=(()=>{
+    if(!stashKey) return null;
+    try {
+      const raw=sessionStorage.getItem(stashKey);
+      if(!raw) return null;
+      const parsed=JSON.parse(raw);
+      if(parsed&&parsed.at>(cv?.updated_at?Date.parse(cv.updated_at):0)) return parsed.d;
+    } catch { /* malformed stash; ignore and start fresh */ }
+    return null;
+  })();
+  const [d,setD]=useState(cv?(stashedDraft||{...cv}):null);
   const [sec,setSec]=useState("basics");
   const [confirmLeave,setConfirmLeave]=useState(false);
   useEffect(()=>{if(cv)setD({...cv});},[A.cvId]);
   const set=(k,v)=>setD(p=>({...p,[k]:v}));
   const dirty=JSON.stringify(d)!==JSON.stringify(cv);
+  useEffect(()=>{
+    if(!stashKey||!d) return;
+    try { sessionStorage.setItem(stashKey, JSON.stringify({d, at: Date.now()})); }
+    catch { /* quota/private-mode; silent fallback to server-only autosave */ }
+  },[JSON.stringify(d), stashKey]);
   /* Seeker Tranche 5 (JS-08) autosave: 900ms debounce on any change, plus a footer indicator
      that says "Saving…" during the roundtrip and "Saved just now / N minutes ago" after. The
      manual Save button stays as a keyboard-friendly escape hatch, but the reader should
@@ -219,7 +240,9 @@ export function CvEditPage(){
     if(!dirty) return;
     setSaveState("saving");
     const id=setTimeout(async()=>{
-      try{ await A.saveCv(d); setSavedAt(Date.now()); setSaveState("saved"); }
+      try{ await A.saveCv(d); setSavedAt(Date.now()); setSaveState("saved");
+        /* Server saved — drop the sessionStorage backstop so a fresh mount reads from the server. */
+        if(stashKey) try { sessionStorage.removeItem(stashKey); } catch { /* best-effort */ } }
       catch{ setSaveState("error"); }
     },900);
     return()=>clearTimeout(id);

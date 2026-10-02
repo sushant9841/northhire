@@ -2761,6 +2761,7 @@ export const en = {
   home: {
     completenessTitle: "Your profile is {pct}% complete",
     completenessCta: "Add your CV",
+    continueWhereLeft: "Continue where you left off",
     welcomeBack: "Welcome back, {name}.",
     matchedOpportunitiesMsg: "We've lined up {count} new opportunities matched to your skills. Here's what's happening on NorthHire today.",
     addSkillsMsg: "Add a few skills to your profile and we'll start matching you to jobs across Canada.",
@@ -3333,6 +3334,7 @@ export const en = {
       viewAllInterviewsBtn: "View all {n}",
       activeCountOne: "You have {count} active application.", activeCountOther: "You have {count} active applications.",
       lastUpdateLabel: "Last update {when}",
+      stageOf: "Stage {n} of {total}",
       nextStepApplied: "Waiting for the employer to review your application.",
       nextStepReviewed: "The employer has reviewed your application.",
       nextStepShortlisted: "You're on the shortlist — an interview invite may follow.",

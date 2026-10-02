@@ -2751,6 +2751,7 @@ export const fr = {
   home: {
     completenessTitle: "Votre profil est complété à {pct} %",
     completenessCta: "Ajouter mon CV",
+    continueWhereLeft: "Reprendre là où vous avez quitté",
     welcomeBack: "Bienvenue, {name}.",
     matchedOpportunitiesMsg: "Nous avons trouvé {count} possibilités·e assorties·es à vos compétences. Voici ce qui se passe sur NorthHire aujourd'hui.",
     addSkillsMsg: "Ajoutez quelques compétences à votre profil et nous commencerons à vous assortir à des emplois partout au Canada.",
@@ -3323,6 +3324,7 @@ export const fr = {
       viewAllInterviewsBtn: "Voir toutes les {n}",
       activeCountOne: "Vous avez {count} candidature active.", activeCountOther: "Vous avez {count} candidatures actives.",
       lastUpdateLabel: "Dernière mise à jour {when}",
+      stageOf: "Étape {n} sur {total}",
       nextStepApplied: "En attente que l'employeur examine votre candidature.",
       nextStepReviewed: "L'employeur a examiné votre candidature.",
       nextStepShortlisted: "Vous êtes sur la liste restreinte — une invitation à une entrevue pourrait suivre.",

@@ -75,6 +75,17 @@ export function HomePage(){
   /* ─────────── Signed-in seeker: personalized view ─────────── */
   if(seekerLoggedIn){
     const first=A.user.name?.split(" ")[0]||"there";
+    /* Roadmap B4-14: resurface the last job this seeker opened so a returning visit lands on
+       something actionable rather than a cold dashboard. Reads from localStorage (per-viewer
+       convenience) and only renders if the job still exists AND is still live. */
+    let lastJob=null;
+    try {
+      const lastId=localStorage.getItem("nh:lastViewedJob:"+A.user.id);
+      if(lastId){
+        const found=live.find(j=>String(j.id)===lastId);
+        if(found) lastJob=found;
+      }
+    } catch { /* storage disabled; silent */ }
     return <div className="bg-white">
       <section className={mob?"pt-8 px-4 pb-6":"pt-12 px-8 pb-6"}>
         <div className={wrapCls}>
@@ -100,6 +111,20 @@ export function HomePage(){
           old up-front 6-step wizard as the mechanism for collecting the rest of the profile — it
           nudges without gating access to jobs. Reuses the same completeness()/completenessHint()
           selector ProfilePage already shows, so the two never drift out of sync. */}
+      {lastJob&&<section className={mob?"px-4 pt-5":"px-8 pt-6"}>
+        <div className={wrapCls}>
+          <button onClick={()=>A.openJob(lastJob.id)}
+            className={`w-full bg-wash border border-brand-line rounded-2xl flex items-center gap-4 flex-wrap text-left cursor-pointer transition-colors hover:bg-brand-wash-hover ${mob?"p-4":"p-5"}`}>
+            <div className="w-10 h-10 rounded-xl bg-white border border-brand-line flex items-center justify-center text-brand"><I n="arrowR" s={18}/></div>
+            <div className="flex-1 min-w-0">
+              <div className="text-xs font-semibold text-brand mb-0.5 uppercase tracking-wide">{t("home.continueWhereLeft")}</div>
+              <div className="text-base font-bold text-text overflow-hidden text-ellipsis whitespace-nowrap">{lastJob.t}</div>
+              <div className="text-sm text-text-2 mt-0.5">{A.emp(lastJob.e)?.name} · {lastJob.city}, {lastJob.prov}</div>
+            </div>
+          </button>
+        </div>
+      </section>}
+
       {A.completeness<100&&<section className={mob?"px-4 pt-5":"px-8 pt-6"}>
         <div className={wrapCls}>
           <div className={`bg-tint border border-line-2 rounded-2xl flex items-center gap-4 flex-wrap ${mob?"p-4":"p-5"}`}>
