@@ -699,6 +699,16 @@ export function useStore(){
     const target=u.payUnit===j.unit?u.payMin:u.payUnit==="hr"?u.payMin*2080:u.payMin;
     if(j.unit===u.payUnit&&j.lo>=target)r.push("Above your pay target");
     if(u.cat===j.cat)r.push("Your sector");
+    /* Roadmap B4-05: flip the perspective — a seeker weighing a role wants to know how BADLY
+       the employer needs someone like them, not just how well they personally fit. Compute
+       lightweight employer-side signals from the same application/job data already loaded:
+       recent hires in matching sector, and current competition on this specific posting. */
+    const ninetyDays=90*86400000, now=Date.now();
+    const employerJobs=jobs.filter(x=>x.e===j.e).map(x=>x.id);
+    const recentHires=applications.filter(a=>employerJobs.includes(a.job)&&a.stage==="Hired"&&(now-new Date(a.at||a.createdAt||now).getTime())<ninetyDays).length;
+    if(recentHires>=2)r.push(`This employer hired ${recentHires} in the last 90 days`);
+    const applicantsOnThisJob=applications.filter(a=>a.job===j.id&&a.stage!=="Withdrawn").length;
+    if(applicantsOnThisJob<=5&&j.createdAt&&(now-j.createdAt)>=3*86400000)r.push(`Only ${applicantsOnThisJob} applicants so far — low competition`);
     return r;
   };
 
