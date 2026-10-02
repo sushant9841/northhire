@@ -248,7 +248,20 @@ export function ApplyDone(){
   const sentCv=(A.cvs||[]).find(c=>c.id===A.applyDraft.cv)||A.defaultCv;
   const appliedAt=new Date().toLocaleDateString(locale==="fr-CA"?"fr-CA":"en-CA",{day:"numeric",month:"short",year:"numeric"});
   const trackApplication=()=>{ if(A.lastAppliedId)A.setFocusAppId(A.lastAppliedId); A.go("status"); };
-  const more=A.jobs.filter(j=>j.status==="live"&&j.cat===job?.cat&&j.id!==job?.id).slice(0,3);
+  /* Roadmap B1-02: 'Similar roles' used to list the same employer's other roles. That competes
+     with the just-submitted application rather than complementing it — seekers want to broaden
+     their shot across the whole platform. Now excludes the just-applied employer and ranks by
+     overlap of the job's skills + same province, so results feel more like 'what else should I
+     consider?' and less like a cat-filter dump. */
+  const more=(()=>{
+    if(!job) return [];
+    const jobSkills=new Set((job.skills||[]).map(s=>s.toLowerCase()));
+    return A.jobs
+      .filter(j=>j.status==="live"&&j.id!==job.id&&j.e!==job.e&&(j.cat===job.cat||(j.skills||[]).some(s=>jobSkills.has(s.toLowerCase()))))
+      .map(j=>({j, overlap:(j.skills||[]).filter(s=>jobSkills.has(s.toLowerCase())).length, sameProv:j.prov===job.prov?1:0}))
+      .sort((a,b)=>(b.overlap*2+b.sameProv)-(a.overlap*2+a.sameProv))
+      .slice(0,3).map(x=>x.j);
+  })();
   /* Job Seeker Transformation Tranche 1 (JS-01): "First Apply" contextual profile prompt. Rather
      than asking experience level up front at signup, ask it once, right after the first
      successful apply — when years is genuinely unset (completeSignup no longer defaults it for a

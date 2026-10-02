@@ -91,15 +91,23 @@ export function EmpHome(){
   const stale=apps.filter(a=>a.stage==="Applied"&&(now-new Date(a.at||a.createdAt||now).getTime())>=dayMs);
   if(stale.length) attention.push({icon:"users",tone:C.brand,
     title:t(stale.length===1?"employer.home.attStaleOne":"employer.home.attStaleOther",{n:stale.length}),
-    body:t("employer.home.attStaleBody"),cta:t("employer.home.attReviewCta"),onClick:()=>A.go("empPipeline")});
+    body:t("employer.home.attStaleBody"),cta:t("employer.home.attReviewCta"),
+    /* Roadmap B1-04: inline Review opens the specific first-stale candidate directly instead of
+       dumping the user on the pipeline to hunt. Deep link uses the real candidate route. */
+    onClick:()=>{A.setPipelineJob(stale[0].job); A.openCandidateInline(stale[0].id); A.go("empCandidate");}});
   /* 3. Strong candidates (score >= 85 in Applied) */
   const strong=apps.filter(a=>a.stage==="Applied").map(a=>{
     const u=A.person(a.user); const j=A.job(a.job);
     return {a,score:u&&j?A.scoreCandidate(u,j):0};
   }).filter(x=>x.score>=85);
-  if(strong.length) attention.push({icon:"sparkle",tone:C.ok,
-    title:t(strong.length===1?"employer.home.attStrongOne":"employer.home.attStrongOther",{n:strong.length}),
-    body:t("employer.home.attStrongBody"),cta:t("employer.home.attReviewCta"),onClick:()=>A.go("empPipeline")});
+  if(strong.length) {
+    /* Rank by score so the Review action lands on the single best match first. */
+    const best=strong.slice().sort((a,b)=>b.score-a.score)[0];
+    attention.push({icon:"sparkle",tone:C.ok,
+      title:t(strong.length===1?"employer.home.attStrongOne":"employer.home.attStrongOther",{n:strong.length}),
+      body:t("employer.home.attStrongBody"),cta:t("employer.home.attReviewCta"),
+      onClick:()=>{A.setPipelineJob(best.a.job); A.openCandidateInline(best.a.id); A.go("empCandidate");}});
+  }
   /* 4. Jobs approaching expiration (dl <= 3 days) */
   const expiring=liveJobs.filter(j=>j.dl!=null&&j.dl<=3);
   if(expiring.length) attention.push({icon:"clock",tone:C.warn,
@@ -119,7 +127,9 @@ export function EmpHome(){
   const offerWaiting=apps.filter(a=>a.stage==="Offer");
   if(offerWaiting.length) attention.push({icon:"award",tone:C.ok,
     title:t(offerWaiting.length===1?"employer.home.attOfferOne":"employer.home.attOfferOther",{n:offerWaiting.length}),
-    body:t("employer.home.attOfferBody"),cta:t("employer.home.attReviewCta"),onClick:()=>A.go("empPipeline")});
+    body:t("employer.home.attOfferBody"),cta:t("employer.home.attReviewCta"),
+    /* B1-04: open the first offer-stage candidate inline instead of landing on the whole pipeline. */
+    onClick:()=>{A.setPipelineJob(offerWaiting[0].job); A.openCandidateInline(offerWaiting[0].id); A.go("empCandidate");}});
 
   return <Page wide>
     <H1 sub={`${e.verified?t("employer.home.verified"):t("employer.home.awaitingVerification")} • ${A.planName?A.planName():e.plan||"Free"} ${t("employer.home.planSuffix")}`}
