@@ -1829,3 +1829,89 @@ hrRouter.post("/benefits/life-events", requireHrAuth, requireHrMoney, (req, res)
   logHrAudit(req.hrEmployee.company_id, req.hrEmployee.id, "benefits_life_event_recorded", `Recorded life event "${eventType}"`, employeeId);
   res.status(201).json({ event: serializeBenefitsLifeEvent(db.prepare("SELECT * FROM benefits_life_events WHERE id = ?").get(id)) });
 });
+
+
+/* Roadmap B3-14: anonymous employee pulse surveys.
+   One question per calendar month per company, drawn from a rotating 12-question bank by
+   month-of-year. Employees submit a 1-5 rating; we store only a hash of (company_id, employee_id,
+   month) as the de-dup key, never the employee id itself — a leaked response row cannot be
+   traced back to who voted. HR aggregate hides anything below N=5 responses so a small company
+   can't re-identify individuals. */
+const PULSE_QUESTIONS = [
+  { id: "clarity", en: "How clear are your current priorities and goals?", fr: "À quel point vos priorités et objectifs actuels sont-ils clairs ?" },
+  { id: "workload", en: "How sustainable does your workload feel this month?", fr: "À quel point votre charge de travail est-elle soutenable ce mois-ci ?" },
+  { id: "recognition", en: "How often do you feel recognised for your work?", fr: "À quelle fréquence vous sentez-vous reconnu·e pour votre travail ?" },
+  { id: "support", en: "How supported do you feel by your manager?", fr: "À quel point vous sentez-vous soutenu·e par votre gestionnaire ?" },
+  { id: "collaboration", en: "How well is your team collaborating right now?", fr: "À quel point votre équipe collabore-t-elle bien en ce moment ?" },
+  { id: "growth", en: "How much are you learning or growing in your role?", fr: "À quel point apprenez-vous ou progressez-vous dans votre rôle ?" },
+  { id: "fairness", en: "How fair do our processes and policies feel to you?", fr: "À quel point nos processus et politiques vous semblent-ils équitables ?" },
+  { id: "safety", en: "How safe do you feel speaking up with concerns?", fr: "À quel point vous sentez-vous en sécurité pour exprimer des préoccupations ?" },
+  { id: "autonomy", en: "How much autonomy do you have over how you do your work?", fr: "À quel point avez-vous d'autonomie dans la façon dont vous accomplissez votre travail ?" },
+  { id: "purpose", en: "How connected do you feel to the mission of your work?", fr: "À quel point vous sentez-vous relié·e à la mission de votre travail ?" },
+  { id: "pay", en: "How fair does your compensation feel for the work you do?", fr: "À quel point votre rémunération vous semble-t-elle juste pour le travail que vous faites ?" },
+  { id: "overall", en: "Overall, how are you feeling about work this month?", fr: "Globalement, comment vous sentez-vous par rapport au travail ce mois-ci ?" },
+];
+function currentMonthKey() {
+  const d = new Date();
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+function pulseQuestionForMonth(monthKey) {
+  const n = Number(monthKey.slice(-2)) - 1; // 0-11
+  return PULSE_QUESTIONS[n % PULSE_QUESTIONS.length];
+}
+function pulseVoterHash(employeeId, companyId, monthKey) {
+  return crypto.createHash("sha256").update(`${employeeId}|${companyId}|${monthKey}|pulse-v1`).digest("hex");
+}
+
+hrRouter.get("/pulse", requireHrAuth, (req, res) => {
+  const monthKey = currentMonthKey();
+  const q = pulseQuestionForMonth(monthKey);
+  const voterHash = pulseVoterHash(req.hrEmployee.id, req.hrEmployee.company_id, monthKey);
+  const already = db.prepare(
+    "SELECT rating FROM hr_pulse_responses WHERE company_id = ? AND month = ? AND voter_hash = ?"
+  ).get(req.hrEmployee.company_id, monthKey, voterHash);
+  const count = db.prepare(
+    "SELECT COUNT(*) AS n FROM hr_pulse_responses WHERE company_id = ? AND month = ? AND question_id = ?"
+  ).get(req.hrEmployee.company_id, monthKey, q.id).n;
+  res.json({
+    month: monthKey,
+    question: { id: q.id, en: q.en, fr: q.fr },
+    myResponse: already ? already.rating : null,
+    responseCount: count,
+  });
+});
+
+hrRouter.post("/pulse", requireHrAuth, (req, res) => {
+  const { rating } = req.body || {};
+  const n = Number(rating);
+  if (!Number.isInteger(n) || n < 1 || n > 5) return res.status(400).json({ error: "Rating must be an integer 1-5." });
+  const monthKey = currentMonthKey();
+  const q = pulseQuestionForMonth(monthKey);
+  const voterHash = pulseVoterHash(req.hrEmployee.id, req.hrEmployee.company_id, monthKey);
+  try {
+    db.prepare(
+      "INSERT INTO hr_pulse_responses (id, company_id, question_id, month, rating, voter_hash) VALUES (?, ?, ?, ?, ?, ?)"
+    ).run(nextId("pulse", "hr_pulse_responses"), req.hrEmployee.company_id, q.id, monthKey, n, voterHash);
+  } catch (e) {
+    if (/UNIQUE constraint/i.test(e.message)) return res.status(409).json({ error: "You've already answered this month's pulse." });
+    throw e;
+  }
+  res.status(201).json({ ok: true });
+});
+
+hrRouter.get("/pulse/aggregate", requireHrAuth, (req, res) => {
+  const monthKey = currentMonthKey();
+  const q = pulseQuestionForMonth(monthKey);
+  const row = db.prepare(
+    "SELECT COUNT(*) AS n, AVG(rating) AS avg FROM hr_pulse_responses WHERE company_id = ? AND month = ? AND question_id = ?"
+  ).get(req.hrEmployee.company_id, monthKey, q.id);
+  const SUPPRESS_BELOW = 5;
+  const n = row.n || 0;
+  res.json({
+    month: monthKey,
+    question: { id: q.id, en: q.en, fr: q.fr },
+    responseCount: n,
+    average: n >= SUPPRESS_BELOW ? Number((row.avg || 0).toFixed(2)) : null,
+    suppressed: n < SUPPRESS_BELOW,
+  });
+});

@@ -1247,6 +1247,23 @@ for (const stmt of [
      applications still work as always). */
   "ALTER TABLE users ADD COLUMN open_to_offers TEXT NOT NULL DEFAULT 'active' CHECK(open_to_offers IN ('active','passive','closed'))",
   "ALTER TABLE users ADD COLUMN passive_min_score INTEGER NOT NULL DEFAULT 85",
+  /* Roadmap B3-14: anonymous pulse surveys. One question per calendar month per company; the
+     specific question rotates from a hardcoded bank server-side. Rows carry no employee id —
+     anonymity is at the schema level, not just the serialize layer. The HR aggregate hides
+     anything below N=5 responses to prevent re-identification. company_hash is a hash of the
+     employee's company_id + month, used to enforce one-vote-per-month per employee without
+     storing who voted (the row only remembers the hash, which can't be reversed to the id). */
+  `CREATE TABLE IF NOT EXISTS hr_pulse_responses (
+    id TEXT PRIMARY KEY,
+    company_id TEXT NOT NULL REFERENCES employers(id),
+    question_id TEXT NOT NULL,
+    month TEXT NOT NULL,
+    rating INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),
+    voter_hash TEXT NOT NULL,
+    submitted_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(company_id, month, voter_hash)
+  )`,
+  "CREATE INDEX IF NOT EXISTS idx_hr_pulse_company_month ON hr_pulse_responses(company_id, month)",
 ]) {
   try { db.exec(stmt); } catch (e) { if (!/duplicate column/i.test(e.message)) console.error("migration:", stmt, e.message); }
 }

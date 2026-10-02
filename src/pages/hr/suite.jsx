@@ -167,6 +167,60 @@ function H2sub({sub,children}){
   </div>;
 }
 
+/* Roadmap B3-14: anonymous monthly pulse. Shows the current month's question + a 1-5 rating
+   picker if the employee hasn't answered yet, else the live aggregate (suppressed when fewer
+   than 5 responses so a small company can't re-identify anyone). Rendered on HrDashboard; HR/
+   owner/admin roles see both the input and the aggregate, employees only see the input then a
+   "thanks" state after they submit. */
+function PulseCard(){
+  const A=use(); const {t,locale}=useTranslation(); const emp=A.hrCurrentEmp();
+  const [state,setState]=useState(null); // {question, myResponse, responseCount}
+  const [agg,setAgg]=useState(null);
+  const [submitting,setSubmitting]=useState(false);
+  const isHr=emp&&["owner","admin","hr"].includes(emp.role);
+  useEffect(()=>{let on=true;(async()=>{
+    try{
+      const s=await A.hrApiGet("/hr/pulse"); if(on) setState(s);
+      if(isHr){ const a=await A.hrApiGet("/hr/pulse/aggregate"); if(on) setAgg(a); }
+    } catch { /* best-effort — pulse is non-critical UI */ }
+  })();return()=>{on=false;};},[isHr]);
+  if(!state) return null;
+  const q=locale==="fr-CA"?state.question.fr:state.question.en;
+  const submit=async(rating)=>{
+    setSubmitting(true);
+    try{ await A.hrApiPost("/hr/pulse",{rating});
+      const s=await A.hrApiGet("/hr/pulse"); setState(s);
+      if(isHr){ const a=await A.hrApiGet("/hr/pulse/aggregate"); setAgg(a); }
+      A.toast(t("hr.pulse.thanksToast"),"ok");
+    } catch(e){ A.toast(e.message,"danger"); }
+    finally{ setSubmitting(false); }
+  };
+  const answered=state.myResponse!=null;
+  return <Card pad={16} style={{borderRadius:14,marginBottom:16}}>
+    <div className="flex gap-2.5 items-center mb-2">
+      <div className="w-9 h-9 rounded-xl bg-violet-bg text-violet flex items-center justify-center"><I n="sparkle" s={18}/></div>
+      <div className="flex-1 min-w-0">
+        <div className="text-xs font-bold text-violet uppercase tracking-wide">{t("hr.pulse.cardLabel")}</div>
+        <div className="text-sm font-semibold text-text mt-0.5">{q}</div>
+      </div>
+    </div>
+    {!answered?<div className="flex gap-1.5 flex-wrap mt-2">
+      {[1,2,3,4,5].map(n=><button key={n} disabled={submitting} onClick={()=>submit(n)}
+        className="py-2 px-4 rounded-xl border-2 border-line bg-white cursor-pointer text-sm font-bold text-text hover:border-violet hover:text-violet transition-colors">
+        {n}</button>)}
+    </div>:<div className="text-xs text-text-3 mt-1">{t("hr.pulse.alreadyAnswered",{n:state.myResponse})}</div>}
+    {isHr&&agg&&<div className="mt-3 pt-3 border-t border-line-soft flex items-center gap-3 flex-wrap">
+      <div className="text-xs font-bold text-text-3 uppercase tracking-wide">{t("hr.pulse.teamAverage")}</div>
+      {agg.suppressed
+        ? <div className="text-xs text-text-3">{t("hr.pulse.suppressedBelow5",{n:agg.responseCount})}</div>
+        : <>
+          <div className="text-xl font-bold text-text tracking-tight">{(agg.average).toFixed(2)}<span className="text-sm text-text-3 font-normal"> / 5</span></div>
+          <div className="text-xs text-text-3">{t("hr.pulse.responseCount",{n:agg.responseCount})}</div>
+        </>}
+    </div>}
+  </Card>;
+}
+
 export function HrDashboard(){
   const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
   const emp=A.hrCurrentEmp(); const company=A.hrCurrentCompany();
@@ -317,6 +371,8 @@ export function HrDashboard(){
                   <div className="text-xs text-text-3 mt-0.5">{r.type} • {r.from} → {r.to} ({r.days}d)</div>
                 </div>;})}</div>}
         </Card>}
+
+        <PulseCard/>
 
         <Card pad={mob?20:24} style={{borderRadius:20}}>
           <Lbl>{t("hr.dashboard.quickActionsLabel")}</Lbl>

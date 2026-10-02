@@ -1903,6 +1903,14 @@ export const fr = {
       taskSingle: "{count} tâche sur votre liste",
       taskPlural: "{count} tâches sur votre liste",
     },
+    pulse: {
+      cardLabel: "Pouls du mois — anonyme",
+      alreadyAnswered: "Vous avez répondu {n}/5 ce mois-ci. Nous poserons une nouvelle question le mois prochain.",
+      teamAverage: "Moyenne de l'équipe",
+      responseCount: "{n} réponses",
+      suppressedBelow5: "{n} réponses — il en faut au moins 5 pour afficher une moyenne protégée.",
+      thanksToast: "Merci — votre réponse est anonyme.",
+    },
     profile: {
       title: "Profil d'employé·e",
       visibilityJobTitle: "Poste", visibilityDepartment: "Département", visibilityTenure: "Ancienneté à l'entreprise",

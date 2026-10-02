@@ -1915,6 +1915,14 @@ export const en = {
       taskSingle: "{count} task on your list",
       taskPlural: "{count} tasks on your list",
     },
+    pulse: {
+      cardLabel: "This month's pulse — anonymous",
+      alreadyAnswered: "You answered {n}/5 for this month. We'll ask a new question next month.",
+      teamAverage: "Team average",
+      responseCount: "{n} responses",
+      suppressedBelow5: "{n} responses — need at least 5 to show a safe aggregate.",
+      thanksToast: "Thanks — your response is anonymous.",
+    },
     profile: {
       title: "Employee profile",
       visibilityJobTitle: "Job title", visibilityDepartment: "Department", visibilityTenure: "Tenure at company",
