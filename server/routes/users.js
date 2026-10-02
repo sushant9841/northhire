@@ -45,6 +45,18 @@ usersRouter.patch("/me", requireAuth, (req, res) => {
     if (!["instant","daily","weekly"].includes(body.digestFrequency)) return res.status(400).json({ error: "Unknown digest frequency." });
     setCols.push("digest_frequency = ?"); params.push(body.digestFrequency);
   }
+  /* B3-07: open-to-offers status + passive-mode score threshold. The score threshold is only
+     meaningful in passive mode but we accept and persist it regardless so toggling back to
+     passive restores the user's remembered threshold instead of reverting to the default. */
+  if (body.openToOffers !== undefined) {
+    if (!["active","passive","closed"].includes(body.openToOffers)) return res.status(400).json({ error: "Unknown open-to-offers value." });
+    setCols.push("open_to_offers = ?"); params.push(body.openToOffers);
+  }
+  if (body.passiveMinScore !== undefined) {
+    const n = Number(body.passiveMinScore);
+    if (!Number.isFinite(n) || n < 70 || n > 95) return res.status(400).json({ error: "passiveMinScore must be a number between 70 and 95." });
+    setCols.push("passive_min_score = ?"); params.push(n);
+  }
   if (setCols.length) {
     db.prepare(`UPDATE users SET ${setCols.join(", ")} WHERE id = ?`).run(...params, req.user.id);
   }

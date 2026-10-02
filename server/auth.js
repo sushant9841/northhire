@@ -133,7 +133,7 @@ export function requireAgencyAuth(req, res, next) {
 
 export function publicUser(row) {
   if (!row) return null;
-  const { password_hash, password_salt, skills_json, types_json, modes_json, visibility_json, badges_json, opt_in_future_opportunities, quiet_hours_json, digest_frequency, ...rest } = row;
+  const { password_hash, password_salt, skills_json, types_json, modes_json, visibility_json, badges_json, opt_in_future_opportunities, quiet_hours_json, digest_frequency, open_to_offers, passive_min_score, ...rest } = row;
   return {
     ...rest,
     skills: JSON.parse(skills_json || "[]"),
@@ -148,5 +148,8 @@ export function publicUser(row) {
     // Roadmap B4-04: notification preferences surface so the client can render + edit them.
     quietHours: JSON.parse(quiet_hours_json || "{}"),
     digestFrequency: digest_frequency || "instant",
+    // Roadmap B3-07: seeker 'open to offers' status + passive-mode score threshold.
+    openToOffers: open_to_offers || "active",
+    passiveMinScore: Number(passive_min_score) || 85,
   };
 }

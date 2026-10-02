@@ -134,6 +134,22 @@ export function SettingsPage(){
     <TrustedDevices t={t} locale={locale}/>
     {u.role==="seeker"&&<Card pad={mob?18:24} style={{marginBottom:16}}>
       <Lbl>{t("settings.privacy")}</Lbl>
+      {/* Roadmap B3-07: 'Open to offers' tri-state. active = standard; passive = only strong
+         matches surface; closed = hidden from recruiter search. */}
+      <Row icon="target" title={t("settings.openToOffersTitle")} sub={t("settings.openToOffersSub")}>
+        <select value={u.openToOffers||"active"} onChange={e=>A.saveProfile({...u,openToOffers:e.target.value})}
+          className="rounded-lg border border-line bg-white py-1.5 px-2.5 text-sm text-text">
+          <option value="active">{t("settings.openToOffersActive")}</option>
+          <option value="passive">{t("settings.openToOffersPassive")}</option>
+          <option value="closed">{t("settings.openToOffersClosed")}</option>
+        </select>
+      </Row>
+      {u.openToOffers==="passive"&&<Row icon="trend" title={t("settings.passiveMinScoreTitle")} sub={t("settings.passiveMinScoreSub")}>
+        <select value={u.passiveMinScore||85} onChange={e=>A.saveProfile({...u,passiveMinScore:Number(e.target.value)})}
+          className="rounded-lg border border-line bg-white py-1.5 px-2.5 text-sm text-text">
+          {[70,75,80,85,90,95].map(n=><option key={n} value={n}>{n}+</option>)}
+        </select>
+      </Row>}
       <Row icon="eye" title={t("settings.privacyProfileTitle")} sub={t("settings.privacyProfileSub")}>
         <Switch on={S.discoverable} onChange={v=>A.setUserSetting("discoverable",v)}/></Row>
       <Row icon="lock" title={t("settings.privacyEmployerTitle")} sub={t("settings.privacyEmployerSub")}>

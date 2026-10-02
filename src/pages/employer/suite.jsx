@@ -1275,7 +1275,11 @@ export function EmpPipeline(){
                 <SmartPortrait seed={p.seed} size={52}/>
                 <div className="flex-1 min-w-0">
                   <div className="text-base font-semibold text-text">{p.name}</div>
-                  <div className="text-sm text-text-2 mt-1">{p.title} • {p.years}{p.years===1?t("employer.pipeline.yearSingular"):t("employer.pipeline.yearPlural")} • {p.city}</div></div>
+                  <div className="text-sm text-text-2 mt-1">{p.title} • {p.years}{p.years===1?t("employer.pipeline.yearSingular"):t("employer.pipeline.yearPlural")} • {p.city}</div>
+                  {/* B3-07: passive-mode candidates get a distinct badge so recruiters know the
+                      outreach context — strong match, but not actively looking. */}
+                  {p.openToOffers==="passive"&&<div className="mt-1.5"><Tag tone="violet" sm icon="eye">{t("employer.pipeline.passiveCandidate")}</Tag></div>}
+                </div>
                 <Ring v={score} size={44}/></div>
               <div className="flex flex-wrap gap-1.5 mt-3.5">
                 {(p.skills||[]).slice(0,4).map(s=><Tag key={s} sm>{s}</Tag>)}

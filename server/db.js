@@ -1241,6 +1241,12 @@ for (const stmt of [
      clears proposed_slots_json. Legacy single-time flow still works — proposed_slots_json empty
      means 'already locked in'. */
   "ALTER TABLE interviews ADD COLUMN proposed_slots_json TEXT DEFAULT '[]'",
+  /* Roadmap B3-07: tri-state seeker 'open to offers' status. active = everyone can match me
+     (default), passive = only recruiter searches whose role scores at or above my
+     passive_min_score surface me, closed = I'm hidden from recruiter search entirely (direct
+     applications still work as always). */
+  "ALTER TABLE users ADD COLUMN open_to_offers TEXT NOT NULL DEFAULT 'active' CHECK(open_to_offers IN ('active','passive','closed'))",
+  "ALTER TABLE users ADD COLUMN passive_min_score INTEGER NOT NULL DEFAULT 85",
 ]) {
   try { db.exec(stmt); } catch (e) { if (!/duplicate column/i.test(e.message)) console.error("migration:", stmt, e.message); }
 }

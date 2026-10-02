@@ -894,7 +894,9 @@ export function useStore(){
         visibility:d.visibility,optInFutureOpportunities:d.optInFutureOpportunities,
         /* B4-04 notification prefs persist alongside the profile; the server validates HH:MM
            format + the digest enum before writing. */
-        quietHours:d.quietHours,digestFrequency:d.digestFrequency});
+        quietHours:d.quietHours,digestFrequency:d.digestFrequency,
+        /* B3-07: seeker 'open to offers' status + the passive-mode score threshold. */
+        openToOffers:d.openToOffers,passiveMinScore:d.passiveMinScore});
     }catch(err){toast(`Profile saved locally, but couldn't sync to the server: ${err.message}`,"warn");}
   };
   /* Priority-4 #6: a standalone opt-in toggle for the two lightweight surfaces (ApplyDone,
@@ -1392,7 +1394,20 @@ export function useStore(){
     const already=new Set(applications.filter(a=>a.job===jobId).map(a=>a.user));
     return people.filter(p=>!already.has(p.id))
       .map(p=>({p,score:scoreCandidate(p,j)}))
-      .filter(x=>x.score>=minScore)
+      /* Roadmap B3-07: honour each seeker's openToOffers status.
+         - 'closed' candidates are hidden from recruiter search entirely.
+         - 'passive' candidates only appear when the score clears their own passiveMinScore
+           (their call, not the recruiter's). Score below that = they stay invisible.
+         - 'active' (default) = behave as before, subject only to the recruiter's minScore. */
+      .filter(x=>{
+        const mode=x.p.openToOffers||"active";
+        if(mode==="closed") return false;
+        if(mode==="passive") {
+          const threshold=Math.max(x.p.passiveMinScore||85, minScore);
+          return x.score>=threshold;
+        }
+        return x.score>=minScore;
+      })
       .sort((a,b)=>b.score-a.score)
       .slice(0,10);
   };
