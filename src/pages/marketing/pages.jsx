@@ -1342,3 +1342,48 @@ export function SecurityPage(){
     </div>
   </Page>;
 }
+
+/* Roadmap B3-13: salary calculator — standalone tool that derives p25/median/p75 from the
+   platform's own live postings for a title+province combo. Reuses the salaryInsight selector
+   already used by JobDetailPage, so numbers never diverge between the two surfaces. No
+   StatsCan fallback shipped in this pass; result shows the sample size + a link to broaden the
+   search when matches are too thin to publish honest percentiles. */
+export function SalaryCalculatorPage(){
+  const A=use(); const mob=useMedia("(max-width: 900px)"); const {t,locale}=useTranslation();
+  const [title,setTitle]=useState("");
+  const [prov,setProv]=useState("");
+  const result=title.trim().length>=3?A.salaryInsight(title.trim(),prov||null):null;
+  const PROVS=[["ON","Ontario"],["QC","Quebec"],["BC","British Columbia"],["AB","Alberta"],["MB","Manitoba"],["SK","Saskatchewan"],["NS","Nova Scotia"],["NB","New Brunswick"],["NL","Newfoundland and Labrador"],["PE","Prince Edward Island"],["YT","Yukon"],["NT","Northwest Territories"],["NU","Nunavut"]];
+  const fmt=n=>new Intl.NumberFormat(locale==="fr-CA"?"fr-CA":"en-CA",{style:"currency",currency:"CAD",maximumFractionDigits:0}).format(n);
+  return <Page>
+    <div className="max-w-narrow mx-auto">
+      <Tag tone="brand" icon="trend">{t("salaryCalc.eyebrow")}</Tag>
+      <h1 className={`${HERO_QUIET} mt-5 mb-3 ${mob?"text-3xl":"text-4xl"}`}>{t("salaryCalc.title")}</h1>
+      <p className="text-base text-text-2 leading-loose mb-9">{t("salaryCalc.lede")}</p>
+      <Card pad={mob?20:28} style={{marginBottom:28}}>
+        <Field label={t("salaryCalc.titleLabel")} required>
+          <Input value={title} onChange={e=>setTitle(e.target.value)} placeholder={t("salaryCalc.titlePlaceholder")}/>
+        </Field>
+        <Field label={t("salaryCalc.provinceLabel")}>
+          <select value={prov} onChange={e=>setProv(e.target.value)} className="w-full rounded-lg border border-line bg-white py-2.5 px-3 text-sm text-text">
+            <option value="">{t("salaryCalc.anyProvince")}</option>
+            {PROVS.map(([p,n])=><option key={p} value={p}>{n}</option>)}
+          </select>
+        </Field>
+        {!result&&title.trim().length>=3&&
+          <div className="mt-5 bg-bg border border-line rounded-xl p-4 text-sm text-text-2">{t("salaryCalc.notEnoughData")}</div>}
+        {result&&<div className="mt-6">
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            {[["p25",result.p25,"text-text-2"],["median",result.median,"text-brand"],["p75",result.p75,"text-text-2"]].map(([k,v,cls])=>
+              <div key={k} className="bg-bg rounded-xl py-4 px-4 text-center">
+                <div className="text-xs font-bold text-text-3 uppercase tracking-wide">{t("salaryCalc."+k)}</div>
+                <div className={`text-2xl font-bold mt-1 tracking-tight ${cls}`}>{fmt(v)}</div>
+              </div>)}
+          </div>
+          <div className="text-xs text-text-3 text-center">{t("salaryCalc.sampleSize",{n:result.count})}</div>
+        </div>}
+      </Card>
+      <p className="text-xs text-text-3 leading-relaxed">{t("salaryCalc.disclaimer")}</p>
+    </div>
+  </Page>;
+}

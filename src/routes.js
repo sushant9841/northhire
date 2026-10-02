@@ -43,6 +43,7 @@ export const ROUTES = {
   pricing:     {titleKey:"routeTitles.pricing", tab:"home", path:"/pricing"},
   forEmployers:{titleKey:"routeTitles.forEmployers", tab:"home", path:"/for-employers"},
   howItWorks:  {titleKey:"routeTitles.howItWorks", tab:"home", path:"/how-it-works"},
+  salaryCalc:  {titleKey:"routeTitles.salaryCalc", tab:"home", path:"/salary-calculator"},
   forgot:      {titleKey:"routeTitles.forgot", tab:"home", bare:true, path:"/forgot-password"},
   welcome:     {titleKey:"routeTitles.welcome", tab:"home", bare:true, root:true, path:"/welcome"},
   welcomeEmp:  {titleKey:"routeTitles.welcomeEmp", tab:"matched", bare:true, root:true, path:"/welcome/employer"},

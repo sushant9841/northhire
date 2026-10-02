@@ -57,7 +57,7 @@ import { AdmHome, AdmUsers, AdmEmployers, AdmJobs, AdmSettings, AdmLog, AdmStats
 import { AdmDesignSystem } from "./pages/admin/designSystem.jsx";
 import {
   HomePage, BlogsPage, BlogPage, TrainingsPage, TrainingPage, AboutPage, ContactPage, LegalPage,
-  PricingPage, AccessibilityPage, PipedaPage, CreditsPage, SecurityPage,
+  PricingPage, AccessibilityPage, PipedaPage, CreditsPage, SecurityPage, SalaryCalculatorPage,
 } from "./pages/marketing/pages.jsx";
 import { ForEmployersPage, HowItWorksPage } from "./pages/marketing/forEmployers.jsx";
 import { SignupPage, LoginPage, ForgotPasswordPage, WelcomeTourPage, InviteAcceptPage } from "./pages/auth/pages.jsx";
@@ -119,7 +119,7 @@ export default function NorthHire(){
     empWelcome:<EmpShell><EmpPostCheckoutWelcome/></EmpShell>,
     admHome:<AdmShell><AdmHome/></AdmShell>,admUsers:<AdmShell><AdmUsers/></AdmShell>,admEmployers:<AdmShell><AdmEmployers/></AdmShell>,admJobs:<AdmShell><AdmJobs/></AdmShell>,admModeration:<AdmShell><AdmModeration/></AdmShell>,
     account:<AccountMenuPage/>,
-    accessibility:<AccessibilityPage/>,pipeda:<PipedaPage/>,credits:<CreditsPage/>,security:<SecurityPage/>,unsubscribe:<UnsubscribePage/>,matchScore:<MatchScorePage/>,offer:<OfferPage/>,verifyEmail:<VerifyEmailPage/>,
+    accessibility:<AccessibilityPage/>,pipeda:<PipedaPage/>,credits:<CreditsPage/>,security:<SecurityPage/>,salaryCalc:<SalaryCalculatorPage/>,unsubscribe:<UnsubscribePage/>,matchScore:<MatchScorePage/>,offer:<OfferPage/>,verifyEmail:<VerifyEmailPage/>,
     admBlogs:<AdmShell><ContentManager scope="admin"/></AdmShell>,admTrainings:<AdmShell><ContentManager scope="admin"/></AdmShell>,
     admSettings:<AdmShell><AdmSettings/></AdmShell>,admLog:<AdmShell><AdmLog/></AdmShell>,admStats:<AdmShell><AdmStats/></AdmShell>,admDesignSystem:<AdmShell><AdmDesignSystem/></AdmShell>,
     admConfig:<AdmShell><AdmConfig/></AdmShell>,admAdmins:<AdmShell><AdmAdmins/></AdmShell>,
