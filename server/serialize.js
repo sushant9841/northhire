@@ -238,8 +238,12 @@ export function serializeMessage(row) {
 }
 export function serializeInterview(row) {
   if (!row) return null;
+  let proposedSlots = [];
+  try { proposedSlots = JSON.parse(row.proposed_slots_json || "[]"); } catch { /* malformed; treat as none */ }
   return { id: row.id, app: row.application_id, candidate: row.candidate_id, job: row.job_id, employer: row.employer_id,
-    when: row.when_text, mode: row.mode, notes: row.notes, status: row.status, createdAt: sqlTime(row.created_at).getTime() };
+    when: row.when_text, mode: row.mode, notes: row.notes, status: row.status,
+    proposedSlots, awaitingCandidate: proposedSlots.length > 0 && !row.when_text,
+    createdAt: sqlTime(row.created_at).getTime() };
 }
 export function serializeReview(row) {
   if (!row) return null;

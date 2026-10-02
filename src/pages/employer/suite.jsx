@@ -1374,6 +1374,11 @@ export function EmpCandidate({inline=false,onClose}={}){
   const [savingTemplate,setSavingTemplate]=useState(false); const [templateName,setTemplateName]=useState("");
   const [showSched,setShowSched]=useState(false);
   const [ivDate,setIvDate]=useState(""); const [ivTime,setIvTime]=useState(""); const [ivMode,setIvMode]=useState("video"); const [ivNotes,setIvNotes]=useState("");
+  /* Roadmap B2-09: optional alternate slots. When any are filled, we submit as proposedSlots and
+     leave the candidate to pick. 2 extra date+time pairs = up to 3 total slots proposed. */
+  const [ivAlt1Date,setIvAlt1Date]=useState(""); const [ivAlt1Time,setIvAlt1Time]=useState("");
+  const [ivAlt2Date,setIvAlt2Date]=useState(""); const [ivAlt2Time,setIvAlt2Time]=useState("");
+  const [showPropose,setShowPropose]=useState(false);
   const [ivTzOverride,setIvTzOverride]=useState(""); /* E4: employer override of the derived candidate timezone */
   const [confirmReject,setConfirmReject]=useState(false); const [rejectReason,setRejectReason]=useState("");
   const [showOfferLetter,setShowOfferLetter]=useState(false);
@@ -1701,13 +1706,40 @@ export function EmpCandidate({inline=false,onClose}={}){
                 style={{fontWeight:on?640:520,borderColor:on?C.brand:C.line,background:on?C.tint:"#fff",color:on?C.brand:C.text}}>{l}</button>;})}</div></Field>
         <Field label={t("employer.candidate.interviewNotes")} hint={t("employer.candidate.interviewNotesHint")}>
           <Area rows={3} value={ivNotes} onChange={e=>setIvNotes(e.target.value)} placeholder={t("employer.candidate.notesPlaceholder")}/></Field>
+
+        {/* B2-09 propose extra slots. Hidden behind a toggle so the single-time flow stays
+           as fast as before; opens to show two more date+time pairs. Any filled pair joins
+           the proposed-slots list; the candidate picks one via the InterviewsPage card. */}
+        {!showPropose
+          ? <button type="button" onClick={()=>setShowPropose(true)} className="self-start bg-transparent border-0 text-sm font-semibold text-brand cursor-pointer p-0">+ {t("employer.candidate.proposeAltBtn")}</button>
+          : <div className="p-3.5 border border-brand-line rounded-xl bg-wash">
+              <div className="text-xs font-bold text-brand mb-2 uppercase tracking-wide">{t("employer.candidate.proposeAltTitle")}</div>
+              <div className="grid grid-cols-2 gap-2.5 mb-2">
+                <Input type="date" value={ivAlt1Date} onChange={e=>setIvAlt1Date(e.target.value)}/>
+                <Input type="time" value={ivAlt1Time} onChange={e=>setIvAlt1Time(e.target.value)}/>
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                <Input type="date" value={ivAlt2Date} onChange={e=>setIvAlt2Date(e.target.value)}/>
+                <Input type="time" value={ivAlt2Time} onChange={e=>setIvAlt2Time(e.target.value)}/>
+              </div>
+              <div className="text-xs text-text-3 mt-2">{t("employer.candidate.proposeAltHint")}</div>
+            </div>}
         {both&&<Btn kind="outline" size="sm" icon="calendar" onClick={downloadIcs} style={{alignSelf:"flex-start"}}>{t("employer.candidate.addToCalendar")}</Btn>}
         <div className="flex gap-2.5 justify-end">
           <Btn kind="ghost" onClick={()=>setShowSched(false)}>{t("common.cancel")}</Btn>
           <Btn kind="primary" icon="calendar" disabled={!ivDate||!ivTime} onClick={()=>{
             const when=`${ivDate} at ${ivTime}`;
-            A.scheduleInterview(a.id,when,ivMode,ivNotes);
+            const alts=[
+              ivAlt1Date&&ivAlt1Time?`${ivAlt1Date} at ${ivAlt1Time}`:null,
+              ivAlt2Date&&ivAlt2Time?`${ivAlt2Date} at ${ivAlt2Time}`:null,
+            ].filter(Boolean);
+            if(alts.length){
+              A.scheduleInterview(a.id,null,ivMode,ivNotes,[when,...alts]);
+            } else {
+              A.scheduleInterview(a.id,when,ivMode,ivNotes);
+            }
             setShowSched(false);setIvDate("");setIvTime("");setIvNotes("");setIvTzOverride("");
+            setIvAlt1Date("");setIvAlt1Time("");setIvAlt2Date("");setIvAlt2Time("");setShowPropose(false);
           }}>Schedule</Btn></div></div></Modal>;
     })()}
   </Wrap>;

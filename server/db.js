@@ -1235,6 +1235,12 @@ for (const stmt of [
      silenced by this migration. */
   "ALTER TABLE users ADD COLUMN quiet_hours_json TEXT DEFAULT '{}'",
   "ALTER TABLE users ADD COLUMN digest_frequency TEXT NOT NULL DEFAULT 'instant' CHECK(digest_frequency IN ('instant','daily','weekly'))",
+  /* Roadmap B2-09: interview slot proposals. Instead of the employer committing to a single
+     time in when_text, they can propose up to 3 slots as a JSON array of ISO strings. Candidate
+     picks one via /seeker/interviews/:id/accept, which copies the picked slot into when_text and
+     clears proposed_slots_json. Legacy single-time flow still works — proposed_slots_json empty
+     means 'already locked in'. */
+  "ALTER TABLE interviews ADD COLUMN proposed_slots_json TEXT DEFAULT '[]'",
 ]) {
   try { db.exec(stmt); } catch (e) { if (!/duplicate column/i.test(e.message)) console.error("migration:", stmt, e.message); }
 }

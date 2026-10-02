@@ -1336,14 +1336,14 @@ export function useStore(){
     try{await api.patch(`/seeker/messages/${id}/read`);}catch{/* best-effort */}
   };
 
-  const scheduleInterview=async(candidateAppId,when,mode,notes)=>{
+  const scheduleInterview=async(candidateAppId,when,mode,notes,proposedSlots)=>{
     if(user?.role==="employer"&&!can("interviews")){
       notify({icon:"lock",title:"Upgrade to schedule interviews",body:`Interview scheduling is a Growth and Enterprise feature.`,for:user.id,link:"pricing"});
       return {ok:false,msg:"Interview scheduling is a Growth+ feature."};
     }
     const app=applications.find(a=>a.id===candidateAppId); if(!app)return;
     try{
-      const {interview:iv}=await api.post("/seeker/interviews",{applicationId:candidateAppId,when,mode,notes:notes||""});
+      const {interview:iv}=await api.post("/seeker/interviews",{applicationId:candidateAppId,when,mode,notes:notes||"",proposedSlots:proposedSlots||[]});
       setInterviews(l=>[iv,...l]);
       setApplications(l=>l.map(a=>a.id===candidateAppId?{...a,stage:"Interview",note:`Interview ${mode==="video"?"video call":"in-person"} scheduled for ${when}`}:a));
       // Same as sendMessage above: the candidate's notification is now a persisted server row
@@ -1359,6 +1359,17 @@ export function useStore(){
       setInterviews(l=>l.map(iv=>iv.id===id?{...iv,status:"cancelled"}:iv));
       log("interview.cancel","Cancelled an interview","x");
     }catch(err){toast(err.message,"danger");}
+  };
+  /* Roadmap B2-09: candidate picks one of the employer-proposed interview slots. Server copies
+     the picked value into when_text and clears proposed_slots_json, so a subsequent read looks
+     like a single-time interview — no caller elsewhere has to know this flow existed. */
+  const acceptInterviewSlot=async(id,pick)=>{
+    try{
+      const {interview:iv}=await api.patch(`/seeker/interviews/${id}/accept`,{pick});
+      setInterviews(l=>l.map(x=>x.id===id?iv:x));
+      toast("Interview confirmed.","ok");
+      return {ok:true};
+    }catch(err){toast(err.message,"danger"); return {ok:false,msg:err.message};}
   };
 
   /* --- bulk pipeline actions --- */
@@ -2450,7 +2461,7 @@ export function useStore(){
     hasAccount,upsertPassword,loginWithPassword,verifyLogin2FA,resetPasswordRequest,resetPasswordConfirm,completeEmployerSignup,
     saveSearch,deleteSavedSearch,toggleSearchAlert,updateSavedSearch,editingSavedSearchId,setEditingSavedSearchId,
     salaryInsight,skillsGap,expandQuery,restoreApp,notifyFollowers,
-    sendMessage,markMessageRead,scheduleInterview,cancelInterview,bulkMove,bulkReject,reverseMatch,inviteToApply,loadCandidateOutreach,importJobsCSV,employerAnalytics,snapshotDeltas,
+    sendMessage,markMessageRead,scheduleInterview,cancelInterview,acceptInterviewSlot,bulkMove,bulkReject,reverseMatch,inviteToApply,loadCandidateOutreach,importJobsCSV,employerAnalytics,snapshotDeltas,
     impersonate,stopImpersonating,
     PLANS,PLAN_ORDER,payrollTaxConfig,platformConfig,currentPlan,planName,can,limitOf,planRequires,upgradeModal,setUpgradeModal,requestUpgrade,
     oauthProviders,oauthStart,turnstileSiteKey,

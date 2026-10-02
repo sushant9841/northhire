@@ -249,15 +249,20 @@ seekerMiscRouter.get("/interviews", requireAuth, (req, res) => {
   res.json({ interviews: rows.map(serializeInterview), total, limit, offset });
 });
 seekerMiscRouter.post("/interviews", requireAuth, requireRole("employer"), (req, res) => {
-  const { applicationId, when, mode, notes } = req.body || {};
+  const { applicationId, when, mode, notes, proposedSlots } = req.body || {};
   const app = db.prepare("SELECT applications.*, jobs.employer_id FROM applications JOIN jobs ON jobs.id = applications.job_id WHERE applications.id = ?").get(applicationId);
   if (!app) return res.status(404).json({ error: "Application not found." });
   if (app.employer_id !== req.user.employer_id) return res.status(403).json({ error: "Not your candidate." });
+  /* B2-09: propose up to 3 slots instead of committing to one. If proposedSlots is a non-empty
+     array, store as JSON and leave when_text empty; the candidate picks via /accept which
+     promotes the chosen slot into when_text. If a single when is passed, legacy behaviour. */
+  const slots = Array.isArray(proposedSlots) ? proposedSlots.filter(s => typeof s === "string" && s.trim()).slice(0, 3) : [];
+  if (!slots.length && !when) return res.status(400).json({ error: "Provide either when or proposedSlots." });
   const id = nextId("iv", "interviews");
   db.prepare(
-    `INSERT INTO interviews (id, application_id, candidate_id, job_id, employer_id, when_text, mode, notes, status)
-     VALUES (?,?,?,?,?,?,?,?, 'scheduled')`
-  ).run(id, applicationId, app.user_id, app.job_id, req.user.employer_id, when, mode, notes || "");
+    `INSERT INTO interviews (id, application_id, candidate_id, job_id, employer_id, when_text, mode, notes, status, proposed_slots_json)
+     VALUES (?,?,?,?,?,?,?,?, 'scheduled', ?)`
+  ).run(id, applicationId, app.user_id, app.job_id, req.user.employer_id, slots.length ? null : when, mode, notes || "", JSON.stringify(slots));
   const stageNote = candidateStringsForUser(app.user_id).interviewStageNote(mode, when);
   db.prepare("UPDATE applications SET stage = 'Interview', note = ? WHERE id = ?").run(stageNote, applicationId);
   const interview = serializeInterview(db.prepare("SELECT * FROM interviews WHERE id = ?").get(id));
@@ -279,6 +284,24 @@ seekerMiscRouter.post("/interviews", requireAuth, requireRole("employer"), (req,
     pushNotification({ for: app.user_id, icon: "calendar", title: S.interviewScheduledTitle(employer?.name),
       body: S.interviewScheduledBody(mode, when), link: "interviews" });
   }
+});
+/* B2-09: candidate accepts one of the proposed slots. The picked slot must be in
+   proposed_slots_json; anything else is refused. On success when_text becomes the picked slot
+   and proposed_slots_json is cleared, so subsequent reads look like a single-time interview. */
+seekerMiscRouter.patch("/interviews/:id/accept", requireAuth, requireRole("seeker"), (req, res) => {
+  const row = db.prepare("SELECT * FROM interviews WHERE id = ?").get(req.params.id);
+  if (!row || row.candidate_id !== req.user.id) return res.status(404).json({ error: "Not found." });
+  if (row.when_text) return res.status(400).json({ error: "This interview already has a confirmed time." });
+  const { pick } = req.body || {};
+  let slots = [];
+  try { slots = JSON.parse(row.proposed_slots_json || "[]"); } catch { slots = []; }
+  if (!slots.includes(pick)) return res.status(400).json({ error: "That slot wasn't offered." });
+  db.prepare("UPDATE interviews SET when_text = ?, proposed_slots_json = '[]' WHERE id = ?").run(pick, req.params.id);
+  const iv = serializeInterview(db.prepare("SELECT * FROM interviews WHERE id = ?").get(req.params.id));
+  res.json({ interview: iv });
+  liveEmit(row.employer_id, "interview:confirmed", iv);
+  const teammates = db.prepare("SELECT id FROM users WHERE employer_id = ?").all(row.employer_id).map(r => r.id);
+  for (const t of teammates) liveEmit(t, "interview:confirmed", iv);
 });
 seekerMiscRouter.patch("/interviews/:id/cancel", requireAuth, requireRole("employer"), (req, res) => {
   const row = db.prepare("SELECT * FROM interviews WHERE id = ?").get(req.params.id);

@@ -76,23 +76,39 @@ export function InterviewsPage(){
   const heroPad=mob?"pt-11 px-4":"pt-18 px-8";
   const IvCard=({iv})=>{const j=A.job(iv.job); const e=A.emp(iv.employer); const cand=A.person(iv.candidate)||{name:"Candidate",seed:0};
     const forSeeker=A.user.role==="seeker";
+    const awaiting=iv.awaitingCandidate||(iv.proposedSlots?.length>0&&!iv.when);
     return <Card style={{padding:mob?22:26,borderRadius:16,marginBottom:12}}>
       <div className="flex gap-3.5 items-start flex-wrap">
-        <div className={`w-13 h-13 rounded-2xl flex items-center justify-center shrink-0 ${iv.status==="cancelled"?"bg-bg text-text-3":"bg-wash text-brand"}`}><I n="calendar" s={24}/></div>
+        <div className={`w-13 h-13 rounded-2xl flex items-center justify-center shrink-0 ${iv.status==="cancelled"?"bg-bg text-text-3":awaiting?"bg-warn-bg text-warn":"bg-wash text-brand"}`}><I n="calendar" s={24}/></div>
         <div className="flex-1 min-w-0">
           <div className="text-base font-bold text-text tracking-tight">
             {j?.t||t("interviews.interviewDefault")} — {forSeeker?e?.name:cand.name}</div>
-          <div className="text-sm text-text-2 mt-1.5">
-            <strong>{iv.when}</strong> • {iv.mode==="video"?t("interviews.videoCall"):t("interviews.onSiteInterview")}</div>
+          {!awaiting&&<div className="text-sm text-text-2 mt-1.5">
+            <strong>{iv.when}</strong> • {iv.mode==="video"?t("interviews.videoCall"):t("interviews.onSiteInterview")}</div>}
+          {/* B2-09: the slot picker only renders for seekers on an interview whose employer
+              proposed multiple times and no pick has happened yet. Clicking a slot calls
+              /accept and promotes it into when_text server-side. Employers see a read-only
+              hint listing the slots they offered. */}
+          {awaiting&&forSeeker&&<div className="mt-2">
+            <div className="text-sm font-semibold text-warn mb-2">{t("interviews.pickASlotTitle")}</div>
+            <div className="text-xs text-text-3 mb-2.5">{t("interviews.pickASlotBody",{mode:iv.mode==="video"?t("interviews.videoCall"):t("interviews.onSiteInterview")})}</div>
+            <div className="flex flex-col gap-2">{iv.proposedSlots.map(s=>
+              <button key={s} onClick={()=>A.acceptInterviewSlot(iv.id,s)}
+                className="text-left py-2.5 px-3.5 bg-white border-2 border-line rounded-xl cursor-pointer text-sm font-semibold text-text hover:border-brand hover:bg-wash">
+                {s}</button>)}
+            </div>
+          </div>}
+          {awaiting&&!forSeeker&&<div className="mt-2 py-2.5 px-3 bg-warn-bg rounded-lg">
+            <div className="text-xs font-bold text-warn uppercase tracking-wide mb-1">{t("interviews.awaitingPickTitle")}</div>
+            <div className="text-sm text-text-2">{iv.proposedSlots.join(" · ")}</div>
+          </div>}
           {iv.notes&&<div className="text-sm text-text-2 mt-2 py-2.5 px-3 bg-bg rounded-lg leading-relaxed">{iv.notes}</div>}
-          {/* B2-05: prep pack appears for seekers on upcoming interviews. Collapsed by default
-              so the card stays compact; opens on tap and shows likely questions / skills to
-              emphasize / gaps to be ready to address / local salary band. */}
-          {forSeeker&&iv.status==="scheduled"&&j&&<PrepPackPanel A={A} iv={iv} job={j} t={t}/>}
+          {/* B2-05: prep pack appears for seekers on upcoming interviews with a confirmed time. */}
+          {forSeeker&&iv.status==="scheduled"&&!awaiting&&j&&<PrepPackPanel A={A} iv={iv} job={j} t={t}/>}
         </div>
         {iv.status==="cancelled"?<Tag tone="danger" sm>{t("interviews.cancelled")}</Tag>
           :<div className="flex gap-2 flex-col">
-            <Tag tone="warn" sm>{t("interviews.scheduled")}</Tag>
+            <Tag tone={awaiting?"warn":"warn"} sm>{awaiting?t("interviews.awaitingTag"):t("interviews.scheduled")}</Tag>
             {A.user.role==="employer"&&<Btn kind="ghost" size="xs" icon="x" onClick={()=>A.cancelInterview(iv.id)}>{t("interviews.cancelBtn")}</Btn>}</div>}
       </div></Card>;};
   const inShell=A.user.role==="employer"||A.user.role==="admin";
