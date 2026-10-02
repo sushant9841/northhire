@@ -1251,6 +1251,16 @@ export function HrLeave(){
         ? <Empty icon="calendar" title={t("hr.leave.noLeaveRecords")} body={t("hr.leave.requestsWillAppear")}/>
         : <div className="flex flex-col gap-2">
             {sorted.map(r=>{const who=A.hrEmp(r.employee);
+              /* Roadmap B2-06: show the current approver's last 3 decisions on same-type requests
+                 inline, so the reviewer sees pattern context ('I approved the last 3 vacation
+                 requests' or 'I denied the last 2 sick extensions') before clicking. Reduces
+                 bias and speeds up decisions. Only computed for pending rows this approver can
+                 actually decide. */
+              const showHint=r.status==="pending"&&canApprove&&r.employee!==emp.id;
+              const recentDecisions=showHint?A.hrLeave
+                .filter(x=>x.id!==r.id&&x.type===r.type&&x.approvedBy===emp.id&&(x.status==="approved"||x.status==="denied"))
+                .sort((a,b)=>(b.requestedAt||0)-(a.requestedAt||0))
+                .slice(0,3):[];
               return <div key={r.id} className="flex gap-3.5 items-center py-3 px-3.5 bg-bg rounded-xl border border-line flex-wrap">
                 <button onClick={()=>A.openHrEmployeeProfile(r.employee,"leave",r.id)} className="bg-transparent border-0 p-0 cursor-pointer shrink-0">
                   <SmartPortrait seed={who?.seed||0} size={38} radius={10}/></button>
@@ -1262,6 +1272,13 @@ export function HrLeave(){
                   <span className="text-sm font-semibold text-text"> • {r.type}</span>
                   <div className="text-xs text-text-3 mt-0.5">{r.from} → {r.to} ({r.days} {r.days===1?t("hr.leave.daySingular"):t("hr.leave.dayPlural")})</div>
                   {r.reason&&<div className="text-xs text-text-2 mt-1 italic">"{r.reason}"</div>}
+                  {showHint&&recentDecisions.length>0&&
+                    <div className="text-xs text-text-3 mt-1 flex items-center gap-1" title={t("hr.leave.similarDecisionsTitle",{type:r.type})}>
+                      <span>{t("hr.leave.similarDecisionsLabel")}</span>
+                      {recentDecisions.map(d=><span key={d.id}
+                        className={`inline-block w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold ${d.status==="approved"?"bg-ok-bg text-ok":"bg-red-bg text-red"}`}>
+                        {d.status==="approved"?"✓":"✗"}</span>)}
+                    </div>}
                 </div>
                 {r.employee!==emp.id&&<Btn kind="ghost" size="xs" icon="mail" title={t("hr.leave.messageAboutLeaveBtn",{name:who?.name?.split(" ")[0]||""})}
                   onClick={()=>A.openHrChatWith(r.employee,t("hr.leave.messageAboutLeavePrefill",{name:who?.name?.split(" ")[0]||"",type:r.type,from:r.from,to:r.to}))}/>}

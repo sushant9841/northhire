@@ -2076,6 +2076,8 @@ export const en = {
       pending: "pending",
       messageAboutLeaveBtn: "Message {name} about their leave",
       messageAboutLeavePrefill: "Hi {name}, following up on your {type} leave request from {from} to {to}.",
+      similarDecisionsLabel: "Your recent calls:",
+      similarDecisionsTitle: "Your last decisions on {type} requests",
     },
     tasks: {
       title: "Tasks",

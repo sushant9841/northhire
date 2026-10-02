@@ -2066,6 +2066,8 @@ export const fr = {
       pending: "en attente",
       messageAboutLeaveBtn: "Écrire à {name} au sujet de son congé",
       messageAboutLeavePrefill: "Bonjour {name}, un suivi sur votre demande de congé de {type} du {from} au {to}.",
+      similarDecisionsLabel: "Vos décisions récentes :",
+      similarDecisionsTitle: "Vos dernières décisions sur les demandes de type {type}",
     },
     tasks: {
       title: "Tâches",
