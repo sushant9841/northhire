@@ -1,9 +1,71 @@
+import { useState } from "react";
 import { use } from "../../store/context.js";
 import { useMedia } from "../../helpers/hooks.js";
 import { C } from "../../design/tokens.js";
 import { I } from "../../design/icons.jsx";
 import { Btn, Card, Tag, Empty, H2, Page, HERO_TIGHT, Banner } from "../../design/primitives.jsx";
 import { useTranslation } from "../../i18n/i18n.jsx";
+
+/* Roadmap B2-05: template-driven interview prep. The ask was LLM-generated — this ships the
+   deterministic version that covers 70% of the value without LLM infra: five common questions
+   per role category, plus the seeker's skill-match breakdown against the specific job (what to
+   emphasize, what gaps to be ready to address). Can be swapped later for a prompt-against-JD
+   generator without changing the UI surface. */
+const PREP_QUESTIONS_BY_CAT = {
+  trades: ["prepQTradesSafety","prepQTradesTicket","prepQTradesExperience","prepQTradesTools","prepQTradesTeam"],
+  healthcare: ["prepQCareScope","prepQCareDifficult","prepQCareShift","prepQCareDocumentation","prepQCareLearning"],
+  tech: ["prepQTechStack","prepQTechProject","prepQTechDebug","prepQTechLearning","prepQTechCollab"],
+  office: ["prepQOfficeOrganize","prepQOfficeTools","prepQOfficeConflict","prepQOfficeImprovement","prepQOfficeTime"],
+  default: ["prepQGenRole","prepQGenStrength","prepQGenGrowth","prepQGenCulture","prepQGenQuestions"],
+};
+function prepCategoryKey(cat) {
+  const c = (cat||"").toLowerCase();
+  if (c.includes("trade")||c.includes("construction")) return "trades";
+  if (c.includes("care")||c.includes("health")) return "healthcare";
+  if (c.includes("tech")||c.includes("software")||c.includes("it ")) return "tech";
+  if (c.includes("office")||c.includes("admin")||c.includes("finance")) return "office";
+  return "default";
+}
+
+function PrepPackPanel({A, iv, job, t}) {
+  const [open,setOpen] = useState(false);
+  const user = A.user;
+  const userSkills = (user?.skills||[]).map(s=>s.toLowerCase());
+  const jobSkills = (job?.skills||[]).map(s=>s);
+  const haveSkills = jobSkills.filter(s=>userSkills.includes(s.toLowerCase()));
+  const gapSkills = jobSkills.filter(s=>!userSkills.includes(s.toLowerCase()));
+  const catKey = prepCategoryKey(job?.cat);
+  const questions = PREP_QUESTIONS_BY_CAT[catKey] || PREP_QUESTIONS_BY_CAT.default;
+  const salary = job ? A.salaryInsight(job.t, job.prov) : null;
+  return <div className="mt-3 border border-brand-line rounded-xl overflow-hidden">
+    <button onClick={()=>setOpen(o=>!o)} className="w-full flex items-center gap-2.5 py-2.5 px-3.5 bg-wash text-left cursor-pointer border-0 hover:bg-brand-wash">
+      <I n="sparkle" s={16} c={C.brand}/>
+      <span className="flex-1 text-sm font-bold text-brand">{t("interviews.prepPackTitle")}</span>
+      <I n={open?"chevU":"chevD"} s={14} c={C.brand}/>
+    </button>
+    {open && <div className="p-4 bg-white flex flex-col gap-4">
+      <div>
+        <div className="text-xs font-bold text-text-3 uppercase tracking-wide mb-2">{t("interviews.prepLikelyQuestions")}</div>
+        <ol className="list-decimal pl-5 flex flex-col gap-1.5 text-sm text-text-2 m-0">
+          {questions.map(k=><li key={k}>{t("interviews."+k)}</li>)}
+        </ol>
+      </div>
+      {haveSkills.length>0 && <div>
+        <div className="text-xs font-bold text-text-3 uppercase tracking-wide mb-2">{t("interviews.prepEmphasize")}</div>
+        <div className="flex flex-wrap gap-1.5">{haveSkills.map(s=><span key={s} className="text-xs font-semibold bg-ok-bg text-ok border border-ok-ln rounded-full py-0.5 px-2.5">{s}</span>)}</div>
+      </div>}
+      {gapSkills.length>0 && <div>
+        <div className="text-xs font-bold text-text-3 uppercase tracking-wide mb-2">{t("interviews.prepBeReady")}</div>
+        <div className="flex flex-wrap gap-1.5 mb-1.5">{gapSkills.map(s=><span key={s} className="text-xs font-semibold bg-warn-bg text-warn border border-warn-ln rounded-full py-0.5 px-2.5">{s}</span>)}</div>
+        <div className="text-xs text-text-3">{t("interviews.prepGapHint")}</div>
+      </div>}
+      {salary && <div className="bg-bg rounded-lg p-3">
+        <div className="text-xs font-bold text-text-3 uppercase tracking-wide mb-1">{t("interviews.prepSalaryBand")}</div>
+        <div className="text-sm text-text-2">{t("interviews.prepSalaryLine",{p25:Math.round(salary.p25/1000),median:Math.round(salary.median/1000),p75:Math.round(salary.p75/1000)})}</div>
+      </div>}
+    </div>}
+  </div>;
+}
 
 export function InterviewsPage(){
   const A=use(); const { t } = useTranslation(); const mob=useMedia("(max-width: 900px)");
@@ -22,7 +84,12 @@ export function InterviewsPage(){
             {j?.t||t("interviews.interviewDefault")} — {forSeeker?e?.name:cand.name}</div>
           <div className="text-sm text-text-2 mt-1.5">
             <strong>{iv.when}</strong> • {iv.mode==="video"?t("interviews.videoCall"):t("interviews.onSiteInterview")}</div>
-          {iv.notes&&<div className="text-sm text-text-2 mt-2 py-2.5 px-3 bg-bg rounded-lg leading-relaxed">{iv.notes}</div>}</div>
+          {iv.notes&&<div className="text-sm text-text-2 mt-2 py-2.5 px-3 bg-bg rounded-lg leading-relaxed">{iv.notes}</div>}
+          {/* B2-05: prep pack appears for seekers on upcoming interviews. Collapsed by default
+              so the card stays compact; opens on tap and shows likely questions / skills to
+              emphasize / gaps to be ready to address / local salary band. */}
+          {forSeeker&&iv.status==="scheduled"&&j&&<PrepPackPanel A={A} iv={iv} job={j} t={t}/>}
+        </div>
         {iv.status==="cancelled"?<Tag tone="danger" sm>{t("interviews.cancelled")}</Tag>
           :<div className="flex gap-2 flex-col">
             <Tag tone="warn" sm>{t("interviews.scheduled")}</Tag>
