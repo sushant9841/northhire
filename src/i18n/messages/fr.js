@@ -1558,6 +1558,9 @@ export const fr = {
       moneyOnDesk: "Argent sur le pupitre", arOutstanding: "Comptes clients impayés", overdue: "En souffrance (relance)", placementsInFlight: "Placements en cours",
       guaranteesEndingSoon: "Garanties se terminant bientôt",
       timesheetsWaiting: "Feuilles de temps en attente", submitted: "soumises, en attente d'approbation", reviewPending: "Réviser les feuilles de temps en attente",
+      rollingOffTitle: "Fins d'assignation prochaines",
+      rollingOffSub: "{n} se termine dans les 14 prochains jours — alignez le prochain placement avant leur retour au banc.",
+      endsInDays: "Se termine dans {n} jours", placeNext: "Placer ensuite", unknownWorker: "Travailleur·euse",
       quickActions: "Actions rapides", addJobOrderAction: "Ajouter une commande d'emploi", placeWorker: "Placer un·e travailleur·euse", runPayroll: "Exécuter la paie", generateInvoices: "Générer les factures",
     },
     jobOrders: {

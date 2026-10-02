@@ -1559,6 +1559,9 @@ export const en = {
       moneyOnDesk: "Money on the desk", arOutstanding: "AR outstanding", overdue: "Overdue (chase)", placementsInFlight: "Placements in flight",
       guaranteesEndingSoon: "Guarantees ending soon",
       timesheetsWaiting: "Timesheets waiting", submitted: "submitted, awaiting approval", reviewPending: "Review pending timesheets",
+      rollingOffTitle: "Rolling off soon",
+      rollingOffSub: "{n} ending in the next 14 days — line up the next placement before they drop to the bench.",
+      endsInDays: "Ends in {n} days", placeNext: "Place next", unknownWorker: "Worker",
       quickActions: "Quick actions", addJobOrderAction: "Add job order", placeWorker: "Place a worker", runPayroll: "Run payroll", generateInvoices: "Generate invoices",
     },
     jobOrders: {

@@ -163,6 +163,15 @@ export function AgencyDashboard(){
   const submittedTs=A.timesheets.filter(ts=>ts.status==="submitted");
   const openOrders=A.openJobOrders().sort((a,b)=>{
     const uw={high:0,medium:1,low:2};return (uw[a.urgency]||9)-(uw[b.urgency]||9);}).slice(0,4);
+  /* Roadmap B2-13: rolling-off-soon — active assignments ending in 14 days or less, so a recruiter
+     can line up the next placement before the worker drops to the bench. Sorts by soonest ending. */
+  const nowMs=Date.now();
+  const horizonMs=nowMs+14*86400*1000;
+  const rollingOff=A.activeAssignments().filter(a=>{
+    if(a.ongoing||!a.endDate) return false;
+    const t=Date.parse(a.endDate);
+    return Number.isFinite(t)&&t>=nowMs&&t<=horizonMs;
+  }).sort((a,b)=>Date.parse(a.endDate)-Date.parse(b.endDate)).slice(0,5);
 
   return <div>
     <div className="mb-6">
@@ -255,6 +264,22 @@ export function AgencyDashboard(){
             </div>
           </div>
           <Btn kind="warn" size="sm" full onClick={()=>A.go("agencyTimesheets")}>{t("staffing.dashboard.reviewPending")}</Btn>
+        </Card>}
+
+        {rollingOff.length>0&&<Card pad={mob?18:20} style={{borderRadius:16}}>
+          <Lbl>{t("staffing.dashboard.rollingOffTitle")}</Lbl>
+          <div className="text-xs text-text-3 mb-3">{t("staffing.dashboard.rollingOffSub",{n:rollingOff.length})}</div>
+          <div className="flex flex-col gap-2">
+            {rollingOff.map(a=>{const w=A.worker(a.worker); const c=A.staffingClient(a.client);
+              const daysLeft=Math.max(0,Math.ceil((Date.parse(a.endDate)-nowMs)/86400000));
+              return <div key={a.id} className="flex items-center gap-2.5 py-2 px-2.5 bg-bg rounded-lg">
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold text-text overflow-hidden text-ellipsis whitespace-nowrap">{w?.name||t("staffing.dashboard.unknownWorker")}</div>
+                  <div className="text-xs text-text-3 mt-0.5">{c?.name||""} · {t("staffing.dashboard.endsInDays",{n:daysLeft})}</div>
+                </div>
+                <Btn kind="outline" size="xs" onClick={()=>A.go("agencyBench")}>{t("staffing.dashboard.placeNext")}</Btn>
+              </div>;})}
+          </div>
         </Card>}
       </div>
     </div>
