@@ -523,8 +523,19 @@ employersRouter.patch("/:id", requireAuth, (req, res) => {
   }
   // locale: Bill 96 tail - lets an employer set the language used for mail sent to contacts who
   // have no NorthHire account of their own (e.g. their staffing client's billing contact).
-  const fieldMap = { name: "name", industry: "industry", city: "city", prov: "prov", size: "size", about: "about", site: "site", businessNumber: "business_number", founded: "founded", mark: "mark", a: "a", b: "b", locale: "locale" };
+  const fieldMap = { name: "name", industry: "industry", city: "city", prov: "prov", size: "size", about: "about", site: "site", businessNumber: "business_number", founded: "founded", mark: "mark", a: "a", b: "b", locale: "locale",
+    cultureBlurb: "culture_blurb", benefitsSummary: "benefits_summary" };
   const BRAND_FIELDS = ["mark", "a", "b"];
+  /* B3-08: testimonials come in as an array of {name, role, quote} objects; validate shape +
+     cap at 5 before stringifying so a malformed client payload can't blow up the serialize path.
+     Null/empty array clears all testimonials. */
+  if (profileFields.testimonials !== undefined) {
+    const raw = Array.isArray(profileFields.testimonials) ? profileFields.testimonials : [];
+    const clean = raw.filter(t => t && typeof t === "object" && typeof t.quote === "string" && t.quote.trim())
+      .slice(0, 5)
+      .map(t => ({ name: String(t.name || "").slice(0, 120), role: String(t.role || "").slice(0, 120), quote: String(t.quote).slice(0, 500) }));
+    db.prepare("UPDATE employers SET testimonials_json = ? WHERE id = ?").run(JSON.stringify(clean), req.params.id);
+  }
   let setCols = Object.keys(profileFields).filter(k => fieldMap[k]);
   if (setCols.length) {
     if (!isOwner && !isAdmin) return res.status(403).json({ error: "Not your company." });

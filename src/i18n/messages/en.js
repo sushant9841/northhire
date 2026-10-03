@@ -763,6 +763,7 @@ export const en = {
       openRole: "role", openRoles: "roles",
       rating: "rating", followingBtn: "Following", followBtn: "Follow",
       aboutCompany: "About {company}", reviewsHeading: "Reviews from workers",
+      cultureHead: "Our culture", benefitsHead: "Benefits and perks", testimonialsHead: "What our team says",
       reviewFrom: "from", review: "review", reviews: "reviews",
       writeReview: "Write a review", noReviewsYet: "No reviews yet. Be the first to share your experience.",
       anonymousWorker: "Anonymous worker", formerEmployee: "Former employee", deleteMyReview: "Delete my review",

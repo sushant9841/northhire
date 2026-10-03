@@ -97,6 +97,27 @@ export function EmployerPublicPage(){
             <Lbl>{t("shared.employers.aboutCompany",{company:e.name})}</Lbl>
             <p className="text-base text-text-2 leading-relaxed">{e.about}</p></div>
 
+          {/* Roadmap B3-08: branding content layer. Each block renders only when the employer
+             has filled it in — so an unfilled page stays as it was, and a filled one reads as
+             a real careers landing instead of a bare directory entry. */}
+          {e.cultureBlurb&&<div className={`bg-wash rounded-3xl border border-brand-line mb-6 ${mob?"p-7":"p-9"}`}>
+            <Lbl>{t("shared.employers.cultureHead")}</Lbl>
+            <p className="text-base text-text-2 leading-relaxed whitespace-pre-wrap">{e.cultureBlurb}</p>
+          </div>}
+          {e.benefitsSummary&&<div className={`bg-white rounded-3xl border border-line mb-6 ${mob?"p-7":"p-9"}`}>
+            <Lbl>{t("shared.employers.benefitsHead")}</Lbl>
+            <p className="text-base text-text-2 leading-relaxed whitespace-pre-wrap">{e.benefitsSummary}</p>
+          </div>}
+          {e.testimonials?.length>0&&<div className={`bg-white rounded-3xl border border-line mb-6 ${mob?"p-7":"p-9"}`}>
+            <Lbl>{t("shared.employers.testimonialsHead")}</Lbl>
+            <div className="flex flex-col gap-4 mt-2">
+              {e.testimonials.map((tm,i)=><div key={i} className="p-4 bg-bg rounded-xl border border-line-soft">
+                <div className="text-sm text-text leading-relaxed italic">"{tm.quote}"</div>
+                <div className="text-xs font-semibold text-text-3 mt-2">— {tm.name}{tm.role?`, ${tm.role}`:""}</div>
+              </div>)}
+            </div>
+          </div>}
+
           {/* Reviews section */}
           <div className={`bg-white rounded-3xl border border-line mb-6 ${mob?"p-7":"p-9"}`}>
             <div className="flex justify-between items-center gap-3.5 mb-4 flex-wrap">

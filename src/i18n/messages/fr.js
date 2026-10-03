@@ -761,6 +761,7 @@ export const fr = {
       openRole: "rôle", openRoles: "rôles",
       rating: "évaluation", followingBtn: "Suivi", followBtn: "Suivre",
       aboutCompany: "À propos de {company}", reviewsHeading: "Avis des travailleurs",
+      cultureHead: "Notre culture", benefitsHead: "Avantages", testimonialsHead: "Ce que notre équipe dit",
       reviewFrom: "de", review: "avis", reviews: "avis",
       writeReview: "Rédiger un avis", noReviewsYet: "Aucun avis pour le moment. Soyez le premier à partager votre expérience.",
       anonymousWorker: "Travailleur·euse anonyme", formerEmployee: "Ancien·ne employé·e", deleteMyReview: "Supprimer mon avis",

@@ -1286,6 +1286,14 @@ for (const stmt of [
      seekers aren't forced to maintain both. Other CV fields (role titles, employer names) stay
      as entered — content there is less locale-sensitive. */
   "ALTER TABLE cvs ADD COLUMN summary_fr TEXT",
+  /* Roadmap B3-08: employer branding fields. Three plain text columns a WYSIWYG builder would
+     eventually produce rich blocks for — modest version ships the content layer so an employer
+     page is less of a brochure and more of a careers landing. culture_blurb is one paragraph
+     at the top; benefits_summary is one paragraph under 'Benefits'; testimonials_json is up
+     to 5 {name, role, quote} objects shown in a strip. All optional; empty hides the block. */
+  "ALTER TABLE employers ADD COLUMN culture_blurb TEXT",
+  "ALTER TABLE employers ADD COLUMN benefits_summary TEXT",
+  "ALTER TABLE employers ADD COLUMN testimonials_json TEXT DEFAULT '[]'",
 ]) {
   try { db.exec(stmt); } catch (e) { if (!/duplicate column/i.test(e.message)) console.error("migration:", stmt, e.message); }
 }

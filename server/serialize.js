@@ -117,6 +117,11 @@ export function serializeEmployer(row) {
     about: row.about,
     founded: row.founded,
     site: row.site,
+    // B3-08 branding block fields. All optional strings/arrays; empty hides the corresponding
+    // section on the employer public page.
+    cultureBlurb: row.culture_blurb || null,
+    benefitsSummary: row.benefits_summary || null,
+    testimonials: (() => { try { return JSON.parse(row.testimonials_json || "[]"); } catch { return []; } })(),
     plan: row.plan,
     businessNumber: row.business_number,
     // null (not the default list) so the client can tell "never customised" from "customised to
