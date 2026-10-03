@@ -27,6 +27,16 @@ export const CV_TEMPLATES=[
  {id:"compact",name:"Compact",desc:"Dense one-page layout. Best when you have a long history to fit."},
  {id:"executive",name:"Executive",desc:"Serif headings with generous spacing. Good for senior, leadership or professional-services roles."},
  {id:"skills-first",name:"Skills-first",desc:"Skills and certifications at the top, experience below. Best for early-career and career-change applications."},
+ /* Roadmap B4-15 round-2 additions: five more templates covering the gaps the earlier five
+    didn't serve — trades-ticket-first, healthcare-license-first, creative/portfolio-first,
+    bilingual side-by-side, and a dense two-pager for 15+ year careers. All five render through
+    the same CvPreview layout engine as the original five — the id just controls which header
+    treatment + section order the preview picks, no new render path needed. */
+ {id:"trades",name:"Trades",desc:"Tickets, Red Seal and WSIB up top so a hiring foreman sees your credentials first. Built for construction, driving and skilled-trade applications."},
+ {id:"healthcare",name:"Healthcare",desc:"Licence number, scope of practice and patient-care experience lead. Best for RN/RPN, PSW, lab tech and allied health roles."},
+ {id:"creative",name:"Creative",desc:"Portfolio-link block and a tasteful accent colour. For design, marketing and media roles where visual judgment is itself a signal."},
+ {id:"bilingual",name:"Bilingual",desc:"English and French side-by-side in two columns. Required for Quebec provincial roles and useful for any federal + bilingual-service posting."},
+ {id:"two-pager",name:"Two-pager",desc:"Executive-friendly layout that genuinely breathes across two pages. Use when 15+ years of work history doesn't honestly fit on one page."},
 ];
 
 export const PLANS={
