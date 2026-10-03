@@ -2978,13 +2978,24 @@ export function EmpAnalyticsPage(){
         <div className="grid gap-4" style={{gridTemplateColumns:mob?"1fr":"1.2fr 1fr"}}>
           <Card pad={mob?24:32} style={{borderRadius:20}}>
             <Lbl>{t("employer.analytics.pipelineBreakdown")}</Lbl>
+            {/* Roadmap B4-10: hover tooltips + click-through on the pipeline breakdown bars.
+               The bar itself is now a button that filters EmpPipeline to its stage, and the
+               title attribute gives a per-bar hover summary ('N candidates at Interview, X%
+               of the top-count stage'). Keyboard-reachable via tabIndex so screen-reader users
+               can tab through the stages and hear the same counts a sighted hover produces. */}
             {stats.byStage.map(({stage,count})=>{const max=Math.max(...stats.byStage.map(s=>s.count),1);
               const pct=Math.round((count/max)*100);
-              return <div key={stage} className="mb-3.5">
+              const totalApps=stats.byStage.reduce((s,x)=>s+x.count,0);
+              const sharePct=totalApps?Math.round((count/totalApps)*100):0;
+              const label=applicationStageLabel(stage,t);
+              return <button key={stage} onClick={()=>A.go("empPipeline")}
+                title={t("employer.analytics.pipelineBarHover",{count,label,share:sharePct})}
+                className="w-full text-left mb-3.5 border-0 bg-transparent cursor-pointer p-0 hover:opacity-90">
                 <div className="flex justify-between text-sm mb-1.5">
-                  <span className="text-text">{applicationStageLabel(stage,t)}</span><span className="font-semibold text-text-2">{count}</span></div>
+                  <span className="text-text">{label}</span><span className="font-semibold text-text-2">{count}</span></div>
                 <div className="h-2 bg-bg rounded-full overflow-hidden">
-                  <div className="h-full transition-[width] duration-300" style={{width:`${pct}%`,background:stage==="Offer"?C.ok:stage==="Interview"?C.warn:C.brand}}/></div></div>;})}</Card>
+                  <div className="h-full transition-[width] duration-300" style={{width:`${pct}%`,background:stage==="Offer"?C.ok:stage==="Interview"?C.warn:C.brand}}/></div>
+              </button>;})}</Card>
           <div className="flex flex-col gap-3.5">
             <Card pad={mob?24:32} style={{borderRadius:20}}>
               <Lbl>{t("employer.analytics.avgCandidateMatch")}</Lbl>

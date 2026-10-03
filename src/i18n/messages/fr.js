@@ -1484,6 +1484,7 @@ export const fr = {
       recruitingSpend: "Dépenses de recrutement", hiresInRange: "Embauches (dans la plage)", costPerHire: "Coût par embauche",
       applicationsLast30: "Candidatures, 30 derniers jours", noApplications: "Aucune candidature au cours des 30 derniers jours pour l'instant.", totalApplications: "Total {total} · pic {max}",
       peakDate: " le {date}", pipelineBreakdown: "Ventilation du pipeline", applicationRate: "Taux de candidature",
+      pipelineBarHover: "{count} à {label} — {share}% du total · cliquez pour ouvrir le pipeline",
       timeToHire: "Délai d'embauche", conversionReport: "Rapport de taux de conversion", applicationsOpen: "Candidatures ouvertes",
       applicationsClicked: "Candidatures cliquées depuis la recherche", applicationsApplied: "Candidatures complétées", avgDaysToHire: "Jours moyens pour embaucher",
       // EmpAnalyticsPage tail translations

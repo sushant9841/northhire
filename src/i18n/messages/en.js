@@ -1485,6 +1485,7 @@ export const en = {
       recruitingSpend: "Recruiting spend", hiresInRange: "Hires (in range)", costPerHire: "Cost per hire",
       applicationsLast30: "Applications, last 30 days", noApplications: "No applications in the last 30 days yet.", totalApplications: "Total {total} · peak {max}",
       peakDate: " on {date}", pipelineBreakdown: "Pipeline breakdown", applicationRate: "Application rate",
+      pipelineBarHover: "{count} at {label} — {share}% of total · click to open pipeline",
       timeToHire: "Time to hire", conversionReport: "Conversion rate report", applicationsOpen: "Applications opened",
       applicationsClicked: "Applications clicked-through from search", applicationsApplied: "Applications completed", avgDaysToHire: "Avg days to hire",
       // EmpAnalyticsPage tail translations
