@@ -1281,6 +1281,11 @@ for (const stmt of [
   "CREATE INDEX IF NOT EXISTS idx_session_events_user ON session_events(user_id, created_at DESC)",
   "CREATE INDEX IF NOT EXISTS idx_session_events_session ON session_events(session_id, created_at)",
   "CREATE INDEX IF NOT EXISTS idx_session_events_type ON session_events(event_type, created_at DESC)",
+  /* Roadmap B3-17: French-locale summary stored alongside the English one. Preview + employer-
+     view prefer summary_fr when the viewer is in fr-CA; empty falls back to summary so bilingual
+     seekers aren't forced to maintain both. Other CV fields (role titles, employer names) stay
+     as entered — content there is less locale-sensitive. */
+  "ALTER TABLE cvs ADD COLUMN summary_fr TEXT",
 ]) {
   try { db.exec(stmt); } catch (e) { if (!/duplicate column/i.test(e.message)) console.error("migration:", stmt, e.message); }
 }

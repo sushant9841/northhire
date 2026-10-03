@@ -37,8 +37,12 @@ function WordCountHint({html,budget=120}){
    the "modern" template's sidebar so it stacks instead of staying frozen at width:33% on narrow
    screens, matching the breakpoint convention CvEditPage already uses for its own chrome. */
 export function CvPreview({cv,u,scale=1,mob=false}){
-  const {t}=useTranslation();
+  const {t,locale}=useTranslation();
   const T=cv.template;
+  /* B3-17: when the viewer is in fr-CA and the CV carries a French summary, show that one
+     instead of the English. Empty summaryFr falls back to summary so no bilingual seeker is
+     forced to maintain both. Other fields (role titles, employer names) stay as entered. */
+  const summaryText=(locale==="fr-CA"&&cv.summaryFr&&cv.summaryFr.trim())?cv.summaryFr:cv.summary;
   const wrap={background:"#fff",width:"100%",fontFamily:FONT,color:"#111",lineHeight:1.5,
     fontSize:13*scale,padding:T==="compact"?22*scale:28*scale,boxSizing:"border-box"};
   const Head=()=><>
@@ -50,8 +54,8 @@ export function CvPreview({cv,u,scale=1,mob=false}){
     color:T==="modern"?C.brand:"#0E1727",borderBottom:T==="classic"?`1.5px solid ${C.brand}`:"none",
     paddingBottom:T==="classic"?4*scale:0,marginBottom:8*scale,marginTop:16*scale}}>{children}</div>;
   const Body=()=><>
-    {cv.summary&&<><SecT>{t("seeker.cv.secProfessionalSummary")}</SecT>
-      <div className="rich-content" style={{fontSize:12*scale,color:"#333",lineHeight:1.65}} dangerouslySetInnerHTML={{__html:sanitizeHtml(cv.summary)}}/></>}
+    {summaryText&&<><SecT>{t("seeker.cv.secProfessionalSummary")}</SecT>
+      <div className="rich-content" style={{fontSize:12*scale,color:"#333",lineHeight:1.65}} dangerouslySetInnerHTML={{__html:sanitizeHtml(summaryText)}}/></>}
     {cv.exp?.length>0&&<><SecT>{t("seeker.cv.secWorkExperience")}</SecT>
       {cv.exp.map(x=><div key={x.id} style={{marginBottom:10*scale}}>
         <div style={{display:"flex",justifyContent:"space-between",gap:10}}>
@@ -306,7 +310,14 @@ export function CvEditPage(){
             <Field label={t("seeker.cv.professionalSummaryLabel")} hint={t("seeker.cv.professionalSummaryHint")}>
               <RichText value={d.summary||""} onChange={v=>set("summary",v)} rows={4}
                 placeholder={t("seeker.cv.summaryPlaceholder")}/>
-              <WordCountHint html={d.summary} budget={60}/></Field></div>}
+              <WordCountHint html={d.summary} budget={60}/></Field>
+            {/* Roadmap B3-17: optional French-locale summary stored alongside the English one.
+               The preview + any employer viewing the CV in fr-CA will prefer summary_fr; empty
+               falls back to summary so bilingual seekers aren't forced to maintain both. */}
+            <Field label={t("seeker.cv.summaryFrLabel")} hint={t("seeker.cv.summaryFrHint")}>
+              <RichText value={d.summaryFr||""} onChange={v=>set("summaryFr",v)} rows={4}
+                placeholder={t("seeker.cv.summaryFrPlaceholder")}/>
+              <WordCountHint html={d.summaryFr} budget={60}/></Field></div>}
 
           {sec==="exp"&&<div>
             <H2 sub={t("seeker.cv.workExperienceSub")} action={<Btn kind="outline" size="sm" icon="plus" onClick={addExp}>{t("seeker.cv.addRoleBtn")}</Btn>}>{t("seeker.cv.workExperienceTitle")}</H2>

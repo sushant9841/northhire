@@ -215,7 +215,9 @@ export function serializeCv(row) {
     // tests/e2e/seeker/apply.spec.ts.
     id: row.id, user: row.user_id, name: row.name, template: row.template,
     name0: row.name0, title: row.title, email: row.email, phone: row.phone, city: row.city, prov: row.prov,
-    summary: row.summary, skills: JSON.parse(row.skills_json || "[]"), certs: JSON.parse(row.certs_json || "[]"),
+    summary: row.summary, summaryFr: row.summary_fr || null,
+    updated_at: row.updated_at,
+    skills: JSON.parse(row.skills_json || "[]"), certs: JSON.parse(row.certs_json || "[]"),
     exp: JSON.parse(row.exp_json || "[]"), edu: JSON.parse(row.edu_json || "[]"),
     updated: relativeTime(row.updated_at),
   };

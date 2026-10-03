@@ -114,7 +114,7 @@ seekerMiscRouter.patch("/cvs/:id", requireAuth, (req, res) => {
   if (!row || row.user_id !== req.user.id) return res.status(404).json({ error: "CV not found." });
   const d = req.body || {};
   const fields = { name: "name", template: "template", name0: "name0", title: "title", email: "email",
-    phone: "phone", city: "city", prov: "prov", summary: "summary" };
+    phone: "phone", city: "city", prov: "prov", summary: "summary", summaryFr: "summary_fr" };
   const setCols = ["updated_at = datetime('now')"]; const params = [];
   for (const [key, col] of Object.entries(fields)) if (d[key] !== undefined) { setCols.push(`${col} = ?`); params.push(d[key]); }
   if (d.skills !== undefined) { setCols.push("skills_json = ?"); params.push(JSON.stringify(d.skills)); }
