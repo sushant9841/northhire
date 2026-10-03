@@ -1336,6 +1336,27 @@ for (const stmt of [
     submitted_at TEXT NOT NULL DEFAULT (datetime('now'))
   )`,
   "CREATE INDEX IF NOT EXISTS idx_dei_self_id_employer ON dei_self_id(employer_id, submitted_at)",
+  /* Roadmap B3-06: background check tracking. The actual Certn/Sterling API call is a partner-
+     integration task that needs commercial onboarding; this ships the data model so an employer
+     records the order ('I sent a check for this candidate'), tracks its status (ordered /
+     consent_pending / in_progress / clear / flagged / cancelled), and attaches the result
+     document when it comes back. result_doc_token links to the uploads layer if/when the
+     employer uploads a PDF; direct-API integration can bypass that step and write result
+     fields directly. */
+  `CREATE TABLE IF NOT EXISTS background_checks (
+    id TEXT PRIMARY KEY,
+    application_id TEXT NOT NULL REFERENCES applications(id),
+    employer_id TEXT NOT NULL REFERENCES employers(id),
+    provider TEXT NOT NULL DEFAULT 'manual' CHECK(provider IN ('manual','certn','sterling')),
+    check_type TEXT NOT NULL DEFAULT 'criminal' CHECK(check_type IN ('criminal','credit','driving','identity','comprehensive')),
+    status TEXT NOT NULL DEFAULT 'ordered' CHECK(status IN ('ordered','consent_pending','in_progress','clear','flagged','cancelled')),
+    result_summary TEXT,
+    result_doc_token TEXT,
+    ordered_at TEXT NOT NULL DEFAULT (datetime('now')),
+    completed_at TEXT
+  )`,
+  "CREATE INDEX IF NOT EXISTS idx_background_checks_app ON background_checks(application_id)",
+  "CREATE INDEX IF NOT EXISTS idx_background_checks_employer ON background_checks(employer_id, ordered_at DESC)",
 ]) {
   try { db.exec(stmt); } catch (e) { if (!/duplicate column/i.test(e.message)) console.error("migration:", stmt, e.message); }
 }

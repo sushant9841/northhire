@@ -518,3 +518,51 @@ applicationsRouter.get("/dei/aggregate", requireAuth, requireRole("employer"), (
     lgbtq: tally(r => r.lgbtq == null ? null : (r.lgbtq ? "yes" : "no")),
   });
 });
+
+/* Roadmap B3-06: background check lifecycle. Current ship is the data model + endpoints so an
+   employer can RECORD a check they ordered through any provider (including 'manual' = emailed
+   candidate a form, waited for a PDF, uploaded it). Direct Certn/Sterling API wiring is a
+   same-schema follow-up — the integration layer writes to the same background_checks row,
+   just skipping the human-upload step. */
+applicationsRouter.post("/:id/background-checks", requireAuth, requireRole("employer"), (req, res) => {
+  const app = db.prepare(
+    "SELECT applications.*, jobs.employer_id FROM applications JOIN jobs ON jobs.id = applications.job_id WHERE applications.id = ?"
+  ).get(req.params.id);
+  if (!app || app.employer_id !== req.user.employer_id) return res.status(404).json({ error: "Not your candidate." });
+  const { provider, checkType } = req.body || {};
+  const p = ["manual","certn","sterling"].includes(provider) ? provider : "manual";
+  const ty = ["criminal","credit","driving","identity","comprehensive"].includes(checkType) ? checkType : "criminal";
+  const id = nextId("bgc", "background_checks");
+  db.prepare(
+    "INSERT INTO background_checks (id, application_id, employer_id, provider, check_type) VALUES (?, ?, ?, ?, ?)"
+  ).run(id, req.params.id, app.employer_id, p, ty);
+  res.status(201).json({ id });
+});
+
+applicationsRouter.patch("/background-checks/:id", requireAuth, requireRole("employer"), (req, res) => {
+  const row = db.prepare("SELECT * FROM background_checks WHERE id = ?").get(req.params.id);
+  if (!row || row.employer_id !== req.user.employer_id) return res.status(404).json({ error: "Not your check." });
+  const { status, resultSummary, resultDocToken } = req.body || {};
+  const sets = [], params = [];
+  if (status !== undefined) {
+    if (!["ordered","consent_pending","in_progress","clear","flagged","cancelled"].includes(status)) {
+      return res.status(400).json({ error: "Unknown status." });
+    }
+    sets.push("status = ?"); params.push(status);
+    if (["clear","flagged","cancelled"].includes(status)) { sets.push("completed_at = datetime('now')"); }
+  }
+  if (resultSummary !== undefined) { sets.push("result_summary = ?"); params.push(String(resultSummary || "").slice(0, 2000)); }
+  if (resultDocToken !== undefined) { sets.push("result_doc_token = ?"); params.push(resultDocToken || null); }
+  if (sets.length) db.prepare(`UPDATE background_checks SET ${sets.join(", ")} WHERE id = ?`).run(...params, req.params.id);
+  const updated = db.prepare("SELECT * FROM background_checks WHERE id = ?").get(req.params.id);
+  res.json({ check: updated });
+});
+
+applicationsRouter.get("/:id/background-checks", requireAuth, requireRole("employer"), (req, res) => {
+  const app = db.prepare(
+    "SELECT applications.*, jobs.employer_id FROM applications JOIN jobs ON jobs.id = applications.job_id WHERE applications.id = ?"
+  ).get(req.params.id);
+  if (!app || app.employer_id !== req.user.employer_id) return res.status(404).json({ error: "Not your candidate." });
+  const rows = db.prepare("SELECT * FROM background_checks WHERE application_id = ? ORDER BY ordered_at DESC").all(req.params.id);
+  res.json({ checks: rows });
+});
