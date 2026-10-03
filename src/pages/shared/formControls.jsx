@@ -463,6 +463,25 @@ const _resolveCategory=(title,cat)=>{
   return "default";
 };
 
+/* Roadmap B1-01: seniority modifier picked up from title keywords. The category templates
+   already differentiate hard skills (an electrician vs an accountant); this layer catches the
+   soft shift between 'junior QA analyst' and 'senior QA analyst' at the same category, which
+   the roadmap row explicitly called out ('An employer typing senior devops engineer gets the
+   same generic tech copy as junior QA analyst'). Prepends a seniority-shaped duty + requirement
+   to the output of the main generator — leaves the category content intact so the two layers
+   compose rather than conflict. Returns null when the title has no detectable seniority marker,
+   in which case the caller skips the prepend. */
+export function senioritySignal(title){
+  const t=(title||"").toLowerCase();
+  if(/\b(principal|staff|chief|director|head of|vp|vice president)\b/.test(t))
+    return {level:"executive",dutyLine:"Set technical direction and own cross-team outcomes end-to-end.",reqLine:"10+ years of relevant experience, with evidence of leading teams through non-trivial projects.",mustSkill:"Technical leadership"};
+  if(/\b(lead|senior|sr\.?|sr\b)\b/.test(t))
+    return {level:"senior",dutyLine:"Mentor less-experienced colleagues and lead design reviews for important work.",reqLine:"5+ years of relevant experience with examples of work you shipped end-to-end.",mustSkill:"Mentoring + review experience"};
+  if(/\b(junior|jr\.?|jr\b|associate|intermediate)\b/.test(t))
+    return {level:"junior",dutyLine:"Grow into the role under the guidance of a senior teammate — curiosity is a hard requirement.",reqLine:"Entry-level: a strong foundation + evidence you can learn fast is better than years alone.",mustSkill:"Willingness to learn + ask questions"};
+  return null;
+}
+
 /* Main entry point. Accepts either the old positional signature (title, cat) — kept for any
    external caller still on the two-arg form — or the new object signature with full context. */
 export function aiSuggestJD(a,b){
@@ -474,9 +493,16 @@ export function aiSuggestJD(a,b){
   const pool=_AI_JD_POOLS[key]||_AI_JD_POOLS.default;
   const base=_hashInputs(title,key,type,mode,exp,edu);
   const rot=(base+(seed>>>0))>>>0;
-  const duties=_rotate(tpl.duties,rot%tpl.duties.length,5);
-  const reqs=_rotate(tpl.reqs,(rot>>>2)%tpl.reqs.length,5);
-  const mustHave=_rotate(pool.must,(rot>>>3)%pool.must.length,4);
+  /* B1-01: seniority modifier prepended to the category-shaped duties + requirements, so a
+     'senior devops engineer' listing opens with 'Mentor less-experienced colleagues…' instead
+     of the generic tech first line, while still sharing the category's hard-skill content. */
+  const sig=senioritySignal(title);
+  const baseDuties=_rotate(tpl.duties,rot%tpl.duties.length,sig?4:5);
+  const baseReqs=_rotate(tpl.reqs,(rot>>>2)%tpl.reqs.length,sig?4:5);
+  const duties=sig?[sig.dutyLine,...baseDuties]:baseDuties;
+  const reqs=sig?[sig.reqLine,...baseReqs]:baseReqs;
+  const baseMust=_rotate(pool.must,(rot>>>3)%pool.must.length,sig?3:4);
+  const mustHave=sig?[sig.mustSkill,...baseMust]:baseMust;
   const niceToHave=_rotate(pool.nice,(rot>>>5)%pool.nice.length,4);
   const eduLine=_educationLine(edu);
   if(eduLine&&!mustHave.includes(eduLine))mustHave.unshift(eduLine);
