@@ -468,3 +468,53 @@ applicationsRouter.post("/references/submit/:token", (req, res) => {
   ).run(yn, safeComments, req.params.token);
   res.json({ ok: true });
 });
+
+/* Roadmap B3-16: voluntary DEI self-identification. Seeker submits one row per application
+   with any subset of fields filled; row carries no user_id (anonymity at the schema layer).
+   Employer dashboard reads suppressed-below-N=10 aggregates. */
+applicationsRouter.post("/:id/dei", requireAuth, (req, res) => {
+  const app = db.prepare(
+    "SELECT applications.*, jobs.employer_id FROM applications JOIN jobs ON jobs.id = applications.job_id WHERE applications.id = ?"
+  ).get(req.params.id);
+  if (!app || app.user_id !== req.user.id) return res.status(404).json({ error: "Application not found." });
+  // Only one DEI row per application. Any resubmit replaces the previous one.
+  db.prepare("DELETE FROM dei_self_id WHERE application_id = ?").run(req.params.id);
+  const { gender, ageBand, indigenous, racialized, disability, lgbtq } = req.body || {};
+  const yn = v => v === true || v === 1 ? 1 : (v === false || v === 0 ? 0 : null);
+  const id = nextId("dei", "dei_self_id");
+  db.prepare(
+    "INSERT INTO dei_self_id (id, application_id, employer_id, gender, age_band, indigenous, racialized, disability, lgbtq) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+  ).run(id, req.params.id, app.employer_id,
+    typeof gender === "string" ? gender.slice(0, 40) : null,
+    typeof ageBand === "string" ? ageBand.slice(0, 40) : null,
+    yn(indigenous), yn(racialized), yn(disability), yn(lgbtq));
+  res.status(201).json({ ok: true });
+});
+
+applicationsRouter.get("/dei/aggregate", requireAuth, requireRole("employer"), (req, res) => {
+  const employerId = req.user.employer_id;
+  const rows = db.prepare("SELECT gender, age_band, indigenous, racialized, disability, lgbtq FROM dei_self_id WHERE employer_id = ?").all(employerId);
+  const SUPPRESS_BELOW = 10;
+  const total = rows.length;
+  const suppressed = total < SUPPRESS_BELOW;
+  function tally(fn) {
+    const m = {};
+    for (const r of rows) { const k = fn(r); if (k == null) continue; m[k] = (m[k] || 0) + 1; }
+    if (suppressed) return { suppressed: true };
+    const entries = Object.entries(m);
+    // Also suppress any individual bucket under N=10 so a small sub-group is still protected
+    // even when the overall roster is large.
+    return Object.fromEntries(entries.filter(([, n]) => n >= SUPPRESS_BELOW));
+  }
+  res.json({
+    total,
+    suppressed,
+    threshold: SUPPRESS_BELOW,
+    gender: tally(r => r.gender),
+    ageBand: tally(r => r.age_band),
+    indigenous: tally(r => r.indigenous == null ? null : (r.indigenous ? "yes" : "no")),
+    racialized: tally(r => r.racialized == null ? null : (r.racialized ? "yes" : "no")),
+    disability: tally(r => r.disability == null ? null : (r.disability ? "yes" : "no")),
+    lgbtq: tally(r => r.lgbtq == null ? null : (r.lgbtq ? "yes" : "no")),
+  });
+});

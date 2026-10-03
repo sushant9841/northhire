@@ -1315,6 +1315,27 @@ for (const stmt of [
   )`,
   "CREATE INDEX IF NOT EXISTS idx_reference_requests_app ON reference_requests(application_id)",
   "CREATE INDEX IF NOT EXISTS idx_reference_requests_token ON reference_requests(token)",
+  /* Roadmap B3-16: voluntary DEI self-identification with hard aggregation threshold. Each row
+     is a single self-ID answer for one application; stored WITHOUT the user_id to make
+     identification trivially impossible from the row itself. employer_id is kept so an admin
+     DEI dashboard can roll up per-employer; application_id survives for the (rare) case of a
+     seeker wanting to withdraw their answer, which happens via DELETE on the row the seeker's
+     own session proves ownership of in-memory before passing the id to the delete. ALL fields
+     optional — a seeker who declines any question just has null for that one. N<10 suppression
+     is enforced by the dashboard query, not by storage. */
+  `CREATE TABLE IF NOT EXISTS dei_self_id (
+    id TEXT PRIMARY KEY,
+    application_id TEXT NOT NULL REFERENCES applications(id),
+    employer_id TEXT NOT NULL REFERENCES employers(id),
+    gender TEXT,
+    age_band TEXT,
+    indigenous INTEGER,
+    racialized INTEGER,
+    disability INTEGER,
+    lgbtq INTEGER,
+    submitted_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`,
+  "CREATE INDEX IF NOT EXISTS idx_dei_self_id_employer ON dei_self_id(employer_id, submitted_at)",
 ]) {
   try { db.exec(stmt); } catch (e) { if (!/duplicate column/i.test(e.message)) console.error("migration:", stmt, e.message); }
 }
