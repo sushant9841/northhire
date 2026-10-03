@@ -1314,12 +1314,16 @@ export function useStore(){
   const impersonate=userId=>{
     if(user?.role!=="admin"){log("admin.impersonate.deny","Non-admin tried to impersonate","shield");return;}
     const target=people.find(p=>p.id===userId); if(!target)return;
-    setImpersonating({originalUser:user}); /* remember admin */
+    /* Roadmap B4-13: read-only mode defaults ON so an admin can't accidentally take a destructive
+       action as the user they're sampling. Explicit toggle via setImpersonationReadOnly if the
+       admin genuinely needs to act on behalf of the user. */
+    setImpersonating({originalUser:user, readOnly:true});
     setUser({...target,role:"seeker"});
     _hardNav("home");
-    log("admin.impersonate",`Admin viewing as ${target.name}`,"eye");
-    notify({icon:"eye",title:"Impersonation active",body:`You are viewing as ${target.name}. Return to admin from the banner.`,for:target.id,link:null});
+    log("admin.impersonate",`Admin viewing as ${target.name} (read-only)`,"eye");
+    notify({icon:"eye",title:"Impersonation active",body:`Viewing as ${target.name} in READ-ONLY mode. Return to admin from the banner.`,for:target.id,link:null});
   };
+  const setImpersonationReadOnly=on=>{setImpersonating(s=>s?{...s,readOnly:!!on}:s);};
   const stopImpersonating=()=>{
     if(!impersonating?.originalUser)return;
     setUser(impersonating.originalUser); setImpersonating(null); _hardNav("admHome");
@@ -2487,7 +2491,7 @@ export function useStore(){
     saveSearch,deleteSavedSearch,toggleSearchAlert,updateSavedSearch,editingSavedSearchId,setEditingSavedSearchId,
     salaryInsight,skillsGap,expandQuery,restoreApp,notifyFollowers,
     sendMessage,markMessageRead,scheduleInterview,cancelInterview,acceptInterviewSlot,bulkMove,bulkReject,reverseMatch,inviteToApply,loadCandidateOutreach,importJobsCSV,employerAnalytics,snapshotDeltas,
-    impersonate,stopImpersonating,
+    impersonate,stopImpersonating,setImpersonationReadOnly,
     PLANS,PLAN_ORDER,payrollTaxConfig,platformConfig,currentPlan,planName,can,limitOf,planRequires,upgradeModal,setUpgradeModal,requestUpgrade,
     oauthProviders,oauthStart,turnstileSiteKey,
     paymentMethods,addPaymentMethod,removePaymentMethod,setDefaultPayment,employerInvoices,verifyCheckout,startCheckout,openBillingPortal,markWelcomeSeen,loadReferralCredits,

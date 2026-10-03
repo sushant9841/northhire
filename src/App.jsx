@@ -240,10 +240,22 @@ export default function NorthHire(){
               <span style={{display:"flex",alignItems:"center",gap:8}}><I n="sparkle" s={16}/>{t("common.newVersionMsg")}</span>
               <button onClick={()=>{try{window.location.reload();}catch{/* ignore */}}} style={{background:"#fff",color:C.ink,border:"none",padding:"6px 14px",borderRadius:8,cursor:"pointer",fontWeight:700,fontSize:13,fontFamily:"inherit"}}>{t("common.newVersionBtn")}</button>
             </div>}
-            {impersonating?.originalUser&&<div style={{background:C.warn,color:"#fff",padding:"10px 18px",
-              display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap",fontSize:13.5,fontWeight:600}} data-impersonation-banner>
-              <span style={{display:"flex",alignItems:"center",gap:8}}><I n="eye" s={16}/>Viewing as {user?.name}</span>
-              <button onClick={stopImpersonating} style={{background:"#fff",color:C.warn,border:"none",padding:"6px 14px",borderRadius:8,cursor:"pointer",fontWeight:700,fontSize:13,fontFamily:"inherit"}}>Return to admin</button>
+            {impersonating?.originalUser&&<div style={{background:impersonating.readOnly?C.warn:C.danger,color:"#fff",padding:"14px 22px",
+              display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap",fontSize:14,fontWeight:700,
+              borderBottom:"3px solid rgba(0,0,0,.18)"}} data-impersonation-banner>
+              <span style={{display:"flex",alignItems:"center",gap:10}}>
+                <I n="eye" s={18}/>
+                {impersonating.readOnly
+                  ? <>Viewing as <strong style={{fontSize:15}}>{user?.name}</strong> — <span style={{opacity:0.9,fontWeight:600}}>READ-ONLY mode active</span></>
+                  : <>Viewing as <strong style={{fontSize:15}}>{user?.name}</strong> — <span style={{opacity:0.95,fontWeight:700,textDecoration:"underline"}}>LIVE actions ENABLED, every click is attributed to you</span></>}
+              </span>
+              <span style={{display:"flex",alignItems:"center",gap:8}}>
+                <button onClick={()=>A.setImpersonationReadOnly(!impersonating.readOnly)}
+                  style={{background:"rgba(255,255,255,.2)",color:"#fff",border:"1px solid rgba(255,255,255,.5)",padding:"6px 12px",borderRadius:8,cursor:"pointer",fontWeight:700,fontSize:12.5,fontFamily:"inherit"}}>
+                  {impersonating.readOnly?"Switch to LIVE actions":"Back to READ-ONLY"}
+                </button>
+                <button onClick={stopImpersonating} style={{background:"#fff",color:impersonating.readOnly?C.warn:C.danger,border:"none",padding:"7px 14px",borderRadius:8,cursor:"pointer",fontWeight:700,fontSize:13,fontFamily:"inherit"}}>Return to admin</button>
+              </span>
             </div>}
             <a href="#main-content" style={{position:"absolute",left:-9999,top:"auto",width:1,height:1,overflow:"hidden",zIndex:9999,
               background:C.brand,color:"#fff",padding:"14px 20px",minHeight:44,display:"inline-flex",alignItems:"center",borderRadius:8,fontWeight:700,fontSize:14}}
