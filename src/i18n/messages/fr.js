@@ -1292,6 +1292,7 @@ export const fr = {
       searchPlaceholder: "p. ex. « Sceau rouge » ET Calgary", showCandidates: "Afficher {n} candidat·e", showCandidatesPlural: "Afficher {n} candidat·e·s",
       reset: "Réinitialiser", yearSingular: "an", yearPlural: "ans", decisionNoticeOverdue: "Avis de décision en retard de {n}j", decisionNoticeDue: "Avis de décision à rendre dans {n}j",
       passiveCandidate: "Ouvert·e aux forts rapprochements",
+      showMoreInColumn: "Afficher {n} de plus ({total} restantes)",
       moveBack: "Retour", advance: "Avancer", selectAll: "tout", selectClear: "effacer", selectUpgradeTitle: "La sélection de plusieurs candidat·e·s est disponible sur Croissance et Entreprise",
       emptyColumn: "Vide", talentPoolTitle: "Le vivier de talents est une fonctionnalité Croissance", talentPoolBody: "Consultez les candidat·e·s les mieux évalué·e·s de NorthHire qui n'ont pas encore postulé, et invitez-les directement. Disponible sur les forfaits Croissance et Entreprise.",
       upgradeToGrowth: "Passer à Croissance", talentPoolMatches: "Correspondances du vivier de talents", talentPoolDesc: "Candidat·e·s de NorthHire qui correspondent à cette annonce mais n'ont pas encore postulé.",

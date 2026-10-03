@@ -1293,6 +1293,7 @@ export const en = {
       searchPlaceholder: "e.g. \"red seal\" AND calgary", showCandidates: "Show {n} candidate", showCandidatesPlural: "Show {n} candidates",
       reset: "Reset", yearSingular: "yr", yearPlural: "yrs", decisionNoticeOverdue: "Decision notice {n}d overdue", decisionNoticeDue: "Decision notice due in {n}d",
       passiveCandidate: "Open to strong matches",
+      showMoreInColumn: "Show {n} more ({total} remaining)",
       moveBack: "Move back", advance: "Advance", selectAll: "all", selectClear: "clear", selectUpgradeTitle: "Selecting several candidates at once is available on Growth and Enterprise",
       emptyColumn: "Empty", talentPoolTitle: "Talent pool is a Growth feature", talentPoolBody: "See top-matched candidates across NorthHire who haven't applied yet, and invite them directly. Available on the Growth and Enterprise plans.",
       upgradeToGrowth: "Upgrade to Growth", talentPoolMatches: "Talent pool matches", talentPoolDesc: "Candidates on NorthHire who match this posting but haven't applied yet.",

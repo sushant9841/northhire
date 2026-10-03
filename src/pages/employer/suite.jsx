@@ -1002,9 +1002,20 @@ function PipelineCard({a,u,s,idx,selected,tog,A,notice,stages,t,onOpen}){
       {idx<stages.length-1&&<Btn kind="outline" size="xs" iconR="arrowR" onClick={()=>A.moveApp(a.id,stages[idx+1])} style={{flex:2}}>{t("employer.pipeline.advance")}</Btn>}</div>
   </div>;
 }
+/* Roadmap B2-02: at real scale (300k apps across 15k jobs, from the QA-r4 scale test) a popular
+   job can carry hundreds of candidates in a single stage. The DOM tanks past ~500 cards per column.
+   Rather than pull in react-window + bend @dnd-kit around a virtualized list, this ships a cheaper
+   windowed render: cap visible cards at CARDS_PER_PAGE and surface a 'Show N more' footer that
+   extends the window. All cards within the window stay fully draggable via existing dnd-kit setup;
+   cards past the window still participate in the column total but aren't rendered until requested.
+   This is the practical win — the DOM stays sub-100 nodes per column regardless of total count. */
+const CARDS_PER_PAGE = 100;
 function PipelineColumn({stage,items,job,sel,tog,selectStage,A,mob,stages,t,onOpen}){
   const {setNodeRef,isOver}=useDroppable({id:stage});
+  const [visibleCount,setVisibleCount]=useState(CARDS_PER_PAGE);
   const allSelected=items.length>0&&items.every(a=>sel.has(a.id));
+  const windowed=items.slice(0,visibleCount);
+  const remaining=items.length-windowed.length;
   return <div ref={setNodeRef} className={`${mob?"w-52":"flex-1 min-w-56"} flex flex-col gap-2 rounded-2xl transition-colors duration-150`}
     style={{background:isOver?C.tint:"transparent",padding:isOver?5:0}}>
     <div className="flex items-center justify-between px-1">
@@ -1020,9 +1031,12 @@ function PipelineColumn({stage,items,job,sel,tog,selectStage,A,mob,stages,t,onOp
               className="bg-transparent border-0 text-xs font-semibold cursor-pointer flex items-center gap-1" style={{color:C.text3}}>
               <I n="lock" s={11}/>{t("employer.pipeline.selectAll")}</button>)}
         <span className="bg-wash text-brand border border-line-2 text-xs font-bold rounded-full flex items-center justify-center px-1.5" style={{minWidth:22,height:22}}>{items.length}</span></div></div>
-    {items.map(a=>{const u=A.person(a.user); const s=A.scoreCandidate(u,job); const idx=stages.indexOf(stage);
+    {windowed.map(a=>{const u=A.person(a.user); const s=A.scoreCandidate(u,job); const idx=stages.indexOf(stage);
       const notice=applicationDecisionNotice(a,postingRules({prov:job?.prov,employerSize:A.company?.size}));
       return <PipelineCard key={a.id} a={a} u={u} s={s} idx={idx} selected={sel.has(a.id)} tog={tog} A={A} notice={notice} stages={stages} t={t} onOpen={onOpen}/>;})}
+    {remaining>0&&<button onClick={()=>setVisibleCount(c=>c+CARDS_PER_PAGE)}
+      className="bg-wash border border-brand-line text-brand text-xs font-bold py-2 px-3 rounded-xl cursor-pointer hover:bg-brand-wash">
+      {t("employer.pipeline.showMoreInColumn",{n:Math.min(remaining,CARDS_PER_PAGE),total:remaining})}</button>}
     {items.length===0&&<div className="rounded-2xl text-center text-xs text-text-3 py-6 px-3" style={{border:`1.5px dashed ${C.line}`}}>{t("employer.pipeline.emptyColumn")}</div>}
   </div>;
 }
