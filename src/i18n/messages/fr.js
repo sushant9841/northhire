@@ -131,6 +131,11 @@ export const fr = {
     denied: "Non disponible",
   },
 
+  palette: {
+    placeholder: "Aller à n'importe quoi… (tapez une page, un titre de poste ou une action)",
+    noResults: "Aucun résultat — essayez une autre requête.",
+    hint: "Appuyez sur Cmd+K / Ctrl+K depuis n'importe où",
+  },
   common: {
     save: "Enregistrer", cancel: "Annuler", close: "Fermer", delete: "Supprimer", edit: "Modifier",
     newVersionMsg: "Une nouvelle version de NorthHire est disponible.", newVersionBtn: "Actualiser",

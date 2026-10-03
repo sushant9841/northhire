@@ -266,6 +266,7 @@ export default function NorthHire(){
             </Modal>}
             <ToastHost toasts={A.toasts} dismiss={A.dismissToast}/>
             <CompareBar/>
+            <CommandPalette/>
             {/* Cookie banner hides on dashboard-shell pages: a signed-in user is on a page whose
                 left rail carries the "Sign out" and bottom-of-nav controls, and the fixed
                 bottom-left banner was overlapping and hiding them. Signed-in users have
@@ -279,6 +280,75 @@ export default function NorthHire(){
             {!cookieAck&&!_isBare&&<CookieBanner mob={mob} onAccept={acceptCookies} onGoPolicy={()=>{acceptCookies();go("privacy");}}/>}
           </>}
     </div></Ctx.Provider>;
+}
+
+/* Roadmap B4-12: command palette (Cmd+K / Ctrl+K). A global modal that fuzzy-matches route
+   titles + the user's own entities (jobs they can navigate to, saved searches, employers they
+   follow) + a handful of named actions. Keeps the keyboard-only path short — power users on
+   30+ job listings or 200+ employees never want to click through the nav. */
+function CommandPalette(){
+  const A=use(); const {t}=useTranslation();
+  const [open,setOpen]=useState(false);
+  const [q,setQ]=useState("");
+  const [cursor,setCursor]=useState(0);
+  useEffect(()=>{
+    const onKey=e=>{
+      if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="k"){e.preventDefault();setOpen(o=>!o);setQ("");setCursor(0);return;}
+      if(e.key==="Escape"&&open){setOpen(false);}
+    };
+    window.addEventListener("keydown",onKey);
+    return()=>window.removeEventListener("keydown",onKey);
+  },[open]);
+  if(!open) return null;
+  const nq=q.trim().toLowerCase();
+  const items=[];
+  const tabsForRole=(A.user?.role==="employer")?[["empHome","Dashboard"],["empJobs","My jobs"],["empPipeline","Candidates"],["empAnalytics","Analytics"],["empBilling","Billing"],["empCompany","Company profile"],["empTeam","Team"],["empPost","Post a job"],["interviews","Interviews"],["messages","Messages"],["settings","Settings"]]
+    :(A.user?.role==="admin")?[["admin","Overview"],["admUsers","Users"],["admEmployers","Employers"],["admJobs","Jobs moderation"],["admStats","Statistics"],["admLog","Activity log"],["admConfig","Business config"],["admSettings","Settings"]]
+    :[["home","Home"],["search","Search jobs"],["matched","Matched"],["saved","Saved"],["status","My applications"],["interviews","Interviews"],["messages","Messages"],["profile","Profile"],["cvs","My CVs"],["salaryCalc","Salary calculator"],["settings","Settings"]];
+  for(const [page,label] of tabsForRole){
+    if(!nq||label.toLowerCase().includes(nq)) items.push({kind:"page",label,action:()=>A.go(page)});
+  }
+  if(A.user?.role==="employer"&&(A.jobs||[]).length){
+    for(const j of A.jobs.filter(j=>j.e===A.company?.id)){
+      if(nq&&!j.t.toLowerCase().includes(nq)) continue;
+      items.push({kind:"job",label:`Pipeline — ${j.t}`,hint:`${j.city||""}, ${j.prov||""}`.replace(/^, |, $/,""),action:()=>{A.setPipelineJob(j.id);A.go("empPipeline");}});
+      if(items.length>=40) break;
+    }
+  }
+  if(A.user?.role==="seeker"&&(A.savedSearches||[]).length){
+    for(const s of A.savedSearches){
+      if(nq&&!s.name?.toLowerCase().includes(nq)) continue;
+      items.push({kind:"search",label:`Open saved search — ${s.name}`,action:()=>{A.setSearch({q:s.q,where:s.where,cats:s.cats||[]});A.go("search");}});
+    }
+  }
+  const take=items.slice(0,20);
+  const pick=i=>{if(take[i]){take[i].action();setOpen(false);}};
+  return <div onClick={()=>setOpen(false)} className="fixed inset-0 z-[950] bg-ink/40 flex items-start justify-center" style={{paddingTop:80,animation:"fade .15s ease both"}}>
+    <div onClick={e=>e.stopPropagation()} className="bg-white rounded-2xl shadow-xl border border-line" style={{width:"min(92vw,560px)",overflow:"hidden"}}>
+      <input autoFocus value={q} onChange={e=>{setQ(e.target.value);setCursor(0);}}
+        onKeyDown={e=>{
+          if(e.key==="ArrowDown"){e.preventDefault();setCursor(c=>Math.min(c+1,take.length-1));}
+          else if(e.key==="ArrowUp"){e.preventDefault();setCursor(c=>Math.max(c-1,0));}
+          else if(e.key==="Enter"){e.preventDefault();pick(cursor);}
+        }}
+        placeholder={t("palette.placeholder")}
+        className="w-full border-0 outline-none text-base p-4 border-b border-line text-text"/>
+      <div className="max-h-96 overflow-y-auto">
+        {take.length===0
+          ? <div className="p-5 text-sm text-text-3">{t("palette.noResults")}</div>
+          : take.map((it,i)=><button key={i} onMouseEnter={()=>setCursor(i)} onClick={()=>pick(i)}
+              className={`w-full text-left py-2.5 px-4 border-0 bg-transparent cursor-pointer flex items-center gap-3 ${i===cursor?"bg-wash":""}`}>
+              <span className="text-xs font-bold uppercase tracking-wide text-text-3 w-16 shrink-0">{it.kind}</span>
+              <span className="text-sm text-text flex-1 min-w-0 truncate">{it.label}</span>
+              {it.hint&&<span className="text-xs text-text-3 shrink-0">{it.hint}</span>}
+            </button>)}
+      </div>
+      <div className="py-2 px-4 border-t border-line-soft text-xs text-text-3 flex justify-between">
+        <span>{t("palette.hint")}</span>
+        <span>↑↓ · ⏎ · Esc</span>
+      </div>
+    </div>
+  </div>;
 }
 
 /* Roadmap B4-11: compare-jobs floating bar. Appears when the seeker has ticked 2+ jobs via the

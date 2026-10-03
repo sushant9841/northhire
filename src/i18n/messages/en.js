@@ -130,6 +130,11 @@ export const en = {
     denied: "Not available",
   },
 
+  palette: {
+    placeholder: "Jump to anything… (type a page, job title, or action)",
+    noResults: "No matches — try a different query.",
+    hint: "Press Cmd+K / Ctrl+K from anywhere",
+  },
   common: {
     save: "Save", cancel: "Cancel", close: "Close", delete: "Delete", edit: "Edit",
     newVersionMsg: "A new version of NorthHire is available.", newVersionBtn: "Refresh",
