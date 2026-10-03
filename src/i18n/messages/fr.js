@@ -574,7 +574,8 @@ export const fr = {
   },
   dockedChat: {
     title: "Messages", expandAria: "Ouvrir les messages", collapseAria: "Réduire les messages",
-    searchPlaceholder: "Rechercher des candidat·e·s…", typePlaceholder: "Tapez un message…",
+    searchPlaceholder: "Rechercher des candidat·e·s…", typePlaceholder: "Tapez un message… (appuyez sur / pour les modèles)",
+    slashHint: "Modèles — Entrée choisit le premier résultat",
     youPrefix: "Vous :", allThreadsBtn: "Toutes les conversations",
     emptyTitle: "Aucune conversation pour l'instant", emptyBody: "Envoyez un message à un·e candidat·e depuis son profil pour en démarrer une.",
   },

@@ -246,10 +246,54 @@ export function DockedChat(){
                   }} className="block w-full text-left py-2 px-2.5 bg-transparent border-0 cursor-pointer text-xs text-text rounded-lg hover:bg-bg">{tm.name}</button>)}
                 </div>}
               </div>;})()}
+              {/* Roadmap B4-06: slash-command snippet chips. Typing '/' at the start of the
+                 message opens a filtered template menu inline; typing more characters narrows
+                 the list by template name; Enter picks the top match without the user having
+                 to reach for the mouse. Esc dismisses. */}
+              {(()=>{
+                const txt=draft[active.otherId]||"";
+                const sm=txt.match(/^\/(\w*)$/);
+                if(!sm) return null;
+                const all=[...defaultMessageTemplates(t),...A.messageTemplates];
+                const q=sm[1].toLowerCase();
+                const matches=all.filter(tm=>tm.name.toLowerCase().includes(q)).slice(0,6);
+                if(!matches.length) return null;
+                const pick=tm=>{
+                  const firstName=(activePerson?.name||"").split(" ")[0]||"";
+                  const text=tm.body.replace(/\{\{name\}\}/gi,firstName).replace(/\{\{job\}\}/gi,active.role||"").replace(/\{\{company\}\}/gi,A.company?.name||"");
+                  setDraft(d=>({...d,[active.otherId]:text}));
+                };
+                return <div className="bg-white border border-line rounded-xl shadow-lg p-1.5 mb-1" style={{maxHeight:200,overflowY:"auto"}}>
+                  <div className="text-xs text-text-3 font-semibold px-2.5 py-1">{t("dockedChat.slashHint")}</div>
+                  {matches.map(tm=><button key={tm.id} onMouseDown={e=>{e.preventDefault();pick(tm);}}
+                    className="block w-full text-left py-2 px-2.5 bg-transparent border-0 cursor-pointer text-xs text-text rounded-lg hover:bg-wash">
+                    <span className="font-semibold text-brand mr-1.5">/</span>{tm.name}</button>)}
+                </div>;
+              })()}
               <div className="flex gap-2 items-end">
                 <Area rows={1} value={draft[active.otherId]||""} placeholder={t("dockedChat.typePlaceholder")}
                   onChange={e=>setDraft(d=>({...d,[active.otherId]:e.target.value}))}
-                  onKeyDown={e=>{ if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); send(); } }}
+                  onKeyDown={e=>{
+                    if(e.key==="Enter"&&!e.shiftKey){
+                      /* If the slash menu is up and matches exist, Enter picks the top match
+                         instead of sending the raw slash command. */
+                      const txt=draft[active.otherId]||"";
+                      const sm=txt.match(/^\/(\w*)$/);
+                      if(sm){
+                        const all=[...defaultMessageTemplates(t),...A.messageTemplates];
+                        const q=sm[1].toLowerCase();
+                        const match=all.find(tm=>tm.name.toLowerCase().includes(q));
+                        if(match){
+                          e.preventDefault();
+                          const firstName=(activePerson?.name||"").split(" ")[0]||"";
+                          const text=match.body.replace(/\{\{name\}\}/gi,firstName).replace(/\{\{job\}\}/gi,active.role||"").replace(/\{\{company\}\}/gi,A.company?.name||"");
+                          setDraft(d=>({...d,[active.otherId]:text}));
+                          return;
+                        }
+                      }
+                      e.preventDefault(); send();
+                    }
+                  }}
                   style={{minHeight:38,maxHeight:90,fontSize:13.5,padding:"9px 12px"}}/>
                 <button onClick={send} disabled={!(draft[active.otherId]||"").trim()} aria-label={t("common.send")}
                   className={`shrink-0 w-9 h-9 rounded-lg border-0 flex items-center justify-center ${(draft[active.otherId]||"").trim()?"bg-brand text-white cursor-pointer":"bg-line text-text-3 cursor-not-allowed"}`}>

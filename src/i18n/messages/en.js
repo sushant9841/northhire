@@ -576,7 +576,8 @@ export const en = {
   },
   dockedChat: {
     title: "Messages", expandAria: "Open messages", collapseAria: "Collapse messages",
-    searchPlaceholder: "Search candidates…", typePlaceholder: "Type a message…",
+    searchPlaceholder: "Search candidates…", typePlaceholder: "Type a message… (press / for templates)",
+    slashHint: "Templates — Enter picks the top match",
     youPrefix: "You:", allThreadsBtn: "All conversations",
     emptyTitle: "No conversations yet", emptyBody: "Message a candidate from their profile to start one.",
   },
