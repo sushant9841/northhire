@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import { en } from "./messages/en.js";
 import { fr } from "./messages/fr.js";
+import { es } from "./messages/es.js";
 import { setCurrentLocale } from "./format.js";
 
 /* ═══════════════ Lightweight in-house i18n (Bill 96 / Quebec French requirement) ═══════════════
@@ -9,13 +10,20 @@ import { setCurrentLocale } from "./format.js";
    heavy dependency. Supports {placeholder} interpolation and falls back en-CA -> raw key so a
    missing translation never renders "undefined". */
 
-export const LOCALES = ["en-CA", "fr-CA"];
+export const LOCALES = ["en-CA", "fr-CA", "es-CA"];
 export const DEFAULT_LOCALE = "en-CA";
-const CATALOGS = { "en-CA": en, "fr-CA": fr };
+const CATALOGS = { "en-CA": en, "fr-CA": fr, "es-CA": es };
 const STORAGE_KEY = "nh_locale";
 
+/* Roadmap B3-11: es-CA is a seeded locale — the catalog covers top-nav + sign-in + home; every
+   other key falls back to en-CA via the lookup chain below so a Spanish-speaking seeker never
+   sees a raw key but also never sees broken Spanish-with-English-mixed-in on a surface the
+   catalog hasn't translated yet. Adding pa-IN / zh-CN / tl-PH follows the same three-line
+   pattern: import, add to LOCALES, add to CATALOGS. */
 function normalizeLocale(l) {
-  return l === "fr-CA" || l === "fr" ? "fr-CA" : "en-CA";
+  if (l === "fr-CA" || l === "fr") return "fr-CA";
+  if (l === "es-CA" || l === "es") return "es-CA";
+  return "en-CA";
 }
 
 export function readStoredLocale() {
@@ -42,7 +50,7 @@ export function LocaleProvider({ children }) {
 
   useEffect(() => {
     if (typeof document === "undefined") return;
-    document.documentElement.lang = locale === "fr-CA" ? "fr-CA" : "en-CA";
+    document.documentElement.lang = locale;
     // QA-r4 Bill 96 tail: sync the module-level locale so money() and currentNumber() in
     // non-component contexts (utils.js, print helpers, CSV exports) format for the active locale
     // — no per-call-site rewiring needed.
