@@ -1294,6 +1294,27 @@ for (const stmt of [
   "ALTER TABLE employers ADD COLUMN culture_blurb TEXT",
   "ALTER TABLE employers ADD COLUMN benefits_summary TEXT",
   "ALTER TABLE employers ADD COLUMN testimonials_json TEXT DEFAULT '[]'",
+  /* Roadmap B3-05: automated reference-check flow. Candidate adds up to 3 reference contacts
+     (name + email + relationship) via a reference_requests row per contact, server sends a
+     signed-URL email to each referee, referee's response lands in the same row (completed_at
+     timestamp + would_hire_again yes/no + free-form comments). Employer sees the aggregated
+     summary on the candidate page. Public endpoint uses the token (random 32-byte hex) as the
+     ONLY auth — email itself carries no PII beyond 'please verify this reference', the full
+     form content lives behind the signed link. */
+  `CREATE TABLE IF NOT EXISTS reference_requests (
+    id TEXT PRIMARY KEY,
+    application_id TEXT NOT NULL REFERENCES applications(id),
+    referee_name TEXT NOT NULL,
+    referee_email TEXT NOT NULL,
+    relationship TEXT,
+    token TEXT NOT NULL UNIQUE,
+    requested_at TEXT NOT NULL DEFAULT (datetime('now')),
+    completed_at TEXT,
+    would_hire_again INTEGER,
+    comments TEXT
+  )`,
+  "CREATE INDEX IF NOT EXISTS idx_reference_requests_app ON reference_requests(application_id)",
+  "CREATE INDEX IF NOT EXISTS idx_reference_requests_token ON reference_requests(token)",
 ]) {
   try { db.exec(stmt); } catch (e) { if (!/duplicate column/i.test(e.message)) console.error("migration:", stmt, e.message); }
 }

@@ -390,3 +390,81 @@ applicationsRouter.patch("/:id/accept-offer", requireAuth, requireRole("seeker")
   liveEmit(app.user_id, "application:updated", payload);
   if (job) liveEmitMany(employerUserIds(job.employer_id), "application:updated", payload);
 });
+
+/* Roadmap B3-05: automated reference-check email + form.
+   Candidate (the applicant) POSTs 1-3 reference contacts for an application they own; server
+   generates signed tokens, sends 'please verify this reference' email to each, and surfaces
+   aggregated responses to the employer owning the application's job.
+   Referee responds via GET /references/respond/:token (public, token is the only auth) + a
+   POST with would_hire_again (0/1) + optional comments. completed_at timestamps the response.
+   Employer side reads via GET /applications/:id/references (gated by job ownership). */
+import crypto from "node:crypto";
+
+applicationsRouter.post("/:id/references", requireAuth, (req, res) => {
+  const app = db.prepare("SELECT * FROM applications WHERE id = ?").get(req.params.id);
+  if (!app || app.user_id !== req.user.id) return res.status(404).json({ error: "Application not found." });
+  const contacts = Array.isArray(req.body?.contacts) ? req.body.contacts : [];
+  const existing = db.prepare("SELECT COUNT(*) AS n FROM reference_requests WHERE application_id = ?").get(req.params.id).n;
+  if (existing + contacts.length > 3) return res.status(400).json({ error: "At most 3 references per application." });
+  const made = [];
+  for (const c of contacts.slice(0, 3)) {
+    if (!c || typeof c.name !== "string" || !c.name.trim()) continue;
+    if (typeof c.email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.email.trim())) continue;
+    const id = nextId("ref", "reference_requests");
+    const token = crypto.randomBytes(32).toString("hex");
+    db.prepare(
+      "INSERT INTO reference_requests (id, application_id, referee_name, referee_email, relationship, token) VALUES (?, ?, ?, ?, ?, ?)"
+    ).run(id, req.params.id, c.name.trim().slice(0, 120), c.email.trim().toLowerCase(), (c.relationship || "").slice(0, 120), token);
+    made.push({ id, name: c.name.trim(), email: c.email.trim(), token });
+    // Mail-send uses the same outbox pattern as every other transactional email in this app —
+    // sendAndLogMail logs to outbox when no SMTP is configured so the dev loop + tests see it.
+    try {
+      sendAndLogMail({
+        to: c.email.trim(), subject: `Reference check for ${req.user.name}`,
+        body: `Hello ${c.name.trim()},\n\n${req.user.name} listed you as a reference for a role they're applying to. If you're willing, please take 2 minutes to answer two short questions here:\n\n${req.body?.baseUrl || "https://northhire.ca"}/references/${token}\n\nThe link only works for you.\n\nThanks,\nNorthHire`,
+      });
+    } catch (e) { console.warn("[refCheck] mail send failed:", e.message); }
+  }
+  res.status(201).json({ requests: made.map(m => ({ id: m.id, name: m.name, email: m.email })) });
+});
+
+applicationsRouter.get("/:id/references", requireAuth, requireRole("employer"), (req, res) => {
+  const app = db.prepare(
+    "SELECT applications.*, jobs.employer_id AS job_employer_id FROM applications JOIN jobs ON jobs.id = applications.job_id WHERE applications.id = ?"
+  ).get(req.params.id);
+  if (!app || app.job_employer_id !== req.user.employer_id) return res.status(404).json({ error: "Not your candidate." });
+  const rows = db.prepare("SELECT * FROM reference_requests WHERE application_id = ? ORDER BY requested_at ASC").all(req.params.id);
+  res.json({
+    references: rows.map(r => ({
+      id: r.id, name: r.referee_name, email: r.referee_email, relationship: r.relationship,
+      requestedAt: r.requested_at, completedAt: r.completed_at,
+      wouldHireAgain: r.would_hire_again == null ? null : !!r.would_hire_again,
+      comments: r.completed_at ? r.comments : null,
+    })),
+  });
+});
+
+// Public token-authed endpoints. These intentionally do not require an auth cookie — the random
+// 32-byte token is the sole access control, so the referee can respond without an account.
+applicationsRouter.get("/references/verify/:token", (req, res) => {
+  const row = db.prepare("SELECT * FROM reference_requests WHERE token = ?").get(req.params.token);
+  if (!row) return res.status(404).json({ error: "Invalid or expired link." });
+  if (row.completed_at) return res.status(410).json({ error: "This reference has already been submitted. Thanks!" });
+  const app = db.prepare("SELECT user_id FROM applications WHERE id = ?").get(row.application_id);
+  const candidate = app ? db.prepare("SELECT name FROM users WHERE id = ?").get(app.user_id) : null;
+  res.json({ candidateName: candidate?.name || "the candidate", refereeName: row.referee_name });
+});
+
+applicationsRouter.post("/references/submit/:token", (req, res) => {
+  const row = db.prepare("SELECT * FROM reference_requests WHERE token = ?").get(req.params.token);
+  if (!row) return res.status(404).json({ error: "Invalid or expired link." });
+  if (row.completed_at) return res.status(410).json({ error: "Already submitted." });
+  const { wouldHireAgain, comments } = req.body || {};
+  const yn = wouldHireAgain === true || wouldHireAgain === 1 ? 1 : (wouldHireAgain === false || wouldHireAgain === 0 ? 0 : null);
+  if (yn == null) return res.status(400).json({ error: "wouldHireAgain is required (true/false)." });
+  const safeComments = typeof comments === "string" ? comments.slice(0, 2000) : "";
+  db.prepare(
+    "UPDATE reference_requests SET completed_at = datetime('now'), would_hire_again = ?, comments = ? WHERE token = ?"
+  ).run(yn, safeComments, req.params.token);
+  res.json({ ok: true });
+});
